@@ -1,0 +1,254 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+
+  /* Opacity variants for bg-background */
+  .bg-background\/10 {
+    background-color: rgba(var(--background-color-rgb), 0.1);
+  }
+
+  .bg-background\/20 {
+    background-color: rgba(var(--background-color-rgb), 0.2);
+  }
+
+  .bg-background\/30 {
+    background-color: rgba(var(--background-color-rgb), 0.3);
+  }
+
+  .bg-background\/40 {
+    background-color: rgba(var(--background-color-rgb), 0.4);
+  }
+
+  .bg-background\/50 {
+    background-color: rgba(var(--background-color-rgb), 0.5);
+  }
+
+  .bg-background\/[60-90] {
+    /* Consolidated opacity 60-90 */
+    background-color: rgba(var(--background-color-rgb), calc(var(--tw-bg-opacity) * 0.01));
+  }
+
+  .bg-background\/80 {
+    /* Explicitly define 80% opacity */
+    background-color: rgba(var(--background-color-rgb), 0.8);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Always show scrollbar */
+html {
+  overflow-y: scroll;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
+}
+
+/* Ensure content accounts for scrollbar */
+body {
+  padding-right: calc(100vw - 100%);
+}
+
+/* Glassmorphism */
+.glass {
+  @apply bg-background/80 backdrop-blur-md border-b border-border;
+}
+
+.dark .glass {
+  @apply bg-background/80 border-border;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  @apply bg-gradient-to-r from-blue-500 to-purple-600;
+}
+
+.dark .bg-gradient-primary {
+  @apply from-blue-700 to-purple-800;
+}
+
+/* Subtle hover effects */
+.hover-lift {
+  @apply transition-transform duration-300 ease-in-out;
+}
+
+/* Improved visual hierarchy */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Accessibility */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+}
+
+/* Focus styles for keyboard navigation */
+.focus-visible:focus-visible {
+  @apply outline-none ring-2 ring-offset-2 ring-offset-background ring-primary;
+}
+
+/* Subtle animations */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.5s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Tablet and mobile styles */
+@media (max-width: 1023px) {
+  html {
+    font-size: 16px;
+  }
+
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Increase the size of UI components */
+  .btn,
+  .input,
+  .select {
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Adjust card padding */
+  .card {
+    padding: 1.25rem;
+  }
+}
+
+/* Mobile-only styles */
+@media (max-width: 639px) {
+  html {
+    font-size: 14px;
+  }
+
+  /* Reduce spacing between elements */
+  .space-y-4 {
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Adjust padding for main content area */
+  main {
+    padding: 1rem 0.5rem;
+  }
+}
+
+/* Add a new utility class for full-width containers on mobile */
+.container-fluid {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 640px) {
+  .container-fluid {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .container-fluid {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
