@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import CourseBasicInfo from "./components/CourseBasicInfo"
 import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
+import AICourseGenerator from "./components/AICourseGenerator"
 import { modules } from "@/app/data/courses"
 
 function NewCourseContent() {
@@ -128,6 +130,11 @@ function NewCourseContent() {
     router.push("/manage-courses")
   }
 
+  const handleAICourseGenerated = (aiCourseData: any) => {
+    setCourseData(aiCourseData)
+    toast.success("AI-generated course data applied!")
+  }
+
   return (
     <div className="pt-4 md:pt-8">
       <div className="flex justify-between items-center mb-8">
@@ -141,13 +148,18 @@ function NewCourseContent() {
       </div>
 
       <Card className="p-6">
-        <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="ai-generator" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="ai-generator">AI Generator</TabsTrigger>
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="lessons">Lessons</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="ai-generator" className="space-y-4">
+            <AICourseGenerator onCourseGenerated={handleAICourseGenerated} />
+          </TabsContent>
 
           <TabsContent value="basic" className="space-y-4">
             <CourseBasicInfo data={courseData.basicInfo} onUpdate={(data) => updateCourseData("basicInfo", data)} />

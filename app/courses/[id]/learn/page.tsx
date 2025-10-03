@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft } from "lucide-react"
 import VideoPlayer from "./components/VideoPlayer"
+import SmartVideoPlayer from "./components/SmartVideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
 
@@ -330,7 +331,8 @@ export default function CourseLearningPage({ params }: { params: { id: string } 
 
                 <TabsContent value="video" className="flex-grow m-0 p-0 flex overflow-hidden">
                   <div className="w-full h-full lg:h-[370px] aspect-video relative">
-                    <VideoPlayer
+                    <SmartVideoPlayer
+                      videoUrl="/placeholder.svg?height=400&width=800"
                       lessonTitle={currentLesson.title}
                       onComplete={handleLessonComplete}
                       autoPlay={true}
