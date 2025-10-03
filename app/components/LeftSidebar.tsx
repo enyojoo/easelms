@@ -95,7 +95,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
         <div className="mt-auto flex justify-center mb-5">
           <ThemeToggle />
         </div>
-        <div className="p-2 text-xs text-muted-foreground text-center">© 2025 Easner, Inc. All rights reserved.</div>
+        <div className="p-2 text-xs text-muted-foreground text-center">© 2025 EaseLMS. All rights reserved.</div>
       </div>
     </div>
   )

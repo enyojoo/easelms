@@ -374,7 +374,7 @@ export default function AIContentPage() {
                       {message.role === "assistant" ? (
                         <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden bg-background border">
                           <Image
-                            src="http://class.easner.com/wp-content/uploads/2025/01/Easner-Black.png"
+                            src="http://class.easelms.com/wp-content/uploads/2025/01/EaseLMS-Black.png"
                             alt="AI Assistant"
                             width={32}
                             height={32}

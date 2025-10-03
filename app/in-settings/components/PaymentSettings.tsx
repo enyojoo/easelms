@@ -33,7 +33,7 @@ export default function PaymentSettings({
   setSelectedCurrency,
   setIsPaymentModalOpen,
 }: PaymentSettingsProps) {
-  const [selectedGateway, setSelectedGateway] = useState({ main: "easnerpay", custom: "" })
+  const [selectedGateway, setSelectedGateway] = useState({ main: "easelms-pay", custom: "" })
   const [customGatewayDetails, setCustomGatewayDetails] = useState({
     stripe: { key: "", secret: "", webhook: "", webhookSecret: "" },
     flutterwave: { publicKey: "", secretKey: "", webhookUri: "", secretHash: "" },
@@ -116,8 +116,8 @@ export default function PaymentSettings({
             className="space-y-4"
           >
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="easnerpay" id="easnerpay" />
-              <Label htmlFor="easnerpay">Use EasnerPay (recommended)</Label>
+              <RadioGroupItem value="easelms-pay" id="easelms-pay" />
+              <Label htmlFor="easelms-pay">Use EaseLMS Pay (recommended)</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="custom" id="custom" />
@@ -125,10 +125,10 @@ export default function PaymentSettings({
             </div>
           </RadioGroup>
 
-          {selectedGateway.main === "easnerpay" && (
+          {selectedGateway.main === "easelms-pay" && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>EasnerPay Benefits</AlertTitle>
+              <AlertTitle>EaseLMS Pay Benefits</AlertTitle>
               <AlertDescription>
                 Multiple currency support, no setup needed, secure transactions, and seamless integration.
               </AlertDescription>
@@ -287,7 +287,7 @@ export default function PaymentSettings({
           </p>
         </div>
 
-        {selectedGateway.main === "easnerpay" && (
+        {selectedGateway.main === "easelms-pay" && (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold flex items-center">
               <Wallet className="mr-2 h-5 w-5" /> Payout Settings

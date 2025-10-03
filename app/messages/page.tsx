@@ -43,7 +43,7 @@ const mockInboxMessages = [
       {
         id: "2a",
         sender: "Admin",
-        content: "Welcome to Easner Learn Platform! We are glad to have you.",
+        content: "Welcome to EaseLMS! We are glad to have you.",
         timestamp: "2024-01-06 14:15",
       },
     ],

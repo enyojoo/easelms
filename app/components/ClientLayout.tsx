@@ -29,7 +29,7 @@ export default function ClientLayout({
   const isSessionPage = pathname.startsWith("/studio/session/")
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="easner-theme">
+    <ThemeProvider defaultTheme="system" storageKey="easelms-theme">
       {isLoggedIn && !isAuthPage && !isSessionPage ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">
