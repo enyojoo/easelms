@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -8,83 +9,51 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
-import Logo from "@/app/components/Logo"
-import { ThemeProvider } from "@/app/components/ThemeProvider"
+import Logo from "../components/Logo"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-
-    try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to send reset email")
-      }
-
-      toast({
-        title: "Reset email sent",
-        description: "Check your email for password reset instructions",
-      })
-
-      router.push("/login")
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send reset email",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    // In a real app, you would send a request to your backend to initiate the password reset process
+    console.log("Password reset requested for:", email)
+    // For demo purposes, we'll just redirect to the code entry page
+    router.push("/forgot-password/code")
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <div className="container flex h-screen w-screen flex-col items-center justify-center">
-        <div className="mb-8">
-          <Logo className="w-32" />
+    <div className="flex justify-center items-center min-h-screen bg-background px-4 sm:px-0">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <Logo className="mx-auto mb-8" />
         </div>
-        <Card className="w-[400px]">
+        <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Forgot Password</CardTitle>
-            <CardDescription>Enter your email to reset your password</CardDescription>
+            <CardDescription>Enter your email to receive a password reset code</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent>
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? "Sending..." : "Send Reset Email"}
+              <Button type="submit" className="w-full">
+                Send Reset Code
               </Button>
-              <div className="text-sm text-center">
-                <Link href="/login" className="text-primary hover:underline">
+              <div className="text-center text-sm">
+                <Link href="/login" className="text-center text-sm hover:underline">
                   Back to Login
                 </Link>
               </div>
@@ -92,7 +61,6 @@ export default function ForgotPasswordPage() {
           </form>
         </Card>
       </div>
-    </ThemeProvider>
+    </div>
   )
 }
-

@@ -44,4 +44,3 @@ export default function VideoPreview({ videoUrl, thumbnailUrl }: VideoPreviewPro
     </div>
   )
 }
-

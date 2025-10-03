@@ -34,13 +34,68 @@ export const modules: Module[] = [
   {
     id: 1,
     title: "Digital Marketing & Social Media",
-    description: "Learn the fundamentals of digital marketing and social media strategies.",
+    description: "Learn the fundamentals of digital marketing, social media strategies, and online branding.",
     image:
       "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1474&q=80",
     lessons: [
-      { title: "Introduction to Digital Marketing" },
+      {
+        title: "Intro to Digital Marketing",
+        quiz: {
+          questions: [
+            {
+              question: "What is digital marketing?",
+              options: ["Traditional advertising", "Online marketing", "Print media", "Radio advertising"],
+              correctAnswer: 1,
+            },
+          ],
+        },
+        resources: [
+          { type: "document", title: "Digital Marketing Basics", url: "/documents/digital-marketing-basics.pdf" },
+          { type: "link", title: "Top Digital Marketing Trends", url: "https://example.com/digital-marketing-trends" },
+        ],
+      },
+      {
+        title: "Online Branding",
+        quiz: {
+          questions: [
+            {
+              question: "What is a key component of online branding?",
+              options: [
+                "Offline advertising",
+                "Consistent visual identity",
+                "Ignoring social media",
+                "Avoiding customer feedback",
+              ],
+              correctAnswer: 1,
+            },
+          ],
+        },
+        resources: [
+          { type: "document", title: "Branding Essentials", url: "/documents/branding-essentials.pdf" },
+          { type: "link", title: "Case Studies in Online Branding", url: "https://example.com/branding-case-studies" },
+        ],
+      },
+      {
+        title: "Content Marketing Strategies",
+        quiz: {
+          questions: [
+            {
+              question: "What is the primary goal of content marketing?",
+              options: ["Immediate sales", "Brand awareness", "Website traffic", "All of the above"],
+              correctAnswer: 3,
+            },
+          ],
+        },
+        resources: [
+          { type: "document", title: "Content Marketing Guide", url: "/documents/content-marketing-guide.pdf" },
+          { type: "link", title: "Successful Content Campaigns", url: "https://example.com/content-campaigns" },
+        ],
+      },
       { title: "Social Media Platforms Overview" },
-      { title: "Content Marketing Strategies" },
+      { title: "SEO and SEM Basics" },
+      { title: "Analytics Tracking" },
+      { title: "Advertising and Paid Campaigns" },
+      { title: "Ethics and Digital Responsibility" },
     ],
     workshops: 3,
     price: 199,
@@ -50,13 +105,68 @@ export const modules: Module[] = [
   {
     id: 2,
     title: "Startup Fundamentals",
-    description: "Discover the essentials of entrepreneurship and starting a business.",
+    description: "Discover the essentials of entrepreneurship, from idea generation to scaling your business.",
     image:
       "https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
     lessons: [
-      { title: "Idea Generation and Validation" },
-      { title: "Business Planning Basics" },
-      { title: "Funding and Financial Management" },
+      {
+        title: "Intro to Entrepreneurship",
+        quiz: {
+          questions: [
+            {
+              question: "What is a startup?",
+              options: ["A large corporation", "A new business venture", "A government organization", "A non-profit"],
+              correctAnswer: 1,
+            },
+          ],
+        },
+        resources: [
+          { type: "document", title: "Startup Checklist", url: "/documents/startup-checklist.pdf" },
+          { type: "link", title: "Top Startup Incubators", url: "https://example.com/startup-incubators" },
+        ],
+      },
+      {
+        title: "Idea Generation and Validation",
+        quiz: {
+          questions: [
+            {
+              question: "What is the first step in idea validation?",
+              options: ["Building a product", "Market research", "Seeking funding", "Hiring employees"],
+              correctAnswer: 1,
+            },
+          ],
+        },
+        resources: [
+          { type: "document", title: "Idea Validation Techniques", url: "/documents/idea-validation.pdf" },
+          { type: "link", title: "Successful Startup Ideas", url: "https://example.com/successful-startup-ideas" },
+        ],
+      },
+      {
+        title: "Business Planning",
+        quiz: {
+          questions: [
+            {
+              question: "What is the purpose of a business plan?",
+              options: [
+                "To impress investors",
+                "To guide business operations",
+                "To fulfill legal requirements",
+                "All of the above",
+              ],
+              correctAnswer: 3,
+            },
+          ],
+        },
+        resources: [
+          { type: "document", title: "Business Plan Template", url: "/documents/business-plan-template.pdf" },
+          { type: "link", title: "Sample Business Plans", url: "https://example.com/sample-business-plans" },
+        ],
+      },
+      { title: "Market Analysis" },
+      { title: "Business Models and Revenue" },
+      { title: "Legal Basics for Startups" },
+      { title: "Operations and Management" },
+      { title: "Scaling and Growth Strategies" },
     ],
     workshops: 2,
     price: 249,
@@ -133,4 +243,3 @@ export const modules: Module[] = [
     enrolledStudents: 610,
   },
 ]
-

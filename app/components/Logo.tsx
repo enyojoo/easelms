@@ -25,4 +25,3 @@ export default function Logo({ className = "" }: LogoProps) {
     </Link>
   )
 }
-

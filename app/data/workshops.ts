@@ -58,4 +58,3 @@ export const workshops: Workshop[] = [
     courseId: 3,
   },
 ]
-

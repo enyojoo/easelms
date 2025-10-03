@@ -1,11 +1,10 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface Message {
   id: string
@@ -22,50 +21,49 @@ interface MessageThreadModalProps {
   instructorName: string
 }
 
-const MessageThreadModal: React.FC<MessageThreadModalProps> = ({
+export default function MessageThreadModal({
   isOpen,
   onClose,
   messages,
   onSendReply,
   instructorName,
-}) => {
+}: MessageThreadModalProps) {
   const [reply, setReply] = useState("")
 
   const handleSendReply = () => {
-    if (reply.trim()) {
-      onSendReply(reply)
-      setReply("")
-    }
+    onSendReply(reply)
+    setReply("")
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Conversation with {instructorName}</DialogTitle>
+          <DialogTitle>Message Thread</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="h-[300px] w-full pr-4">
+        <ScrollArea className="h-[400px] pr-4">
           {messages.map((message) => (
-            <div key={message.id} className="mb-4">
-              <p className="font-semibold">{message.sender}</p>
+            <div key={message.id} className="mb-4 p-3 bg-muted rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">
+                  {message.sender === "Instructor" ? instructorName : message.sender}
+                </span>
+                <span className="text-sm text-muted-foreground">{message.timestamp}</span>
+              </div>
               <p>{message.content}</p>
-              <p className="text-sm text-muted-foreground">{message.timestamp}</p>
             </div>
           ))}
         </ScrollArea>
-        <div className="flex items-center space-x-2">
-          <Input
+        <div className="mt-4">
+          <Textarea
             placeholder="Type your reply..."
             value={reply}
             onChange={(e) => setReply(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSendReply()}
+            className="mb-4"
           />
-          <Button onClick={handleSendReply}>Send</Button>
+          <Button onClick={handleSendReply}>Send Reply</Button>
         </div>
       </DialogContent>
     </Dialog>
   )
 }
-
-export default MessageThreadModal
-

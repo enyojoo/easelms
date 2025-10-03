@@ -61,7 +61,7 @@ export default function InstructorNewUpdateModal({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="updateType">Update Type</Label>
-            <Select value={updateType} onValueChange={(value: "course" | "workshop") => setUpdateType(value)}>
+            <Select onValueChange={(value: "course" | "workshop") => setUpdateType(value)} value={updateType}>
               <SelectTrigger id="updateType">
                 <SelectValue placeholder="Select update type" />
               </SelectTrigger>
@@ -123,4 +123,3 @@ export default function InstructorNewUpdateModal({
     </Dialog>
   )
 }
-

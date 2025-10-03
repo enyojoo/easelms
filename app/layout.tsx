@@ -1,17 +1,16 @@
 import type React from "react"
 import { Poppins } from "next/font/google"
 import "./globals.css"
-import { Toaster } from "@/components/ui/toaster"
+import ClientLayout from "./components/ClientLayout"
 
 const poppins = Poppins({
-  subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
 })
 
 export const metadata = {
-  title: "Easner",
-  description: "A platform for online course creation and management",
-    generator: 'v0.dev'
+  generator: "v0.dev",
 }
 
 export default function RootLayout({
@@ -20,15 +19,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={poppins.className}>
-        {children}
-        <Toaster />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${poppins.className} bg-background text-text-primary`}>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   )
 }
-
-
-
-import './globals.css'

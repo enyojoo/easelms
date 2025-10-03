@@ -1,13 +1,13 @@
 "use client"
 
-import type React from "react"
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 
-interface User {
+interface Student {
   id: string
   name: string
 }
@@ -15,53 +15,59 @@ interface User {
 interface NewMessageModalProps {
   isOpen: boolean
   onClose: () => void
-  learners: User[]
+  learners: Student[]
   onSendMessage: (recipientId: string, message: string) => void
 }
 
-const NewMessageModal: React.FC<NewMessageModalProps> = ({ isOpen, onClose, learners, onSendMessage }) => {
+export default function NewMessageModal({ isOpen, onClose, learners, onSendMessage }: NewMessageModalProps) {
   const [selectedRecipient, setSelectedRecipient] = useState("")
   const [message, setMessage] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
 
   const handleSendMessage = () => {
-    if (selectedRecipient && message.trim()) {
-      onSendMessage(selectedRecipient, message)
-      setSelectedRecipient("")
-      setMessage("")
-      onClose()
-    }
+    onSendMessage(selectedRecipient, message)
+    setSelectedRecipient("")
+    setMessage("")
+    setSearchTerm("")
+    onClose()
   }
+
+  const filteredLearners = learners.filter((learner) => learner.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>New Message</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <Select onValueChange={setSelectedRecipient} value={selectedRecipient}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select recipient" />
-            </SelectTrigger>
-            <SelectContent>
-              {learners.map((learner) => (
-                <SelectItem key={learner.id} value={learner.id}>
-                  {learner.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Textarea
-            placeholder="Type your message here..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          />
-        </div>
+        <Input
+          type="text"
+          placeholder="Search recipients..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="mb-4"
+        />
+        <Select onValueChange={setSelectedRecipient} value={selectedRecipient}>
+          <SelectTrigger className="mb-4">
+            <SelectValue placeholder="Select a recipient" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">Platform Admin</SelectItem>
+            {filteredLearners.map((learner) => (
+              <SelectItem key={learner.id} value={learner.id}>
+                {learner.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Textarea
+          placeholder="Type your message..."
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="mb-4"
+        />
         <Button onClick={handleSendMessage}>Send Message</Button>
       </DialogContent>
     </Dialog>
   )
 }
-
-export default NewMessageModal
-

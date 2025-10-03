@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -8,151 +9,90 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { useToast } from "@/components/ui/use-toast"
-import { EyeIcon, EyeOffIcon } from "lucide-react"
-import Logo from "@/app/components/Logo"
-import { ThemeProvider } from "@/app/components/ThemeProvider"
+import Logo from "../components/Logo"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.easner.com"
-
-export default function SignupPage() {
-  const [fullName, setFullName] = useState("")
+export default function SignUpPage() {
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [workspaceName, setWorkspaceName] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
+    // In a real app, you would send this data to your backend to create a new user
+    console.log("Sign up:", { name, email, password })
+    // For now, we'll just redirect to the learner dashboard
+    router.push("/dash/learner")
+  }
 
-    try {
-      const response = await fetch(`${APP_URL}/api/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName, workspaceName }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Signup failed")
-      }
-
-      if (!data.workspace || !data.workspace.subdomain) {
-        throw new Error("Invalid workspace data received")
-      }
-
-      toast({
-        title: "Account created",
-        description: "You've successfully created your workspace.",
-      })
-
-      router.push(`/${data.workspace.subdomain}/in/dash`)
-    } catch (error) {
-      console.error("Signup error:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Signup failed. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+  const handleGoogleSignUp = () => {
+    // Implement Google sign up logic here
+    console.log("Google sign up clicked")
   }
 
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-      <div className="container flex h-screen w-screen flex-col items-center justify-center">
-        <div className="mb-8">
-          <Logo className="w-32" />
+    <div className="flex justify-center items-center min-h-screen bg-background px-4 sm:px-0">
+      <div className="w-full max-w-md space-y-6">
+        <div className="text-center">
+          <Logo className="mx-auto mb-8" />
         </div>
-        <Card className="w-[400px]">
+        <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Create Easner Workspace</CardTitle>
-            <CardDescription>Set up your instructor workspace to start creating courses</CardDescription>
+            <CardTitle>Sign Up</CardTitle>
+            <CardDescription>Create your account to start learning</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent>
-              <div className="grid w-full items-center gap-4">
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    placeholder="Enter your full name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Create a password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOffIcon className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" aria-hidden="true" />
-                      )}
-                      <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex flex-col space-y-1.5">
-                  <Label htmlFor="workspaceName">Workspace Name</Label>
-                  <Input
-                    id="workspaceName"
-                    placeholder="myworkspace"
-                    value={workspaceName}
-                    onChange={(e) => setWorkspaceName(e.target.value)}
-                    required
-                  />
-                </div>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create Workspace"}
+              <Button type="submit" className="w-full">
+                Sign Up
               </Button>
-              <div className="text-sm text-center">
-                Already have a workspace?{" "}
+              <Button type="button" variant="outline" className="w-full" onClick={handleGoogleSignUp}>
+                Sign up with Google
+              </Button>
+              <div className="text-center text-sm">
+                Already have an account?{" "}
                 <Link href="/login" className="text-primary hover:underline">
-                  Login here
+                  Log in
                 </Link>
               </div>
             </CardFooter>
           </form>
         </Card>
       </div>
-    </ThemeProvider>
+    </div>
   )
 }
-

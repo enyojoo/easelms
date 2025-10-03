@@ -30,4 +30,3 @@ export function getClientAuthState(): { isLoggedIn: boolean; userType?: UserType
 
   return { isLoggedIn: false }
 }
-

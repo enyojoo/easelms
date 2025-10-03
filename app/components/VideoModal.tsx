@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Volume2, Settings, Maximize, Subtitles, RotateCcw } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 
 interface VideoModalProps {
   isOpen: boolean
@@ -161,4 +161,3 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoMo
     </Dialog>
   )
 }
-
