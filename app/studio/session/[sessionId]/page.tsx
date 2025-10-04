@@ -8,6 +8,7 @@ import { UserPlus, PhoneOff } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getClientAuthState } from "@/app/utils/client-auth"
 import Whiteboard from "../../components/Whiteboard"
+import EnhancedWhiteboard from "../../components/EnhancedWhiteboard"
 import Chat from "../../components/Chat"
 import VideoConference from "../../components/VideoConference"
 import Logo from "@/app/components/Logo"
@@ -86,7 +87,7 @@ export default function SessionPage({ params }: { params: { sessionId: string } 
             <Logo className="w-20 h-auto" />
           </div>
           <div className="bg-white dark:bg-[#18181b] rounded-lg border border-border p-4 flex-grow flex flex-col shadow-lg">
-            {activeTab === "whiteboard" && <Whiteboard sessionId={params.sessionId} />}
+            {activeTab === "whiteboard" && <EnhancedWhiteboard sessionId={params.sessionId} />}
             {activeTab === "chat" && <Chat sessionId={params.sessionId} />}
             {activeTab === "video" && <VideoConference sessionId={params.sessionId} />}
           </div>
