@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import {
   Home,
   BookOpen,
-  Calendar,
   MessageSquare,
   BarChart,
   Users,
@@ -16,14 +15,15 @@ import {
   Settings,
   LogOut,
 } from "lucide-react"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "./ThemeToggle"
 import Logo from "./Logo"
+import { logout } from "../utils/logout"
 
 interface MobileMenuProps {
-  userType: "learner" | "instructor" | "admin"
+  userType: "user" | "admin"
   user: {
     name: string
     profileImage: string
@@ -35,47 +35,29 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
   const pathname = usePathname()
 
   const menuItems = {
-    learner: [
-      { href: "/dash", icon: Home, label: "Dashboard" },
-      { href: "/courses", icon: BookOpen, label: "Courses" },
-      { href: "/workshops", icon: Calendar, label: "Workshops" },
-      { href: "/messages", icon: MessageSquare, label: "Messages" },
-    ],
-    instructor: [
-      { href: "/dash", icon: Home, label: "Dashboard" },
-      { href: "/manage-courses", icon: BookOpen, label: "Manage Courses" },
-      { href: "/plan-workshops", icon: Calendar, label: "Plan Workshops" },
-      { href: "/in-messages", icon: MessageSquare, label: "Messages" },
+    user: [
+      { href: "/user/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/user/courses", icon: BookOpen, label: "Courses" },
     ],
     admin: [
-      { href: "/dash", icon: Home, label: "Dashboard" },
-      { href: "/manage-courses", icon: BookOpen, label: "Manage Courses" },
-      { href: "/manage-workshops", icon: Calendar, label: "Manage Workshops" },
-      { href: "/manage-users", icon: Users, label: "Manage Users" },
+      { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/admin/courses", icon: BookOpen, label: "Manage Courses" },
     ],
   }
 
   const sidebarItems = {
-    learner: [
-      { href: "/profile", label: "Profile", icon: User },
-      { href: "/achievements", label: "Achievements", icon: Award },
+    user: [
+      { href: "/user/profile", label: "Profile", icon: User },
+      { href: "/user/achievements", label: "Achievements", icon: Award },
       { href: "https://t.me/enyosam", label: "Support", icon: HelpCircle, external: true },
-      { href: "/settings", label: "Settings", icon: Settings },
-      { href: "/logout", label: "Log Out", icon: LogOut },
-    ],
-    instructor: [
-      { href: "/in-profile", label: "Profile", icon: User },
-      { href: "/report", label: "Report", icon: BarChart },
-      { href: "/in-report", label: "Report", icon: BarChart },
-      { href: "/in-settings", label: "Settings", icon: Settings },
-      { href: "/logout", label: "Log Out", icon: LogOut },
+      { href: "/user/settings", label: "Settings", icon: Settings },
+      { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
     admin: [
-      { href: "/profile", label: "Profile", icon: User },
-      { href: "/messages", label: "Messages", icon: MessageSquare },
-      { href: "/report", label: "Report", icon: BarChart },
-      { href: "/settings", label: "Settings", icon: Settings },
-      { href: "/logout", label: "Log Out", icon: LogOut },
+      { href: "/admin/profile", label: "Profile", icon: User },
+      { href: "/admin/reports", label: "Report", icon: BarChart },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
+      { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
   }
 
@@ -95,6 +77,9 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[250px] sm:w-[300px] p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Navigation Menu</SheetTitle>
+            </SheetHeader>
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-4">
@@ -109,24 +94,58 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
                 </div>
               </div>
               <nav className="flex-grow px-4 py-6">
-                {currentSidebar.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center py-3 px-4 rounded-lg text-base font-medium ${
-                      pathname === item.href
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    }`}
-                    onClick={() => setIsOpen(false)}
-                    {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                  >
-                    {item.icon && (
-                      <item.icon className={`w-5 h-5 mr-3 ${pathname === item.href ? "text-primary" : ""}`} />
-                    )}
-                    {item.label}
-                  </Link>
-                ))}
+                {currentSidebar.map((item) => {
+                  if (item.isLogout) {
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => {
+                          setIsOpen(false)
+                          logout(userType)
+                        }}
+                        className="flex items-center py-3 px-4 rounded-lg text-base font-medium w-full text-left text-muted-foreground hover:text-foreground hover:bg-accent"
+                      >
+                        {item.icon && <item.icon className="w-5 h-5 mr-3" />}
+                        {item.label}
+                      </button>
+                    )
+                  }
+                  return item.external ? (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center py-3 px-4 rounded-lg text-base font-medium ${
+                        pathname === item.href
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.icon && (
+                        <item.icon className={`w-5 h-5 mr-3 ${pathname === item.href ? "text-primary" : ""}`} />
+                      )}
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center py-3 px-4 rounded-lg text-base font-medium ${
+                        pathname === item.href
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.icon && (
+                        <item.icon className={`w-5 h-5 mr-3 ${pathname === item.href ? "text-primary" : ""}`} />
+                      )}
+                      {item.label}
+                    </Link>
+                  )
+                })}
               </nav>
               <div className="mt-auto p-4">
                 <ThemeToggle disableTooltip />

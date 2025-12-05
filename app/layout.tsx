@@ -11,7 +11,7 @@ const poppins = Poppins({
 
 export const metadata = {
   title: "EaseLMS - Learning Management System",
-  description: "A modern, easy-to-use Learning Management System for creating and managing courses, workshops, and educational content.",
+  description: "A modern, easy-to-use Learning Management System for creating and managing courses and educational content.",
   generator: "Next.js",
 }
 

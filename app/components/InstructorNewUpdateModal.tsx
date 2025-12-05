@@ -13,27 +13,20 @@ interface Course {
   title: string
 }
 
-interface Workshop {
-  id: number
-  title: string
-}
-
 interface InstructorNewUpdateModalProps {
   isOpen: boolean
   onClose: () => void
   courses: Course[]
-  workshops: Workshop[]
-  onSendUpdate: (type: "course" | "workshop", id: string, recipients: string, message: string) => void
+  onSendUpdate: (type: "course", id: string, recipients: string, message: string) => void
 }
 
 export default function InstructorNewUpdateModal({
   isOpen,
   onClose,
   courses,
-  workshops,
   onSendUpdate,
 }: InstructorNewUpdateModalProps) {
-  const [updateType, setUpdateType] = useState<"course" | "workshop">("course")
+  const [updateType, setUpdateType] = useState<"course">("course")
   const [selectedId, setSelectedId] = useState("all")
   const [message, setMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -47,10 +40,7 @@ export default function InstructorNewUpdateModal({
     onClose()
   }
 
-  const filteredOptions =
-    updateType === "course"
-      ? courses.filter((course) => course.title.toLowerCase().includes(searchTerm.toLowerCase()))
-      : workshops.filter((workshop) => workshop.title.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredOptions = courses.filter((course) => course.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -61,36 +51,35 @@ export default function InstructorNewUpdateModal({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="updateType">Update Type</Label>
-            <Select onValueChange={(value: "course" | "workshop") => setUpdateType(value)} value={updateType}>
+            <Select onValueChange={(value: "course") => setUpdateType(value)} value={updateType}>
               <SelectTrigger id="updateType">
                 <SelectValue placeholder="Select update type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="course">Course Update</SelectItem>
-                <SelectItem value="workshop">Workshop Update</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="searchTerm">Search {updateType === "course" ? "Courses" : "Workshops"}</Label>
+            <Label htmlFor="searchTerm">Search Courses</Label>
             <Input
               id="searchTerm"
               type="text"
-              placeholder={`Search ${updateType}s...`}
+              placeholder="Search courses..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="selectedId">Select {updateType === "course" ? "Course" : "Workshop"}</Label>
+            <Label htmlFor="selectedId">Select Course</Label>
             <Select onValueChange={setSelectedId} value={selectedId}>
               <SelectTrigger id="selectedId">
-                <SelectValue placeholder={`Select a ${updateType}`} />
+                <SelectValue placeholder="Select a course" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All {updateType === "course" ? "Courses" : "Workshops"}</SelectItem>
+                <SelectItem value="all">All Courses</SelectItem>
                 {filteredOptions.map((option) => (
                   <SelectItem key={option.id} value={option.id.toString()}>
                     {option.title}

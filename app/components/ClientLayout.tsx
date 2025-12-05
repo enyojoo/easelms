@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-
+import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Header from "./Header"
 import LeftSidebar from "./LeftSidebar"
@@ -16,27 +16,48 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const { isLoggedIn, userType, user } = getClientAuthState()
+  const [mounted, setMounted] = useState(false)
+  const [authState, setAuthState] = useState<{
+    isLoggedIn: boolean
+    userType?: "user" | "admin"
+    user?: any
+  }>({ isLoggedIn: false })
 
-  // Check if current path is an auth page or a session page
+  useEffect(() => {
+    setMounted(true)
+    setAuthState(getClientAuthState())
+  }, [])
+
+  // Check if current path is an auth page
   const isAuthPage = [
-    "/login",
-    "/signup",
+    "/auth/user/login",
+    "/auth/user/signup",
+    "/auth/admin/login",
     "/forgot-password",
     "/forgot-password/code",
     "/forgot-password/new-password",
-  ].includes(pathname)
-  const isSessionPage = pathname.startsWith("/studio/session/")
+  ].includes(pathname) || pathname.startsWith("/auth/")
+
+  const { isLoggedIn, userType, user } = authState
+
+  // During SSR and initial render, show children without layout to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <ThemeProvider defaultTheme="system" storageKey="easelms-theme">
+        <PageTransition>{children}</PageTransition>
+      </ThemeProvider>
+    )
+  }
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="easelms-theme">
-      {isLoggedIn && !isAuthPage && !isSessionPage ? (
+      {isLoggedIn && !isAuthPage ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">
-            <MobileMenu userType={userType || "learner"} user={user} />
+            <MobileMenu userType={userType || "user"} user={user} />
           </div>
           <div className="hidden lg:flex h-screen">
-            <LeftSidebar userType={userType || "learner"} />
+            <LeftSidebar userType={userType || "user"} />
             <div className="flex flex-col flex-grow lg:ml-64">
               <Header isLoggedIn={isLoggedIn} userType={userType} user={user} />
               <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">

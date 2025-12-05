@@ -12,7 +12,6 @@ export interface Module {
   description: string
   image: string
   lessons: Lesson[]
-  workshops?: number
   price?: number
   currency?: string
   enrolledStudents?: number
@@ -97,7 +96,6 @@ export const modules: Module[] = [
       { title: "Advertising and Paid Campaigns" },
       { title: "Ethics and Digital Responsibility" },
     ],
-    workshops: 3,
     price: 199,
     currency: "USD",
     enrolledStudents: 1250,
@@ -168,7 +166,6 @@ export const modules: Module[] = [
       { title: "Operations and Management" },
       { title: "Scaling and Growth Strategies" },
     ],
-    workshops: 2,
     price: 249,
     currency: "USD",
     enrolledStudents: 980,

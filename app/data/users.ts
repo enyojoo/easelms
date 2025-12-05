@@ -1,10 +1,9 @@
-// Update the instructor's profile image
 export const users: User[] = [
   {
     id: "1",
     name: "John Doe",
-    email: "learner@example.com",
-    userType: "learner",
+    email: "user@example.com",
+    userType: "user",
     enrolledCourses: [1, 2],
     progress: { 1: 60, 2: 30 },
     completedCourses: [],
@@ -16,8 +15,8 @@ export const users: User[] = [
   {
     id: "2",
     name: "Jane Smith",
-    email: "instructor@example.com",
-    userType: "instructor",
+    email: "admin@example.com",
+    userType: "admin",
     enrolledCourses: [],
     progress: {},
     completedCourses: [],
@@ -31,11 +30,13 @@ export function getUserByEmail(email: string): User | undefined {
   return users.find((user) => user.email === email)
 }
 
-interface User {
+export type UserType = "user" | "admin"
+
+export interface User {
   id: string
   name: string
   email: string
-  userType: "learner" | "instructor"
+  userType: UserType
   enrolledCourses: number[]
   progress: { [courseId: number]: number }
   completedCourses: number[]
