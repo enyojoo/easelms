@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
 import VideoModal from "@/app/components/VideoModal"
-import { modules } from "../../data/courses"
-import { users } from "../../data/users"
+import { modules } from "@/app/data/courses"
+import { users } from "@/app/data/users"
 import { Twitter, Linkedin, Youtube, Instagram, LinkIcon as Website } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit } from "lucide-react"
@@ -87,7 +87,7 @@ export default function CoursePage({ params }: { params: { id: string } }) {
   const { price, buttonText, access } = getAccessDetails()
 
   const handleStartCourse = () => {
-    router.push(`/courses/${module.id}/learn`)
+    router.push(`/user/courses/${module.id}/learn`)
   }
 
   return (

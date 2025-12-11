@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft } from "lucide-react"
 import VideoPlayer from "./components/VideoPlayer"
-import SmartVideoPlayer from "./components/SmartVideoPlayer"
 import QuizComponent from "./components/QuizComponent"
-import InteractiveQuiz from "./components/InteractiveQuiz"
 import ResourcesPanel from "./components/ResourcesPanel"
 
 // Updated quiz data for each lesson
@@ -332,40 +330,20 @@ export default function CourseLearningPage({ params }: { params: { id: string } 
 
                 <TabsContent value="video" className="flex-grow m-0 p-0 flex overflow-hidden">
                   <div className="w-full h-full lg:h-[370px] aspect-video relative">
-                    <SmartVideoPlayer
+                    <VideoPlayer
                       videoUrl="/placeholder.svg?height=400&width=800"
-                      lessonTitle={currentLesson.title}
-                      onComplete={handleLessonComplete}
-                      autoPlay={true}
-                      isActive={activeTab === "video"}
+                      title={currentLesson.title}
                     />
                   </div>
                 </TabsContent>
 
                 <TabsContent value="quiz" className="flex-grow m-0 p-4 md:p-6 lg:h-[370px] overflow-y-auto">
-                  <InteractiveQuiz
-                    quiz={{ 
-                      questions: lessonQuizzes[currentLesson.title].questions.map((q, index) => ({
-                        id: `q-${index}`,
-                        question: q.question,
-                        type: "multiple-choice" as const,
-                        options: q.options,
-                        correctAnswer: q.correctAnswer,
-                        explanation: `The correct answer is option ${q.correctAnswer + 1}`,
-                        points: 10,
-                        difficulty: "medium" as const,
-                        hints: ["Read the question carefully", "Eliminate obviously wrong answers"]
-                      })),
-                      timeLimit: 300, // 5 minutes
-                      passingScore: 70
-                    }}
-                    onComplete={(results) => {
-                      console.log("Quiz completed:", results)
-                      handleQuizComplete()
-                    }}
-                    showHints={true}
-                    allowRetry={true}
-                  />
+                  {lessonQuizzes[currentLesson.title] && (
+                    <QuizComponent
+                      questions={lessonQuizzes[currentLesson.title].questions}
+                      onComplete={handleQuizComplete}
+                    />
+                  )}
                 </TabsContent>
 
                 <TabsContent value="resources" className="flex-grow m-0 p-4 md:p-6 lg:h-[370px] overflow-y-auto">

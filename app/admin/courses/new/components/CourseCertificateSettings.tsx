@@ -37,26 +37,6 @@ export default function CourseCertificateSettings({ settings, onUpdate }: Course
       {settings.certificateEnabled && (
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label>Certificate Type</Label>
-            <Select
-              value={settings.certificateType}
-              onValueChange={(value: "completion" | "achievement" | "participation") =>
-                onUpdate({ ...settings, certificateType: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select certificate type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="completion">Certificate of Completion</SelectItem>
-                <SelectItem value="achievement">Certificate of Achievement</SelectItem>
-                <SelectItem value="participation">Certificate of Participation</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">This will be used as the main heading on the certificate</p>
-          </div>
-
-          <div className="space-y-2">
             <Label>Certificate Description</Label>
             <Textarea
               placeholder="e.g., This is to certify that [student_name] has successfully completed the course..."

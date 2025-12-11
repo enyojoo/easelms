@@ -46,7 +46,7 @@ export default function CustomDomainSettings() {
             <p>To set up your custom domain:</p>
             <ol className="list-decimal list-inside mt-2">
               <li>
-                Add a CNAME record pointing to <code>cname.easelms.com</code>
+                Add a CNAME record pointing to <code>cname.enthronement-university.com</code>
               </li>
               <li>Enter your custom domain above</li>
               <li>Click "Verify Domain"</li>

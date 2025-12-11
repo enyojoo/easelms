@@ -43,14 +43,14 @@ export default function ClientLayout({
   // During SSR and initial render, show children without layout to avoid hydration mismatch
   if (!mounted) {
     return (
-      <ThemeProvider defaultTheme="system" storageKey="easelms-theme">
+      <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">
         <PageTransition>{children}</PageTransition>
       </ThemeProvider>
     )
   }
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="easelms-theme">
+    <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">
       {isLoggedIn && !isAuthPage ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">

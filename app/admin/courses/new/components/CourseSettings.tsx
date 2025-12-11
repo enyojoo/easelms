@@ -4,7 +4,6 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import CourseEnrollmentSettings from "./CourseEnrollmentSettings"
-import CourseAccessSettings from "./CourseAccessSettings"
 import CourseCertificateSettings from "./CourseCertificateSettings"
 
 interface CourseSettingsProps {
@@ -17,15 +16,6 @@ interface CourseSettingsProps {
       price?: number
       recurringPrice?: number
     }
-    access: {
-      requirementType: "none" | "prerequisites" | "points"
-      prerequisites?: string[]
-      requiredPoints?: number
-      hasExpiration: boolean
-      startDate?: string
-      endDate?: string
-      studentLimit: number
-    }
     certificate: {
       certificateEnabled: boolean
       certificateTemplate: string
@@ -37,7 +27,6 @@ interface CourseSettingsProps {
       certificateType: "completion" | "achievement" | "participation"
     }
   }
-  courses: { id: string; title: string }[]
   onUpdate: (settings: any) => void
 }
 
@@ -103,15 +92,6 @@ export default function CourseSettings({ settings, courses, onUpdate }: CourseSe
         <CourseEnrollmentSettings
           settings={settings.enrollment}
           onUpdate={(data) => handleSectionUpdate("enrollment", data)}
-        />
-      </div>
-
-      <div className="space-y-6">
-        <h3 className="text-lg font-semibold">Access Settings</h3>
-        <CourseAccessSettings
-          settings={settings.access}
-          courses={courses}
-          onUpdate={(data) => handleSectionUpdate("access", data)}
         />
       </div>
 

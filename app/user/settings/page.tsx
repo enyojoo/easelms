@@ -13,9 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getClientAuthState } from "@/app/utils/client-auth"
 import type { User } from "@/app/data/users"
-import { Globe, Bell, Shield, CreditCard, Puzzle } from "lucide-react"
-import Image from "next/image"
-import { GB, RU, ES, FR, US, EU } from "country-flag-icons/react/3x2"
+import { Bell, Shield, CreditCard } from "lucide-react"
+import { US, EU, GB } from "country-flag-icons/react/3x2"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -34,9 +33,7 @@ export default function LearnerSettingsPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [settings, setSettings] = useState({
-    language: "en",
     emailNotifications: true,
-    twoFactorAuth: false,
   })
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [paymentDetails, setPaymentDetails] = useState<CreditCardDetails | null>(null)
@@ -103,53 +100,6 @@ export default function LearnerSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Globe className="mr-2 h-5 w-5" /> Language
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span>Select your preferred language</span>
-              <Select
-                value={settings.language}
-                onValueChange={(value) => setSettings((prev) => ({ ...prev, language: value }))}
-              >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Select language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en">
-                    <div className="flex items-center">
-                      <GB className="w-4 h-4 mr-2" />
-                      English
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="ru">
-                    <div className="flex items-center">
-                      <RU className="w-4 h-4 mr-2" />
-                      Russian
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="es">
-                    <div className="flex items-center">
-                      <ES className="w-4 h-4 mr-2" />
-                      Spanish
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="fr">
-                    <div className="flex items-center">
-                      <FR className="w-4 h-4 mr-2" />
-                      French
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
               <Bell className="mr-2 h-5 w-5" /> Notifications
             </CardTitle>
           </CardHeader>
@@ -171,10 +121,6 @@ export default function LearnerSettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span>Two-Factor Authentication</span>
-              <Switch checked={settings.twoFactorAuth} onCheckedChange={handleSwitchChange("twoFactorAuth")} />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="password">Change Password</Label>
               <div className="flex space-x-2">
@@ -188,32 +134,6 @@ export default function LearnerSettingsPage() {
                 />
                 <Button onClick={handleSavePassword}>Save</Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Puzzle className="mr-2 h-5 w-5" /> Integrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Button variant="outline" className="w-full justify-between">
-                <div className="flex items-center space-x-3">
-                  <Image
-                    src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg"
-                    alt="Google Calendar"
-                    width={24}
-                    height={24}
-                    className="rounded"
-                    crossOrigin="anonymous"
-                  />
-                  <span>Google Calendar</span>
-                </div>
-                <span className="text-sm text-muted-foreground">Connect</span>
-              </Button>
             </div>
           </CardContent>
         </Card>

@@ -6,9 +6,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Award, BookOpen, Clock, Zap, ChevronRight, BarChart3 } from "lucide-react"
-import LearningAnalytics from "./components/LearningAnalytics"
+import { Award, BookOpen, ChevronRight } from "lucide-react"
 import { getClientAuthState } from "@/app/utils/client-auth"
 import type { User } from "@/app/data/users"
 
@@ -59,18 +57,8 @@ export default function LearnerDashboard() {
         <h1 className="text-3xl font-bold text-primary">Hi, {user.name}!</h1>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -84,26 +72,16 @@ export default function LearnerDashboard() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Clock className="mr-2" /> Learning Hours
+              <Award className="mr-2" /> Completed Courses
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">24</p>
+            <p className="text-3xl font-bold">0</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Zap className="mr-2" /> Learning Streak
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">7 days</p>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
             <CardTitle>Continue Learning</CardTitle>
@@ -172,13 +150,8 @@ export default function LearnerDashboard() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <LearningAnalytics userType="learner" />
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }

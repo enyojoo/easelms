@@ -151,7 +151,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
                 <ThemeToggle disableTooltip />
               </div>
               <div className="p-4 text-left text-xs text-muted-foreground">
-                © 2025 EaseLMS. All rights reserved.
+                © 2025 Enthronement University. All rights reserved.
               </div>
             </div>
           </SheetContent>

@@ -124,7 +124,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
         <div className="mt-4 flex justify-center mb-5">
           <ThemeToggle />
         </div>
-        <div className="p-2 text-xs text-muted-foreground text-center">© 2025 EaseLMS. All rights reserved.</div>
+        <div className="p-2 text-xs text-muted-foreground text-center">© 2025 Enthronement University. All rights reserved.</div>
       </div>
     </div>
   )
