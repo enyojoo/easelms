@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -10,11 +10,12 @@
 /coverage
 
 # next.js
-/.next/
+.next/
 /out/
 
 # production
 /build
+dist/
 
 # misc
 .DS_Store
@@ -36,12 +37,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# LMS specific
-lms/.next/
-lms/out/
-lms/node_modules/
+# turbo
+.turbo
 
-# Website specific
-website/.next/
-website/out/
-website/node_modules/
+# Apps specific
+apps/*/.next/
+apps/*/out/
+apps/*/node_modules/
