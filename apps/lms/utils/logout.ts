@@ -1,7 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-
 export function logout(userType?: "user" | "admin") {
   // Clear the authentication cookie
   document.cookie = "auth=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;"
@@ -10,7 +8,7 @@ export function logout(userType?: "user" | "admin") {
   if (userType === "admin") {
     window.location.href = "/auth/admin/login"
   } else {
-    window.location.href = "/auth/user/login"
+    window.location.href = "/auth/learner/login"
   }
 }
 
