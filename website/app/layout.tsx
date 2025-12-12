@@ -1,0 +1,29 @@
+import type React from "react"
+import { Poppins } from "next/font/google"
+import "../globals.css"
+
+const poppins = Poppins({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+})
+
+export const metadata = {
+  title: "Enthronement University - Learn. Grow. Succeed.",
+  description: "A modern learning management system designed to help you achieve your goals.",
+  generator: "Next.js",
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${poppins.className} bg-background text-text-primary`}>
+        {children}
+      </body>
+    </html>
+  )
+}
