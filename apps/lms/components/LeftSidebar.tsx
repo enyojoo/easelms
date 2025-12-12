@@ -30,7 +30,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
       { href: "/user/dashboard", icon: Home, label: "Dashboard" },
       { href: "/user/courses", icon: BookOpen, label: "Courses" },
       { href: "/user/achievements", icon: Award, label: "Achievements" },
-      { href: "https://t.me/enyosam", icon: HelpCircle, label: "Support", external: true },
+      { href: "/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
       { href: "/admin/dashboard", icon: Home, label: "Dashboard" },

@@ -38,7 +38,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
     user: [
       { href: "/user/dashboard", icon: Home, label: "Dashboard" },
       { href: "/user/courses", icon: BookOpen, label: "Courses" },
-      { href: "https://t.me/enyosam", icon: HelpCircle, label: "Support", external: true },
+      { href: "/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
       { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
@@ -51,7 +51,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
     user: [
       { href: "/user/profile", label: "Profile", icon: User },
       { href: "/user/achievements", label: "Achievements", icon: Award },
-      { href: "https://t.me/enyosam", label: "Support", icon: HelpCircle, external: true },
+      { href: "/support", label: "Support", icon: HelpCircle },
       { href: "/user/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
