@@ -16,12 +16,6 @@ const mockEnrolledCourses = [
   { id: 2, title: "Startup Fundamentals", progress: 30 },
 ]
 
-
-const mockRecentAchievements = [
-  { id: 1, title: "Course Completion", description: "Completed Digital Marketing Basics", icon: Award },
-  { id: 2, title: "Perfect Score", description: "100% on Social Media Quiz", icon: Award },
-]
-
 const mockRecommendedCourses = [
   {
     id: 3,
@@ -59,97 +53,76 @@ export default function LearnerDashboard() {
 
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BookOpen className="mr-2" /> Courses in Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{enrolledCourses.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Award className="mr-2" /> Completed Courses
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">0</p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BookOpen className="mr-2" /> Courses in Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{enrolledCourses.length}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="mr-2" /> Completed Courses
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{user.completedCourses?.length || 0}</p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Continue Learning</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {enrolledCourses.map((course) => (
-              <div key={course.id} className="mb-4">
-                <h3 className="font-semibold mb-2">{course.title}</h3>
-                <div className="flex items-center">
-                  <Progress value={course.progress} className="flex-grow mr-4" />
-                  <span className="text-sm font-medium">{course.progress}%</span>
-                </div>
-                <Link href={`/user/courses/${course.id}`}>
-                  <Button variant="link" className="mt-2 p-0">
-                    Continue <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Achievements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {mockRecentAchievements.map((achievement) => (
-              <div key={achievement.id} className="flex items-center mb-4">
-                <achievement.icon className="h-8 w-8 text-yellow-400 mr-3" />
-                <div>
-                  <h3 className="font-semibold">{achievement.title}</h3>
-                  <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                </div>
-              </div>
-            ))}
-            <Link href="/user/achievements">
-              <Button variant="outline" className="w-full">
-                View All Achievements
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recommended Courses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {mockRecommendedCourses.map((course) => (
-                <Link key={course.id} href={`/courses/${course.id}`} className="flex">
-                  <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
-                    <div className="relative w-full h-32">
-                      <Image src={course.image} alt={course.title} layout="fill" objectFit="cover" />
+          <Card>
+            <CardHeader>
+              <CardTitle>Continue Learning</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {enrolledCourses.length > 0 ? (
+                enrolledCourses.map((course) => (
+                  <div key={course.id} className="mb-4">
+                    <h3 className="font-semibold mb-2">{course.title}</h3>
+                    <div className="flex items-center">
+                      <Progress value={course.progress} className="flex-grow mr-4" />
+                      <span className="text-sm font-medium">{course.progress}%</span>
                     </div>
-                    <div className="p-2 flex-grow flex items-center">
-                      <h3 className="font-semibold text-sm line-clamp-2">{course.title}</h3>
-                    </div>
+                    <Link href={`/user/courses/${course.id}`}>
+                      <Button variant="link" className="mt-2 p-0">
+                        Continue <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </Link>
                   </div>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))
+              ) : (
+                <p className="text-muted-foreground">No courses in progress</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recommended Courses</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                {mockRecommendedCourses.map((course) => (
+                  <Link key={course.id} href={`/user/courses/${course.id}`} className="flex">
+                    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
+                      <div className="relative w-full h-32">
+                        <Image src={course.image} alt={course.title} layout="fill" objectFit="cover" />
+                      </div>
+                      <div className="p-2 flex-grow flex items-center">
+                        <h3 className="font-semibold text-sm line-clamp-2">{course.title}</h3>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

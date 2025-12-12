@@ -16,17 +16,21 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const [mounted, setMounted] = useState(false)
-  const [authState, setAuthState] = useState<{
-    isLoggedIn: boolean
-    userType?: "user" | "admin"
-    user?: any
-  }>({ isLoggedIn: false })
+  
+  // Initialize auth state synchronously on client side using function initializer
+  const [authState, setAuthState] = useState(() => {
+    if (typeof window !== "undefined") {
+      return getClientAuthState()
+    }
+    return { isLoggedIn: false }
+  })
 
+  // Update auth state when pathname changes (in case user logs in/out or navigates)
   useEffect(() => {
-    setMounted(true)
-    setAuthState(getClientAuthState())
-  }, [])
+    if (typeof window !== "undefined") {
+      setAuthState(getClientAuthState())
+    }
+  }, [pathname])
 
   // Check if current path is an auth page
   const isAuthPage = [
@@ -39,15 +43,6 @@ export default function ClientLayout({
   ].includes(pathname) || pathname.startsWith("/auth/")
 
   const { isLoggedIn, userType, user } = authState
-
-  // During SSR and initial render, show children without layout to avoid hydration mismatch
-  if (!mounted) {
-    return (
-      <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">
-        <PageTransition>{children}</PageTransition>
-      </ThemeProvider>
-    )
-  }
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">
