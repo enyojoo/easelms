@@ -20,6 +20,7 @@ export function middleware(request: NextRequest) {
     "/admin",
     "/forgot-password",
     "/logout",
+    "/support",
   ]
 
   const isAllowed = allowedPaths.some((path) => url.pathname.startsWith(path))
