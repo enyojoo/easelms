@@ -89,7 +89,7 @@ export default function CoursePage() {
   const { price, buttonText, access } = getAccessDetails()
 
   const handleStartCourse = () => {
-    router.push(`/user/courses/${id}/learn`)
+    router.push(`/learner/courses/${id}/learn`)
   }
 
   return (

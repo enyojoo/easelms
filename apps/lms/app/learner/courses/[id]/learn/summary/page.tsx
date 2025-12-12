@@ -72,7 +72,7 @@ export default function CourseCompletionPage() {
   useEffect(() => {
     const { isLoggedIn, userType } = getClientAuthState()
     if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/user/login")
+      router.push("/auth/learner/login")
     } else {
       const courseData = modules.find((m) => m.id === Number.parseInt(id))
       if (courseData) {
@@ -80,7 +80,7 @@ export default function CourseCompletionPage() {
         setQuizResults(mockQuizResults)
         setAchievements(mockAchievements)
       } else {
-        router.push("/user/courses")
+        router.push("/learner/courses")
       }
     }
   }, [router, id])

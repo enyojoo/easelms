@@ -240,13 +240,13 @@ export default function CourseLearningPage() {
   useEffect(() => {
     const { isLoggedIn, userType } = getClientAuthState()
     if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/user/login")
+      router.push("/auth/learner/login")
     } else {
       const courseData = modules.find((m) => m.id === Number.parseInt(id))
       if (courseData) {
         setCourse(courseData)
       } else {
-        router.push("/user/courses")
+        router.push("/learner/courses")
       }
     }
   }, [router, id])
@@ -279,7 +279,7 @@ export default function CourseLearningPage() {
         setActiveTab("video")
       } else {
         // All lessons completed, redirect to summary page
-        router.push(`/user/courses/${id}/learn/summary`)
+        router.push(`/learner/courses/${id}/learn/summary`)
       }
     }
   }
@@ -376,7 +376,7 @@ export default function CourseLearningPage() {
                   <Button
                     variant={allLessonsCompleted ? "default" : "outline"}
                     onClick={
-                      allLessonsCompleted ? () => router.push(`/user/courses/${id}/learn/summary`) : handleNextLesson
+                      allLessonsCompleted ? () => router.push(`/learner/courses/${id}/learn/summary`) : handleNextLesson
                     }
                     disabled={
                       !allLessonsCompleted &&

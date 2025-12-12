@@ -33,7 +33,7 @@ export default function LearnerProfilePage() {
   useEffect(() => {
     const { isLoggedIn, userType, user } = getClientAuthState()
     if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/user/login")
+      router.push("/auth/learner/login")
     } else {
       setUser(user)
       setFormData({

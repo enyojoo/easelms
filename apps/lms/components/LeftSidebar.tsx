@@ -27,23 +27,22 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
 
   const menuItems = {
     user: [
-      { href: "/user/dashboard", icon: Home, label: "Dashboard" },
-      { href: "/user/courses", icon: BookOpen, label: "Courses" },
-      { href: "/user/achievements", icon: Award, label: "Achievements" },
+      { href: "/learner/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/learner/courses", icon: BookOpen, label: "Courses" },
+      { href: "/learner/achievements", icon: Award, label: "Achievements" },
       { href: "/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
       { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
       { href: "/admin/courses", icon: BookOpen, label: "Courses" },
-      { href: "/admin/reports", icon: BarChart, label: "Report" },
-      { href: "https://t.me/enyosam", icon: HelpCircle, label: "Support", external: true },
+      { href: "/admin/learners", icon: Users, label: "Learners" },
     ],
   }
 
   const bottomMenuItems = {
     user: [
-      { href: "/user/profile", icon: User, label: "Profile" },
-      { href: "/user/settings", icon: Settings, label: "Settings" },
+      { href: "/learner/profile", icon: User, label: "Profile" },
+      { href: "/learner/settings", icon: Settings, label: "Settings" },
       { href: "#", icon: LogOut, label: "Log Out", isLogout: true },
     ],
     admin: [
@@ -124,7 +123,6 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
         <div className="mt-4 flex justify-center mb-5">
           <ThemeToggle />
         </div>
-        <div className="p-2 text-xs text-muted-foreground text-center">© 2025 Enthronement University. All rights reserved.</div>
       </div>
     </div>
   )

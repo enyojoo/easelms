@@ -36,8 +36,8 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
 
   const menuItems = {
     user: [
-      { href: "/user/dashboard", icon: Home, label: "Dashboard" },
-      { href: "/user/courses", icon: BookOpen, label: "Courses" },
+      { href: "/learner/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/learner/courses", icon: BookOpen, label: "Courses" },
       { href: "/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
@@ -49,15 +49,15 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
 
   const sidebarItems = {
     user: [
-      { href: "/user/profile", label: "Profile", icon: User },
-      { href: "/user/achievements", label: "Achievements", icon: Award },
+      { href: "/learner/profile", label: "Profile", icon: User },
+      { href: "/learner/achievements", label: "Achievements", icon: Award },
       { href: "/support", label: "Support", icon: HelpCircle },
-      { href: "/user/settings", label: "Settings", icon: Settings },
+      { href: "/learner/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
     admin: [
       { href: "/admin/profile", label: "Profile", icon: User },
-      { href: "/admin/reports", label: "Report", icon: BarChart },
+      { href: "/admin/learners", label: "Learners", icon: Users },
       { href: "/admin/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],

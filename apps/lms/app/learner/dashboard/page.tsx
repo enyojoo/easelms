@@ -89,7 +89,7 @@ export default function LearnerDashboard() {
                       <Progress value={course.progress} className="flex-grow mr-4" />
                       <span className="text-sm font-medium">{course.progress}%</span>
                     </div>
-                    <Link href={`/user/courses/${course.id}`}>
+                    <Link href={`/learner/courses/${course.id}`}>
                       <Button variant="link" className="mt-2 p-0">
                         Continue <ChevronRight className="ml-1 h-4 w-4" />
                       </Button>
@@ -109,7 +109,7 @@ export default function LearnerDashboard() {
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 {mockRecommendedCourses.map((course) => (
-                  <Link key={course.id} href={`/user/courses/${course.id}`} className="flex">
+                  <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex">
                     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
                       <div className="relative w-full h-32">
                         <Image src={course.image} alt={course.title} layout="fill" objectFit="cover" />

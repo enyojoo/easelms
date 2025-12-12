@@ -7,16 +7,16 @@ export function middleware(request: NextRequest) {
   // This middleware is only for the LMS app (app folder)
   // The website folder has its own deployment and doesn't need this middleware
   
-  // If accessing root, redirect to user login
+  // If accessing root, redirect to learner login
   if (url.pathname === "/") {
-    url.pathname = "/auth/user/login"
+    url.pathname = "/auth/learner/login"
     return NextResponse.redirect(url)
   }
 
-  // Allow access to auth routes, user routes, admin routes, and shared routes
+  // Allow access to auth routes, learner routes, admin routes, and shared routes
   const allowedPaths = [
     "/auth",
-    "/user",
+    "/learner",
     "/admin",
     "/forgot-password",
     "/logout",
@@ -26,8 +26,8 @@ export function middleware(request: NextRequest) {
   const isAllowed = allowedPaths.some((path) => url.pathname.startsWith(path))
 
   if (!isAllowed && url.pathname !== "/") {
-    // Redirect unknown routes to user login
-    url.pathname = "/auth/user/login"
+    // Redirect unknown routes to learner login
+    url.pathname = "/auth/learner/login"
     return NextResponse.redirect(url)
   }
 

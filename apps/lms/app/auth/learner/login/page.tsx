@@ -57,7 +57,7 @@ export default function UserLoginPage() {
       document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
 
       // Redirect to the user dashboard
-      router.push("/user/dashboard")
+      router.push("/learner/dashboard")
     } else {
       // Handle login error
       alert("Invalid email or password")
@@ -119,7 +119,7 @@ export default function UserLoginPage() {
               </Button>
               <div className="text-center text-sm">
                 Don't have an account?{" "}
-                <Link href="/auth/user/signup" className="text-primary hover:underline">
+                <Link href="/auth/learner/signup" className="text-primary hover:underline">
                   Sign up
                 </Link>
               </div>

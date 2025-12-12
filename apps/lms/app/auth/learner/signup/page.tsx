@@ -22,7 +22,7 @@ export default function UserSignUpPage() {
     // In a real app, you would send this data to your backend to create a new user
     console.log("Sign up:", { name, email, password })
     // For now, we'll just redirect to the user dashboard
-    router.push("/user/dashboard")
+    router.push("/learner/dashboard")
   }
 
   const handleGoogleSignUp = () => {
@@ -85,7 +85,7 @@ export default function UserSignUpPage() {
               </Button>
               <div className="text-center text-sm">
                 Already have an account?{" "}
-                <Link href="/auth/user/login" className="text-primary hover:underline">
+                <Link href="/auth/learner/login" className="text-primary hover:underline">
                   Log in
                 </Link>
               </div>

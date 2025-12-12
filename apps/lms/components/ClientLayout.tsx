@@ -34,8 +34,8 @@ export default function ClientLayout({
 
   // Check if current path is an auth page
   const isAuthPage = [
-    "/auth/user/login",
-    "/auth/user/signup",
+    "/auth/learner/login",
+    "/auth/learner/signup",
     "/auth/admin/login",
     "/forgot-password",
     "/forgot-password/code",
