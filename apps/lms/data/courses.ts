@@ -391,7 +391,7 @@ export const modules: Module[] = [
     id: 19,
     title: "Basic Certificate Course - Enthronement Bible Institute",
     description: "Foundational biblical studies and theological training for those beginning their journey in biblical education.",
-    image: "https://images.pexels.com/photos/159832/book-reading-glasses-literature-159832.jpeg?auto=compress&cs=tinysrgb&w=800",
+    image: "https://images.pexels.com/photos/256417/pexels-photo-256417.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Introduction to Biblical Studies" },
       { title: "Old Testament Survey" },
