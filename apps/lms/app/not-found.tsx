@@ -1,7 +1,9 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Home, Search } from "lucide-react"
+import { Home, ArrowLeft } from "lucide-react"
 
 export default function NotFound() {
   return (
@@ -23,7 +25,7 @@ export default function NotFound() {
               </Link>
             </Button>
             <Button variant="outline" onClick={() => window.history.back()}>
-              <Search className="mr-2 h-4 w-4" />
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Go Back
             </Button>
           </div>
