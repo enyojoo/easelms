@@ -1,13 +1,22 @@
 import Flutterwave from "flutterwave-node-v3"
 
-if (!process.env.FLUTTERWAVE_SECRET_KEY) {
-  throw new Error("FLUTTERWAVE_SECRET_KEY is not set")
-}
+let flw: Flutterwave | null = null
 
-const flw = new Flutterwave(
-  process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY!,
-  process.env.FLUTTERWAVE_SECRET_KEY
-)
+function getFlutterwaveClient(): Flutterwave {
+  if (!flw) {
+    if (!process.env.FLUTTERWAVE_SECRET_KEY) {
+      throw new Error("FLUTTERWAVE_SECRET_KEY is not set")
+    }
+    if (!process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY) {
+      throw new Error("NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY is not set")
+    }
+    flw = new Flutterwave(
+      process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY,
+      process.env.FLUTTERWAVE_SECRET_KEY
+    )
+  }
+  return flw
+}
 
 export async function initializePayment(data: {
   amount: number
@@ -17,10 +26,12 @@ export async function initializePayment(data: {
   callback_url: string
   metadata?: Record<string, any>
 }) {
-  return await flw.Payment.initialize(data)
+  const client = getFlutterwaveClient()
+  return await client.Payment.initialize(data)
 }
 
 export async function verifyTransaction(transactionId: string) {
-  return await flw.Transaction.verify({ id: transactionId })
+  const client = getFlutterwaveClient()
+  return await client.Transaction.verify({ id: transactionId })
 }
 
