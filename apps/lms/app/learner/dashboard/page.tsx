@@ -43,16 +43,53 @@ export default function LearnerDashboard() {
     })
     .filter((course): course is { id: number; title: string; progress: number } => course !== null)
 
-  // Get recommended courses (courses not enrolled in, limited to 4)
-  const enrolledCourseIds = new Set(user.enrolledCourses || [])
-  const recommendedCourses = modules
-    .filter((course) => !enrolledCourseIds.has(course.id))
-    .slice(0, 4)
-    .map((course) => ({
-      id: course.id,
-      title: course.title,
-      image: course.image,
-    }))
+  // Get completed courses count
+  const completedCoursesCount = (user.completedCourses || []).length
+
+  // Get courses in progress (enrolled but not completed)
+  const coursesInProgress = enrolledCourses.filter(
+    (course) => !(user.completedCourses || []).includes(course.id)
+  )
+
+  // Get recommended courses with random selection that changes every 12 hours
+  const getRecommendedCourses = () => {
+    const enrolledCourseIds = new Set(user.enrolledCourses || [])
+    const availableCourses = modules.filter((course) => !enrolledCourseIds.has(course.id))
+
+    if (availableCourses.length === 0) return []
+
+    // Generate a seed based on the current 12-hour period
+    // This ensures the same courses are shown for 12 hours, then change
+    const now = new Date()
+    const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60))
+    const twelveHourPeriod = Math.floor(hoursSinceEpoch / 12)
+    
+    // Seeded random number generator (Linear Congruential Generator)
+    let seed = twelveHourPeriod
+    const seededRandom = () => {
+      seed = (seed * 9301 + 49297) % 233280
+      return seed / 233280
+    }
+
+    // Create array with indices and shuffle using seeded random
+    const indices = availableCourses.map((_, i) => i)
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(seededRandom() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]]
+    }
+
+    // Take first 4 courses based on shuffled indices
+    return indices.slice(0, 4).map((idx) => {
+      const course = availableCourses[idx]
+      return {
+        id: course.id,
+        title: course.title,
+        image: course.image,
+      }
+    })
+  }
+
+  const recommendedCourses = getRecommendedCourses()
 
   const firstName = user.name?.split(" ")[0] || user.name || "there"
 
@@ -74,7 +111,7 @@ export default function LearnerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{enrolledCourses.length}</p>
+              <p className="text-3xl font-bold">{coursesInProgress.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -84,7 +121,7 @@ export default function LearnerDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{user.completedCourses?.length || 0}</p>
+              <p className="text-3xl font-bold">{completedCoursesCount}</p>
             </CardContent>
           </Card>
         </div>
@@ -95,15 +132,15 @@ export default function LearnerDashboard() {
               <CardTitle>Continue Learning</CardTitle>
             </CardHeader>
             <CardContent>
-              {enrolledCourses.length > 0 ? (
-                enrolledCourses.map((course) => (
+              {coursesInProgress.length > 0 ? (
+                coursesInProgress.map((course) => (
                   <div key={course.id} className="mb-4">
                     <h3 className="font-semibold mb-2">{course.title}</h3>
                     <div className="flex items-center">
                       <Progress value={course.progress} className="flex-grow mr-4" />
                       <span className="text-sm font-medium">{course.progress}%</span>
                     </div>
-                    <Link href={`/learner/courses/${course.id}`}>
+                    <Link href={`/learner/courses/${course.id}/learn`}>
                       <Button variant="link" className="mt-2 p-0">
                         Continue <ChevronRight className="ml-1 h-4 w-4" />
                       </Button>

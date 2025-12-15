@@ -32,7 +32,7 @@ function NewCourseContent() {
       requiresSequentialProgress: boolean
       minimumQuizScore: number
       enrollment: {
-        enrollmentMode: "open" | "free" | "buy" | "recurring" | "closed"
+        enrollmentMode: "free" | "buy" | "recurring"
         price?: number
         recurringPrice?: number
       }

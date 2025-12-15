@@ -5,7 +5,8 @@ import Link from "next/link"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { BookOpen, Clock, Users, Banknote, Eye, Play } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { BookOpen, Clock, Banknote, Eye, Play } from "lucide-react"
 import type { Module } from "@/data/courses"
 
 interface CourseCardProps {
@@ -133,6 +134,38 @@ export default function CourseCard({
 
   const mainLink = getMainLink()
 
+  // Get course type badge
+  const getCourseTypeBadge = () => {
+    if (actualStatus === "enrolled" || actualStatus === "completed") {
+      return null // Don't show badge for enrolled/completed courses
+    }
+
+    const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
+    
+    switch (enrollmentMode) {
+      case "free":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            Free
+          </Badge>
+        )
+      case "buy":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            Paid
+          </Badge>
+        )
+      case "recurring":
+        return (
+          <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+            Subscription
+          </Badge>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <Card className={`flex flex-col h-full ${className || ""}`}>
       <CardHeader className="p-6">
@@ -144,6 +177,10 @@ export default function CourseCard({
               fill
               className="object-cover"
             />
+            {/* Course Type Badge */}
+            <div className="absolute top-2 right-2">
+              {getCourseTypeBadge()}
+            </div>
           </div>
         </Link>
         <Link href={mainLink} className="block">
@@ -161,15 +198,25 @@ export default function CourseCard({
             <span>4 hours</span>
           </div>
           <div className="flex items-center">
-            <Users className="w-4 h-4 mr-1" />
-            <span>{course.enrolledStudents || 0} learners</span>
-          </div>
-          <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />
             <span>
-              {course.settings?.enrollment?.price || course.price
-                ? `$${course.settings?.enrollment?.price || course.price}`
-                : "Free"}
+              {(() => {
+                const enrollmentMode = course.settings?.enrollment?.enrollmentMode
+                const price = course.settings?.enrollment?.price || course.price
+                const recurringPrice = course.settings?.enrollment?.recurringPrice
+                
+                if (enrollmentMode === "recurring" && recurringPrice) {
+                  return `$${recurringPrice}/mo`
+                } else if (enrollmentMode === "buy" && price) {
+                  return `$${price}`
+                } else if (enrollmentMode === "free") {
+                  return "Free"
+                } else if (price) {
+                  return `$${price}`
+                } else {
+                  return "Free"
+                }
+              })()}
             </span>
           </div>
         </div>

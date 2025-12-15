@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { BookOpen, Edit, Trash2, Eye, Clock, Users, Banknote, Filter, Loader2 } from "lucide-react"
+import { BookOpen, Edit, Trash2, Eye, Clock, Banknote, Filter, Loader2 } from "lucide-react"
 import { getClientAuthState } from "@/utils/client-auth"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
@@ -98,12 +98,26 @@ export default function ManageCoursesPage() {
             <span>4 hours</span>
           </div>
           <div className="flex items-center">
-            <Users className="w-4 h-4 mr-1" />
-            <span>{course.enrolledStudents || 0} learners</span>
-          </div>
-          <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />
-            <span>{course.price ? `$${course.price}` : "Free"}</span>
+            <span>
+              {(() => {
+                const enrollmentMode = course.settings?.enrollment?.enrollmentMode
+                const price = course.settings?.enrollment?.price || course.price
+                const recurringPrice = course.settings?.enrollment?.recurringPrice
+                
+                if (enrollmentMode === "recurring" && recurringPrice) {
+                  return `$${recurringPrice}/mo`
+                } else if (enrollmentMode === "buy" && price) {
+                  return `$${price}`
+                } else if (enrollmentMode === "free") {
+                  return "Free"
+                } else if (price) {
+                  return `$${price}`
+                } else {
+                  return "Free"
+                }
+              })()}
+            </span>
           </div>
         </div>
       </CardHeader>

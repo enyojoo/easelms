@@ -85,6 +85,11 @@ export const modules: Module[] = [
       { title: "Living Authentically" },
     ],
     enrolledStudents: 1245,
+    settings: {
+      enrollment: {
+        enrollmentMode: "free",
+      },
+    },
   },
   {
     id: 2,
@@ -102,6 +107,12 @@ export const modules: Module[] = [
       { title: "Growing Together Through Challenges" },
     ],
     enrolledStudents: 1890,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 49,
+      },
+    },
   },
   {
     id: 3,
@@ -119,6 +130,12 @@ export const modules: Module[] = [
       { title: "Preparing for Life Together" },
     ],
     enrolledStudents: 1567,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 39,
+      },
+    },
   },
   {
     id: 4,
@@ -136,6 +153,11 @@ export const modules: Module[] = [
       { title: "Advanced Presentation Techniques" },
     ],
     enrolledStudents: 2134,
+    settings: {
+      enrollment: {
+        enrollmentMode: "free",
+      },
+    },
   },
   {
     id: 5,
@@ -153,6 +175,12 @@ export const modules: Module[] = [
       { title: "Legacy and Generational Impact" },
     ],
     enrolledStudents: 1789,
+    settings: {
+      enrollment: {
+        enrollmentMode: "recurring",
+        recurringPrice: 29,
+      },
+    },
   },
   {
     id: 6,
@@ -171,6 +199,10 @@ export const modules: Module[] = [
     ],
     enrolledStudents: 892,
     settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 199,
+      },
       certificate: {
         certificateEnabled: true,
         certificateType: "completion",
@@ -194,6 +226,10 @@ export const modules: Module[] = [
     ],
     enrolledStudents: 456,
     settings: {
+      enrollment: {
+        enrollmentMode: "recurring",
+        recurringPrice: 39,
+      },
       certificate: {
         certificateEnabled: true,
         certificateType: "completion",
@@ -216,6 +252,12 @@ export const modules: Module[] = [
       { title: "Building Prophetic Character" },
     ],
     enrolledStudents: 723,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 79,
+      },
+    },
   },
   {
     id: 9,
@@ -233,6 +275,11 @@ export const modules: Module[] = [
       { title: "Sustaining Long-Term Impact" },
     ],
     enrolledStudents: 567,
+    settings: {
+      enrollment: {
+        enrollmentMode: "free",
+      },
+    },
   },
   {
     id: 10,
@@ -250,6 +297,12 @@ export const modules: Module[] = [
       { title: "Walking in Obedience" },
     ],
     enrolledStudents: 1456,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 59,
+      },
+    },
   },
   {
     id: 11,
@@ -267,6 +320,12 @@ export const modules: Module[] = [
       { title: "Developing Your EQ" },
     ],
     enrolledStudents: 1123,
+    settings: {
+      enrollment: {
+        enrollmentMode: "recurring",
+        recurringPrice: 19,
+      },
+    },
   },
   {
     id: 12,
@@ -284,6 +343,12 @@ export const modules: Module[] = [
       { title: "Thriving in Transition" },
     ],
     enrolledStudents: 789,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 89,
+      },
+    },
   },
   {
     id: 13,
@@ -301,6 +366,11 @@ export const modules: Module[] = [
       { title: "Marketing Your Book" },
     ],
     enrolledStudents: 634,
+    settings: {
+      enrollment: {
+        enrollmentMode: "free",
+      },
+    },
   },
   {
     id: 14,
@@ -318,6 +388,12 @@ export const modules: Module[] = [
       { title: "Living Without Limits" },
     ],
     enrolledStudents: 987,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 69,
+      },
+    },
   },
   {
     id: 15,
@@ -335,6 +411,12 @@ export const modules: Module[] = [
       { title: "Creating Your Leadership Legacy" },
     ],
     enrolledStudents: 1234,
+    settings: {
+      enrollment: {
+        enrollmentMode: "recurring",
+        recurringPrice: 24,
+      },
+    },
   },
   {
     id: 16,
@@ -352,6 +434,12 @@ export const modules: Module[] = [
       { title: "Planning for Future Generations" },
     ],
     enrolledStudents: 678,
+    settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 99,
+      },
+    },
   },
   {
     id: 17,
@@ -386,6 +474,11 @@ export const modules: Module[] = [
       { title: "Creating Your Personal Development Plan" },
     ],
     enrolledStudents: 2345,
+    settings: {
+      enrollment: {
+        enrollmentMode: "free",
+      },
+    },
   },
   {
     id: 19,
@@ -404,6 +497,10 @@ export const modules: Module[] = [
     ],
     enrolledStudents: 567,
     settings: {
+      enrollment: {
+        enrollmentMode: "buy",
+        price: 149,
+      },
       certificate: {
         certificateEnabled: true,
         certificateType: "completion",
@@ -427,6 +524,10 @@ export const modules: Module[] = [
     ],
     enrolledStudents: 234,
     settings: {
+      enrollment: {
+        enrollmentMode: "recurring",
+        recurringPrice: 49,
+      },
       certificate: {
         certificateEnabled: true,
         certificateType: "completion",

@@ -5,7 +5,7 @@ import { notFound, useParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
+import { PlayCircle, FileText, Award, Clock, Globe, Link } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
 import { modules } from "@/data/courses"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -99,8 +99,6 @@ export default function InstructorCoursePreviewPage() {
                   <span>{module.lessons.length} lessons</span>
                   <span>•</span>
                   <span>4 hours</span>
-                  <span>•</span>
-                  <span>{module.enrolledStudents || 0} students</span>
                 </div>
               </div>
             </CardContent>
@@ -242,10 +240,6 @@ export default function InstructorCoursePreviewPage() {
                 <div className="flex items-center">
                   <Award className="w-5 h-5 mr-2 text-primary" />
                   <span>Certificate of completion</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="w-5 h-5 mr-2 text-primary" />
-                  <span>{module.enrolledStudents || 0} learners enrolled</span>
                 </div>
               </div>
             </CardContent>
