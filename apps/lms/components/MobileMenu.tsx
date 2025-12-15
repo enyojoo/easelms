@@ -10,7 +10,6 @@ import {
   BarChart,
   Users,
   User,
-  Award,
   HelpCircle,
   Settings,
   LogOut,
@@ -50,7 +49,6 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
   const sidebarItems = {
     user: [
       { href: "/learner/profile", label: "Profile", icon: User },
-      { href: "/learner/achievements", label: "Achievements", icon: Award },
       { href: "/support", label: "Support", icon: HelpCircle },
       { href: "/learner/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },

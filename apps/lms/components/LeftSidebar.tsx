@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import {
   Home,
   BookOpen,
-  Award,
   HelpCircle,
   Users,
   BarChart,
@@ -29,7 +28,6 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
     user: [
       { href: "/learner/dashboard", icon: Home, label: "Dashboard" },
       { href: "/learner/courses", icon: BookOpen, label: "Courses" },
-      { href: "/learner/achievements", icon: Award, label: "Achievements" },
       { href: "/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
