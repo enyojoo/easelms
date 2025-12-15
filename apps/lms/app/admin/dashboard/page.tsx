@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings, FileText } from "lucide-react"
+import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings } from "lucide-react"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import Link from "next/link"
