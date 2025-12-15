@@ -82,11 +82,11 @@ export default function CoursePage() {
     notFound()
   }
 
-  // Find the instructor (assuming it's the first instructor user)
-  const instructor = users.find((user) => user.email === "admin@example.com")
-
-  if (!instructor) {
-    return <div>Instructor not found</div>
+  // Instructor information
+  const instructor = {
+    name: "Dr Ifeoma Eze",
+    bio: "I use my voice in reaching the voiceless and passionately share God's transformative word with those seeking to discover their purpose in life and launch them into their destiny​​",
+    profileImage: "/placeholder-user.jpg",
   }
 
   // Determine course access type based on module ID (simulating different course types)
@@ -223,39 +223,32 @@ export default function CoursePage() {
 
           <Card className="mb-4">
             <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
-              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                <li>No prior business knowledge required</li>
-                <li>Basic computer skills</li>
-                <li>Enthusiasm to learn and apply new concepts</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Description</h2>
-              <p className="text-muted-foreground mb-4">
-                This Mini-MBA for Teens module on {module.title} is designed to give young entrepreneurs a comprehensive
-                understanding of key business concepts. Through engaging lessons and practical exercises, students will
-                develop skills that are crucial in today's fast-paced business world.
-              </p>
-              <p className="text-muted-foreground mb-4">
-                Whether you're interested in starting your own business, improving your financial literacy, or
-                developing essential communication skills, this course provides the foundation you need to succeed.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardContent className="p-6">
               <h2 className="text-2xl font-bold mb-4 text-primary">Who this course is for:</h2>
-              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                <li>Teens interested in entrepreneurship and business</li>
-                <li>Young adults looking to develop practical business skills</li>
-                <li>Students who want to get a head start in their business education</li>
-                <li>Anyone between 13-19 years old with a passion for learning</li>
-              </ul>
+              {module.whoIsThisFor ? (
+                <p className="text-muted-foreground leading-relaxed">{module.whoIsThisFor}</p>
+              ) : (
+                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                  <li>Individuals seeking personal and spiritual growth</li>
+                  <li>Those looking to discover their purpose and calling</li>
+                  <li>Anyone desiring to deepen their relationship with God</li>
+                  <li>People ready to transform their lives and impact others</li>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mb-4">
+            <CardContent className="p-6">
+              <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
+              {module.requirements ? (
+                <p className="text-muted-foreground leading-relaxed">{module.requirements}</p>
+              ) : (
+                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                  <li>Open heart and willingness to learn</li>
+                  <li>Desire for personal and spiritual growth</li>
+                  <li>Commitment to complete the course materials</li>
+                </ul>
+              )}
             </CardContent>
           </Card>
 
@@ -263,12 +256,7 @@ export default function CoursePage() {
           <InstructorCard
             name={instructor.name}
             image={instructor.profileImage}
-            bio="Passionate educator with over 10 years of experience in teaching business and entrepreneurship to young minds. Specializing in practical, hands-on learning experiences that prepare students for the real world of business."
-            website={instructor.website}
-            twitter={instructor.twitter}
-            linkedin={instructor.linkedin}
-            youtube={instructor.youtube}
-            instagram={instructor.instagram}
+            bio={instructor.bio}
             className="mb-4"
           />
 
