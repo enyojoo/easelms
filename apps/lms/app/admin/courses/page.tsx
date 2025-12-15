@@ -106,7 +106,7 @@ export default function ManageCoursesPage() {
                 const recurringPrice = course.settings?.enrollment?.recurringPrice
                 
                 if (enrollmentMode === "recurring" && recurringPrice) {
-                  return `$${recurringPrice}/mo`
+                  return `$${recurringPrice}`
                 } else if (enrollmentMode === "buy" && price) {
                   return `$${price}`
                 } else if (enrollmentMode === "free") {

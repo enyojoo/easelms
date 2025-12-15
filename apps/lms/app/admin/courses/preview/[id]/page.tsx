@@ -51,7 +51,7 @@ export default function InstructorCoursePreviewPage() {
         }
       case "subscribe":
         return {
-          price: "$20/mo",
+          price: "$20",
           buttonText: "Subscribe",
           access: "Access while subscribed",
         }

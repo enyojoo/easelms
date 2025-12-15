@@ -101,7 +101,7 @@ export default function CourseCard({
               {previewButton}
               <Button asChild className="flex-1">
                 <Link href={`/learner/courses/${course.id}`}>
-                  Subscribe for ${recurringPrice || coursePrice}/mo
+                  Subscribe for ${recurringPrice || coursePrice}/month
                 </Link>
               </Button>
             </>
@@ -206,7 +206,7 @@ export default function CourseCard({
                 const recurringPrice = course.settings?.enrollment?.recurringPrice
                 
                 if (enrollmentMode === "recurring" && recurringPrice) {
-                  return `$${recurringPrice}/mo`
+                  return `$${recurringPrice}`
                 } else if (enrollmentMode === "buy" && price) {
                   return `$${price}`
                 } else if (enrollmentMode === "free") {

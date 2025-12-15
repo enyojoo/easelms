@@ -175,7 +175,6 @@ export default function CoursesPage() {
                   enrolledCourseIds={enrolledCourseIds}
                   completedCourseIds={completedCourseIds}
                   userProgress={user.progress || {}}
-                  courseImage={courseImages[course.title]}
                 />
               ))}
             </div>
@@ -195,7 +194,6 @@ export default function CoursesPage() {
                   enrolledCourseIds={enrolledCourseIds}
                   completedCourseIds={completedCourseIds}
                   userProgress={user.progress || {}}
-                  courseImage={courseImages[course.title]}
                 />
               ))}
             </div>
