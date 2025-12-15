@@ -7,7 +7,6 @@ import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import Link from "next/link"
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts"
 
 // Mock data for recent activity
 const mockRecentActivity = [
@@ -18,34 +17,6 @@ const mockRecentActivity = [
   { id: 5, type: "completion", user: "David Lee", course: "Basic Money Management", time: "2 days ago" },
 ]
 
-// Mock revenue data for last 7 days
-const revenueData = [
-  { date: "Mon", revenue: 1200 },
-  { date: "Tue", revenue: 1900 },
-  { date: "Wed", revenue: 3000 },
-  { date: "Thu", revenue: 2500 },
-  { date: "Fri", revenue: 3200 },
-  { date: "Sat", revenue: 2800 },
-  { date: "Sun", revenue: 3500 },
-]
-
-// Mock learners growth data for last 6 months
-const learnersGrowthData = [
-  { month: "Jan", learners: 1200 },
-  { month: "Feb", learners: 1350 },
-  { month: "Mar", learners: 1500 },
-  { month: "Apr", learners: 1650 },
-  { month: "May", learners: 1800 },
-  { month: "Jun", learners: 2350 },
-]
-
-// Mock course enrollment data
-const courseEnrollmentData = [
-  { course: "Digital Marketing", enrollments: 1250 },
-  { course: "Startup Fundamentals", enrollments: 980 },
-  { course: "Money Management", enrollments: 550 },
-  { course: "Public Speaking", enrollments: 720 },
-]
 
 export default function InstructorDashboard() {
   const [user, setUser] = useState<User | null>(null)
@@ -106,51 +77,14 @@ export default function InstructorDashboard() {
         </Card>
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue (Last 7 Days)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Area type="monotone" dataKey="revenue" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Learners Growth (Last 6 Months)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={learnersGrowthData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="learners" stroke="#82ca9d" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions and Course Enrollment Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Quick Actions */}
+      <div className="mb-8">
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Link href="/admin/courses/new">
                 <Button className="h-auto py-4 flex flex-col items-center w-full" variant="outline">
                   <PlusCircle className="mb-2 h-5 w-5" />
@@ -178,27 +112,10 @@ export default function InstructorDashboard() {
             </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Enrollments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={courseEnrollmentData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="course" angle={-45} textAnchor="end" height={80} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="enrollments" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Recent Activity and Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* Recent Activity */}
+      <div className="mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -229,49 +146,6 @@ export default function InstructorDashboard() {
             </div>
           </CardContent>
         </Card>
-
-        <div className="grid grid-cols-1 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Course Completion Rate</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold mb-2">78.5%</div>
-              <p className="text-sm text-muted-foreground">
-                <TrendingUp className="h-4 w-4 text-green-500 inline mr-1" />
-                +5.1% from last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Countries</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">United States</span>
-                  <span className="text-sm font-semibold">1,200 learners</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">India</span>
-                  <span className="text-sm font-semibold">850 learners</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">United Kingdom</span>
-                  <span className="text-sm font-semibold">620 learners</span>
-                </div>
-              </div>
-              <Link href="/admin/reports">
-                <Button variant="outline" className="w-full mt-4">
-                  <FileText className="mr-2 h-4 w-4" />
-                  View Detailed Report
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </div>
   )
