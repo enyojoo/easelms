@@ -76,30 +76,15 @@ export default function ManageCoursesPage() {
     return matchesSearch && matchesStatus && matchesPrice
   })
 
-  const courseImages: Record<string, string> = {
-    "Digital Marketing & Social Media":
-      "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1474&q=80",
-    "Startup Fundamentals":
-      "https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    "Basic Money Management":
-      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1511&q=80",
-    "Public Speaking & Communication":
-      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    "Building Side Hustles":
-      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-    "Tech Skills (No-code, AI Basics)":
-      "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-  }
-
   const renderCourseCard = (course: typeof modules[0]) => (
     <Card key={course.id} className="flex flex-col h-full">
       <CardHeader className="p-6">
         <div className="aspect-video relative rounded-md overflow-hidden mb-4">
           <Image
-            src={courseImages[course.title] || "/placeholder.svg?height=200&width=300"}
+            src={course.image || "/placeholder.svg?height=200&width=300"}
             alt={course.title}
-            layout="fill"
-            objectFit="cover"
+            fill
+            className="object-cover"
           />
         </div>
         <CardTitle className="text-lg mb-2">{course.title}</CardTitle>
