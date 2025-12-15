@@ -11,15 +11,15 @@ export default function Logo({ className = "" }: LogoProps) {
       <Image
         src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk.svg"
         alt="Enthronement University Logo"
-        width={120}
-        height={40}
+        width={180}
+        height={60}
         className={`${className} object-contain block dark:hidden`}
       />
       <Image
         src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20wh.svg"
         alt="Enthronement University Logo"
-        width={120}
-        height={40}
+        width={180}
+        height={60}
         className={`${className} object-contain hidden dark:block`}
       />
     </Link>
