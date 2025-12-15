@@ -177,7 +177,6 @@ export default function LearnersPage() {
                   <TableHead>Learner</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Enrolled Courses</TableHead>
-                  <TableHead>Progress</TableHead>
                   <TableHead>Completed</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -185,7 +184,7 @@ export default function LearnersPage() {
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No learners found
                     </TableCell>
                   </TableRow>
@@ -220,32 +219,6 @@ export default function LearnersPage() {
                             ))
                           ) : (
                             <span className="text-sm text-muted-foreground">No courses</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {user.enrolledCourses.length > 0 ? (
-                            user.enrolledCourses.map((courseId) => {
-                              const progress = user.progress[courseId] || 0
-                              return (
-                                <div key={courseId} className="flex items-center gap-2">
-                                  <div className="flex-1 min-w-[60px]">
-                                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                                      <div
-                                        className="h-full bg-primary transition-all"
-                                        style={{ width: `${progress}%` }}
-                                      />
-                                    </div>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground w-10 text-right">
-                                    {progress}%
-                                  </span>
-                                </div>
-                              )
-                            })
-                          ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
                           )}
                         </div>
                       </TableCell>
