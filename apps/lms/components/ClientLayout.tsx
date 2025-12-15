@@ -17,20 +17,26 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname()
   
-  // Initialize auth state synchronously on client side using function initializer
-  const [authState, setAuthState] = useState(() => {
-    if (typeof window !== "undefined") {
-      return getClientAuthState()
-    }
-    return { isLoggedIn: false }
+  // Initialize auth state - start with false to match server render
+  const [authState, setAuthState] = useState<{ isLoggedIn: boolean; userType?: string; user?: any }>({
+    isLoggedIn: false,
   })
+  const [mounted, setMounted] = useState(false)
 
-  // Update auth state when pathname changes (in case user logs in/out or navigates)
+  // Only check auth state on client after mount to avoid hydration mismatch
   useEffect(() => {
+    setMounted(true)
     if (typeof window !== "undefined") {
       setAuthState(getClientAuthState())
     }
-  }, [pathname])
+  }, [])
+
+  // Update auth state when pathname changes (in case user logs in/out or navigates)
+  useEffect(() => {
+    if (mounted && typeof window !== "undefined") {
+      setAuthState(getClientAuthState())
+    }
+  }, [pathname, mounted])
 
   // Check if current path is an auth page
   const isAuthPage = [
@@ -43,6 +49,16 @@ export default function ClientLayout({
   ].includes(pathname) || pathname.startsWith("/auth/")
 
   const { isLoggedIn, userType, user } = authState
+
+  // During SSR and initial render, show children without layout to avoid hydration mismatch
+  // After mount, show the proper layout based on auth state
+  if (!mounted) {
+    return (
+      <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
+        <PageTransition>{children}</PageTransition>
+      </ThemeProvider>
+    )
+  }
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">

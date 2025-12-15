@@ -23,6 +23,27 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.className} bg-background text-text-primary`}>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                const storageKey = 'enthronement-university-theme';
+                const theme = localStorage.getItem(storageKey) || 'dark';
+                let rootClass = '';
+                
+                if (theme === 'system') {
+                  rootClass = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                } else {
+                  rootClass = theme;
+                }
+                
+                if (rootClass) {
+                  document.documentElement.classList.add(rootClass);
+                }
+              })();
+            `,
+          }}
+        />
         <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
