@@ -9,14 +9,14 @@ export default function Logo({ className = "" }: LogoProps) {
   return (
     <Link href="/">
       <Image
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Easner%20Logobk-o4FCA9xAbfVjAP0quynvrpsHMrcMsl.svg"
+        src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20B.svg"
         alt="Enthronement University Logo"
         width={120}
         height={40}
         className={`${className} object-contain block dark:hidden`}
       />
       <Image
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Easner%20LogoWh-hTyWcV5fCe3avnPjPxvyKz5ovra975.svg"
+        src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20W.svg"
         alt="Enthronement University Logo"
         width={120}
         height={40}
