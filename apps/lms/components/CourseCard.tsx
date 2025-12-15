@@ -80,7 +80,7 @@ export default function CourseCard({
             <>
               {previewButton}
               <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>Start Free Course</Link>
+                <Link href={`/learner/courses/${course.id}`}>Start</Link>
               </Button>
             </>
           )
@@ -89,9 +89,7 @@ export default function CourseCard({
             <>
               {previewButton}
               <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>
-                  Buy for ${coursePrice}
-                </Link>
+                <Link href={`/learner/courses/${course.id}`}>Buy</Link>
               </Button>
             </>
           )
@@ -100,9 +98,7 @@ export default function CourseCard({
             <>
               {previewButton}
               <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>
-                  Subscribe for ${recurringPrice || coursePrice}/month
-                </Link>
+                <Link href={`/learner/courses/${course.id}`}>Subscribe</Link>
               </Button>
             </>
           )
