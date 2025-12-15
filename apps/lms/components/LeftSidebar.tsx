@@ -58,7 +58,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
   return (
     <div className="w-64 h-screen py-4 flex flex-col fixed left-0 top-0 bg-background-element border-r border-border hidden lg:flex">
       <div className="mb-8 px-6">
-        <Logo className="w-24" />
+        <Logo className="w-44" />
       </div>
       <nav className="flex-grow px-2">
         {currentMenu.map((item) => {
@@ -120,8 +120,13 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
             </Link>
           )
         })}
-        <div className="mt-4 flex justify-center mb-5">
+        <div className="mt-4 flex justify-center mb-4">
           <ThemeToggle />
+        </div>
+        <div className="px-4 pb-4">
+          <p className="text-xs text-muted-foreground text-center">
+            © {new Date().getFullYear()} Enthronement University
+          </p>
         </div>
       </div>
     </div>

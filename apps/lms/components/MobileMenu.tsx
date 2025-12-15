@@ -159,7 +159,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
           </SheetContent>
         </Sheet>
         <div className="flex-1 flex justify-end">
-          <Logo className="w-28" />
+          <Logo className="w-44" />
         </div>
       </header>
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md h-16 px-4 flex items-center justify-around lg:hidden border-t border-border">

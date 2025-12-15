@@ -11,7 +11,7 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Logo className="w-32" />
+          <Logo className="w-44" />
           <div className="flex gap-4">
             <Link href={`${APP_URL}/auth/user/login`}>
               <Button variant="ghost">Login</Button>
