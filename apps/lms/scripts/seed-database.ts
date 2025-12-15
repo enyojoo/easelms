@@ -9,7 +9,6 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { modules } from '../data/courses'
-import { achievements } from '../data/achievements'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -26,28 +25,6 @@ async function seedDatabase() {
   console.log('Starting database seed...')
 
   try {
-    // Seed achievements
-    console.log('Seeding achievements...')
-    for (const achievement of achievements) {
-      const { error } = await supabase
-        .from('achievements')
-        .upsert({
-          id: achievement.id,
-          title: achievement.title,
-          description: achievement.description,
-          icon: achievement.icon,
-          category: achievement.category,
-          points: achievement.points,
-          rarity: achievement.rarity,
-        })
-
-      if (error) {
-        console.error(`Error seeding achievement ${achievement.title}:`, error)
-      } else {
-        console.log(`✓ Seeded achievement: ${achievement.title}`)
-      }
-    }
-
     // Note: Courses and other data should be created through the application
     // as they require proper user authentication and relationships
 

@@ -14,7 +14,7 @@ export const metadata = {
   description: "A modern, easy-to-use Learning Management System for creating and managing courses and educational content.",
   generator: "Next.js",
   icons: {
-    icon: "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Favicon.svg",
+    icon: "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Faviconn.svg",
   },
 }
 

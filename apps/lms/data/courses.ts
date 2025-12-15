@@ -50,7 +50,7 @@ export interface Module {
       signatureImage?: string // Supabase Storage URL
       signatureTitle?: string
       additionalText?: string
-      certificateType?: "completion" | "achievement" | "participation"
+      certificateType?: "completion" | "participation"
     }
     currency?: string
   }

@@ -43,7 +43,7 @@ function NewCourseContent() {
         signatureImage: string
         signatureTitle: string
         additionalText: string
-        certificateType: "completion" | "achievement" | "participation"
+        certificateType: "completion" | "participation"
       }
       currency: string
     }

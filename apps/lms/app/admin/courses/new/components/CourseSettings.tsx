@@ -23,7 +23,7 @@ interface CourseSettingsProps {
       signatureImage: string
       signatureTitle?: string
       additionalText?: string
-      certificateType: "completion" | "achievement" | "participation"
+      certificateType: "completion" | "participation"
     }
   }
   onUpdate: (settings: any) => void

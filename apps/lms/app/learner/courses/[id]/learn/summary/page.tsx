@@ -56,11 +56,6 @@ const mockQuizResults = {
   },
 }
 
-const mockAchievements = [
-  { id: 1, name: "Course Completed", description: "You've completed the entire course!" },
-  { id: 2, name: "Quiz Master", description: "You've scored over 90% on all quizzes" },
-  { id: 3, name: "Speedy Learner", description: "You've completed the course in record time" },
-]
 
 export default function CourseCompletionPage() {
   const router = useRouter()
@@ -68,7 +63,6 @@ export default function CourseCompletionPage() {
   const id = params.id as string
   const [course, setCourse] = useState<any>(null)
   const [quizResults, setQuizResults] = useState<any>(null)
-  const [achievements, setAchievements] = useState<any[]>([])
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
@@ -81,7 +75,6 @@ export default function CourseCompletionPage() {
       if (courseData) {
         setCourse(courseData)
         setQuizResults(mockQuizResults)
-        setAchievements(mockAchievements)
       } else {
         router.push("/learner/courses")
       }
@@ -250,27 +243,6 @@ export default function CourseCompletionPage() {
             </div>
             <div className="mt-6 text-center">
               <span className="text-xl font-semibold">Overall Score: {calculateOverallScore()}%</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Achievements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {achievements.map((achievement) => (
-                <Card key={achievement.id} className="bg-muted">
-                  <CardContent className="p-4 flex items-center space-x-4">
-                    <Award className="h-8 w-8 text-yellow-500" />
-                    <div>
-                      <h3 className="font-semibold">{achievement.name}</h3>
-                      <p className="text-sm text-muted-foreground">{achievement.description}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </CardContent>
         </Card>

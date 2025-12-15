@@ -23,7 +23,6 @@ export interface UserAnalytics {
   totalCoursesCompleted: number
   totalTimeSpent: number // in seconds
   averageProgress: number
-  achievementsEarned: number
   certificatesEarned: number
 }
 
@@ -84,7 +83,6 @@ export const userAnalytics: UserAnalytics[] = [
     totalCoursesCompleted: 0,
     totalTimeSpent: 5100,
     averageProgress: 45.0,
-    achievementsEarned: 2,
     certificatesEarned: 0,
   },
   {
@@ -93,7 +91,6 @@ export const userAnalytics: UserAnalytics[] = [
     totalCoursesCompleted: 1,
     totalTimeSpent: 7200,
     averageProgress: 100.0,
-    achievementsEarned: 2,
     certificatesEarned: 1,
   },
 ]

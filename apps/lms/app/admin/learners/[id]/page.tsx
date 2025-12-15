@@ -16,7 +16,6 @@ import {
   TrendingUp,
   Calendar,
   DollarSign,
-  User,
 } from "lucide-react"
 import { users } from "@/data/users"
 import { modules } from "@/data/courses"
@@ -88,10 +87,6 @@ export default function LearnerDetailsPage() {
                   <span>{learner.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span>ID: {learner.id}</span>
-                </div>
-                <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
                   <span>Currency: {learner.currency}</span>
                 </div>
@@ -102,7 +97,7 @@ export default function LearnerDetailsPage() {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center">
@@ -123,17 +118,6 @@ export default function LearnerDetailsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{learner.completedCourses.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center">
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Achievements
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{learner.achievements.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -163,7 +147,6 @@ export default function LearnerDetailsPage() {
         <TabsList>
           <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
           <TabsTrigger value="progress">Progress</TabsTrigger>
-          <TabsTrigger value="achievements">Achievements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="enrollments" className="space-y-4">
@@ -232,31 +215,6 @@ export default function LearnerDetailsPage() {
                 </div>
               ) : (
                 <p className="text-center py-8 text-muted-foreground">No progress data</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="achievements" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Achievements</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {learner.achievements.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {learner.achievements.map((achievement, index) => (
-                    <div key={index} className="flex items-center gap-3 p-4 border rounded-lg">
-                      <Award className="h-8 w-8 text-yellow-500" />
-                      <div>
-                        <p className="font-semibold">{achievement}</p>
-                        <p className="text-sm text-muted-foreground">Earned achievement</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center py-8 text-muted-foreground">No achievements yet</p>
               )}
             </CardContent>
           </Card>
