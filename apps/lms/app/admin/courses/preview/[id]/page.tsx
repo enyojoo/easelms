@@ -105,7 +105,22 @@ export default function InstructorCoursePreviewPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <p className="text-muted-foreground mb-6 text-gray-600">{module.description}</p>
+          {/* Course Overview Section */}
+          <Card className="mb-4">
+            <CardContent className="p-6">
+              <h2 className="text-2xl font-bold mb-4 text-primary">Course Overview</h2>
+              <p className="text-muted-foreground mb-4 leading-relaxed">{module.description}</p>
+              <div className="flex items-center gap-4 pt-4 border-t">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>{module.lessons.length} lessons</span>
+                  <span>•</span>
+                  <span>4 hours</span>
+                  <span>•</span>
+                  <span>{module.enrolledStudents || 0} students</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="mb-4">
             <CardContent className="p-6">
@@ -120,7 +135,7 @@ export default function InstructorCoursePreviewPage() {
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center">
                           <PlayCircle className="w-5 h-5 mr-2 text-primary" />
-                          <span className="font-small">{lesson.title}</span>
+                          <span className="font-medium">{lesson.title}</span>
                         </div>
                         {/* Time removed */}
                       </div>
@@ -164,39 +179,32 @@ export default function InstructorCoursePreviewPage() {
 
           <Card className="mb-4">
             <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
-              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                <li>No prior business knowledge required</li>
-                <li>Basic computer skills</li>
-                <li>Enthusiasm to learn and apply new concepts</li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Description</h2>
-              <p className="text-muted-foreground mb-4">
-                This Mini-MBA for Teens module on {module.title} is designed to give young entrepreneurs a comprehensive
-                understanding of key business concepts. Through engaging lessons and practical exercises, students will
-                develop skills that are crucial in today's fast-paced business world.
-              </p>
-              <p className="text-muted-foreground mb-4">
-                Whether you're interested in starting your own business, improving your financial literacy, or
-                developing essential communication skills, this course provides the foundation you need to succeed.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="mb-4">
-            <CardContent className="p-6">
               <h2 className="text-2xl font-bold mb-4 text-primary">Who this course is for:</h2>
-              <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                <li>Teens interested in entrepreneurship and business</li>
-                <li>Young adults looking to develop practical business skills</li>
-                <li>Students who want to get a head start in their business education</li>
-                <li>Anyone between 13-19 years old with a passion for learning</li>
-              </ul>
+              {module.whoIsThisFor ? (
+                <p className="text-muted-foreground leading-relaxed">{module.whoIsThisFor}</p>
+              ) : (
+                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                  <li>Individuals seeking personal and spiritual growth</li>
+                  <li>Those looking to discover their purpose and calling</li>
+                  <li>Anyone desiring to deepen their relationship with God</li>
+                  <li>People ready to transform their lives and impact others</li>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mb-4">
+            <CardContent className="p-6">
+              <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
+              {module.requirements ? (
+                <p className="text-muted-foreground leading-relaxed">{module.requirements}</p>
+              ) : (
+                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                  <li>Open heart and willingness to learn</li>
+                  <li>Desire for personal and spiritual growth</li>
+                  <li>Commitment to complete the course materials</li>
+                </ul>
+              )}
             </CardContent>
           </Card>
 
