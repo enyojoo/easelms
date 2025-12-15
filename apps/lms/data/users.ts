@@ -14,14 +14,15 @@ export const users: User[] = [
   },
   {
     id: "2",
-    name: "Jane Smith",
+    name: "Dr Ifeoma Eze",
     email: "admin@example.com",
     userType: "admin",
     enrolledCourses: [],
     progress: {},
     completedCourses: [],
     achievements: ["Course Created"],
-    profileImage: "https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=600",
+    profileImage: "https://www.pastorifeomaeze.com/wp-content/uploads/2020/01/Ifeoma-Eze.jpeg",
+    bio: "I use my voice in reaching the voiceless and passionately share God's transformative word with those seeking to discover their purpose in life and launch them into their destiny​​",
     currency: "USD",
   },
 ]
@@ -43,6 +44,7 @@ export interface User {
   achievements: string[]
   profileImage: string
   currency: string
+  bio?: string
   website?: string
   twitter?: string
   linkedin?: string

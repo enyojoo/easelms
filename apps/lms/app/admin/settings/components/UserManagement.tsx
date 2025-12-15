@@ -31,8 +31,8 @@ export default function UserManagement() {
     },
     { 
       id: "2", 
-      name: "Jane Smith", 
-      email: "jane@example.com", 
+      name: "Dr Ifeoma Eze", 
+      email: "admin@example.com", 
       enrolledCourses: 5,
       completedCourses: 2,
       joinDate: "2024-02-20",

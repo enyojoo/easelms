@@ -8,27 +8,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
 import { modules } from "@/data/courses"
-import { users } from "@/data/users"
-import { Twitter, Linkedin, Youtube, Instagram, LinkIcon as Website } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Edit } from "lucide-react"
-
-const courseImages: Record<string, string> = {
-  "Digital Marketing & Social Media":
-    "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1474&q=80",
-  "Startup Fundamentals":
-    "https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-  "Basic Money Management":
-    "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1511&q=80",
-  "Public Speaking & Communication":
-    "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-  "Building Side Hustles":
-    "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-  "Tech Skills (No-code, AI Basics)":
-    "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-}
+import InstructorCard from "@/components/InstructorCard"
 
 export default function InstructorCoursePreviewPage() {
   const params = useParams()
@@ -89,14 +73,14 @@ export default function InstructorCoursePreviewPage() {
   const { price, buttonText, access } = getAccessDetails()
 
   return (
-    <div className=" pt-4 md:pt-8">
-      <h1 className="text-4xl font-bold mb-6 text-primary">{module.title}</h1>
-
-      <div className="flex justify-between items-center mb-6">
-        <Button variant="outline" onClick={() => router.push("/admin/courses")} className="flex items-center">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Courses
-        </Button>
+    <div className="pt-4 md:pt-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/courses")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold text-primary">{module.title}</h1>
+        </div>
         <Button onClick={() => router.push(`/admin/courses/new?edit=${module.id}`)} className="flex items-center">
           <Edit className="w-4 h-4 mr-2" />
           Edit Course
@@ -209,26 +193,12 @@ export default function InstructorCoursePreviewPage() {
           </Card>
 
           {/* Instructor Profile Card */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4 mb-4">
-                <Image
-                  src={instructor.profileImage}
-                  alt={instructor.name}
-                  width={80}
-                  height={80}
-                  className="w-20 h-20 rounded-full object-cover"
-                />
-                <div>
-                  <h2 className="text-2xl font-bold text-primary">{instructor.name}</h2>
-                  <p className="text-muted-foreground">Course Instructor</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                {instructor.bio}
-              </p>
-            </CardContent>
-          </Card>
+          <InstructorCard
+            name={instructor.name}
+            image={instructor.profileImage}
+            bio={instructor.bio}
+            className="mb-4"
+          />
         </div>
 
         <div className="lg:col-span-1">
@@ -239,7 +209,7 @@ export default function InstructorCoursePreviewPage() {
                 onClick={() => setIsVideoModalOpen(true)}
               >
                 <Image
-                  src={courseImages[module.title] || module.image}
+                  src={module.image}
                   alt={module.title}
                   fill
                   className="object-cover"
@@ -249,15 +219,12 @@ export default function InstructorCoursePreviewPage() {
                 </div>
               </div>
               <div className="mt-4 mb-4">
-                <span className="text-3xl font-bold text-primary">{price}</span>
+                <span className="text-2xl font-bold text-primary">{price}</span>
                 {accessType === "subscribe" && <span className="text-sm text-muted-foreground">/month</span>}
               </div>
-              <p className="text-sm text-muted-foreground mb-2">
-                This is a preview. Students will see an active enrollment button here.
+              <p className="text-sm text-muted-foreground mb-4 text-center">
+                Preview Mode - Enrollment button disabled for admin
               </p>
-              <Button className="w-full mb-4 bg-muted text-muted-foreground cursor-not-allowed" disabled>
-                {buttonText}
-              </Button>
               <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">
                 <div className="flex items-center">

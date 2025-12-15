@@ -19,7 +19,7 @@ interface TeamMember {
 export default function TeamManagement() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { id: "1", name: "John Doe", email: "john@example.com", role: "instructor" },
-    { id: "2", name: "Jane Smith", email: "jane@example.com", role: "admin" },
+    { id: "2", name: "Dr Ifeoma Eze", email: "admin@example.com", role: "admin" },
   ])
   const [newMember, setNewMember] = useState<{ name: string; email: string; role: "instructor" | "admin" }>({ name: "", email: "", role: "instructor" })
 

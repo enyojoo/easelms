@@ -41,7 +41,7 @@ export default function ProfilePage() {
         email: user.email,
         bio:
           user.bio ||
-          "Passionate educator with over 10 years of experience in teaching business and entrepreneurship to young minds. Specializing in practical, hands-on learning experiences that prepare students for the real world of business.",
+          "I use my voice in reaching the voiceless and passionately share God's transformative word with those seeking to discover their purpose in life and launch them into their destiny​​",
         website: user.website || "",
         twitter: user.twitter || "",
         linkedin: user.linkedin || "",
