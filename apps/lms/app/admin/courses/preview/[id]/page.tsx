@@ -222,9 +222,9 @@ export default function InstructorCoursePreviewPage() {
                 <span className="text-2xl font-bold text-primary">{price}</span>
                 {accessType === "subscribe" && <span className="text-sm text-muted-foreground">/month</span>}
               </div>
-              <p className="text-sm text-muted-foreground mb-4 text-center">
-                Preview Mode - Enrollment button disabled for admin
-              </p>
+              <Button className="w-full mb-4" disabled>
+                {buttonText}
+              </Button>
               <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">
                 <div className="flex items-center">

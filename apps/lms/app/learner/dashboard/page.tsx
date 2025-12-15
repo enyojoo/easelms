@@ -11,27 +11,6 @@ import { getClientAuthState } from "@/utils/client-auth"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
 
-// Mock data for the dashboard
-const mockEnrolledCourses = [
-  { id: 1, title: "Digital Marketing & Social Media", progress: 60 },
-  { id: 2, title: "Startup Fundamentals", progress: 30 },
-]
-
-const mockRecommendedCourses = [
-  {
-    id: 3,
-    title: "Basic Money Management",
-    image:
-      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1511&q=80",
-  },
-  {
-    id: 4,
-    title: "Public Speaking & Communication",
-    image:
-      "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
-  },
-]
-
 
 export default function LearnerDashboard() {
   const [user, setUser] = useState<User | null>(null)
@@ -51,7 +30,30 @@ export default function LearnerDashboard() {
     )
   }
 
-  const enrolledCourses = mockEnrolledCourses
+  // Get enrolled courses from user data and match with modules
+  const enrolledCourses = (user.enrolledCourses || [])
+    .map((courseId) => {
+      const course = modules.find((m) => m.id === courseId)
+      if (!course) return null
+      return {
+        id: course.id,
+        title: course.title,
+        progress: user.progress?.[courseId] || 0,
+      }
+    })
+    .filter((course): course is { id: number; title: string; progress: number } => course !== null)
+
+  // Get recommended courses (courses not enrolled in, limited to 4)
+  const enrolledCourseIds = new Set(user.enrolledCourses || [])
+  const recommendedCourses = modules
+    .filter((course) => !enrolledCourseIds.has(course.id))
+    .slice(0, 4)
+    .map((course) => ({
+      id: course.id,
+      title: course.title,
+      image: course.image,
+    }))
+
   const firstName = user.name?.split(" ")[0] || user.name || "there"
 
   return (
@@ -119,20 +121,29 @@ export default function LearnerDashboard() {
               <CardTitle>Recommended Courses</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                {mockRecommendedCourses.map((course) => (
-                  <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex">
-                    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
-                      <div className="relative w-full h-32">
-                        <Image src={course.image} alt={course.title} layout="fill" objectFit="cover" />
+              {recommendedCourses.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {recommendedCourses.map((course) => (
+                    <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex">
+                      <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
+                        <div className="relative w-full h-32">
+                          <Image
+                            src={course.image}
+                            alt={course.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="p-2 flex-grow flex items-center">
+                          <h3 className="font-semibold text-sm line-clamp-2">{course.title}</h3>
+                        </div>
                       </div>
-                      <div className="p-2 flex-grow flex items-center">
-                        <h3 className="font-semibold text-sm line-clamp-2">{course.title}</h3>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No recommended courses available</p>
+              )}
             </CardContent>
           </Card>
         </div>
