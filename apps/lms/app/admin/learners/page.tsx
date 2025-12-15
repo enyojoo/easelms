@@ -174,42 +174,40 @@ export default function LearnersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Learner</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Enrolled Courses</TableHead>
-                  <TableHead>Completed</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[30%] min-w-[200px]">Learner</TableHead>
+                  <TableHead className="w-[25%] min-w-[180px]">Email</TableHead>
+                  <TableHead className="w-[30%]">Enrolled Courses</TableHead>
+                  <TableHead className="w-[15%] min-w-[180px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       No learners found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredUsers.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell>
+                      <TableCell className="w-[30%] min-w-[200px]">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-10 w-10 flex-shrink-0">
                             <AvatarImage src={user.profileImage} alt={user.name} />
                             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-muted-foreground">ID: {user.id}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{user.name}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{user.email}</span>
+                      <TableCell className="w-[25%] min-w-[180px]">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm truncate">{user.email}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-[30%]">
                         <div className="flex flex-wrap gap-2">
                           {user.enrolledCourses.length > 0 ? (
                             user.enrolledCourses.map((courseId) => (
@@ -222,16 +220,10 @@ export default function LearnersPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Award className="h-4 w-4 text-yellow-500" />
-                          <span className="font-medium">{user.completedCourses.length}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
+                      <TableCell className="w-[15%] min-w-[180px]">
+                        <div className="flex gap-2 flex-wrap">
                           <Link href={`/admin/learners/${user.id}`}>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="whitespace-nowrap">
                               View Details
                             </Button>
                           </Link>
@@ -239,6 +231,7 @@ export default function LearnersPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleEnrollClick(user)}
+                            className="whitespace-nowrap"
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Enroll

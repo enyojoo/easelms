@@ -31,12 +31,12 @@ export default function InstructorDashboard() {
   }
 
   return (
-    <div className=" pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8 h-[calc(100vh-8rem)] flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-primary">Hi, {user.name}!</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -77,14 +77,15 @@ export default function InstructorDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="mb-8">
-        <Card>
+      {/* Quick Actions and Recent Activity in 2-column grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        {/* Quick Actions */}
+        <Card className="lg:col-span-1 flex flex-col">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="flex-1">
+            <div className="grid grid-cols-1 gap-4">
               <Link href="/admin/courses/new">
                 <Button className="h-auto py-4 flex flex-col items-center w-full" variant="outline">
                   <PlusCircle className="mb-2 h-5 w-5" />
@@ -112,18 +113,16 @@ export default function InstructorDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Recent Activity */}
-      <div className="mb-8">
-        <Card>
+        {/* Recent Activity - Bigger and scrollable */}
+        <Card className="lg:col-span-2 flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Activity className="mr-2 h-5 w-5" /> Recent Activity
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto pr-2 space-y-4">
               {mockRecentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b last:border-0 last:pb-0">
                   <div className="flex-shrink-0 mt-1">

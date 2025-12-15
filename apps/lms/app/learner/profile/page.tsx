@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Globe, Twitter, Linkedin, Youtube, Instagram, TwitterIcon as TikTok, Loader2, Award, BookOpen, CheckCircle2 } from "lucide-react"
+import { Loader2, Award, BookOpen, CheckCircle2 } from "lucide-react"
 import { modules } from "@/data/courses"
 import { getCertificatesByUser } from "@/data/certificates"
 import Link from "next/link"
@@ -30,12 +30,6 @@ export default function LearnerProfilePage() {
     name: "",
     email: "",
     bio: "",
-    website: "",
-    twitter: "",
-    linkedin: "",
-    youtube: "",
-    instagram: "",
-    tiktok: "",
   })
 
   useEffect(() => {
@@ -48,12 +42,6 @@ export default function LearnerProfilePage() {
         name: user.name,
         email: user.email,
         bio: user.bio || "",
-        website: user.website || "",
-        twitter: user.twitter || "",
-        linkedin: user.linkedin || "",
-        youtube: user.youtube || "",
-        instagram: user.instagram || "",
-        tiktok: user.tiktok || "",
       })
       
       // Load enrolled and completed courses
@@ -141,71 +129,6 @@ export default function LearnerProfilePage() {
                     rows={6}
                     placeholder="Tell us about yourself..."
                   />
-                </div>
-                <div className="space-y-4">
-                  <Label>Social Media Links</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Globe className="w-5 h-5" />
-                      <Input
-                        name="website"
-                        placeholder="Website URL"
-                        value={formData.website}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Twitter className="w-5 h-5" />
-                      <Input
-                        name="twitter"
-                        placeholder="Twitter handle"
-                        value={formData.twitter}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Linkedin className="w-5 h-5" />
-                      <Input
-                        name="linkedin"
-                        placeholder="LinkedIn URL"
-                        value={formData.linkedin}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Youtube className="w-5 h-5" />
-                      <Input
-                        name="youtube"
-                        placeholder="YouTube channel"
-                        value={formData.youtube}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Instagram className="w-5 h-5" />
-                      <Input
-                        name="instagram"
-                        placeholder="Instagram handle"
-                        value={formData.instagram}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <TikTok className="w-5 h-5" />
-                      <Input
-                        name="tiktok"
-                        placeholder="TikTok handle"
-                        value={formData.tiktok}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  </div>
                 </div>
                 {isEditing ? (
                   <div className="flex justify-end space-x-2">
