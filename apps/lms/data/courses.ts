@@ -73,7 +73,7 @@ export const modules: Module[] = [
     id: 1,
     title: "Self Discovery Course",
     description: "Embark on a transformative journey to understand your true self, discover your passions, strengths, and purpose in life.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Introduction to Self Discovery" },
       { title: "Understanding Your Core Values" },
@@ -90,7 +90,7 @@ export const modules: Module[] = [
     id: 2,
     title: "Successful Marriage Course",
     description: "Learn the essential principles and practices for building a strong, healthy, and fulfilling marriage relationship.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/2253879/pexels-photo-2253879.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Foundations of a Successful Marriage" },
       { title: "Effective Communication in Marriage" },
@@ -107,7 +107,7 @@ export const modules: Module[] = [
     id: 3,
     title: "Before You Marry Course",
     description: "Essential preparation for marriage covering important topics to consider before saying 'I do'.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/265722/pexels-photo-265722.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Are You Ready for Marriage?" },
       { title: "Understanding Compatibility" },
@@ -124,7 +124,7 @@ export const modules: Module[] = [
     id: 4,
     title: "Public Speaking and Communication Course",
     description: "Master the art of public speaking and effective communication to confidently express yourself in any setting.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3760263/pexels-photo-3760263.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Overcoming Public Speaking Fear" },
       { title: "Crafting Compelling Messages" },
@@ -141,7 +141,7 @@ export const modules: Module[] = [
     id: 5,
     title: "Purpose Discovery and Fulfilment Course",
     description: "Discover your God-given purpose and learn how to live a life of meaning, impact, and fulfillment.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/1438072/pexels-photo-1438072.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Understanding Purpose" },
       { title: "Discovering Your Unique Calling" },
@@ -158,7 +158,7 @@ export const modules: Module[] = [
     id: 6,
     title: "Female in Ministry Academy (Basic Certificate Course)",
     description: "A foundational course designed to equip women with essential knowledge and skills for effective ministry service.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184418/pexels-photo-3184418.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Introduction to Ministry" },
       { title: "Biblical Foundation for Women in Ministry" },
@@ -181,7 +181,7 @@ export const modules: Module[] = [
     id: 7,
     title: "Female in Ministry Academy (Advanced Certificate Course)",
     description: "An advanced program for women in ministry seeking to deepen their knowledge and expand their ministry impact.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184306/pexels-photo-3184306.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Advanced Ministry Leadership" },
       { title: "Strategic Ministry Planning" },
@@ -204,7 +204,7 @@ export const modules: Module[] = [
     id: 8,
     title: "School of The Prophets Course",
     description: "Deep dive into prophetic ministry, learning to hear God's voice and operate in prophetic gifts with wisdom and integrity.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184357/pexels-photo-3184357.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Understanding Prophetic Ministry" },
       { title: "Hearing God's Voice" },
@@ -221,7 +221,7 @@ export const modules: Module[] = [
     id: 9,
     title: "Exceptional Ministry Course",
     description: "Learn how to build and lead an exceptional ministry that transforms lives and impacts communities.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184405/pexels-photo-3184405.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Vision for Exceptional Ministry" },
       { title: "Building Strong Ministry Foundations" },
@@ -238,7 +238,7 @@ export const modules: Module[] = [
     id: 10,
     title: "Hearing God Course",
     description: "Develop your ability to hear and recognize God's voice in your daily life through practical biblical principles.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184339/pexels-photo-3184339.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "The Importance of Hearing God" },
       { title: "How God Speaks" },
@@ -255,7 +255,7 @@ export const modules: Module[] = [
     id: 11,
     title: "Emotional Intelligence Course",
     description: "Master emotional intelligence to improve relationships, leadership skills, and personal well-being.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184416/pexels-photo-3184416.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Understanding Emotional Intelligence" },
       { title: "Self-Awareness and Self-Regulation" },
@@ -272,7 +272,7 @@ export const modules: Module[] = [
     id: 12,
     title: "Adaptability Intelligence Course",
     description: "Learn to thrive in change and uncertainty by developing adaptability skills for personal and professional success.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184302/pexels-photo-3184302.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Understanding Adaptability" },
       { title: "Embracing Change" },
@@ -289,7 +289,7 @@ export const modules: Module[] = [
     id: 13,
     title: "Book Writing Course",
     description: "From concept to publication, learn the complete process of writing and publishing your book successfully.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/159711/books-bookstore-book-reading-159711.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Getting Started with Your Book" },
       { title: "Developing Your Book Concept" },
@@ -306,7 +306,7 @@ export const modules: Module[] = [
     id: 14,
     title: "Shattering Limiting Beliefs Course",
     description: "Break free from limiting beliefs that hold you back and unlock your full potential for success and fulfillment.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184460/pexels-photo-3184460.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Identifying Limiting Beliefs" },
       { title: "Understanding Belief Formation" },
@@ -323,7 +323,7 @@ export const modules: Module[] = [
     id: 15,
     title: "Women in Leadership Course",
     description: "Empower yourself with leadership skills, strategies, and confidence to excel as a woman in leadership positions.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184301/pexels-photo-3184301.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Women in Leadership Today" },
       { title: "Developing Leadership Identity" },
@@ -340,7 +340,7 @@ export const modules: Module[] = [
     id: 16,
     title: "Generational Influence Course",
     description: "Learn how to create lasting impact that transcends generations and builds a legacy of positive influence.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/2253879/pexels-photo-2253879.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Understanding Generational Impact" },
       { title: "Building Generational Wealth" },
@@ -357,7 +357,7 @@ export const modules: Module[] = [
     id: 17,
     title: "Financial Intelligence Course",
     description: "Master financial principles and strategies to build wealth, achieve financial freedom, and create generational prosperity.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/6801874/pexels-photo-6801874.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Financial Intelligence Fundamentals" },
       { title: "Understanding Money and Wealth" },
@@ -374,7 +374,7 @@ export const modules: Module[] = [
     id: 18,
     title: "Personal Development Course",
     description: "A comprehensive program for personal growth, self-improvement, and achieving your highest potential in all areas of life.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/3184465/pexels-photo-3184465.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Introduction to Personal Development" },
       { title: "Setting Personal Goals" },
@@ -391,7 +391,7 @@ export const modules: Module[] = [
     id: 19,
     title: "Basic Certificate Course - Enthronement Bible Institute",
     description: "Foundational biblical studies and theological training for those beginning their journey in biblical education.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/159832/book-reading-glasses-literature-159832.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Introduction to Biblical Studies" },
       { title: "Old Testament Survey" },
@@ -414,7 +414,7 @@ export const modules: Module[] = [
     id: 20,
     title: "Advanced Certificate Course - Enthronement Bible Institute",
     description: "Advanced theological training and biblical studies for those seeking deeper knowledge and ministry preparation.",
-    image: "/placeholder.svg?height=200&width=300",
+    image: "https://images.pexels.com/photos/159751/book-address-book-learning-learn-159751.jpeg?auto=compress&cs=tinysrgb&w=800",
     lessons: [
       { title: "Advanced Biblical Interpretation" },
       { title: "Systematic Theology" },
