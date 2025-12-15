@@ -33,39 +33,35 @@ export default function CoursePage() {
     profileImage: "https://www.pastorifeomaeze.com/wp-content/uploads/2020/01/Ifeoma-Eze.jpeg",
   }
 
-  // Determine course access type based on module ID (simulating different course types)
-  const accessType = ["free", "buy", "subscribe", "request"][module.id % 4]
+  // Get actual enrollment mode from course settings
+  const enrollmentMode = module.settings?.enrollment?.enrollmentMode || "free"
+  const coursePrice = module.settings?.enrollment?.price || module.price || 0
+  const recurringPrice = module.settings?.enrollment?.recurringPrice
 
   const getAccessDetails = () => {
-    switch (accessType) {
+    switch (enrollmentMode) {
       case "free":
         return {
           price: "Free",
-          buttonText: "Start Free Course",
+          buttonText: "Start",
           access: "Full lifetime access",
         }
       case "buy":
         return {
-          price: "$49",
-          buttonText: "Buy Course",
+          price: `$${coursePrice}`,
+          buttonText: "Buy",
           access: "Full lifetime access",
         }
-      case "subscribe":
+      case "recurring":
         return {
-          price: "$20",
+          price: `$${recurringPrice || coursePrice}`,
           buttonText: "Subscribe",
           access: "Access while subscribed",
         }
-      case "request":
-        return {
-          price: "Contact for pricing",
-          buttonText: "Request Access",
-          access: "Full lifetime access",
-        }
       default:
         return {
-          price: "Price not set",
-          buttonText: "Enroll Now",
+          price: "Free",
+          buttonText: "Start",
           access: "Full lifetime access",
         }
     }
@@ -219,7 +215,7 @@ export default function CoursePage() {
               </div>
               <div className="mt-4 mb-4">
                 <span className="text-2xl font-bold text-primary">{price}</span>
-                {accessType === "subscribe" && <span className="text-sm text-muted-foreground">/month</span>}
+                {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
               </div>
               <Button
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
