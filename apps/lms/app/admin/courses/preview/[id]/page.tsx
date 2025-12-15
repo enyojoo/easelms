@@ -41,11 +41,11 @@ export default function InstructorCoursePreviewPage() {
     notFound()
   }
 
-  // Find the instructor (assuming it's the first instructor user)
-  const instructor = users.find((user) => user.email === "admin@example.com")
-
-  if (!instructor) {
-    return <div>Instructor not found</div>
+  // Instructor information
+  const instructor = {
+    name: "Dr Ifeoma Eze",
+    bio: "I use my voice in reaching the voiceless and passionately share God's transformative word with those seeking to discover their purpose in life and launch them into their destiny​​",
+    profileImage: "https://www.pastorifeomaeze.com/wp-content/uploads/2020/01/Ifeoma-Eze.jpeg",
   }
 
   // Determine course access type based on module ID (simulating different course types)
@@ -216,63 +216,9 @@ export default function InstructorCoursePreviewPage() {
                   <p className="text-muted-foreground">Course Instructor</p>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Passionate educator with over 10 years of experience in teaching business and entrepreneurship to young
-                minds. Specializing in practical, hands-on learning experiences that prepare students for the real world
-                of business.
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                {instructor.bio}
               </p>
-              <div className="flex space-x-2">
-                {instructor.website && (
-                  <a
-                    href={instructor.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Website className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.twitter && (
-                  <a
-                    href={`https://twitter.com/${instructor.twitter}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Twitter className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.linkedin && (
-                  <a
-                    href={instructor.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Linkedin className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.youtube && (
-                  <a
-                    href={instructor.youtube}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Youtube className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.instagram && (
-                  <a
-                    href={`https://instagram.com/${instructor.instagram}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Instagram className="w-5 h-5" />
-                  </a>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
