@@ -78,35 +78,35 @@ export default function InstructorDashboard() {
       </div>
 
       {/* Quick Actions and Recent Activity in 2-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-hidden">
         {/* Quick Actions */}
-        <Card className="lg:col-span-1 flex flex-col">
-          <CardHeader>
+        <Card className="lg:col-span-1 flex flex-col min-h-0">
+          <CardHeader className="flex-shrink-0">
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1">
-            <div className="grid grid-cols-1 gap-4">
-              <Link href="/admin/courses/new">
-                <Button className="h-auto py-4 flex flex-col items-center w-full" variant="outline">
-                  <PlusCircle className="mb-2 h-5 w-5" />
+          <CardContent className="flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col gap-3 h-full">
+              <Link href="/admin/courses/new" className="flex-1 min-h-0">
+                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
+                  <PlusCircle className="h-5 w-5 flex-shrink-0" />
                   <span>Create Course</span>
                 </Button>
               </Link>
-              <Link href="/admin/courses">
-                <Button className="h-auto py-4 flex flex-col items-center w-full" variant="outline">
-                  <BookOpen className="mb-2 h-5 w-5" />
+              <Link href="/admin/courses" className="flex-1 min-h-0">
+                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
+                  <BookOpen className="h-5 w-5 flex-shrink-0" />
                   <span>Manage Courses</span>
                 </Button>
               </Link>
-              <Link href="/admin/learners">
-                <Button className="h-auto py-4 flex flex-col items-center w-full" variant="outline">
-                  <Users className="mb-2 h-5 w-5" />
+              <Link href="/admin/learners" className="flex-1 min-h-0">
+                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
+                  <Users className="h-5 w-5 flex-shrink-0" />
                   <span>View Learners</span>
                 </Button>
               </Link>
-              <Link href="/admin/settings">
-                <Button className="h-auto py-4 flex flex-col items-center w-full" variant="outline">
-                  <Settings className="mb-2 h-5 w-5" />
+              <Link href="/admin/settings" className="flex-1 min-h-0">
+                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
+                  <Settings className="h-5 w-5 flex-shrink-0" />
                   <span>Settings</span>
                 </Button>
               </Link>
@@ -115,13 +115,13 @@ export default function InstructorDashboard() {
         </Card>
 
         {/* Recent Activity - Bigger and scrollable */}
-        <Card className="lg:col-span-2 flex flex-col">
-          <CardHeader>
+        <Card className="lg:col-span-2 flex flex-col min-h-0">
+          <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center">
               <Activity className="mr-2 h-5 w-5" /> Recent Activity
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden">
+          <CardContent className="flex-1 min-h-0 overflow-hidden">
             <div className="h-full overflow-y-auto pr-2 space-y-4">
               {mockRecentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b last:border-0 last:pb-0">

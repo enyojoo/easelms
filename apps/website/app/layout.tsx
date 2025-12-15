@@ -13,6 +13,9 @@ export const metadata = {
   title: "Enthronement University - Learn. Grow. Succeed.",
   description: "A modern learning management system designed to help you achieve your goals.",
   generator: "Next.js",
+  icons: {
+    icon: "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Favicon.svg",
+  },
 }
 
 export default function RootLayout({

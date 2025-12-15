@@ -134,8 +134,13 @@ export default function ManageCoursesPage() {
 
   return (
     <div className=" pt-4 md:pt-8">
-      <div className="flex justify-between items-center mb-4 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-primary">Courses</h1>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-primary mb-2">Course Management</h1>
+          <p className="text-muted-foreground">
+            Create, edit, and manage all courses in your learning platform
+          </p>
+        </div>
         <Link href="/admin/courses/new" passHref>
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
             <BookOpen className="mr-2 h-4 w-4" /> Create

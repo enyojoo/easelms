@@ -98,7 +98,7 @@ export default function LearnersPage() {
     <div className="pt-4 md:pt-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-primary mb-2">Learners Management</h1>
+          <h1 className="text-3xl font-bold text-primary mb-2">Learner Management</h1>
           <p className="text-muted-foreground">
             View and manage all learners enrolled in courses
           </p>
