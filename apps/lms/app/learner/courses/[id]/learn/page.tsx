@@ -7,7 +7,7 @@ import { modules } from "@/data/courses"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft } from "lucide-react"
+import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle } from "lucide-react"
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
@@ -406,30 +406,66 @@ export default function CourseLearningPage() {
 
           <div className="w-full lg:w-[30%] mb-6 lg:mb-0 order-2 lg:order-none lg:pl-6">
             <div className="rounded-lg bg-card border border-border p-4 h-full overflow-auto shadow-lg">
-              <h3 className="text-base font-semibold mb-4">Course Content</h3>
-              <div className="space-y-2">
-                {course.lessons.map((lesson: any, index: number) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      setCurrentLessonIndex(index)
-                      setActiveTab("video")
-                    }}
-                    className={`w-full text-left p-3 rounded-lg flex items-center justify-between transition-colors text-sm ${
-                      index === currentLessonIndex
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <BookOpen className="mr-3 h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{lesson.title}</span>
-                    </div>
-                    {completedLessons.includes(index) && (
-                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0 ml-2" />
-                    )}
-                  </button>
-                ))}
+              <div className="mb-4">
+                <h3 className="text-base font-semibold mb-2">Course Progress</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Overall Progress</span>
+                    <span className="font-semibold">{Math.round(progress)}%</span>
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    {completedLessons.length} of {course.lessons.length} lessons completed
+                  </p>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="text-base font-semibold mb-4">Course Content</h3>
+                <div className="space-y-2">
+                  {course.lessons.map((lesson: any, index: number) => {
+                    const isCompleted = completedLessons.includes(index)
+                    const isCurrent = index === currentLessonIndex
+                    const lessonProgress = isCompleted ? 100 : isCurrent ? 50 : 0
+
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setCurrentLessonIndex(index)
+                          setActiveTab("video")
+                        }}
+                        className={`w-full text-left p-3 rounded-lg flex items-center justify-between transition-colors text-sm border ${
+                          isCurrent
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : isCompleted
+                              ? "bg-muted/50 border-green-200 dark:border-green-800"
+                              : "hover:bg-accent hover:text-accent-foreground border-border"
+                        }`}
+                      >
+                        <div className="flex items-center flex-1 min-w-0">
+                          {isCompleted ? (
+                            <CheckCircle2 className="mr-3 h-4 w-4 flex-shrink-0 text-green-500" />
+                          ) : isCurrent ? (
+                            <PlayCircle className="mr-3 h-4 w-4 flex-shrink-0" />
+                          ) : (
+                            <BookOpen className="mr-3 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className={`truncate block ${isCurrent ? "font-semibold" : ""}`}>
+                              {index + 1}. {lesson.title}
+                            </span>
+                            {isCurrent && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <Progress value={lessonProgress} className="h-1 w-20" />
+                                <span className="text-xs opacity-75">{lessonProgress}%</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           </div>

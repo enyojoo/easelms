@@ -8,7 +8,8 @@ import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getClientAuthState } from "@/utils/client-auth" // Correct import
 import { modules } from "@/data/courses"
-import { Award, Download, CheckCircle, XCircle, ArrowLeft } from "lucide-react"
+import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star } from "lucide-react"
+import CertificatePreview from "@/components/CertificatePreview"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 // Mock data for quiz results
@@ -68,12 +69,14 @@ export default function CourseCompletionPage() {
   const [course, setCourse] = useState<any>(null)
   const [quizResults, setQuizResults] = useState<any>(null)
   const [achievements, setAchievements] = useState<any[]>([])
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    const { isLoggedIn, userType } = getClientAuthState()
+    const { isLoggedIn, userType, user } = getClientAuthState()
     if (!isLoggedIn || userType !== "user") {
       router.push("/auth/learner/login")
     } else {
+      setUser(user)
       const courseData = modules.find((m) => m.id === Number.parseInt(id))
       if (courseData) {
         setCourse(courseData)
@@ -97,29 +100,106 @@ export default function CourseCompletionPage() {
     alert("Certificate download started!")
   }
 
-  if (!course) return null
+  if (!course || !user) return null
+
+  const overallScore = calculateOverallScore()
+  const totalTimeSpent = "4 hours" // Mock data
+  const completionDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
 
   return (
-    <div className="pt-4 md:pt-8 ">
-      <div className="container-fluid max-w-[1600px] mx-auto py-2 flex-grow ">
-        <Card className="mb-8">
+    <div className="pt-4 md:pt-8">
+      <div className="container-fluid max-w-[1600px] mx-auto py-2 flex-grow">
+        {/* Completion Celebration */}
+        <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader>
             <div className="flex items-center mb-4">
               <Button variant="ghost" size="sm" onClick={() => router.back()}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
               </Button>
               <CardTitle>
-                <h1 className="text-2xl font-bold">Overview: {course.title}</h1>
+                <h1 className="text-2xl font-bold">Course Completed! 🎉</h1>
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-lg font-semibold">Overall Progress:</span>
-              <span className="text-lg font-semibold">100%</span>
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+              <div className="flex-shrink-0">
+                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Trophy className="w-12 h-12 text-primary" />
+                </div>
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-3xl font-bold mb-2 text-primary">Congratulations, {user.name?.split(" ")[0] || "Student"}!</h2>
+                <p className="text-lg text-muted-foreground mb-4">
+                  You've successfully completed <strong>{course.title}</strong>
+                </p>
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold text-lg">{overallScore}%</span>
+                  </div>
+                  <span className="text-muted-foreground">Overall Score</span>
+                </div>
+                <Progress value={100} className="h-3 mb-4" />
+                <p className="text-sm text-muted-foreground">Completed on {completionDate}</p>
+              </div>
             </div>
-            <Progress value={100} className="h-2 mb-4" />
-            <p className="text-left text-sm mt-4">Congratulations on finishing the course!</p>
+          </CardContent>
+        </Card>
+
+        {/* Course Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Total Lessons</p>
+                  <p className="text-2xl font-bold">{course.lessons.length}</p>
+                </div>
+                <BookOpen className="h-8 w-8 text-primary opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Time Spent</p>
+                  <p className="text-2xl font-bold">{totalTimeSpent}</p>
+                </div>
+                <Clock className="h-8 w-8 text-primary opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Average Score</p>
+                  <p className="text-2xl font-bold">{overallScore}%</p>
+                </div>
+                <Award className="h-8 w-8 text-primary opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Certificate Preview */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Your Certificate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CertificatePreview
+              courseTitle={course.title}
+              learnerName={user.name || "Student"}
+              completionDate={completionDate}
+              onDownload={handleDownloadCertificate}
+            />
           </CardContent>
         </Card>
 
@@ -195,11 +275,27 @@ export default function CourseCompletionPage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-center">
-          <Button onClick={handleDownloadCertificate} size="lg" className="px-8">
-            <Download className="mr-2 h-4 w-4" /> Download Certificate
-          </Button>
-        </div>
+        {/* Next Steps */}
+        <Card>
+          <CardHeader>
+            <CardTitle>What's Next?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-muted-foreground">
+                Continue your learning journey! Explore more courses to expand your skills and knowledge.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button onClick={() => router.push("/learner/courses")} variant="outline" className="flex-1">
+                  Browse More Courses
+                </Button>
+                <Button onClick={() => router.push("/learner/dashboard")} variant="outline" className="flex-1">
+                  Go to Dashboard
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

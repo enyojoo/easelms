@@ -13,12 +13,10 @@ import {
   Bell,
   Users,
   UserCog,
-  CreditCardIcon as PaymentIcon,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TeamManagement from "./components/TeamManagement"
 import UserManagement from "./components/UserManagement"
-import PaymentSettings from "./components/PaymentSettings"
 
 
 
@@ -32,7 +30,6 @@ export default function SettingsPage() {
     platformAnnouncements: true,
     userEmailNotifications: true,
   })
-  const [selectedCurrency, setSelectedCurrency] = useState("USD")
 
   useEffect(() => {
     const { isLoggedIn, userType, user } = getClientAuthState()
@@ -57,7 +54,7 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-primary mb-6">Settings</h1>
         <Tabs defaultValue="notifications" className="space-y-6">
-          <TabsList className="bg-muted p-1 rounded-lg w-full grid grid-cols-4 gap-2">
+          <TabsList className="bg-muted p-1 rounded-lg w-full grid grid-cols-3 gap-2">
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
               <span>Notifications</span>
@@ -69,10 +66,6 @@ export default function SettingsPage() {
             <TabsTrigger value="team" className="flex items-center gap-2">
               <UserCog className="h-4 w-4" />
               <span>Team</span>
-            </TabsTrigger>
-            <TabsTrigger value="payment-settings" className="flex items-center gap-2">
-              <PaymentIcon className="h-4 w-4" />
-              <span>Payment</span>
             </TabsTrigger>
           </TabsList>
 
@@ -153,13 +146,6 @@ export default function SettingsPage() {
 
           <TabsContent value="team">
             <TeamManagement />
-          </TabsContent>
-
-          <TabsContent value="payment-settings">
-            <PaymentSettings
-              selectedCurrency={selectedCurrency}
-              setSelectedCurrency={setSelectedCurrency}
-            />
           </TabsContent>
         </Tabs>
       </div>

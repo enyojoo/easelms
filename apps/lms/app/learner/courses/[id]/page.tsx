@@ -9,11 +9,13 @@ import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-r
 import VideoModal from "@/components/VideoModal"
 import { modules } from "@/data/courses"
 import { users } from "@/data/users"
-import { Twitter, Linkedin, Youtube, Instagram, LinkIcon as Website } from "lucide-react"
+import { Twitter, Linkedin, Youtube, Instagram, LinkIcon as Website, Star } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
+import ReviewCard from "@/components/ReviewCard"
+import InstructorCard from "@/components/InstructorCard"
 
 const courseImages: Record<string, string> = {
   "Digital Marketing & Social Media":
@@ -29,6 +31,45 @@ const courseImages: Record<string, string> = {
   "Tech Skills (No-code, AI Basics)":
     "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80",
 }
+
+// Mock reviews data
+const mockReviews = [
+  {
+    id: 1,
+    reviewerName: "Sarah Johnson",
+    reviewerImage: "/placeholder-user.jpg",
+    rating: 5,
+    reviewText: "This course exceeded my expectations! The content is well-structured and the instructor explains complex concepts in an easy-to-understand way. Highly recommend!",
+    date: "2 weeks ago",
+  },
+  {
+    id: 2,
+    reviewerName: "Michael Chen",
+    reviewerImage: "/placeholder-user.jpg",
+    rating: 5,
+    reviewText: "Excellent course for beginners. The practical examples and real-world applications make it very engaging. I've already applied what I learned!",
+    date: "1 month ago",
+  },
+  {
+    id: 3,
+    reviewerName: "Emily Rodriguez",
+    reviewerImage: "/placeholder-user.jpg",
+    rating: 4,
+    reviewText: "Great course overall! The video quality is excellent and the quizzes help reinforce learning. Would love to see more advanced topics in a follow-up course.",
+    date: "2 months ago",
+  },
+  {
+    id: 4,
+    reviewerName: "David Thompson",
+    reviewerImage: "/placeholder-user.jpg",
+    rating: 5,
+    reviewText: "One of the best courses I've taken. The instructor is knowledgeable and the course materials are comprehensive. Worth every penny!",
+    date: "3 months ago",
+  },
+]
+
+const averageRating = mockReviews.reduce((sum, review) => sum + review.rating, 0) / mockReviews.length
+const totalReviews = mockReviews.length
 
 export default function CoursePage() {
   const params = useParams()
@@ -103,7 +144,27 @@ export default function CoursePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
-          <p className="text-muted-foreground mb-6 text-gray-600">{module.description}</p>
+          {/* Course Overview Section */}
+          <Card className="mb-4">
+            <CardContent className="p-6">
+              <h2 className="text-2xl font-bold mb-4 text-primary">Course Overview</h2>
+              <p className="text-muted-foreground mb-4 leading-relaxed">{module.description}</p>
+              <div className="flex items-center gap-4 pt-4 border-t">
+                <div className="flex items-center gap-1">
+                  <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold">{averageRating.toFixed(1)}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">({totalReviews} reviews)</span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>{module.lessons.length} lessons</span>
+                  <span>•</span>
+                  <span>4 hours</span>
+                  <span>•</span>
+                  <span>{module.enrolledStudents || 0} students</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card className="mb-4">
             <CardContent className="p-6">
@@ -199,77 +260,42 @@ export default function CoursePage() {
           </Card>
 
           {/* Instructor Profile Card */}
+          <InstructorCard
+            name={instructor.name}
+            image={instructor.profileImage}
+            bio="Passionate educator with over 10 years of experience in teaching business and entrepreneurship to young minds. Specializing in practical, hands-on learning experiences that prepare students for the real world of business."
+            website={instructor.website}
+            twitter={instructor.twitter}
+            linkedin={instructor.linkedin}
+            youtube={instructor.youtube}
+            instagram={instructor.instagram}
+            className="mb-4"
+          />
+
+          {/* Reviews Section */}
           <Card>
             <CardContent className="p-6">
-              <div className="flex items-center space-x-4 mb-4">
-                <Image
-                  src={instructor.profileImage}
-                  alt={instructor.name}
-                  width={80}
-                  height={80}
-                  className="w-20 h-20 rounded-full object-cover"
-                />
-                <div>
-                  <h2 className="text-2xl font-bold text-primary">{instructor.name}</h2>
-                  <p className="text-muted-foreground">Course Instructor</p>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-primary">Student Reviews</h2>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold text-lg">{averageRating.toFixed(1)}</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">({totalReviews} reviews)</span>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Passionate educator with over 10 years of experience in teaching business and entrepreneurship to young
-                minds. Specializing in practical, hands-on learning experiences that prepare students for the real world
-                of business.
-              </p>
-              <div className="flex space-x-2">
-                {instructor.website && (
-                  <a
-                    href={instructor.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Website className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.twitter && (
-                  <a
-                    href={`https://twitter.com/${instructor.twitter}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Twitter className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.linkedin && (
-                  <a
-                    href={instructor.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Linkedin className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.youtube && (
-                  <a
-                    href={instructor.youtube}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Youtube className="w-5 h-5" />
-                  </a>
-                )}
-                {instructor.instagram && (
-                  <a
-                    href={`https://instagram.com/${instructor.instagram}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary"
-                  >
-                    <Instagram className="w-5 h-5" />
-                  </a>
-                )}
+              <div className="space-y-4">
+                {mockReviews.map((review) => (
+                  <ReviewCard
+                    key={review.id}
+                    reviewerName={review.reviewerName}
+                    reviewerImage={review.reviewerImage}
+                    rating={review.rating}
+                    reviewText={review.reviewText}
+                    date={review.date}
+                  />
+                ))}
               </div>
             </CardContent>
           </Card>
