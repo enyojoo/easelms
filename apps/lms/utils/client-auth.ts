@@ -150,6 +150,7 @@ export function getClientAuthState(): { isLoggedIn: boolean; userType?: UserType
             name: authData.name,
             email: authData.email,
             profileImage: authData.profileImage,
+            bio: authData.bio,
             currency: authData.currency || "USD",
             enrolledCourses: authData.enrolledCourses || [],
             completedCourses: authData.completedCourses || [],

@@ -61,6 +61,7 @@ export default function AdminLoginPage() {
           email: user.email,
           name: user.name,
           profileImage: user.profileImage,
+          bio: user.bio,
         }
         document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
 
