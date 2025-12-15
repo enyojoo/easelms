@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { HelpCircle, Mail, MessageSquare, Send } from "lucide-react"
+import { Mail, MessageSquare, Send } from "lucide-react"
 
 export default function SupportPage() {
   const [formData, setFormData] = useState({
@@ -49,7 +49,7 @@ export default function SupportPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -85,23 +85,6 @@ export default function SupportPage() {
                 Open Telegram
               </Button>
             </a>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <HelpCircle className="mr-2 h-5 w-5" />
-              FAQ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Find answers to common questions.
-            </p>
-            <Button variant="outline" className="w-full" disabled>
-              Coming Soon
-            </Button>
           </CardContent>
         </Card>
       </div>
