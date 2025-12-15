@@ -11,9 +11,11 @@ interface FileUploadProps {
   accept?: string
   maxSize?: number
   multiple?: boolean
-  onUploadComplete?: (files: File[]) => void
-  type?: "image" | "video" | "document" | "all"
+  onUploadComplete?: (files: File[], urls: string[]) => void
+  type?: "image" | "video" | "document" | "all" | "thumbnail" | "avatar" | "certificate"
   className?: string
+  bucket?: "course-thumbnails" | "course-documents" | "user-avatars" | "certificates"
+  additionalPath?: string
 }
 
 export default function FileUpload({
@@ -23,11 +25,15 @@ export default function FileUpload({
   onUploadComplete,
   type = "all",
   className,
+  bucket,
+  additionalPath,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [uploaded, setUploaded] = useState(false)
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   const getAcceptTypes = (): Record<string, string[]> | undefined => {
     switch (type) {
@@ -67,26 +73,62 @@ export default function FileUpload({
 
     setUploading(true)
     setProgress(0)
+    setError(null)
+    setUploadedUrls([])
 
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
+    try {
+      const urls: string[] = []
+      const totalFiles = files.length
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const formData = new FormData()
+        formData.append("file", file)
+
+        // Determine file type for bucket selection
+        let fileType = type
+        if (type === "all") {
+          if (file.type.startsWith("image/")) {
+            fileType = "document" // Default to document for general uploads
+          } else {
+            fileType = "document"
+          }
         }
-        return prev + 10
-      })
-    }, 200)
 
-    // Mock upload - in real app, this would upload to S3
-    setTimeout(() => {
-      clearInterval(interval)
-      setProgress(100)
+        formData.append("type", fileType)
+        if (bucket) {
+          formData.append("bucket", bucket)
+        }
+        if (additionalPath) {
+          formData.append("additionalPath", additionalPath)
+        }
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `Failed to upload ${file.name}`)
+        }
+
+        const data = await response.json()
+        urls.push(data.url)
+
+        // Update progress
+        setProgress(Math.round(((i + 1) / totalFiles) * 100))
+      }
+
+      setUploadedUrls(urls)
       setUploading(false)
       setUploaded(true)
-      onUploadComplete?.(files)
-    }, 2000)
+      onUploadComplete?.(files, urls)
+    } catch (err: any) {
+      setError(err.message || "Upload failed")
+      setUploading(false)
+      setUploaded(false)
+    }
   }
 
   const removeFile = (index: number) => {
@@ -167,6 +209,12 @@ export default function FileUpload({
             </Card>
           ))}
 
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+
           {uploading && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
@@ -178,16 +226,29 @@ export default function FileUpload({
           )}
 
           {!uploading && !uploaded && (
-            <Button onClick={handleUpload} className="w-full">
+            <Button onClick={handleUpload} className="w-full" disabled={files.length === 0}>
               <Upload className="mr-2 h-4 w-4" />
               Upload {files.length} file{files.length > 1 ? "s" : ""}
             </Button>
           )}
 
           {uploaded && (
-            <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-              <CheckCircle2 className="h-4 w-4" />
-              <span>Upload complete!</span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2 text-sm text-green-600">
+                <CheckCircle2 className="h-4 w-4" />
+                <span>Upload complete! {uploadedUrls.length} file{uploadedUrls.length > 1 ? "s" : ""} uploaded</span>
+              </div>
+              {uploadedUrls.length > 0 && (
+                <div className="text-xs text-muted-foreground space-y-1">
+                  {uploadedUrls.map((url, idx) => (
+                    <div key={idx} className="truncate">
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        {url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -4,15 +4,25 @@ import { useState, useRef, useEffect } from "react"
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
+import { extractVimeoId, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 
 interface VideoPlayerProps {
   lessonTitle: string
   onComplete: () => void
   autoPlay?: boolean
   isActive: boolean
+  videoUrl?: string // Vimeo URL or video ID
+  vimeoVideoId?: string // Direct Vimeo video ID
 }
 
-export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, isActive }: VideoPlayerProps) {
+export default function VideoPlayer({
+  lessonTitle,
+  onComplete,
+  autoPlay = true,
+  isActive,
+  videoUrl,
+  vimeoVideoId,
+}: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(autoPlay)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -21,10 +31,61 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  let timeoutId: NodeJS.Timeout | undefined // Define timeoutId
+  let timeoutId: NodeJS.Timeout | undefined
 
+  // Extract Vimeo video ID
+  const vimeoId = vimeoVideoId || (videoUrl ? extractVimeoId(videoUrl) : null)
+  const isVimeoVideo = !!vimeoId
+
+  // Vimeo Player API via postMessage
   useEffect(() => {
+    if (!isVimeoVideo || !iframeRef.current) return
+
+    const iframe = iframeRef.current
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from Vimeo
+      if (!event.origin.includes("vimeo.com")) return
+
+      const data = event.data
+      if (typeof data !== "object" || data.event === undefined) return
+
+      switch (data.event) {
+        case "play":
+          setIsPlaying(true)
+          break
+        case "pause":
+          setIsPlaying(false)
+          break
+        case "timeupdate":
+          setCurrentTime(data.data?.seconds || 0)
+          break
+        case "loaded":
+          setDuration(data.data?.duration || 0)
+          break
+        case "ended":
+          setIsPlaying(false)
+          onComplete()
+          break
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+
+    // Request video info
+    iframe.contentWindow?.postMessage({ method: "getDuration" }, "*")
+    iframe.contentWindow?.postMessage({ method: "getCurrentTime" }, "*")
+
+    return () => {
+      window.removeEventListener("message", handleMessage)
+    }
+  }, [isVimeoVideo, isActive, onComplete])
+
+  // HTML5 video player (fallback for non-Vimeo videos)
+  useEffect(() => {
+    if (isVimeoVideo) return
+
     const video = videoRef.current
     if (video) {
       video.addEventListener("timeupdate", handleTimeUpdate)
@@ -43,28 +104,30 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
         setIsPlaying(false)
       }
 
-      // Set up event listeners for showing/hiding controls
-      const container = containerRef.current
-      if (container) {
-        container.addEventListener("mouseenter", showControlsHandler)
-        container.addEventListener("mouseleave", hideControlsHandler)
-        container.addEventListener("touchstart", showControlsHandler) // For mobile
-      }
-
       return () => {
         video.removeEventListener("timeupdate", handleTimeUpdate)
         video.removeEventListener("loadedmetadata", handleLoadedMetadata)
         video.removeEventListener("ended", handleVideoComplete)
-        if (container) {
-          container.removeEventListener("mouseenter", showControlsHandler)
-          container.removeEventListener("mouseleave", hideControlsHandler)
-          container.removeEventListener("touchstart", showControlsHandler)
-        }
-        // Clear timeout if component unmounts or video changes
+      }
+    }
+  }, [autoPlay, lessonTitle, isActive, isPlaying, isVimeoVideo])
+
+  // Set up event listeners for showing/hiding controls
+  useEffect(() => {
+    const container = containerRef.current
+    if (container) {
+      container.addEventListener("mouseenter", showControlsHandler)
+      container.addEventListener("mouseleave", hideControlsHandler)
+      container.addEventListener("touchstart", showControlsHandler)
+
+      return () => {
+        container.removeEventListener("mouseenter", showControlsHandler)
+        container.removeEventListener("mouseleave", hideControlsHandler)
+        container.removeEventListener("touchstart", showControlsHandler)
         clearTimeout(timeoutId)
       }
     }
-  }, [autoPlay, lessonTitle, isActive, isPlaying])
+  }, [])
 
   // Handler functions for showing and hiding controls
   const showControlsHandler = () => {
@@ -93,7 +156,13 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
   }
 
   const togglePlay = () => {
-    if (videoRef.current) {
+    if (isVimeoVideo && iframeRef.current) {
+      iframeRef.current.contentWindow?.postMessage(
+        { method: isPlaying ? "pause" : "play" },
+        "*"
+      )
+      setIsPlaying(!isPlaying)
+    } else if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause()
       } else {
@@ -104,7 +173,13 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
   }
 
   const handleSeek = (value: number[]) => {
-    if (videoRef.current) {
+    if (isVimeoVideo && iframeRef.current) {
+      iframeRef.current.contentWindow?.postMessage(
+        { method: "setCurrentTime", value: value[0] },
+        "*"
+      )
+      setCurrentTime(value[0])
+    } else if (videoRef.current) {
       videoRef.current.currentTime = value[0]
       setCurrentTime(value[0])
     }
@@ -150,20 +225,63 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`
   }
 
+  const handleSkipBack = () => {
+    if (isVimeoVideo && iframeRef.current) {
+      iframeRef.current.contentWindow?.postMessage(
+        { method: "setCurrentTime", value: Math.max(0, currentTime - 10) },
+        "*"
+      )
+    } else if (videoRef.current) {
+      videoRef.current.currentTime = Math.max(0, videoRef.current.currentTime - 10)
+    }
+  }
+
+  const handleSkipForward = () => {
+    if (isVimeoVideo && iframeRef.current) {
+      iframeRef.current.contentWindow?.postMessage(
+        { method: "setCurrentTime", value: Math.min(duration, currentTime + 10) },
+        "*"
+      )
+    } else if (videoRef.current) {
+      videoRef.current.currentTime = Math.min(duration, videoRef.current.currentTime + 10)
+    }
+  }
+
+  // Vimeo embed URL
+  const vimeoEmbedUrl = vimeoId
+    ? getVimeoEmbedUrl(vimeoId, {
+        autoplay: autoPlay && isActive,
+        controls: true,
+        responsive: true,
+      })
+    : null
+
   return (
     <div ref={containerRef} className="relative w-full h-full flex items-center justify-center bg-black">
-      <video
-        ref={videoRef}
-        className={`w-full h-full ${isFullscreen ? "object-contain" : "object-cover"}`}
-        src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-      />
-      {showControls && ( // Conditionally render controls
+      {isVimeoVideo && vimeoEmbedUrl ? (
+        <iframe
+          ref={iframeRef}
+          src={vimeoEmbedUrl}
+          className="w-full h-full"
+          frameBorder="0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          title={lessonTitle}
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          className={`w-full h-full ${isFullscreen ? "object-contain" : "object-cover"}`}
+          src={videoUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"}
+        />
+      )}
+      {showControls && !isVimeoVideo && ( // Vimeo has its own controls, only show custom controls for HTML5 video
         <div className="absolute inset-0 flex items-end">
           <div className="w-full bg-gradient-to-t from-black/80 to-transparent p-4">
             <div className="flex items-center justify-between mb-2">
               <Slider
                 value={[currentTime]}
-                max={duration}
+                max={duration || 100}
                 step={1}
                 onValueChange={handleSeek}
                 className="w-full mr-4"
@@ -177,7 +295,7 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => videoRef.current && (videoRef.current.currentTime -= 10)}
+                  onClick={handleSkipBack}
                   className="text-white hover:bg-white/20"
                 >
                   <SkipBack className="h-4 w-4" />
@@ -188,7 +306,7 @@ export default function VideoPlayer({ lessonTitle, onComplete, autoPlay = true, 
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => videoRef.current && (videoRef.current.currentTime += 10)}
+                  onClick={handleSkipForward}
                   className="text-white hover:bg-white/20"
                 >
                   <SkipForward className="h-4 w-4" />

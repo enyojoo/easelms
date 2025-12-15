@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { Plus, GripVertical, Video, FileText, Settings, Trash2, Link, FileUp } from "lucide-react"
 import LessonContentEditor from "./LessonContentEditor"
+import FileUpload from "@/components/FileUpload"
 
 interface Resource {
   id: string
@@ -268,35 +269,77 @@ export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps)
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Resources</h3>
                   {selectedLesson.resources.map((resource) => (
-                    <div key={resource.id} className="flex items-center space-x-2">
-                      {resource.type === "document" ? <FileUp className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                      <Input
-                        value={resource.title}
-                        onChange={(e) => {
-                          const updatedResources = selectedLesson.resources.map((r) =>
-                            r.id === resource.id ? { ...r, title: e.target.value } : r,
-                          )
-                          updateLesson({ ...selectedLesson, resources: updatedResources })
-                        }}
-                        placeholder="Resource title"
-                      />
-                      <Input
-                        value={resource.url}
-                        onChange={(e) => {
-                          const updatedResources = selectedLesson.resources.map((r) =>
-                            r.id === resource.id ? { ...r, url: e.target.value } : r,
-                          )
-                          updateLesson({ ...selectedLesson, resources: updatedResources })
-                        }}
-                        placeholder={resource.type === "document" ? "Upload file" : "Enter URL"}
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeResource(selectedLesson.id, resource.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                    <div key={resource.id} className="space-y-2 p-4 border rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        {resource.type === "document" ? <FileUp className="w-4 h-4" /> : <Link className="w-4 h-4" />}
+                        <Input
+                          value={resource.title}
+                          onChange={(e) => {
+                            const updatedResources = selectedLesson.resources.map((r) =>
+                              r.id === resource.id ? { ...r, title: e.target.value } : r,
+                            )
+                            updateLesson({ ...selectedLesson, resources: updatedResources })
+                          }}
+                          placeholder="Resource title"
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeResource(selectedLesson.id, resource.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {resource.type === "document" ? (
+                        <div className="space-y-2">
+                          {resource.url ? (
+                            <div className="flex items-center justify-between p-2 bg-muted rounded">
+                              <span className="text-sm truncate flex-1">{resource.url}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const updatedResources = selectedLesson.resources.map((r) =>
+                                    r.id === resource.id ? { ...r, url: "" } : r,
+                                  )
+                                  updateLesson({ ...selectedLesson, resources: updatedResources })
+                                }}
+                              >
+                                Change
+                              </Button>
+                            </div>
+                          ) : (
+                            <FileUpload
+                              type="document"
+                              bucket="course-documents"
+                              accept="application/pdf,.doc,.docx,.txt,.zip"
+                              maxSize={50 * 1024 * 1024} // 50MB
+                              multiple={false}
+                              additionalPath={`lesson-${selectedLesson.id}`}
+                              onUploadComplete={(files, urls) => {
+                                if (urls.length > 0) {
+                                  const updatedResources = selectedLesson.resources.map((r) =>
+                                    r.id === resource.id ? { ...r, url: urls[0] } : r,
+                                  )
+                                  updateLesson({ ...selectedLesson, resources: updatedResources })
+                                }
+                              }}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <Input
+                          value={resource.url}
+                          onChange={(e) => {
+                            const updatedResources = selectedLesson.resources.map((r) =>
+                              r.id === resource.id ? { ...r, url: e.target.value } : r,
+                            )
+                            updateLesson({ ...selectedLesson, resources: updatedResources })
+                          }}
+                          placeholder="Enter URL"
+                        />
+                      )}
                     </div>
                   ))}
                   <div className="flex space-x-2">

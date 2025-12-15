@@ -2,13 +2,16 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ImagePlus } from "lucide-react"
+import { ImagePlus, CheckCircle2, AlertCircle } from "lucide-react"
 import VideoPreview from "@/components/VideoPreview"
+import { extractVimeoId, isVimeoUrl } from "@/lib/vimeo/utils"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import FileUpload from "@/components/FileUpload"
 
 interface CourseBasicInfoProps {
   data: {
@@ -25,19 +28,41 @@ interface CourseBasicInfoProps {
 
 export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps) {
   const [thumbnail, setThumbnail] = useState(data.thumbnail || "/placeholder.svg?height=200&width=300")
+  const [previewVideoInput, setPreviewVideoInput] = useState(data.previewVideo || "")
+  const [vimeoId, setVimeoId] = useState<string | null>(null)
+  const [isValidVideo, setIsValidVideo] = useState(true)
+
+  useEffect(() => {
+    if (previewVideoInput) {
+      const extractedId = extractVimeoId(previewVideoInput)
+      if (extractedId) {
+        setVimeoId(extractedId)
+        setIsValidVideo(true)
+        onUpdate({ previewVideo: previewVideoInput, vimeoVideoId: extractedId })
+      } else if (isVimeoUrl(previewVideoInput)) {
+        setIsValidVideo(false)
+        setVimeoId(null)
+      } else {
+        setVimeoId(null)
+        setIsValidVideo(true)
+        onUpdate({ previewVideo: previewVideoInput, vimeoVideoId: undefined })
+      }
+    } else {
+      setVimeoId(null)
+      setIsValidVideo(true)
+      onUpdate({ previewVideo: "", vimeoVideoId: undefined })
+    }
+  }, [previewVideoInput])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     onUpdate({ [name]: value })
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // In a real app, you would upload this to your storage
-      const imageUrl = URL.createObjectURL(file)
-      setThumbnail(imageUrl)
-      onUpdate({ thumbnail: imageUrl })
+  const handleThumbnailUpload = (files: File[], urls: string[]) => {
+    if (urls.length > 0) {
+      setThumbnail(urls[0])
+      onUpdate({ thumbnail: urls[0] })
     }
   }
 
@@ -92,36 +117,56 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
 
       <div className="space-y-2">
         <Label>Course Thumbnail</Label>
-        <div className="flex items-start space-x-4">
-          <div className="relative w-[300px] h-[200px] rounded-lg overflow-hidden border border-border">
+        {thumbnail && thumbnail !== "/placeholder.svg?height=200&width=300" && (
+          <div className="relative w-[300px] h-[200px] rounded-lg overflow-hidden border border-border mb-4">
             <Image src={thumbnail} alt="Course thumbnail" fill className="object-cover" />
           </div>
-          <div>
-            <Label htmlFor="thumbnail" className="cursor-pointer">
-              <div className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90">
-                <ImagePlus className="w-4 h-4" />
-                Upload
-              </div>
-              <input id="thumbnail" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-            </Label>
-            <p className="text-sm text-muted-foreground mt-2">Resolution: 1280x720 px</p>
-          </div>
-        </div>
+        )}
+        <FileUpload
+          type="thumbnail"
+          bucket="course-thumbnails"
+          accept="image/*"
+          maxSize={5 * 1024 * 1024} // 5MB
+          multiple={false}
+          onUploadComplete={handleThumbnailUpload}
+        />
+        <p className="text-sm text-muted-foreground">Recommended resolution: 1280x720 px. Max size: 5MB</p>
       </div>
 
       <div className="space-y-2">
-        <Label>Course Preview Video</Label>
+        <Label>Course Preview Video (Vimeo)</Label>
         <div className="space-y-4">
           <Input
-            name="previewVideo"
             type="url"
-            value={data.previewVideo}
-            onChange={handleInputChange}
-            placeholder="Enter video URL"
+            value={previewVideoInput}
+            onChange={(e) => setPreviewVideoInput(e.target.value)}
+            placeholder="Enter Vimeo URL (e.g., https://vimeo.com/123456789) or video ID"
           />
-          {data.previewVideo && (
+          <p className="text-xs text-muted-foreground">
+            Supported formats: https://vimeo.com/123456789, https://player.vimeo.com/video/123456789, or just the video ID
+          </p>
+          {previewVideoInput && (
+            <Alert variant={isValidVideo ? "default" : "destructive"}>
+              {isValidVideo && vimeoId ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  <AlertDescription>
+                    Valid Vimeo video detected. Video ID: {vimeoId}
+                  </AlertDescription>
+                </>
+              ) : !isValidVideo ? (
+                <>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
+                  </AlertDescription>
+                </>
+              ) : null}
+            </Alert>
+          )}
+          {previewVideoInput && (
             <div className="relative w-full max-w-2xl">
-              <VideoPreview videoUrl={data.previewVideo} thumbnailUrl={thumbnail} />
+              <VideoPreview videoUrl={previewVideoInput} thumbnailUrl={thumbnail} vimeoVideoId={vimeoId || undefined} />
             </div>
           )}
           <p className="text-sm text-muted-foreground">

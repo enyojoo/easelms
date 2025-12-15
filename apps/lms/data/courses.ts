@@ -2,7 +2,12 @@ export interface Lesson {
   id?: string | number
   title: string
   type?: string
-  content?: any
+  content?: {
+    url?: string // Video URL (for non-Vimeo videos or legacy support)
+    vimeoVideoId?: string // Vimeo video ID
+    text?: string // For text-based lessons
+    [key: string]: any // Allow other content properties
+  }
   quiz?: {
     questions: QuizQuestion[]
   }
@@ -19,14 +24,15 @@ export interface Module {
   id: number
   title: string
   description: string
-  image: string
+  image: string // Supabase Storage URL for course thumbnail
   lessons: Lesson[]
   price?: number
   currency?: string
   enrolledStudents?: number
   requirements?: string
   whoIsThisFor?: string
-  previewVideo?: string
+  previewVideo?: string // Video URL (for non-Vimeo videos or legacy support)
+  vimeoVideoId?: string // Vimeo video ID for preview video
   settings?: {
     isPublished?: boolean
     requiresSequentialProgress?: boolean
@@ -41,7 +47,7 @@ export interface Module {
       certificateTemplate?: string
       certificateTitle?: string
       certificateDescription?: string
-      signatureImage?: string
+      signatureImage?: string // Supabase Storage URL
       signatureTitle?: string
       additionalText?: string
       certificateType?: "completion" | "achievement" | "participation"
@@ -59,7 +65,7 @@ export interface QuizQuestion {
 export interface Resource {
   type: "document" | "link"
   title: string
-  url: string
+  url: string // Supabase Storage URL for documents, external URL for links
 }
 
 export const modules: Module[] = [

@@ -337,6 +337,8 @@ export default function CourseLearningPage() {
                       onComplete={handleLessonComplete}
                       autoPlay={false}
                       isActive={true}
+                      videoUrl={currentLesson.content?.url}
+                      vimeoVideoId={currentLesson.content?.vimeoVideoId}
                     />
                   </div>
                 </TabsContent>
