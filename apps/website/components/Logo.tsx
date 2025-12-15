@@ -10,7 +10,7 @@ export default function Logo({ className }: LogoProps) {
   return (
     <Link href="/" className={cn("flex items-center", className)}>
       <Image
-        src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20B.svg"
+        src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk.svg"
         alt="Enthronement University Logo"
         width={120}
         height={40}
@@ -18,7 +18,7 @@ export default function Logo({ className }: LogoProps) {
         priority
       />
       <Image
-        src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20W.svg"
+        src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20wh.svg"
         alt="Enthronement University Logo"
         width={120}
         height={40}
