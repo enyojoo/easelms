@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Bell, Shield, CreditCard } from "lucide-react"
+import { Bell, Shield, CreditCard, Loader2 } from "lucide-react"
 import { US, EU, GB } from "country-flag-icons/react/3x2"
 
 const NigeriaFlag = () => (
@@ -89,7 +89,13 @@ export default function LearnerSettingsPage() {
   }
 
   if (!user) {
-    return <div>Loading...</div>
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
   }
 
   return (

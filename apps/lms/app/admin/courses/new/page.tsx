@@ -158,8 +158,18 @@ function NewCourseContent() {
   }, [])
 
   const handleSaveCourse = async () => {
+    // Validate required fields
+    if (!courseData.basicInfo.title || !courseData.basicInfo.description) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    // Mock save - in real app, this would call an API
     console.log("Saving course:", courseData)
-    router.push("/admin/courses")
+    toast.success(searchParams?.get("edit") ? "Course updated successfully" : "Course created successfully")
+    setTimeout(() => {
+      router.push("/admin/courses")
+    }, 1000)
   }
 
 

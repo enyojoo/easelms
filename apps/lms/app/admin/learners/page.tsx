@@ -14,26 +14,64 @@ import {
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Search, Mail, BookOpen, Award, TrendingUp } from "lucide-react"
+import { Search, Mail, BookOpen, Award, TrendingUp, Filter, Plus, Loader2 } from "lucide-react"
 import { users } from "@/data/users"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
 import Link from "next/link"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { toast } from "sonner"
 
 export default function LearnersPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [enrollmentFilter, setEnrollmentFilter] = useState<string>("all")
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState<string>("")
 
   useEffect(() => {
     // Filter out admin users and apply search
     const userLearners = users.filter((user) => user.userType === "user")
-    const filtered = userLearners.filter(
+    let filtered = userLearners.filter(
       (user) =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
     )
+
+    // Apply enrollment filter
+    if (enrollmentFilter === "enrolled") {
+      filtered = filtered.filter((user) => user.enrolledCourses.length > 0)
+    } else if (enrollmentFilter === "not-enrolled") {
+      filtered = filtered.filter((user) => user.enrolledCourses.length === 0)
+    }
+
     setFilteredUsers(filtered)
-  }, [searchTerm])
+  }, [searchTerm, enrollmentFilter])
+
+  const handleEnrollClick = (user: User) => {
+    setSelectedUser(user)
+    setEnrollDialogOpen(true)
+  }
+
+  const handleEnrollConfirm = () => {
+    if (selectedUser && selectedCourse) {
+      // Mock enrollment - in real app, this would call an API
+      toast.success(`Enrolled ${selectedUser.name} in course`)
+      setEnrollDialogOpen(false)
+      setSelectedUser(null)
+      setSelectedCourse("")
+    }
+  }
 
   const getCourseTitle = (courseId: number) => {
     const course = modules.find((m) => m.id === courseId)
@@ -105,16 +143,29 @@ export default function LearnersPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <CardTitle>All Learners</CardTitle>
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={enrollmentFilter} onValueChange={setEnrollmentFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Learners</SelectItem>
+                  <SelectItem value="enrolled">Enrolled</SelectItem>
+                  <SelectItem value="not-enrolled">Not Enrolled</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
@@ -205,11 +256,21 @@ export default function LearnersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Link href={`/admin/learners/${user.id}`}>
-                          <Button variant="outline" size="sm">
-                            View Details
+                        <div className="flex gap-2">
+                          <Link href={`/admin/learners/${user.id}`}>
+                            <Button variant="outline" size="sm">
+                              View Details
+                            </Button>
+                          </Link>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEnrollClick(user)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Enroll
                           </Button>
-                        </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -219,6 +280,43 @@ export default function LearnersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Enrollment Dialog */}
+      <Dialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enroll Learner in Course</DialogTitle>
+            <DialogDescription>
+              Select a course to enroll {selectedUser?.name} in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Course</label>
+              <Select value={selectedCourse} onValueChange={setSelectedCourse}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a course" />
+                </SelectTrigger>
+                <SelectContent>
+                  {modules.map((course) => (
+                    <SelectItem key={course.id} value={course.id.toString()}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEnrollConfirm} disabled={!selectedCourse}>
+              Enroll
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

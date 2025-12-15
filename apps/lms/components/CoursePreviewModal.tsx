@@ -13,11 +13,11 @@ interface Course {
 
 interface CoursePreviewModalProps {
   course: Course
-  isOpen: boolean
-  onClose: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-export default function CoursePreviewModal({ course, isOpen, onClose }: CoursePreviewModalProps) {
+export default function CoursePreviewModal({ course, open, onOpenChange }: CoursePreviewModalProps) {
   const courseImages: Record<string, string> = {
     "Digital Marketing & Social Media":
       "https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1474&q=80",
@@ -34,7 +34,7 @@ export default function CoursePreviewModal({ course, isOpen, onClose }: CoursePr
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{course.title}</DialogTitle>
@@ -73,7 +73,7 @@ export default function CoursePreviewModal({ course, isOpen, onClose }: CoursePr
           </div>
         </div>
         <div className="mt-6 flex justify-end">
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={() => onOpenChange(false)}>Close</Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Download, Award } from "lucide-react"
+import { Download, Award, Loader2 } from "lucide-react"
 
 // Mock data for certificates
 const mockCertificates = [
@@ -35,7 +35,13 @@ export default function AchievementsPage() {
   }, [router])
 
   if (!user) {
-    return <div>Loading...</div>
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
   }
 
   return (

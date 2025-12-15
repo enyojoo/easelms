@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { getUserByEmail } from "@/data/users"
 import Logo from "@/components/Logo"
-import { Copy } from "lucide-react"
+import { Copy, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const DemoAccess = ({ setCredentials }: { setCredentials: (email: string, password: string) => void }) => (
   <div className="text-center mb-6 space-y-2">
@@ -35,6 +36,9 @@ const DemoAccess = ({ setCredentials }: { setCredentials: (email: string, passwo
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   const setCredentials = (newEmail: string, newPassword: string) => {
@@ -44,23 +48,31 @@ export default function AdminLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const user = getUserByEmail(email)
-    if (user && user.userType === "admin" && password === "password123") {
-      // In a real app, you would validate the password here
-      // Set the authentication cookie with more user data
-      const authData = {
-        userType: user.userType,
-        email: user.email,
-        name: user.name,
-        profileImage: user.profileImage,
-      }
-      document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
+    setError("")
+    setLoading(true)
 
-      // Redirect to the admin dashboard
-      router.push("/admin/dashboard")
-    } else {
-      // Handle login error
-      alert("Invalid email or password. Admin access only.")
+    try {
+      const user = getUserByEmail(email)
+      if (user && user.userType === "admin" && password === "password123") {
+        // In a real app, you would validate the password here
+        // Set the authentication cookie with more user data
+        const authData = {
+          userType: user.userType,
+          email: user.email,
+          name: user.name,
+          profileImage: user.profileImage,
+        }
+        document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
+
+        // Redirect to the admin dashboard
+        router.push("/admin/dashboard")
+      } else {
+        setError("Invalid email or password. Admin access only.")
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -79,6 +91,12 @@ export default function AdminLoginPage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -97,18 +115,34 @@ export default function AdminLoginPage() {
                     Forgot password?
                   </Link>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Logging in..." : "Login"}
               </Button>
               <div className="text-center text-sm">
                 <Link href="/auth/learner/login" className="text-primary hover:underline">

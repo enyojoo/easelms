@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Globe, Twitter, Linkedin, Youtube, Instagram, TwitterIcon as TikTok } from "lucide-react"
+import { Globe, Twitter, Linkedin, Youtube, Instagram, TwitterIcon as TikTok, Loader2 } from "lucide-react"
 
 export default function LearnerProfilePage() {
   const router = useRouter()
@@ -63,7 +63,13 @@ export default function LearnerProfilePage() {
   }
 
   if (!user) {
-    return <div>Loading...</div>
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -6,8 +6,9 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Award, BookOpen, ChevronRight } from "lucide-react"
+import { Award, BookOpen, ChevronRight, Clock, Loader2 } from "lucide-react"
 import { getClientAuthState } from "@/utils/client-auth"
+import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
 
 // Mock data for the dashboard
@@ -31,6 +32,7 @@ const mockRecommendedCourses = [
   },
 ]
 
+
 export default function LearnerDashboard() {
   const [user, setUser] = useState<User | null>(null)
 
@@ -40,23 +42,33 @@ export default function LearnerDashboard() {
   }, [])
 
   if (!user) {
-    return <div className="p-4 md:p-8 pt-20 md:pt-24">Loading...</div>
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
   }
 
   const enrolledCourses = mockEnrolledCourses
+  const firstName = user.name?.split(" ")[0] || user.name || "there"
 
   return (
     <div className="pt-4 md:pt-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-primary">Hi, {user.name}!</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Hi, {firstName} 👋🏻</h1>
+        </div>
       </div>
 
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BookOpen className="mr-2" /> Courses in Progress
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <BookOpen className="mr-2 h-4 w-4" /> Courses in Progress
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -64,9 +76,9 @@ export default function LearnerDashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="mr-2" /> Completed Courses
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center">
+                <Award className="mr-2 h-4 w-4" /> Completed Courses
               </CardTitle>
             </CardHeader>
             <CardContent>
