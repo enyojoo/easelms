@@ -264,14 +264,16 @@ export default function CourseLearningPage() {
                     </div>
                   </div>
                 ) : currentLesson.type === "text" ? (
-                  <div className="w-full h-full overflow-y-auto p-4 sm:p-6">
-                    <div 
-                      className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{
-                        __html: currentLesson.content?.html || currentLesson.content?.text || "<p>No content available for this lesson.</p>"
-                      }}
-                    />
-                  </div>
+                  <ScrollArea className="w-full h-full">
+                    <div className="p-4 sm:p-6">
+                      <div 
+                        className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{
+                          __html: currentLesson.content?.html || currentLesson.content?.text || "<p>No content available for this lesson.</p>"
+                        }}
+                      />
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="w-full h-full relative bg-black">
                     <VideoPlayer
@@ -291,8 +293,10 @@ export default function CourseLearningPage() {
               </TabsContent>
 
               {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
-                <TabsContent value="quiz" className="flex-1 m-0 p-4 sm:p-6 overflow-y-auto min-h-0">
-                  <QuizComponent
+                <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0">
+                  <ScrollArea className="w-full h-full">
+                    <div className="p-4 sm:p-6">
+                      <QuizComponent
                       quiz={{
                         questions: currentLesson.quiz.questions.map((q: any) => {
                           // Convert admin quiz format to learner format
@@ -345,16 +349,22 @@ export default function CourseLearningPage() {
                         allowMultipleAttempts: (currentLesson.quiz as any).allowMultipleAttempts,
                         showCorrectAnswers: (currentLesson.quiz as any).showCorrectAnswers,
                       }}
-                      onComplete={handleQuizComplete}
-                      minimumQuizScore={course?.settings?.minimumQuizScore || 50}
-                    />
-                  </TabsContent>
-                )}
+                        onComplete={handleQuizComplete}
+                        minimumQuizScore={course?.settings?.minimumQuizScore || 50}
+                      />
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              )}
 
-              <TabsContent value="resources" className="flex-1 m-0 p-4 sm:p-6 overflow-y-auto min-h-0">
-                <ResourcesPanel 
-                  resources={currentLesson.resources || []} 
-                />
+              <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0">
+                <ScrollArea className="w-full h-full">
+                  <div className="p-4 sm:p-6">
+                    <ResourcesPanel 
+                      resources={currentLesson.resources || []} 
+                    />
+                  </div>
+                </ScrollArea>
               </TabsContent>
             </Tabs>
 
@@ -427,8 +437,8 @@ export default function CourseLearningPage() {
 
         {/* Sidebar - Scrollable on mobile, fixed on desktop */}
         <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-            <div className="mb-4">
+          <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4">
+            <div className="mb-4 flex-shrink-0">
               <h3 className="text-sm sm:text-base font-semibold mb-2">Course Progress</h3>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs sm:text-sm">
@@ -441,9 +451,10 @@ export default function CourseLearningPage() {
                 </p>
               </div>
             </div>
-            <div className="border-t pt-3 sm:pt-4">
-              <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4">Course Content</h3>
-              <div className="space-y-1.5 sm:space-y-2">
+            <div className="border-t pt-3 sm:pt-4 flex-1 flex flex-col min-h-0">
+              <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4 flex-shrink-0">Course Content</h3>
+              <ScrollArea className="flex-1">
+                <div className="space-y-1.5 sm:space-y-2 pr-2">
                 {course.lessons.map((lesson: any, index: number) => {
                   const isCompleted = completedLessons.includes(index)
                   const isCurrent = index === currentLessonIndex
@@ -503,9 +514,10 @@ export default function CourseLearningPage() {
                         </div>
                       </div>
                     </button>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
             </div>
           </div>
         </div>
