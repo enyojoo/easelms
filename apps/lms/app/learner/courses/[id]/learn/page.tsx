@@ -264,7 +264,7 @@ export default function CourseLearningPage() {
   const currentLesson = course.lessons[currentLessonIndex]
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur">
         <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
@@ -279,10 +279,10 @@ export default function CourseLearningPage() {
 
       {/* Main Content - Scrollable container on mobile, fixed on desktop */}
       <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
-        <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none">
-          <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border">
+        <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto">
+              <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
                 <TabsTrigger
                   value="video"
                   className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
@@ -307,9 +307,9 @@ export default function CourseLearningPage() {
                 )}
               </TabsList>
 
-              <TabsContent value="video" className="flex-1 m-0 p-0 flex overflow-hidden min-h-0">
+              <TabsContent value="video" className="flex-1 m-0 p-0 flex overflow-hidden min-h-0 data-[state=active]:flex">
                 {timeLimitExceeded ? (
-                  <div className="w-full h-full flex items-center justify-center bg-black text-white p-4">
+                  <div className="w-full h-full flex items-center justify-center bg-black text-white p-4 min-h-0">
                     <div className="text-center max-w-md">
                       <Clock className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-red-500" />
                       <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2">Time Limit Exceeded</h3>
@@ -319,7 +319,7 @@ export default function CourseLearningPage() {
                     </div>
                   </div>
                 ) : currentLesson.type === "text" ? (
-                  <ScrollArea className="w-full h-full">
+                  <ScrollArea className="w-full h-full flex-1 min-h-0">
                     <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
                       <div 
                         className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
@@ -330,7 +330,7 @@ export default function CourseLearningPage() {
                     </div>
                   </ScrollArea>
                 ) : (
-                  <div className="w-full h-full relative bg-black flex items-center justify-center">
+                  <div className="w-full h-full relative bg-black flex items-center justify-center min-h-0">
                     <VideoPlayer
                       lessonTitle={currentLesson.title}
                       onComplete={handleLessonComplete}
@@ -348,8 +348,8 @@ export default function CourseLearningPage() {
               </TabsContent>
 
               {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
-                <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
-                  <ScrollArea className="w-full h-full">
+                <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
+                  <ScrollArea className="w-full h-full flex-1 min-h-0">
                     <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
                       <QuizComponent
                       quiz={{
@@ -413,8 +413,8 @@ export default function CourseLearningPage() {
               )}
 
               {currentLesson.resources && currentLesson.resources.length > 0 && (
-                <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
-                  <ScrollArea className="w-full h-full">
+                <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
+                  <ScrollArea className="w-full h-full flex-1 min-h-0">
                     <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
                       <ResourcesPanel 
                         resources={currentLesson.resources || []} 
@@ -493,7 +493,7 @@ export default function CourseLearningPage() {
         </div>
 
         {/* Sidebar - Scrollable on mobile, fixed on desktop */}
-        <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0">
+        <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-none">
           <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-3 md:p-4 overflow-hidden">
             <div className="mb-3 sm:mb-4 flex-shrink-0">
               <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2">Course Progress</h3>
@@ -510,7 +510,7 @@ export default function CourseLearningPage() {
             </div>
             <div className="border-t pt-2 sm:pt-3 md:pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
               <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
-              <ScrollArea className="flex-1 min-h-0">
+              <ScrollArea className="flex-1 min-h-0 w-full">
                 <div className="space-y-1 sm:space-y-1.5 md:space-y-2 pr-1 sm:pr-2">
                 {course.lessons.map((lesson: any, index: number) => {
                   const isCompleted = completedLessons.includes(index)
