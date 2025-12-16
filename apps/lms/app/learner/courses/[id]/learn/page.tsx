@@ -211,42 +211,42 @@ export default function CourseLearningPage() {
   const currentLesson = course.lessons[currentLessonIndex]
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur">
-        <div className="px-3 sm:px-4 md:px-6 py-3 md:py-4">
-          <div className="max-w-[1800px] mx-auto flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0">
-              <ArrowLeft className="h-4 w-4" />
+        <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
+          <div className="max-w-[1800px] mx-auto flex items-center gap-2 sm:gap-3">
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0 h-8 sm:h-9 md:h-10">
+              <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">Course: {course.title}</h1>
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate">Course: {course.title}</h1>
           </div>
         </div>
       </div>
 
       {/* Main Content - Scrollable container on mobile, fixed on desktop */}
-      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
         <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none">
           <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-12 border-b border-border overflow-x-auto">
+              <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto">
                 <TabsTrigger
                   value="video"
-                  className="rounded-none h-12 px-4 sm:px-6 md:px-8 flex-shrink-0"
+                  className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
                 >
                   {currentLesson.type === "text" ? "Content" : "Video"}
                 </TabsTrigger>
                 {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
                   <TabsTrigger
                     value="quiz"
-                    className="rounded-none h-12 px-4 sm:px-6 md:px-8 flex-shrink-0"
+                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
                   >
                     Quiz
                   </TabsTrigger>
                 )}
                 <TabsTrigger
                   value="resources"
-                  className="rounded-none h-12 px-4 sm:px-6 md:px-8 flex-shrink-0"
+                  className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
                 >
                   Resources
                 </TabsTrigger>
@@ -256,16 +256,16 @@ export default function CourseLearningPage() {
                 {timeLimitExceeded ? (
                   <div className="w-full h-full flex items-center justify-center bg-black text-white p-4">
                     <div className="text-center max-w-md">
-                      <Clock className="h-12 w-12 mx-auto mb-4 text-red-500" />
-                      <h3 className="text-lg sm:text-xl font-semibold mb-2">Time Limit Exceeded</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <Clock className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-red-500" />
+                      <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-2">Time Limit Exceeded</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         You have exceeded the time limit for this lesson. Please contact your instructor.
                       </p>
                     </div>
                   </div>
                 ) : currentLesson.type === "text" ? (
                   <ScrollArea className="w-full h-full">
-                    <div className="p-4 sm:p-6">
+                    <div className="p-3 sm:p-4 md:p-6">
                       <div 
                         className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
                         dangerouslySetInnerHTML={{
@@ -275,7 +275,7 @@ export default function CourseLearningPage() {
                     </div>
                   </ScrollArea>
                 ) : (
-                  <div className="w-full h-full relative bg-black">
+                  <div className="w-full h-full relative bg-black flex items-center justify-center">
                     <VideoPlayer
                       lessonTitle={currentLesson.title}
                       onComplete={handleLessonComplete}
@@ -293,9 +293,9 @@ export default function CourseLearningPage() {
               </TabsContent>
 
               {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
-                <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0">
+                <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
                   <ScrollArea className="w-full h-full">
-                    <div className="p-4 sm:p-6">
+                    <div className="p-3 sm:p-4 md:p-6">
                       <QuizComponent
                       quiz={{
                         questions: currentLesson.quiz.questions.map((q: any) => {
@@ -357,9 +357,9 @@ export default function CourseLearningPage() {
                 </TabsContent>
               )}
 
-              <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0">
+              <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
                 <ScrollArea className="w-full h-full">
-                  <div className="p-4 sm:p-6">
+                  <div className="p-3 sm:p-4 md:p-6">
                     <ResourcesPanel 
                       resources={currentLesson.resources || []} 
                     />
@@ -369,37 +369,37 @@ export default function CourseLearningPage() {
             </Tabs>
 
             {/* Footer - Fixed */}
-            <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-background">
+            <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 border-t border-border bg-background">
               {/* Time Limit Display */}
               {timeRemaining !== null && timeRemaining > 0 && (() => {
                 const mins = Math.floor(timeRemaining / 60)
                 const secs = Math.floor(timeRemaining % 60)
                 const secsStr = secs < 10 ? "0" + secs.toString() : secs.toString()
                 return (
-                  <div className="mb-3 flex items-center justify-center gap-2 text-xs sm:text-sm">
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <div className="mb-2 sm:mb-3 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs md:text-sm">
+                    <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
                     <span className="font-medium">
                       Time Remaining: {mins.toString()}:{secsStr}
                     </span>
                   </div>
                 )
               })()}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4">
                 <Button
                   variant="outline"
                   onClick={handlePreviousLesson}
                   disabled={currentLessonIndex === 0 || timeLimitExceeded}
-                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto order-2 sm:order-1"
+                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto order-2 sm:order-1 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                   size="sm"
                 >
-                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
+                  <ChevronLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Previous
                 </Button>
 
                 <div className="text-center w-full sm:w-auto order-1 sm:order-2">
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-1">
+                  <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-1">
                     Lesson {currentLessonIndex + 1} of {course.lessons.length}
                   </p>
-                  <Progress value={progress} className="w-full sm:w-[200px] bg-secondary h-1.5 sm:h-2" />
+                  <Progress value={progress} className="w-full sm:w-[180px] md:w-[200px] bg-secondary h-1 sm:h-1.5 md:h-2" />
                 </div>
 
                 <Button
@@ -413,7 +413,7 @@ export default function CourseLearningPage() {
                       activeTab === "resources" &&
                       currentLessonIndex === course.lessons.length - 1)
                   }
-                  className={`text-foreground w-full sm:w-auto order-3 ${
+                  className={`text-foreground w-full sm:w-auto order-3 h-8 sm:h-9 md:h-10 text-xs sm:text-sm ${
                     allLessonsCompleted
                       ? "bg-primary hover:bg-primary-dark text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
@@ -422,11 +422,11 @@ export default function CourseLearningPage() {
                 >
                   {allLessonsCompleted ? (
                     <>
-                      Complete Course <CheckCircle2 className="ml-2 h-4 w-4" />
+                      Complete Course <CheckCircle2 className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                     </>
                   ) : (
                     <>
-                      Next <ChevronRight className="ml-2 h-4 w-4" />
+                      Next <ChevronRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                     </>
                   )}
                 </Button>
@@ -437,24 +437,24 @@ export default function CourseLearningPage() {
 
         {/* Sidebar - Scrollable on mobile, fixed on desktop */}
         <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0">
-          <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4">
-            <div className="mb-4 flex-shrink-0">
-              <h3 className="text-sm sm:text-base font-semibold mb-2">Course Progress</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs sm:text-sm">
+          <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-3 md:p-4 overflow-hidden">
+            <div className="mb-3 sm:mb-4 flex-shrink-0">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2">Course Progress</h3>
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
                   <span className="text-muted-foreground">Overall Progress</span>
                   <span className="font-semibold">{Math.round(progress)}%</span>
                 </div>
-                <Progress value={progress} className="h-1.5 sm:h-2" />
-                <p className="text-xs text-muted-foreground">
+                <Progress value={progress} className="h-1 sm:h-1.5 md:h-2" />
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {completedLessons.length} of {course.lessons.length} lessons completed
                 </p>
               </div>
             </div>
-            <div className="border-t pt-3 sm:pt-4 flex-1 flex flex-col min-h-0">
-              <h3 className="text-sm sm:text-base font-semibold mb-3 sm:mb-4 flex-shrink-0">Course Content</h3>
-              <ScrollArea className="flex-1">
-                <div className="space-y-1.5 sm:space-y-2 pr-2">
+            <div className="border-t pt-2 sm:pt-3 md:pt-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="space-y-1 sm:space-y-1.5 md:space-y-2 pr-1 sm:pr-2">
                 {course.lessons.map((lesson: any, index: number) => {
                   const isCompleted = completedLessons.includes(index)
                   const isCurrent = index === currentLessonIndex
@@ -476,7 +476,7 @@ export default function CourseLearningPage() {
                         setTimeLimitExceeded(false)
                       }}
                       disabled={!canAccess}
-                      className={`w-full text-left p-2 sm:p-3 rounded-md sm:rounded-lg flex items-center justify-between transition-colors text-xs sm:text-sm border ${
+                      className={`w-full text-left p-1.5 sm:p-2 md:p-3 rounded-md sm:rounded-lg flex items-center justify-between transition-colors text-[10px] sm:text-xs md:text-sm border ${
                         !canAccess
                           ? "opacity-50 cursor-not-allowed bg-muted border-border"
                           : isCurrent
@@ -488,27 +488,27 @@ export default function CourseLearningPage() {
                     >
                       <div className="flex items-center flex-1 min-w-0">
                         {isCompleted ? (
-                          <CheckCircle2 className="mr-2 sm:mr-3 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-green-500" />
+                          <CheckCircle2 className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0 text-green-500" />
                         ) : isCurrent ? (
-                          <PlayCircle className="mr-2 sm:mr-3 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                          <PlayCircle className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0" />
                         ) : (
-                          <BookOpen className="mr-2 sm:mr-3 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-muted-foreground" />
+                          <BookOpen className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
                             <span className={`truncate block ${isCurrent ? "font-semibold" : ""}`}>
                               {index + 1}. {lesson.title}
                             </span>
                             {isRequired && (
-                              <span className="text-[10px] sm:text-xs bg-yellow-500 text-yellow-900 dark:text-yellow-100 px-1 sm:px-1.5 py-0.5 rounded flex-shrink-0">
+                              <span className="text-[9px] sm:text-[10px] md:text-xs bg-yellow-500 text-yellow-900 dark:text-yellow-100 px-0.5 sm:px-1 md:px-1.5 py-0.5 rounded flex-shrink-0">
                                 Required
                               </span>
                             )}
                           </div>
                           {(isCurrent || videoProgressPercent > 0) && (
-                            <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
-                              <Progress value={lessonProgress} className="h-1 w-16 sm:w-20" />
-                              <span className="text-[10px] sm:text-xs opacity-75">{Math.round(lessonProgress)}%</span>
+                            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 mt-0.5 sm:mt-1">
+                              <Progress value={lessonProgress} className="h-0.5 sm:h-1 w-12 sm:w-16 md:w-20" />
+                              <span className="text-[9px] sm:text-[10px] md:text-xs opacity-75">{Math.round(lessonProgress)}%</span>
                             </div>
                           )}
                         </div>

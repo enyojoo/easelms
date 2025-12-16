@@ -63,7 +63,7 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className=" pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8 px-4 lg:px-6">
       <div className="flex items-center mb-4">
         <h1 className="text-3xl font-bold text-primary">Courses</h1>
       </div>
