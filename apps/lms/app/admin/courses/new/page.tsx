@@ -202,46 +202,43 @@ function NewCourseContent() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <div>
+        <Card className="p-6">
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="lessons">Lessons</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
 
-          <Card className="p-6">
-            <Tabs defaultValue="basic" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                <TabsTrigger value="lessons">Lessons</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
+            <TabsContent value="basic" className="mt-0 space-y-4">
+              <CourseBasicInfo
+                data={courseData.basicInfo}
+                onUpdate={(data) => updateCourseData("basicInfo", data)}
+                availableCourses={modules.map((m) => ({ id: m.id, title: m.title }))}
+              />
+            </TabsContent>
 
-          <TabsContent value="basic" className="space-y-4">
-            <CourseBasicInfo
-              data={courseData.basicInfo}
-              onUpdate={(data) => updateCourseData("basicInfo", data)}
-              availableCourses={modules.map((m) => ({ id: m.id, title: m.title }))}
-            />
-          </TabsContent>
+            <TabsContent value="lessons" className="mt-0 space-y-4">
+              <LessonBuilder 
+                lessons={courseData.lessons} 
+                onUpdate={(lessons) => updateCourseData("lessons", lessons)}
+                minimumQuizScore={courseData.settings.minimumQuizScore}
+              />
+            </TabsContent>
 
-          <TabsContent value="lessons" className="space-y-4">
-            <LessonBuilder 
-              lessons={courseData.lessons} 
-              onUpdate={(lessons) => updateCourseData("lessons", lessons)}
-              minimumQuizScore={courseData.settings.minimumQuizScore}
-            />
-          </TabsContent>
+            <TabsContent value="settings" className="mt-0 space-y-4">
+              <CourseSettings
+                settings={courseData.settings}
+                onUpdate={(settings) => updateCourseData("settings", settings)}
+              />
+            </TabsContent>
 
-          <TabsContent value="settings" className="space-y-4">
-            <CourseSettings
-              settings={courseData.settings}
-              onUpdate={(settings) => updateCourseData("settings", settings)}
-            />
-          </TabsContent>
-
-              <TabsContent value="preview" className="space-y-4">
-                <CoursePreview courseData={courseData} />
-              </TabsContent>
-            </Tabs>
-          </Card>
-        </div>
+            <TabsContent value="preview" className="mt-0 space-y-4">
+              <CoursePreview courseData={courseData} />
+            </TabsContent>
+          </Tabs>
+        </Card>
       </div>
     </div>
   )
