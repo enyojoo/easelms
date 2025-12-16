@@ -483,12 +483,47 @@ export default function CourseLearningPage() {
                 </TabsContent>
 
                 <TabsContent value="quiz" className="flex-grow m-0 p-4 md:p-6 lg:h-[370px] overflow-y-auto">
-                  {currentLesson.title && lessonQuizzes[currentLesson.title as keyof typeof lessonQuizzes] && (
+                  {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 ? (
+                    <QuizComponent
+                      quiz={{
+                        questions: currentLesson.quiz.questions.map((q: any) => {
+                          // Convert admin quiz format to learner format
+                          if (q.type === "multiple-choice") {
+                            return {
+                              question: q.text || "",
+                              options: q.options || [],
+                              correctAnswer: q.correctOption || 0,
+                              id: q.id,
+                            }
+                          }
+                          // For other question types, return a simple format
+                          return {
+                            question: q.text || q.question || "",
+                            options: q.options || [],
+                            correctAnswer: q.correctOption || q.correctAnswer || 0,
+                            id: q.id,
+                          }
+                        }),
+                        shuffleQuestions: (currentLesson.quiz as any).shuffleQuestions,
+                        shuffleAnswers: (currentLesson.quiz as any).shuffleAnswers,
+                        showResultsImmediately: (currentLesson.quiz as any).showResultsImmediately,
+                        allowMultipleAttempts: (currentLesson.quiz as any).allowMultipleAttempts,
+                        showCorrectAnswers: (currentLesson.quiz as any).showCorrectAnswers,
+                      }}
+                      onComplete={handleQuizComplete}
+                      minimumQuizScore={course?.settings?.minimumQuizScore || 50}
+                    />
+                  ) : currentLesson.title && lessonQuizzes[currentLesson.title as keyof typeof lessonQuizzes] ? (
+                    // Fallback to hardcoded quizzes for backward compatibility
                     <QuizComponent
                       quiz={lessonQuizzes[currentLesson.title as keyof typeof lessonQuizzes]}
                       onComplete={handleQuizComplete}
                       minimumQuizScore={course?.settings?.minimumQuizScore || 50}
                     />
+                  ) : (
+                    <div className="text-center p-8">
+                      <p className="text-muted-foreground">No quiz available for this lesson.</p>
+                    </div>
                   )}
                 </TabsContent>
 
