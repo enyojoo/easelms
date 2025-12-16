@@ -94,7 +94,7 @@ export default function LearnerDashboard() {
   const firstName = user.name?.split(" ")[0] || user.name || "there"
 
   return (
-    <div className="pt-2 md:pt-4 pb-2 md:pb-4 max-w-7xl mx-auto px-4 lg:px-6">
+    <div className="pt-2 md:pt-4 lg:pt-0 pb-2 md:pb-4 max-w-7xl mx-auto px-4 lg:px-6">
       <div className="flex justify-between items-center mb-3 md:mb-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary">Hi, {firstName} 👋🏻</h1>
@@ -126,7 +126,7 @@ export default function LearnerDashboard() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 lg:mb-0">
           <Card>
             <CardHeader>
               <CardTitle>Continue Learning</CardTitle>
