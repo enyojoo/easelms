@@ -166,10 +166,10 @@ export default function CoursePage() {
                 {module.lessons.map((lesson, index) => (
                   <AccordionItem value={`item-${index}`} key={index}>
                     <AccordionTrigger>
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center">
-                          <PlayCircle className="w-5 h-5 mr-2 text-primary" />
-                          <span className="font-medium">{lesson.title}</span>
+                      <div className="flex items-start justify-between w-full text-left">
+                        <div className="flex items-start flex-1 min-w-0">
+                          <PlayCircle className="w-5 h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="font-medium text-left break-words">{lesson.title}</span>
                         </div>
                         {/* Time removed */}
                       </div>

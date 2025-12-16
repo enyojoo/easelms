@@ -552,8 +552,8 @@ export default function CourseLearningPage() {
                           <BookOpen className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
-                            <span className={`truncate block ${isCurrent ? "font-semibold" : ""}`}>
+                          <div className="flex items-start gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
+                            <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
                               {index + 1}. {lesson.title}
                             </span>
                             {isRequired && (
