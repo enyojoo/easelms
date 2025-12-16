@@ -1,8 +1,6 @@
 "use client"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2, AlertCircle } from "lucide-react"
 import { extractVimeoId, isVimeoUrl, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
@@ -55,16 +53,6 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
     }
   }, [videoInput])
 
-  const handleVideoSettingsChange = (key: string, value: boolean) => {
-    onChange({
-      ...content,
-      settings: {
-        ...content.settings,
-        [key]: value,
-      },
-    })
-  }
-
   if (type === "video") {
     return (
       <div className="space-y-4">
@@ -115,44 +103,6 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
             </div>
           </div>
         )}
-
-        <Card className="p-4">
-          <h4 className="font-medium mb-4">Video Settings</h4>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Autostart</Label>
-                <p className="text-sm text-muted-foreground">Start video automatically when lesson loads</p>
-              </div>
-              <Switch
-                checked={content.settings?.autostart || false}
-                onCheckedChange={(checked) => handleVideoSettingsChange("autostart", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Show Controls</Label>
-                <p className="text-sm text-muted-foreground">Display video player controls</p>
-              </div>
-              <Switch
-                checked={content.settings?.showControls || false}
-                onCheckedChange={(checked) => handleVideoSettingsChange("showControls", checked)}
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Pause on Unfocus</Label>
-                <p className="text-sm text-muted-foreground">Pause video when window loses focus</p>
-              </div>
-              <Switch
-                checked={content.settings?.pauseOnUnfocus || false}
-                onCheckedChange={(checked) => handleVideoSettingsChange("pauseOnUnfocus", checked)}
-              />
-            </div>
-          </div>
-        </Card>
       </div>
     )
   }

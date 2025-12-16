@@ -113,39 +113,6 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
     onChange({ ...quiz, questions: items })
   }
 
-  const calculatePreviewScore = () => {
-    if (!previewMode || questions.length === 0) return 0
-    let correct = 0
-    questions.forEach((question, qIndex) => {
-      const answer = selectedAnswers[qIndex]
-      if (answer === undefined) return
-
-      switch (question.type) {
-        case "multiple-choice":
-          if (answer === question.correctOption) correct++
-          break
-        case "true-false":
-          if (answer === question.correctAnswer) correct++
-          break
-        case "fill-blank":
-          if (question.correctAnswers.some((a) => a.toLowerCase() === answer.toLowerCase())) correct++
-          break
-        case "short-answer":
-          if (
-            question.correctKeywords.some((keyword) =>
-              answer.toLowerCase().includes(keyword.toLowerCase())
-            )
-          )
-            correct++
-          break
-        default:
-          // Essay and matching need manual grading
-          break
-      }
-    })
-    return Math.round((correct / questions.length) * 100)
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -171,24 +138,15 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
           </div>
 
           <TabsContent value="builder" className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-              <div className="space-y-1">
-                <Label className="text-sm font-medium">Passing Score</Label>
-                <p className="text-xs text-muted-foreground">
-                  Using course minimum: {minimumQuizScore}% (set in Course Settings)
-                </p>
-              </div>
-            </div>
-
             <QuizSettings
               quiz={{
                 enabled: quiz.enabled,
                 questions: questions,
-                shuffleQuestions: quiz.shuffleQuestions,
-                shuffleAnswers: quiz.shuffleAnswers,
-                showResultsImmediately: quiz.showResultsImmediately,
-                allowMultipleAttempts: quiz.allowMultipleAttempts,
-                showCorrectAnswers: quiz.showCorrectAnswers,
+                shuffleQuestions: (quiz as any).shuffleQuestions,
+                shuffleAnswers: (quiz as any).shuffleAnswers,
+                showResultsImmediately: (quiz as any).showResultsImmediately,
+                allowMultipleAttempts: (quiz as any).allowMultipleAttempts,
+                showCorrectAnswers: (quiz as any).showCorrectAnswers,
               }}
               onChange={(updatedQuiz) => {
                 onChange({
@@ -271,23 +229,14 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
             </DragDropContext>
 
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <QuestionTypeSelector
-                  onSelect={(type) => addQuestion(type)}
-                  trigger={
-                    <Button className="flex-1" variant="outline">
-                      <Plus className="w-4 h-4 mr-2" /> Add Question
-                    </Button>
-                  }
-                />
-                <Button
-                  onClick={() => addQuestion("multiple-choice")}
-                  variant="outline"
-                  className="flex-shrink-0"
-                >
-                  <Plus className="w-4 h-4 mr-2" /> Quick Add (MC)
-                </Button>
-              </div>
+              <QuestionTypeSelector
+                onSelect={(type) => addQuestion(type)}
+                trigger={
+                  <Button className="w-full" variant="outline">
+                    <Plus className="w-4 h-4 mr-2" /> Add Question
+                  </Button>
+                }
+              />
             </div>
           </TabsContent>
 
@@ -310,20 +259,6 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                     </p>
                   </div>
                 ))}
-                <div className="p-4 bg-muted rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Your Score</span>
-                    <span className="text-2xl font-bold text-primary">{calculatePreviewScore()}%</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Passing score: {minimumQuizScore}% -{" "}
-                    {calculatePreviewScore() >= minimumQuizScore ? (
-                      <span className="text-green-600 font-semibold">Passed!</span>
-                    ) : (
-                      <span className="text-red-600 font-semibold">Not passed</span>
-                    )}
-                  </p>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

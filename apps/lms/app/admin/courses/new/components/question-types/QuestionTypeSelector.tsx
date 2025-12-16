@@ -10,8 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CheckCircle2, Type, FileText } from "lucide-react"
-import { QuestionType } from "../types/quiz"
+import { CheckCircle2, Type, FileText, HelpCircle } from "lucide-react"
+import { QuestionType } from "../../types/quiz"
 
 interface QuestionTypeOption {
   type: QuestionType
@@ -82,14 +82,14 @@ export default function QuestionTypeSelector({ onSelect, trigger }: QuestionType
               <Button
                 key={option.type}
                 variant="outline"
-                className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-primary/5 transition-colors"
+                className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-primary/5 transition-colors text-left"
                 onClick={() => handleSelect(option.type)}
               >
                 <div className="flex items-center gap-2 w-full">
                   <Icon className="w-5 h-5 text-primary flex-shrink-0" />
-                  <span className="font-semibold text-left">{option.label}</span>
+                  <span className="font-semibold">{option.label}</span>
                 </div>
-                <p className="text-sm text-muted-foreground text-left w-full leading-relaxed">
+                <p className="text-sm text-muted-foreground w-full leading-relaxed break-words whitespace-normal">
                   {option.description}
                 </p>
               </Button>
