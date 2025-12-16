@@ -4,29 +4,17 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Filter, ArrowUpDown, Loader2 } from "lucide-react"
+import { ArrowUpDown, Loader2 } from "lucide-react"
 import { getClientAuthState } from "@/utils/client-auth"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CourseCard from "@/components/CourseCard"
 
-// Mock categories
-const courseCategories = [
-  "All Categories",
-  "Marketing",
-  "Business",
-  "Finance",
-  "Communication",
-  "Technology",
-  "Entrepreneurship",
-]
-
 export default function CoursesPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("All Categories")
   const [sortBy, setSortBy] = useState("relevance")
 
   useEffect(() => {
@@ -60,23 +48,6 @@ export default function CoursesPage() {
   const filterCourses = (courses: typeof modules) => {
     let filtered = courses.filter((course) => course.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    // Category filter (mock - in real app, courses would have categories)
-    if (selectedCategory !== "All Categories") {
-      filtered = filtered.filter((course) => {
-        // Mock category matching based on course title keywords
-        const categoryMap: Record<string, string[]> = {
-          Marketing: ["marketing", "social media", "digital"],
-          Business: ["startup", "business", "entrepreneurship"],
-          Finance: ["money", "finance", "financial"],
-          Communication: ["speaking", "communication"],
-          Technology: ["tech", "ai", "no-code"],
-          Entrepreneurship: ["startup", "entrepreneurship", "side hustle"],
-        }
-        const keywords = categoryMap[selectedCategory] || []
-        return keywords.some((keyword) => course.title.toLowerCase().includes(keyword))
-      })
-    }
-
     // Sorting
     if (sortBy === "price-low") {
       filtered.sort((a, b) => (a.price || 0) - (b.price || 0))
@@ -109,19 +80,6 @@ export default function CoursesPage() {
             />
           </div>
           <div className="flex gap-2">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {courseCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-[180px]">
                 <ArrowUpDown className="mr-2 h-4 w-4" />

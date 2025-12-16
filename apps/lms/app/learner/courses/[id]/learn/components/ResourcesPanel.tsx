@@ -11,6 +11,19 @@ interface ResourcesPanelProps {
 }
 
 export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
+  if (!resources || resources.length === 0) {
+    return (
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle>Lesson Resources</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground py-8">No resources available for this lesson.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="border-border bg-card">
       <CardHeader>
