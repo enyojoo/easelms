@@ -1,26 +1,25 @@
 "use client"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, Eye, GripVertical, CheckCircle2 } from "lucide-react"
+import { Plus, Trash2, GripVertical } from "lucide-react"
 import { useState } from "react"
-
-interface Question {
-  id: string
-  text: string
-  options: string[]
-  correctOption: number
-}
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
+import { Quiz, Question } from "../types/quiz"
+import QuestionEditor, { createQuestion } from "./question-types/QuestionEditor"
+import QuestionTypeSelector from "./question-types/QuestionTypeSelector"
+import QuizSettings from "./QuizSettings"
+import QuestionBank from "./QuestionBank"
 
 interface QuizBuilderProps {
   quiz: {
     enabled: boolean
-    questions: Question[]
+    questions: any[]
     passingScore: number
   }
   onChange: (quiz: any) => void
@@ -28,46 +27,95 @@ interface QuizBuilderProps {
 
 export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
   const [previewMode, setPreviewMode] = useState(false)
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({})
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, any>>({})
+
+  // Migrate old questions to new format if needed
+  const migrateQuestions = (questions: any[]): Question[] => {
+    return questions.map((q) => {
+      // If already in new format, return as is
+      if (q.type) {
+        return q as Question
+      }
+      // Migrate old multiple choice format
+      return {
+        id: q.id || `q-${Date.now()}`,
+        type: "multiple-choice",
+        text: q.text || "",
+        options: q.options || ["", "", "", ""],
+        correctOption: q.correctOption || 0,
+        points: 1,
+        explanation: "",
+      } as Question
+    })
+  }
+
+  const questions: Question[] = migrateQuestions(quiz.questions || [])
 
   const toggleQuiz = (enabled: boolean) => {
     onChange({ ...quiz, enabled })
   }
 
-  const addQuestion = () => {
-    const newQuestion: Question = {
-      id: `q-${Date.now()}`,
-      text: "",
-      options: ["", "", "", ""],
-      correctOption: 0,
-    }
+  const addQuestion = (type?: string) => {
+    const questionType = (type || "multiple-choice") as any
+    const newQuestion = createQuestion(questionType)
     onChange({
       ...quiz,
-      questions: [...quiz.questions, newQuestion],
+      questions: [...questions, newQuestion],
     })
   }
 
-  const updateQuestion = (index: number, updates: Partial<Question>) => {
-    const updatedQuestions = [...quiz.questions]
-    updatedQuestions[index] = { ...updatedQuestions[index], ...updates }
+  const updateQuestion = (index: number, updatedQuestion: Question) => {
+    const updatedQuestions = [...questions]
+    updatedQuestions[index] = updatedQuestion
     onChange({ ...quiz, questions: updatedQuestions })
   }
 
   const removeQuestion = (index: number) => {
-    const updatedQuestions = [...quiz.questions]
-    updatedQuestions.splice(index, 1)
+    const updatedQuestions = questions.filter((_, i) => i !== index)
     onChange({ ...quiz, questions: updatedQuestions })
   }
 
+  const handleDragEnd = (result: DropResult) => {
+    if (!result.destination) return
+
+    const items = Array.from(questions)
+    const [reorderedItem] = items.splice(result.source.index, 1)
+    items.splice(result.destination.index, 0, reorderedItem)
+
+    onChange({ ...quiz, questions: items })
+  }
+
   const calculatePreviewScore = () => {
-    if (!previewMode) return 0
+    if (!previewMode || questions.length === 0) return 0
     let correct = 0
-    quiz.questions.forEach((question, qIndex) => {
-      if (selectedAnswers[qIndex] === question.correctOption) {
-        correct++
+    questions.forEach((question, qIndex) => {
+      const answer = selectedAnswers[qIndex]
+      if (answer === undefined) return
+
+      switch (question.type) {
+        case "multiple-choice":
+          if (answer === question.correctOption) correct++
+          break
+        case "true-false":
+          if (answer === question.correctAnswer) correct++
+          break
+        case "fill-blank":
+          if (question.correctAnswers.some((a) => a.toLowerCase() === answer.toLowerCase())) correct++
+          break
+        case "short-answer":
+          if (
+            question.correctKeywords.some((keyword) =>
+              answer.toLowerCase().includes(keyword.toLowerCase())
+            )
+          )
+            correct++
+          break
+        default:
+          // Essay and matching need manual grading
+          break
       }
     })
-    return Math.round((correct / quiz.questions.length) * 100)
+    return Math.round((correct / questions.length) * 100)
   }
 
   return (
@@ -85,12 +133,12 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="builder">Builder</TabsTrigger>
-              <TabsTrigger value="preview" disabled={quiz.questions.length === 0}>
+              <TabsTrigger value="preview" disabled={questions.length === 0}>
                 Preview
               </TabsTrigger>
             </TabsList>
             <Badge variant="outline" className="text-sm">
-              {quiz.questions.length} {quiz.questions.length === 1 ? "question" : "questions"}
+              {questions.length} {questions.length === 1 ? "question" : "questions"}
             </Badge>
           </div>
 
@@ -113,82 +161,106 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
               </div>
             </div>
 
-            <div className="space-y-4">
-              {quiz.questions.map((question, qIndex) => (
-                <Card key={question.id} className="border-2">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="w-4 h-4 text-muted-foreground" />
-                        <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
-                        {question.text && (
-                          <Badge variant="secondary" className="text-xs">
-                            {question.options.filter((o) => o.trim()).length} options
-                          </Badge>
-                        )}
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeQuestion(qIndex)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Question Text</Label>
-                      <Input
-                        value={question.text}
-                        onChange={(e) => updateQuestion(qIndex, { text: e.target.value })}
-                        placeholder="Enter your question here..."
-                        className="font-medium"
-                      />
-                    </div>
+            <QuizSettings
+              quiz={{
+                enabled: quiz.enabled,
+                questions: questions,
+                passingScore: quiz.passingScore,
+                shuffleQuestions: quiz.shuffleQuestions,
+                shuffleAnswers: quiz.shuffleAnswers,
+                showResultsImmediately: quiz.showResultsImmediately,
+                allowMultipleAttempts: quiz.allowMultipleAttempts,
+                showCorrectAnswers: quiz.showCorrectAnswers,
+              }}
+              onChange={(updatedQuiz) => {
+                onChange({
+                  ...quiz,
+                  ...updatedQuiz,
+                  questions: questions, // Keep existing questions
+                })
+              }}
+            />
 
-                    <div className="space-y-3">
-                      <Label>Answer Options</Label>
-                      <RadioGroup
-                        value={question.correctOption.toString()}
-                        onValueChange={(value) => updateQuestion(qIndex, { correctOption: Number.parseInt(value) })}
-                      >
-                        {question.options.map((option, oIndex) => (
-                          <div
-                            key={oIndex}
-                            className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-colors ${
-                              question.correctOption === oIndex
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50"
-                            }`}
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="questions">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                    {questions.map((question, qIndex) => (
+                      <Draggable key={question.id} draggableId={question.id} index={qIndex}>
+                        {(provided) => (
+                          <Card
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className="border-2"
                           >
-                            <RadioGroupItem value={oIndex.toString()} id={`q${qIndex}-o${oIndex}`} />
-                            <div className="flex-1 flex items-center gap-2">
-                              <Input
-                                value={option}
-                                onChange={(e) => {
-                                  const newOptions = [...question.options]
-                                  newOptions[oIndex] = e.target.value
-                                  updateQuestion(qIndex, { options: newOptions })
-                                }}
-                                placeholder={`Option ${oIndex + 1}`}
-                                className="flex-grow"
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-2">
+                                  <div {...provided.dragHandleProps}>
+                                    <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                                  </div>
+                                  <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {question.type.replace("-", " ")}
+                                  </Badge>
+                                  {question.points > 0 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {question.points} {question.points === 1 ? "point" : "points"}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => removeQuestion(qIndex)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <QuestionEditor
+                                question={question}
+                                onChange={(updated) => updateQuestion(qIndex, updated)}
                               />
-                              {question.correctOption === oIndex && (
-                                <CheckCircle2 className="w-4 h-4 text-primary" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                      <p className="text-xs text-muted-foreground">
-                        Select the correct answer by clicking the radio button next to it
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
 
-            <Button onClick={addQuestion} className="w-full" variant="outline">
-              <Plus className="w-4 h-4 mr-2" /> Add Question
-            </Button>
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <QuestionTypeSelector
+                  onSelect={(type) => addQuestion(type)}
+                  trigger={
+                    <Button className="flex-1" variant="outline">
+                      <Plus className="w-4 h-4 mr-2" /> Add Question
+                    </Button>
+                  }
+                />
+                <Button
+                  onClick={() => addQuestion("multiple-choice")}
+                  variant="outline"
+                  className="flex-shrink-0"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Quick Add (MC)
+                </Button>
+              </div>
+              <QuestionBank
+                onSelect={(question) => {
+                  onChange({
+                    ...quiz,
+                    questions: [...questions, question],
+                  })
+                }}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="preview" className="space-y-4">
@@ -197,36 +269,17 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
                 <CardTitle>Quiz Preview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {quiz.questions.map((question, qIndex) => (
+                {questions.map((question, qIndex) => (
                   <div key={question.id} className="space-y-3 p-4 border rounded-lg">
                     <div className="flex items-start justify-between">
                       <h3 className="font-semibold">Question {qIndex + 1}</h3>
-                      {selectedAnswers[qIndex] === question.correctOption && (
-                        <Badge variant="default" className="bg-green-500">
-                          Correct
-                        </Badge>
-                      )}
-                      {selectedAnswers[qIndex] !== undefined &&
-                        selectedAnswers[qIndex] !== question.correctOption && (
-                          <Badge variant="destructive">Incorrect</Badge>
-                        )}
+                      <Badge variant="secondary">{question.type}</Badge>
                     </div>
                     <p className="text-sm font-medium">{question.text || "No question text"}</p>
-                    <RadioGroup
-                      value={selectedAnswers[qIndex]?.toString()}
-                      onValueChange={(value) =>
-                        setSelectedAnswers({ ...selectedAnswers, [qIndex]: Number.parseInt(value) })
-                      }
-                    >
-                      {question.options.map((option, oIndex) => (
-                        <div key={oIndex} className="flex items-center space-x-2 p-2 rounded hover:bg-muted">
-                          <RadioGroupItem value={oIndex.toString()} id={`preview-q${qIndex}-o${oIndex}`} />
-                          <Label htmlFor={`preview-q${qIndex}-o${oIndex}`} className="flex-1 cursor-pointer">
-                            {option || `Option ${oIndex + 1}`}
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+                    {/* Preview rendering would go here - simplified for now */}
+                    <p className="text-xs text-muted-foreground">
+                      Preview mode for {question.type} questions - full implementation in next phase
+                    </p>
                   </div>
                 ))}
                 <div className="p-4 bg-muted rounded-lg">

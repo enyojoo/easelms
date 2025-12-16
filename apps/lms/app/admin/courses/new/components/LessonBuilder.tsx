@@ -2,16 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
-import { Plus, GripVertical, Video, FileText, Settings, Trash2, Link, FileUp } from "lucide-react"
-import LessonContentEditor from "./LessonContentEditor"
-import FileUpload from "@/components/FileUpload"
+import { Plus } from "lucide-react"
+import LessonCard from "./LessonCard"
+import BulkOperations from "./BulkOperations"
 
 interface Resource {
   id: string
@@ -27,7 +22,7 @@ interface Question {
   correctOption: number
 }
 
-interface Lesson {
+export interface Lesson {
   id: string
   title: string
   type: "video" | "text"
@@ -44,6 +39,7 @@ interface Lesson {
     passingScore: number
     questions: Question[]
   }
+  estimatedDuration?: number
 }
 
 interface LessonBuilderProps {
@@ -53,8 +49,8 @@ interface LessonBuilderProps {
 
 export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps) {
   const [localLessons, setLocalLessons] = useState<Lesson[]>(lessons)
-  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
-  const [isEditing, setIsEditing] = useState(false)
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
+  const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setLocalLessons(lessons)
@@ -78,79 +74,112 @@ export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps)
         passingScore: 70,
         questions: [],
       },
+      estimatedDuration: 0,
     }
     const updatedLessons = [...localLessons, newLesson]
     setLocalLessons(updatedLessons)
     onUpdate(updatedLessons)
-  }
-
-  const addQuestion = (lesson: Lesson) => {
-    const newQuestion: Question = {
-      id: `q-${Date.now()}`,
-      text: "",
-      options: ["", "", "", ""],
-      correctOption: 0,
-    }
-
-    const updatedLesson = {
-      ...lesson,
-      quiz: {
-        ...lesson.quiz,
-        questions: [...(lesson.quiz.questions || []), newQuestion],
-      },
-    }
-
-    updateLesson(updatedLesson)
-  }
-
-  const removeQuestion = (lessonId: string, questionId: string) => {
-    const lesson = localLessons.find((l) => l.id === lessonId)
-    if (!lesson) return
-
-    const updatedLesson = {
-      ...lesson,
-      quiz: {
-        ...lesson.quiz,
-        questions: lesson.quiz.questions.filter((q) => q.id !== questionId),
-      },
-    }
-
-    updateLesson(updatedLesson)
-  }
-
-  const addResource = (lesson: Lesson, type: "document" | "link") => {
-    const newResource: Resource = {
-      id: `resource-${Date.now()}`,
-      type,
-      title: "",
-      url: "",
-    }
-
-    const updatedLesson = {
-      ...lesson,
-      resources: [...lesson.resources, newResource],
-    }
-
-    updateLesson(updatedLesson)
-  }
-
-  const removeResource = (lessonId: string, resourceId: string) => {
-    const lesson = localLessons.find((l) => l.id === lessonId)
-    if (!lesson) return
-
-    const updatedLesson = {
-      ...lesson,
-      resources: lesson.resources.filter((r) => r.id !== resourceId),
-    }
-
-    updateLesson(updatedLesson)
+    // Auto-expand new lesson
+    setExpandedLessons(new Set([...expandedLessons, newLesson.id]))
   }
 
   const updateLesson = (updatedLesson: Lesson) => {
     const updatedLessons = localLessons.map((lesson) => (lesson.id === updatedLesson.id ? updatedLesson : lesson))
     setLocalLessons(updatedLessons)
     onUpdate(updatedLessons)
-    setSelectedLesson(updatedLesson)
+  }
+
+  const deleteLesson = (lessonId: string) => {
+    const updatedLessons = localLessons.filter((lesson) => lesson.id !== lessonId)
+    setLocalLessons(updatedLessons)
+    onUpdate(updatedLessons)
+    const newExpanded = new Set(expandedLessons)
+    newExpanded.delete(lessonId)
+    setExpandedLessons(newExpanded)
+  }
+
+  const duplicateLesson = (lesson: Lesson) => {
+    const duplicatedLesson: Lesson = {
+      ...lesson,
+      id: `lesson-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: `${lesson.title} (Copy)`,
+      resources: lesson.resources.map((r) => ({
+        ...r,
+        id: `resource-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      })),
+      quiz: {
+        ...lesson.quiz,
+        questions: lesson.quiz.questions.map((q) => ({
+          ...q,
+          id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        })),
+      },
+    }
+    const updatedLessons = [...localLessons, duplicatedLesson]
+    setLocalLessons(updatedLessons)
+    onUpdate(updatedLessons)
+    setExpandedLessons(new Set([...expandedLessons, duplicatedLesson.id]))
+  }
+
+  const toggleLessonSelection = (lessonId: string) => {
+    setSelectedLessons((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(lessonId)) {
+        newSet.delete(lessonId)
+      } else {
+        newSet.add(lessonId)
+      }
+      return newSet
+    })
+  }
+
+  const selectAllLessons = () => {
+    if (selectedLessons.size === localLessons.length) {
+      setSelectedLessons(new Set())
+    } else {
+      setSelectedLessons(new Set(localLessons.map((l) => l.id)))
+    }
+  }
+
+  const bulkDelete = () => {
+    const updatedLessons = localLessons.filter((lesson) => !selectedLessons.has(lesson.id))
+    setLocalLessons(updatedLessons)
+    onUpdate(updatedLessons)
+    setSelectedLessons(new Set())
+  }
+
+  const bulkDuplicate = () => {
+    const lessonsToDuplicate = localLessons.filter((lesson) => selectedLessons.has(lesson.id))
+    const duplicatedLessons = lessonsToDuplicate.map((lesson) => ({
+      ...lesson,
+      id: `lesson-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      title: `${lesson.title} (Copy)`,
+      resources: lesson.resources.map((r) => ({
+        ...r,
+        id: `resource-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      })),
+      quiz: {
+        ...lesson.quiz,
+        questions: lesson.quiz.questions.map((q) => ({
+          ...q,
+          id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        })),
+      },
+    }))
+    const updatedLessons = [...localLessons, ...duplicatedLessons]
+    setLocalLessons(updatedLessons)
+    onUpdate(updatedLessons)
+    setSelectedLessons(new Set())
+  }
+
+  const toggleLesson = (lessonId: string) => {
+    const newExpanded = new Set(expandedLessons)
+    if (newExpanded.has(lessonId)) {
+      newExpanded.delete(lessonId)
+    } else {
+      newExpanded.add(lessonId)
+    }
+    setExpandedLessons(newExpanded)
   }
 
   const handleDragEnd = (result: DropResult) => {
@@ -164,17 +193,6 @@ export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps)
     onUpdate(items)
   }
 
-  const getLessonIcon = (type: string) => {
-    switch (type) {
-      case "video":
-        return <Video className="w-4 h-4" />
-      case "text":
-        return <FileText className="w-4 h-4" />
-      default:
-        return null
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -184,399 +202,50 @@ export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps)
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-1 space-y-4">
-          <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="lessons">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                  {localLessons.map((lesson, index) => (
-                    <Draggable key={lesson.id} draggableId={lesson.id} index={index}>
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={`p-3 rounded-lg border ${
-                            selectedLesson?.id === lesson.id ? "border-primary bg-primary/5" : "border-border"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div {...provided.dragHandleProps}>
-                              <GripVertical className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                            {getLessonIcon(lesson.type)}
-                            <span className="flex-grow truncate">{lesson.title}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedLesson(lesson)
-                                setIsEditing(true)
-                              }}
-                            >
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
-        </div>
+      {selectedLessons.size > 0 && (
+        <BulkOperations
+          selectedItems={Array.from(selectedLessons)}
+          onBulkDelete={bulkDelete}
+          onBulkDuplicate={bulkDuplicate}
+          onSelectAll={selectAllLessons}
+          totalItems={localLessons.length}
+        />
+      )}
 
-        <div className="md:col-span-2">
-          {isEditing && selectedLesson && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Lesson</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="lessonTitle">Lesson Title</Label>
-                  <Input
-                    id="lessonTitle"
-                    value={selectedLesson.title}
-                    onChange={(e) => updateLesson({ ...selectedLesson, title: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lessonType">Lesson Type</Label>
-                  <Select
-                    value={selectedLesson.type}
-                    onValueChange={(value: "video" | "text") => updateLesson({ ...selectedLesson, type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select lesson type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="video">Video Lesson</SelectItem>
-                      <SelectItem value="text">Text Lesson</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <LessonContentEditor
-                  type={selectedLesson.type}
-                  content={selectedLesson.content}
-                  onChange={(content) => updateLesson({ ...selectedLesson, content })}
-                />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Resources</h3>
-                  {selectedLesson.resources.map((resource) => (
-                    <div key={resource.id} className="space-y-2 p-4 border rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        {resource.type === "document" ? <FileUp className="w-4 h-4" /> : <Link className="w-4 h-4" />}
-                        <Input
-                          value={resource.title}
-                          onChange={(e) => {
-                            const updatedResources = selectedLesson.resources.map((r) =>
-                              r.id === resource.id ? { ...r, title: e.target.value } : r,
-                            )
-                            updateLesson({ ...selectedLesson, resources: updatedResources })
-                          }}
-                          placeholder="Resource title"
-                          className="flex-1"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeResource(selectedLesson.id, resource.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      {resource.type === "document" ? (
-                        <div className="space-y-2">
-                          {resource.url ? (
-                            <div className="flex items-center justify-between p-2 bg-muted rounded">
-                              <span className="text-sm truncate flex-1">{resource.url}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const updatedResources = selectedLesson.resources.map((r) =>
-                                    r.id === resource.id ? { ...r, url: "" } : r,
-                                  )
-                                  updateLesson({ ...selectedLesson, resources: updatedResources })
-                                }}
-                              >
-                                Change
-                              </Button>
-                            </div>
-                          ) : (
-                            <FileUpload
-                              type="document"
-                              bucket="course-documents"
-                              accept="application/pdf,.doc,.docx,.txt,.zip"
-                              maxSize={50 * 1024 * 1024} // 50MB
-                              multiple={false}
-                              additionalPath={`lesson-${selectedLesson.id}`}
-                              onUploadComplete={(files, urls) => {
-                                if (urls.length > 0) {
-                                  const updatedResources = selectedLesson.resources.map((r) =>
-                                    r.id === resource.id ? { ...r, url: urls[0] } : r,
-                                  )
-                                  updateLesson({ ...selectedLesson, resources: updatedResources })
-                                }
-                              }}
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <Input
-                          value={resource.url}
-                          onChange={(e) => {
-                            const updatedResources = selectedLesson.resources.map((r) =>
-                              r.id === resource.id ? { ...r, url: e.target.value } : r,
-                            )
-                            updateLesson({ ...selectedLesson, resources: updatedResources })
-                          }}
-                          placeholder="Enter URL"
-                        />
-                      )}
-                    </div>
-                  ))}
-                  <div className="flex space-x-2">
-                    <Button onClick={() => addResource(selectedLesson, "document")}>
-                      <FileUp className="w-4 h-4 mr-2" /> Add File
-                    </Button>
-                    <Button onClick={() => addResource(selectedLesson, "link")}>
-                      <Link className="w-4 h-4 mr-2" /> Add Link
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Quiz</Label>
-                      <p className="text-sm text-muted-foreground">Enable quiz for this lesson</p>
-                    </div>
-                    <Switch
-                      checked={selectedLesson.quiz.enabled}
-                      onCheckedChange={(checked) =>
-                        updateLesson({
-                          ...selectedLesson,
-                          quiz: { ...selectedLesson.quiz, enabled: checked },
-                        })
-                      }
-                    />
-                  </div>
-
-                  {selectedLesson.quiz.enabled && (
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Passing Score (%)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={selectedLesson.quiz.passingScore}
-                          onChange={(e) =>
-                            updateLesson({
-                              ...selectedLesson,
-                              quiz: {
-                                ...selectedLesson.quiz,
-                                passingScore: Number.parseInt(e.target.value),
-                              },
-                            })
-                          }
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="lessons">
+          {(provided) => (
+            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+              {localLessons.map((lesson, index) => (
+                <Draggable key={lesson.id} draggableId={lesson.id} index={index}>
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.draggableProps} className="flex items-start gap-2">
+                      <Checkbox
+                        checked={selectedLessons.has(lesson.id)}
+                        onCheckedChange={() => toggleLessonSelection(lesson.id)}
+                        className="mt-4"
+                      />
+                      <div className="flex-1">
+                        <LessonCard
+                          lesson={lesson}
+                          index={index}
+                          isExpanded={expandedLessons.has(lesson.id)}
+                          onToggle={() => toggleLesson(lesson.id)}
+                          onUpdate={updateLesson}
+                          onDelete={deleteLesson}
+                          onDuplicate={duplicateLesson}
+                          dragHandleProps={provided.dragHandleProps}
                         />
                       </div>
-
-                      <Button onClick={() => addQuestion(selectedLesson)} className="w-full" type="button">
-                        <Plus className="w-4 h-4 mr-2" /> Add Question
-                      </Button>
-
-                      {selectedLesson.quiz.questions.map((question, qIndex) => (
-                        <div key={question.id} className="p-4 border rounded-lg space-y-4">
-                          <div className="flex items-center justify-between">
-                            <Label>Question {qIndex + 1}</Label>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeQuestion(selectedLesson.id, question.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-
-                          <Input
-                            value={question.text}
-                            onChange={(e) => {
-                              const updatedQuestions = [...selectedLesson.quiz.questions]
-                              updatedQuestions[qIndex] = {
-                                ...question,
-                                text: e.target.value,
-                              }
-                              updateLesson({
-                                ...selectedLesson,
-                                quiz: {
-                                  ...selectedLesson.quiz,
-                                  questions: updatedQuestions,
-                                },
-                              })
-                            }}
-                            placeholder="Enter question text"
-                          />
-
-                          <RadioGroup
-                            value={question.correctOption.toString()}
-                            onValueChange={(value) => {
-                              const updatedQuestions = [...selectedLesson.quiz.questions]
-                              updatedQuestions[qIndex] = {
-                                ...question,
-                                correctOption: Number.parseInt(value),
-                              }
-                              updateLesson({
-                                ...selectedLesson,
-                                quiz: {
-                                  ...selectedLesson.quiz,
-                                  questions: updatedQuestions,
-                                },
-                              })
-                            }}
-                          >
-                            {question.options.map((option, oIndex) => (
-                              <div key={oIndex} className="flex items-center space-x-2">
-                                <RadioGroupItem value={oIndex.toString()} />
-                                <Input
-                                  value={option}
-                                  onChange={(e) => {
-                                    const updatedQuestions = [...selectedLesson.quiz.questions]
-                                    const newOptions = [...question.options]
-                                    newOptions[oIndex] = e.target.value
-                                    updatedQuestions[qIndex] = {
-                                      ...question,
-                                      options: newOptions,
-                                    }
-                                    updateLesson({
-                                      ...selectedLesson,
-                                      quiz: {
-                                        ...selectedLesson.quiz,
-                                        questions: updatedQuestions,
-                                      },
-                                    })
-                                  }}
-                                  placeholder={`Option ${oIndex + 1}`}
-                                  className="flex-grow"
-                                />
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        </div>
-                      ))}
                     </div>
                   )}
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="font-medium">Lesson Settings</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Required Lesson</Label>
-                        <p className="text-sm text-muted-foreground">Students must complete this lesson to progress</p>
-                      </div>
-                      <Switch
-                        checked={selectedLesson.settings.isRequired}
-                        onCheckedChange={(checked) =>
-                          updateLesson({
-                            ...selectedLesson,
-                            settings: { ...selectedLesson.settings, isRequired: checked },
-                          })
-                        }
-                      />
-                    </div>
-
-                    {selectedLesson.type === "video" && (
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label>Video Progress Tracking</Label>
-                          <p className="text-sm text-muted-foreground">Track student's video watching progress</p>
-                        </div>
-                        <Switch
-                          checked={selectedLesson.settings.videoProgression}
-                          onCheckedChange={(checked) =>
-                            updateLesson({
-                              ...selectedLesson,
-                              settings: {
-                                ...selectedLesson.settings,
-                                videoProgression: checked,
-                              },
-                            })
-                          }
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Allow Skip</Label>
-                        <p className="text-sm text-muted-foreground">Allow students to skip this lesson</p>
-                      </div>
-                      <Switch
-                        checked={selectedLesson.settings.allowSkip}
-                        onCheckedChange={(checked) =>
-                          updateLesson({
-                            ...selectedLesson,
-                            settings: { ...selectedLesson.settings, allowSkip: checked },
-                          })
-                        }
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Time Limit (minutes)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={selectedLesson.settings.timeLimit}
-                        onChange={(e) =>
-                          updateLesson({
-                            ...selectedLesson,
-                            settings: {
-                              ...selectedLesson.settings,
-                              timeLimit: Number.parseInt(e.target.value) || 0,
-                            },
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedLesson(null)
-                      setIsEditing(false)
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      updateLesson(selectedLesson)
-                      setSelectedLesson(null)
-                      setIsEditing(false)
-                    }}
-                  >
-                    Save Lesson
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
           )}
-        </div>
-      </div>
+        </Droppable>
+      </DragDropContext>
     </div>
   )
 }

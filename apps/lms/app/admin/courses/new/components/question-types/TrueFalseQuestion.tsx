@@ -1,0 +1,148 @@
+"use client"
+
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Trash2, X } from "lucide-react"
+import { TrueFalseQuestion as TFQuestionType } from "../types/quiz"
+import FileUpload from "@/components/FileUpload"
+import Image from "next/image"
+
+interface TrueFalseQuestionProps {
+  question: TFQuestionType
+  onChange: (question: TFQuestionType) => void
+  onDelete?: () => void
+}
+
+export default function TrueFalseQuestion({ question, onChange, onDelete }: TrueFalseQuestionProps) {
+  const updateQuestion = (updates: Partial<TFQuestionType>) => {
+    onChange({ ...question, ...updates })
+  }
+
+  return (
+    <div className="space-y-4 p-4 border rounded-lg">
+      <div className="flex items-start justify-between">
+        <div className="flex-1 space-y-4">
+          <div className="space-y-2">
+            <Label>Question Text</Label>
+            <Input
+              value={question.text}
+              onChange={(e) => updateQuestion({ text: e.target.value })}
+              placeholder="Enter your true/false question..."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Question Image (optional)</Label>
+            {question.imageUrl ? (
+              <div className="relative">
+                <div className="relative w-full h-48 rounded-lg overflow-hidden border">
+                  <Image src={question.imageUrl} alt="Question image" fill className="object-contain" />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => updateQuestion({ imageUrl: undefined })}
+                >
+                  <X className="w-4 h-4 mr-2" /> Remove Image
+                </Button>
+              </div>
+            ) : (
+              <FileUpload
+                type="image"
+                bucket="course-documents"
+                accept="image/*"
+                maxSize={5 * 1024 * 1024}
+                multiple={false}
+                onUploadComplete={(files, urls) => {
+                  if (urls.length > 0) {
+                    updateQuestion({ imageUrl: urls[0] })
+                  }
+                }}
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Correct Answer</Label>
+            <RadioGroup
+              value={question.correctAnswer.toString()}
+              onValueChange={(value) => updateQuestion({ correctAnswer: value === "true" })}
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="true" id="true" />
+                <Label htmlFor="true" className="cursor-pointer">True</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="false" id="false" />
+                <Label htmlFor="false" className="cursor-pointer">False</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Explanation (shown after answer)</Label>
+            <Input
+              value={question.explanation || ""}
+              onChange={(e) => updateQuestion({ explanation: e.target.value })}
+              placeholder="Optional explanation for the correct answer"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Difficulty</Label>
+              <Select
+                value={question.difficulty || "medium"}
+                onValueChange={(value: "easy" | "medium" | "hard") => updateQuestion({ difficulty: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Time Limit (seconds, optional)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={question.timeLimit || ""}
+                onChange={(e) => updateQuestion({ timeLimit: Number.parseInt(e.target.value) || undefined })}
+                placeholder="No limit"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Points</Label>
+              <p className="text-sm text-muted-foreground">Points awarded for correct answer</p>
+            </div>
+            <Input
+              type="number"
+              min="1"
+              value={question.points}
+              onChange={(e) => updateQuestion({ points: Number.parseInt(e.target.value) || 1 })}
+              className="w-20"
+            />
+          </div>
+        </div>
+        {onDelete && (
+          <Button variant="ghost" size="icon" onClick={onDelete} className="ml-4">
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}
+

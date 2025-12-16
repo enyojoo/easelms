@@ -1,13 +1,13 @@
 "use client"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle2, AlertCircle } from "lucide-react"
 import { extractVimeoId, isVimeoUrl, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import { useState, useEffect } from "react"
+import RichTextEditor from "./RichTextEditor"
 
 interface LessonContentEditorProps {
   type: "video" | "text"
@@ -162,12 +162,10 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="lessonContent">Lesson Content</Label>
-          <Textarea
-            id="lessonContent"
+          <RichTextEditor
+            content={content.html || content.text || ""}
+            onChange={(html) => onChange({ ...content, html, text: html })}
             placeholder="Enter lesson content..."
-            value={content.text || ""}
-            onChange={(e) => onChange({ ...content, text: e.target.value })}
-            rows={10}
           />
         </div>
       </div>

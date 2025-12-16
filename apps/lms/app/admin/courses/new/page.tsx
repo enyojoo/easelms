@@ -10,7 +10,13 @@ import CourseBasicInfo from "./components/CourseBasicInfo"
 import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
+import CourseProgressIndicator from "./components/CourseProgressIndicator"
+import CourseSections from "./components/CourseSections"
+import CourseTemplates from "./components/CourseTemplates"
+import TemplateSelector from "./components/TemplateSelector"
+import { useAutoSave } from "./hooks/useAutoSave"
 import { modules } from "@/data/courses"
+import { Clock } from "lucide-react"
 
 function NewCourseContent() {
   const router = useRouter()
@@ -25,7 +31,22 @@ function NewCourseContent() {
       thumbnail: string
       previewVideo: string
       price: string
+      tags?: string[]
+      learningObjectives?: string[]
+      outcomes?: string[]
+      prerequisites?: number[]
+      estimatedDuration?: number
+      difficulty?: string
+      language?: string
+      instructorId?: string
     }
+    sections?: Array<{
+      id: string
+      title: string
+      description: string
+      order: number
+      lessons: string[]
+    }>
     lessons: any[]
     settings: {
       isPublished: boolean
@@ -57,6 +78,7 @@ function NewCourseContent() {
       previewVideo: "",
       price: "",
     },
+    sections: [],
     lessons: [],
     settings: {
       isPublished: false,
@@ -80,8 +102,35 @@ function NewCourseContent() {
     },
   })
 
+  const editCourseId = searchParams?.get("edit")
+  
+  // Auto-save hook
+  const { lastSaved, loadDraft, clearDraft, saveNow } = useAutoSave({
+    data: courseData,
+    courseId: editCourseId || "new",
+    enabled: true,
+  })
+
+  // Load draft or template on mount
   useEffect(() => {
-    const editCourseId = searchParams?.get("edit")
+    if (!editCourseId) {
+      const templateId = searchParams?.get("template")
+      if (templateId) {
+        // Load from template - would need to fetch from template storage
+        // For now, just check draft
+      }
+      const draft = loadDraft()
+      if (draft) {
+        const shouldLoad = window.confirm("A draft was found. Would you like to restore it?")
+        if (shouldLoad) {
+          setCourseData(draft as typeof courseData)
+        }
+      }
+    }
+  }, [editCourseId, loadDraft, searchParams])
+
+
+  useEffect(() => {
     if (editCourseId) {
       const courseToEdit = modules.find((m) => m.id === Number.parseInt(editCourseId))
       if (courseToEdit) {
@@ -164,6 +213,9 @@ function NewCourseContent() {
       return
     }
 
+    // Clear draft on successful save
+    clearDraft()
+
     // Mock save - in real app, this would call an API
     console.log("Saving course:", courseData)
     toast.success(searchParams?.get("edit") ? "Course updated successfully" : "Course created successfully")
@@ -175,9 +227,33 @@ function NewCourseContent() {
 
   return (
     <div className="pt-4 md:pt-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">{searchParams?.get("edit") ? "Edit Course" : "New Course"}</h1>
-        <div className="space-x-1 flex justify-between items-center mb-6">
+      <div className="flex justify-between items-start mb-8">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold text-primary mb-2">
+            {searchParams?.get("edit") ? "Edit Course" : "New Course"}
+          </h1>
+          {lastSaved && (
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              Last saved: {lastSaved.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
+        <div className="space-x-2 flex items-center">
+          {!editCourseId && (
+            <>
+              <TemplateSelector
+                onSelect={(templateData) => {
+                  setCourseData(templateData)
+                  toast.success("Template loaded")
+                }}
+              />
+              <CourseTemplates courseData={courseData} />
+            </>
+          )}
+          <Button variant="outline" onClick={saveNow}>
+            Save Draft
+          </Button>
           <Button variant="outline" onClick={() => router.push("/admin/courses")}>
             Cancel
           </Button>
@@ -185,21 +261,46 @@ function NewCourseContent() {
         </div>
       </div>
 
-      <Card className="p-6">
-        <Tabs defaultValue="basic" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="lessons">Lessons</TabsTrigger>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-          </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+        <div className="lg:col-span-1">
+          <Card className="p-4">
+            <CourseProgressIndicator courseData={courseData} />
+          </Card>
+        </div>
+        <div className="lg:col-span-3">
+
+          <Card className="p-6">
+            <Tabs defaultValue="basic" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="lessons">Lessons</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
 
           <TabsContent value="basic" className="space-y-4">
-            <CourseBasicInfo data={courseData.basicInfo} onUpdate={(data) => updateCourseData("basicInfo", data)} />
+            <CourseBasicInfo
+              data={courseData.basicInfo}
+              onUpdate={(data) => updateCourseData("basicInfo", data)}
+              availableCourses={modules.map((m) => ({ id: m.id, title: m.title }))}
+            />
           </TabsContent>
 
-          <TabsContent value="lessons" className="space-y-4">
-            <LessonBuilder lessons={courseData.lessons} onUpdate={(lessons) => updateCourseData("lessons", lessons)} />
+          <TabsContent value="lessons" className="space-y-6">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Course Sections</h3>
+                <CourseSections
+                  sections={courseData.sections || []}
+                  lessons={courseData.lessons.map((l) => ({ id: l.id, title: l.title }))}
+                  onChange={(sections) => updateCourseData("sections", sections)}
+                />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Lessons</h3>
+                <LessonBuilder lessons={courseData.lessons} onUpdate={(lessons) => updateCourseData("lessons", lessons)} />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
@@ -209,11 +310,13 @@ function NewCourseContent() {
             />
           </TabsContent>
 
-          <TabsContent value="preview" className="space-y-4">
-            <CoursePreview courseData={courseData} />
-          </TabsContent>
-        </Tabs>
-      </Card>
+              <TabsContent value="preview" className="space-y-4">
+                <CoursePreview courseData={courseData} />
+              </TabsContent>
+            </Tabs>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
