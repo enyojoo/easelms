@@ -110,7 +110,7 @@ export default function CoursePage() {
             >
               {buttonText}
             </Button>
-            <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            <p className="text-left lg:text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
             <div className="space-y-2 text-muted-foreground">
               <div className="flex items-center">
                 <Clock className="w-5 h-5 mr-2 text-primary" />

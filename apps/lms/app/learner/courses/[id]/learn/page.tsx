@@ -452,7 +452,7 @@ export default function CourseLearningPage() {
                   <ChevronLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Previous
                 </Button>
 
-                <div className="text-center w-full sm:w-auto order-1 sm:order-2">
+                <div className="text-left sm:text-center w-full sm:w-auto order-1 sm:order-2">
                   <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-1">
                     Lesson {currentLessonIndex + 1} of {course.lessons.length}
                   </p>
