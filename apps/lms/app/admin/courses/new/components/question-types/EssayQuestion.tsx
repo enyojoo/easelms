@@ -46,19 +46,6 @@ export default function EssayQuestion({ question, onChange, onDelete }: EssayQue
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label>Grading Rubric (optional)</Label>
-            <Textarea
-              value={question.rubric || ""}
-              onChange={(e) => updateQuestion({ rubric: e.target.value })}
-              placeholder="Enter grading criteria and rubric..."
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground">
-              This will be visible to graders when reviewing essays
-            </p>
-          </div>
-
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Points</Label>

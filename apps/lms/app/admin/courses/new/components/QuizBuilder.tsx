@@ -113,6 +113,11 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
     onChange({ ...quiz, questions: items })
   }
 
+  const formatQuestionType = (type: string): string => {
+    if (type === "essay") return "long question"
+    return type.replace("-", " ")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -181,7 +186,7 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                                     </div>
                                     <CardTitle className="text-base">Question {qIndex + 1}</CardTitle>
                                     <Badge variant="secondary" className="text-xs">
-                                      {question.type.replace("-", " ")}
+                                      {formatQuestionType(question.type)}
                                     </Badge>
                                     {question.points > 0 && (
                                       <Badge variant="outline" className="text-xs">
@@ -250,12 +255,12 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                   <div key={question.id} className="space-y-3 p-4 border rounded-lg">
                     <div className="flex items-start justify-between">
                       <h3 className="font-semibold">Question {qIndex + 1}</h3>
-                      <Badge variant="secondary">{question.type}</Badge>
+                      <Badge variant="secondary">{formatQuestionType(question.type)}</Badge>
                     </div>
                     <p className="text-sm font-medium">{question.text || "No question text"}</p>
                     {/* Preview rendering would go here - simplified for now */}
                     <p className="text-xs text-muted-foreground">
-                      Preview mode for {question.type} questions - full implementation in next phase
+                      Preview mode for {formatQuestionType(question.type)} questions - full implementation in next phase
                     </p>
                   </div>
                 ))}

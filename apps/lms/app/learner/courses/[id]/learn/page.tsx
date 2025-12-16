@@ -236,6 +236,10 @@ export default function CourseLearningPage() {
   const [activeTab, setActiveTab] = useState("video")
   const [completedLessons, setCompletedLessons] = useState<number[]>([])
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
+  const [lessonStartTime, setLessonStartTime] = useState<number | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
+  const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
+  const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
 
   useEffect(() => {
     const { isLoggedIn, userType } = getClientAuthState()
@@ -245,11 +249,104 @@ export default function CourseLearningPage() {
       const courseData = modules.find((m) => m.id === Number.parseInt(id))
       if (courseData) {
         setCourse(courseData)
+        // Load saved progress from localStorage
+        try {
+          const savedProgress = localStorage.getItem(`course-${id}-progress`)
+          if (savedProgress) {
+            const { completedLessons: saved, videoProgress: savedVideo } = JSON.parse(savedProgress)
+            if (saved && Array.isArray(saved)) {
+              setCompletedLessons(saved)
+              setProgress((saved.length / courseData.lessons.length) * 100)
+            }
+            if (savedVideo) {
+              setVideoProgress(savedVideo)
+            }
+          }
+        } catch (error) {
+          console.error("Error loading saved progress:", error)
+        }
       } else {
         router.push("/learner/courses")
       }
     }
   }, [router, id])
+
+  // Save progress to localStorage
+  useEffect(() => {
+    if (course && id) {
+      try {
+        localStorage.setItem(
+          `course-${id}-progress`,
+          JSON.stringify({
+            completedLessons,
+            videoProgress,
+            lastUpdated: new Date().toISOString(),
+          })
+        )
+      } catch (error) {
+        console.error("Error saving progress:", error)
+      }
+    }
+  }, [completedLessons, videoProgress, course, id])
+
+  // Time limit enforcement
+  useEffect(() => {
+    if (!course) return
+    const currentLesson = course.lessons[currentLessonIndex]
+    if (!currentLesson?.settings?.timeLimit || currentLesson.settings.timeLimit === 0) {
+      setTimeRemaining(null)
+      setTimeLimitExceeded(false)
+      setLessonStartTime(null)
+      return
+    }
+
+    // Set start time when lesson is accessed
+    const startTime = Date.now()
+    setLessonStartTime(startTime)
+    const limitInMs = currentLesson.settings.timeLimit * 60 * 1000 // Convert minutes to milliseconds
+
+    // Check time limit every second
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const remaining = Math.max(0, limitInMs - elapsed)
+      setTimeRemaining(Math.ceil(remaining / 1000)) // Convert to seconds
+
+      if (remaining === 0 && !timeLimitExceeded) {
+        setTimeLimitExceeded(true)
+        // Prevent further interaction when time limit is exceeded
+      }
+    }, 1000)
+
+    return () => {
+      clearInterval(interval)
+    }
+  }, [currentLessonIndex, course, timeLimitExceeded])
+
+  // Check if required lessons are completed before allowing access
+  const canAccessLesson = (lessonIndex: number): boolean => {
+    if (!course) return false
+    const lesson = course.lessons[lessonIndex]
+    
+    // If lesson is not required, always allow access
+    if (!lesson?.settings?.isRequired) return true
+
+    // Check if all previous required lessons are completed
+    for (let i = 0; i < lessonIndex; i++) {
+      const prevLesson = course.lessons[i]
+      if (prevLesson?.settings?.isRequired && !completedLessons.includes(i)) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  // Check if can skip current lesson
+  const canSkipLesson = (): boolean => {
+    if (!course) return false
+    const currentLesson = course.lessons[currentLessonIndex]
+    return currentLesson?.settings?.allowSkip ?? true
+  }
 
   const handleLessonComplete = () => {
     if (!completedLessons.includes(currentLessonIndex)) {
@@ -264,19 +361,38 @@ export default function CourseLearningPage() {
     setActiveTab("quiz")
   }
 
+  const handleVideoProgressUpdate = (progressPercentage: number) => {
+    setVideoProgress((prev) => ({
+      ...prev,
+      [currentLessonIndex]: progressPercentage,
+    }))
+  }
+
   const handleQuizComplete = () => {
     setActiveTab("resources")
   }
 
   const handleNextLesson = () => {
     if (activeTab === "video") {
+      // Check if can skip lesson
+      if (!canSkipLesson() && !completedLessons.includes(currentLessonIndex)) {
+        alert("This lesson cannot be skipped. Please complete it before proceeding.")
+        return
+      }
       setActiveTab("quiz")
     } else if (activeTab === "quiz") {
       setActiveTab("resources")
     } else if (activeTab === "resources") {
       if (currentLessonIndex < course.lessons.length - 1) {
-        setCurrentLessonIndex(currentLessonIndex + 1)
+        const nextIndex = currentLessonIndex + 1
+        // Check if can access next lesson
+        if (!canAccessLesson(nextIndex)) {
+          alert("You must complete all required previous lessons before accessing this lesson.")
+          return
+        }
+        setCurrentLessonIndex(nextIndex)
         setActiveTab("video")
+        setTimeLimitExceeded(false)
       } else {
         // All lessons completed, redirect to summary page
         router.push(`/learner/courses/${id}/learn/summary`)
@@ -286,8 +402,15 @@ export default function CourseLearningPage() {
 
   const handlePreviousLesson = () => {
     if (currentLessonIndex > 0) {
-      setCurrentLessonIndex(currentLessonIndex - 1)
+      const prevIndex = currentLessonIndex - 1
+      // Check if can access previous lesson
+      if (!canAccessLesson(prevIndex)) {
+        alert("You must complete all required previous lessons before accessing this lesson.")
+        return
+      }
+      setCurrentLessonIndex(prevIndex)
       setActiveTab("video")
+      setTimeLimitExceeded(false)
     }
   }
 
@@ -332,14 +455,30 @@ export default function CourseLearningPage() {
 
                 <TabsContent value="video" className="flex-grow m-0 p-0 flex overflow-hidden">
                   <div className="w-full h-full lg:h-[370px] aspect-video relative">
-                    <VideoPlayer
-                      lessonTitle={currentLesson.title}
-                      onComplete={handleLessonComplete}
-                      autoPlay={false}
-                      isActive={true}
-                      videoUrl={currentLesson.content?.url}
-                      vimeoVideoId={currentLesson.content?.vimeoVideoId}
-                    />
+                    {timeLimitExceeded ? (
+                      <div className="w-full h-full flex items-center justify-center bg-black text-white">
+                        <div className="text-center">
+                          <Clock className="h-12 w-12 mx-auto mb-4 text-red-500" />
+                          <h3 className="text-xl font-semibold mb-2">Time Limit Exceeded</h3>
+                          <p className="text-muted-foreground">
+                            You have exceeded the time limit for this lesson. Please contact your instructor.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <VideoPlayer
+                        lessonTitle={currentLesson.title}
+                        onComplete={handleLessonComplete}
+                        autoPlay={false}
+                        isActive={true}
+                        videoUrl={currentLesson.content?.url}
+                        vimeoVideoId={currentLesson.content?.vimeoVideoId}
+                        courseId={id}
+                        lessonId={currentLesson.id?.toString() || `lesson-${currentLessonIndex}`}
+                        videoProgression={currentLesson.settings?.videoProgression ?? false}
+                        onProgressUpdate={handleVideoProgressUpdate}
+                      />
+                    )}
                   </div>
                 </TabsContent>
 
@@ -359,11 +498,20 @@ export default function CourseLearningPage() {
               </Tabs>
 
               <div className="p-3 md:p-4 border-t border-border bg-background">
+                {/* Time Limit Display */}
+                {timeRemaining !== null && timeRemaining > 0 && (
+                  <div className="mb-3 flex items-center justify-center gap-2 text-sm">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-medium">
+                      Time Remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
+                    </span>
+                  </div>
+                )}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <Button
                     variant="outline"
                     onClick={handlePreviousLesson}
-                    disabled={currentLessonIndex === 0}
+                    disabled={currentLessonIndex === 0 || timeLimitExceeded}
                     className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto"
                   >
                     <ChevronLeft className="mr-2 h-4 w-4" /> Previous
@@ -382,9 +530,10 @@ export default function CourseLearningPage() {
                       allLessonsCompleted ? () => router.push(`/learner/courses/${id}/learn/summary`) : handleNextLesson
                     }
                     disabled={
-                      !allLessonsCompleted &&
-                      activeTab === "resources" &&
-                      currentLessonIndex === course.lessons.length - 1
+                      timeLimitExceeded ||
+                      (!allLessonsCompleted &&
+                        activeTab === "resources" &&
+                        currentLessonIndex === course.lessons.length - 1)
                     }
                     className={`text-foreground w-full sm:w-auto ${
                       allLessonsCompleted
@@ -428,21 +577,32 @@ export default function CourseLearningPage() {
                   {course.lessons.map((lesson: any, index: number) => {
                     const isCompleted = completedLessons.includes(index)
                     const isCurrent = index === currentLessonIndex
-                    const lessonProgress = isCompleted ? 100 : isCurrent ? 50 : 0
+                    const videoProgressPercent = videoProgress[index] || 0
+                    const lessonProgress = isCompleted ? 100 : isCurrent ? Math.max(50, videoProgressPercent) : videoProgressPercent
+                    const canAccess = canAccessLesson(index)
+                    const isRequired = lesson?.settings?.isRequired ?? false
 
                     return (
                       <button
                         key={index}
                         onClick={() => {
+                          if (!canAccess) {
+                            alert("You must complete all required previous lessons before accessing this lesson.")
+                            return
+                          }
                           setCurrentLessonIndex(index)
                           setActiveTab("video")
+                          setTimeLimitExceeded(false)
                         }}
+                        disabled={!canAccess}
                         className={`w-full text-left p-3 rounded-lg flex items-center justify-between transition-colors text-sm border ${
-                          isCurrent
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : isCompleted
-                              ? "bg-muted/50 border-green-200 dark:border-green-800"
-                              : "hover:bg-accent hover:text-accent-foreground border-border"
+                          !canAccess
+                            ? "opacity-50 cursor-not-allowed bg-muted border-border"
+                            : isCurrent
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : isCompleted
+                                ? "bg-muted/50 border-green-200 dark:border-green-800"
+                                : "hover:bg-accent hover:text-accent-foreground border-border"
                         }`}
                       >
                         <div className="flex items-center flex-1 min-w-0">
@@ -454,13 +614,20 @@ export default function CourseLearningPage() {
                             <BookOpen className="mr-3 h-4 w-4 flex-shrink-0 text-muted-foreground" />
                           )}
                           <div className="flex-1 min-w-0">
-                            <span className={`truncate block ${isCurrent ? "font-semibold" : ""}`}>
-                              {index + 1}. {lesson.title}
-                            </span>
-                            {isCurrent && (
+                            <div className="flex items-center gap-2">
+                              <span className={`truncate block ${isCurrent ? "font-semibold" : ""}`}>
+                                {index + 1}. {lesson.title}
+                              </span>
+                              {isRequired && (
+                                <span className="text-xs bg-yellow-500 text-yellow-900 dark:text-yellow-100 px-1.5 py-0.5 rounded">
+                                  Required
+                                </span>
+                              )}
+                            </div>
+                            {(isCurrent || videoProgressPercent > 0) && (
                               <div className="flex items-center gap-2 mt-1">
                                 <Progress value={lessonProgress} className="h-1 w-20" />
-                                <span className="text-xs opacity-75">{lessonProgress}%</span>
+                                <span className="text-xs opacity-75">{Math.round(lessonProgress)}%</span>
                               </div>
                             )}
                           </div>

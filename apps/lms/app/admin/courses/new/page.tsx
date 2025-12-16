@@ -10,7 +10,6 @@ import CourseBasicInfo from "./components/CourseBasicInfo"
 import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
-import CourseProgressIndicator from "./components/CourseProgressIndicator"
 import { useAutoSave } from "./hooks/useAutoSave"
 import { modules } from "@/data/courses"
 
@@ -202,13 +201,8 @@ function NewCourseContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
-          <Card className="p-4">
-            <CourseProgressIndicator courseData={courseData} />
-          </Card>
-        </div>
-        <div className="lg:col-span-3">
+      <div className="grid grid-cols-1 gap-6">
+        <div>
 
           <Card className="p-6">
             <Tabs defaultValue="basic" className="space-y-6">

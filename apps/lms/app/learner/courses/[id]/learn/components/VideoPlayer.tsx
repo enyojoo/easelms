@@ -13,6 +13,10 @@ interface VideoPlayerProps {
   isActive: boolean
   videoUrl?: string // Vimeo URL or video ID
   vimeoVideoId?: string // Direct Vimeo video ID
+  courseId?: string
+  lessonId?: string
+  videoProgression?: boolean // Enable video progress tracking
+  onProgressUpdate?: (progress: number) => void // Callback for progress updates
 }
 
 export default function VideoPlayer({
@@ -22,6 +26,10 @@ export default function VideoPlayer({
   isActive,
   videoUrl,
   vimeoVideoId,
+  courseId,
+  lessonId,
+  videoProgression = false,
+  onProgressUpdate,
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(autoPlay)
   const [currentTime, setCurrentTime] = useState(0)
@@ -33,11 +41,92 @@ export default function VideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const completedRef = useRef(false)
   let timeoutId: NodeJS.Timeout | undefined
 
   // Extract Vimeo video ID
   const vimeoId = vimeoVideoId || (videoUrl ? extractVimeoId(videoUrl) : null)
   const isVimeoVideo = !!vimeoId
+
+  // Storage key for video progress
+  const progressStorageKey = courseId && lessonId ? `course-${courseId}-lesson-${lessonId}-progress` : null
+
+  // Reset completion status when lesson changes
+  useEffect(() => {
+    completedRef.current = false
+  }, [lessonId])
+
+  // Load saved progress
+  useEffect(() => {
+    if (!videoProgression || !progressStorageKey || !isVimeoVideo) return
+
+    try {
+      const savedProgress = localStorage.getItem(progressStorageKey)
+      if (savedProgress) {
+        const { currentTime: savedTime, duration: savedDuration } = JSON.parse(savedProgress)
+        if (savedTime > 0 && savedDuration > 0) {
+          setCurrentTime(savedTime)
+          // Resume from saved position when video loads
+          if (iframeRef.current && savedTime > 5) {
+            // Only resume if more than 5 seconds watched
+            setTimeout(() => {
+              iframeRef.current?.contentWindow?.postMessage(
+                { method: "setCurrentTime", value: savedTime },
+                "*"
+              )
+            }, 1000)
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error loading video progress:", error)
+    }
+  }, [videoProgression, progressStorageKey, isVimeoVideo, lessonId])
+
+  // Save progress periodically
+  useEffect(() => {
+    if (!videoProgression || !progressStorageKey || duration === 0) return
+
+    // Clear existing interval
+    if (progressSaveIntervalRef.current) {
+      clearInterval(progressSaveIntervalRef.current)
+    }
+
+    // Save progress every 5 seconds
+    progressSaveIntervalRef.current = setInterval(() => {
+      if (currentTime > 0 && duration > 0) {
+        try {
+          const progressData = {
+            currentTime,
+            duration,
+            progressPercentage: (currentTime / duration) * 100,
+            lastUpdated: new Date().toISOString(),
+          }
+          localStorage.setItem(progressStorageKey, JSON.stringify(progressData))
+
+          // Call progress update callback
+          if (onProgressUpdate) {
+            onProgressUpdate(progressData.progressPercentage)
+          }
+
+          // Auto-complete if watched 80% or more
+          if (progressData.progressPercentage >= 80 && !completedRef.current) {
+            completedRef.current = true
+            onComplete()
+          }
+        } catch (error) {
+          console.error("Error saving video progress:", error)
+        }
+      }
+    }, 5000)
+
+    return () => {
+      if (progressSaveIntervalRef.current) {
+        clearInterval(progressSaveIntervalRef.current)
+      }
+    }
+  }, [videoProgression, progressStorageKey, currentTime, duration, onProgressUpdate, onComplete])
 
   // Vimeo Player API via postMessage
   useEffect(() => {
@@ -59,10 +148,35 @@ export default function VideoPlayer({
           setIsPlaying(false)
           break
         case "timeupdate":
-          setCurrentTime(data.data?.seconds || 0)
+          const newTime = data.data?.seconds || 0
+          setCurrentTime(newTime)
+          // Save progress immediately on timeupdate if tracking is enabled
+          // Note: duration might not be set yet, so we'll save it in the periodic interval
           break
         case "loaded":
-          setDuration(data.data?.duration || 0)
+          const newDuration = data.data?.duration || 0
+          setDuration(newDuration)
+          // Load saved progress after duration is known
+          if (videoProgression && progressStorageKey && newDuration > 0) {
+            try {
+              const savedProgress = localStorage.getItem(progressStorageKey)
+              if (savedProgress) {
+                const { currentTime: savedTime } = JSON.parse(savedProgress)
+                if (savedTime > 5 && savedTime < newDuration) {
+                  // Resume from saved position if more than 5 seconds watched
+                  setTimeout(() => {
+                    iframe.contentWindow?.postMessage(
+                      { method: "setCurrentTime", value: savedTime },
+                      "*"
+                    )
+                    setCurrentTime(savedTime)
+                  }, 500)
+                }
+              }
+            } catch (error) {
+              console.error("Error loading video progress:", error)
+            }
+          }
           break
         case "ended":
           setIsPlaying(false)
@@ -80,7 +194,7 @@ export default function VideoPlayer({
     return () => {
       window.removeEventListener("message", handleMessage)
     }
-  }, [isVimeoVideo, isActive, onComplete])
+  }, [isVimeoVideo, isActive, onComplete, videoProgression, progressStorageKey, duration, onProgressUpdate])
 
   // HTML5 video player (fallback for non-Vimeo videos)
   useEffect(() => {
