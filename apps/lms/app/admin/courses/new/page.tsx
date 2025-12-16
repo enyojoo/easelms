@@ -189,7 +189,7 @@ function NewCourseContent() {
 
 
   return (
-    <div className="pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8 pb-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-primary">
           {searchParams?.get("edit") ? "Edit Course" : "New Course"}
@@ -202,7 +202,7 @@ function NewCourseContent() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
           <Card className="p-4">
             <CourseProgressIndicator courseData={courseData} />

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -9,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { HelpCircle, CheckCircle2, Type, FileText, List, Link2 } from "lucide-react"
+import { CheckCircle2, Type, FileText } from "lucide-react"
 import { QuestionType } from "../types/quiz"
 
 interface QuestionTypeOption {
@@ -27,12 +28,6 @@ const questionTypes: QuestionTypeOption[] = [
     icon: CheckCircle2,
   },
   {
-    type: "true-false",
-    label: "True/False",
-    description: "Students choose between true or false",
-    icon: HelpCircle,
-  },
-  {
     type: "fill-blank",
     label: "Fill in the Blank",
     description: "Students type the missing word or phrase",
@@ -46,15 +41,9 @@ const questionTypes: QuestionTypeOption[] = [
   },
   {
     type: "essay",
-    label: "Essay",
+    label: "Longer Answer",
     description: "Students write a longer response, requires manual grading",
     icon: FileText,
-  },
-  {
-    type: "matching",
-    label: "Matching",
-    description: "Students match items from two columns",
-    icon: Link2,
   },
 ]
 
@@ -64,8 +53,15 @@ interface QuestionTypeSelectorProps {
 }
 
 export default function QuestionTypeSelector({ onSelect, trigger }: QuestionTypeSelectorProps) {
+  const [open, setOpen] = useState(false)
+
+  const handleSelect = (type: QuestionType) => {
+    onSelect(type)
+    setOpen(false) // Close dialog when a question type is selected
+  }
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline">
@@ -86,14 +82,16 @@ export default function QuestionTypeSelector({ onSelect, trigger }: QuestionType
               <Button
                 key={option.type}
                 variant="outline"
-                className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-primary/5"
-                onClick={() => onSelect(option.type)}
+                className="h-auto p-4 flex flex-col items-start gap-2 hover:bg-primary/5 transition-colors"
+                onClick={() => handleSelect(option.type)}
               >
                 <div className="flex items-center gap-2 w-full">
-                  <Icon className="w-5 h-5 text-primary" />
-                  <span className="font-semibold">{option.label}</span>
+                  <Icon className="w-5 h-5 text-primary flex-shrink-0" />
+                  <span className="font-semibold text-left">{option.label}</span>
                 </div>
-                <p className="text-sm text-muted-foreground text-left">{option.description}</p>
+                <p className="text-sm text-muted-foreground text-left w-full leading-relaxed">
+                  {option.description}
+                </p>
               </Button>
             )
           })}

@@ -78,7 +78,6 @@ export function createQuestion(type: QuestionType, id?: string): Question {
     id: id || `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     text: "",
     points: 1,
-    explanation: "",
   }
 
   switch (type) {

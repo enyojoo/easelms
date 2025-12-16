@@ -95,15 +95,6 @@ export default function ShortAnswerQuestion({ question, onChange, onDelete }: Sh
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Explanation (shown after answer)</Label>
-            <Input
-              value={question.explanation || ""}
-              onChange={(e) => updateQuestion({ explanation: e.target.value })}
-              placeholder="Optional explanation for the correct answer"
-            />
-          </div>
-
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Points</Label>

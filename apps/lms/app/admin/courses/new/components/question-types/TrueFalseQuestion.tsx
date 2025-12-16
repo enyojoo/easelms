@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Trash2, X } from "lucide-react"
 import { TrueFalseQuestion as TFQuestionType } from "../types/quiz"
 import FileUpload from "@/components/FileUpload"
@@ -81,45 +80,6 @@ export default function TrueFalseQuestion({ question, onChange, onDelete }: True
                 <Label htmlFor="false" className="cursor-pointer">False</Label>
               </div>
             </RadioGroup>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Explanation (shown after answer)</Label>
-            <Input
-              value={question.explanation || ""}
-              onChange={(e) => updateQuestion({ explanation: e.target.value })}
-              placeholder="Optional explanation for the correct answer"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Difficulty</Label>
-              <Select
-                value={question.difficulty || "medium"}
-                onValueChange={(value: "easy" | "medium" | "hard") => updateQuestion({ difficulty: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Time Limit (seconds, optional)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={question.timeLimit || ""}
-                onChange={(e) => updateQuestion({ timeLimit: Number.parseInt(e.target.value) || undefined })}
-                placeholder="No limit"
-              />
-            </div>
           </div>
 
           <div className="flex items-center justify-between">
