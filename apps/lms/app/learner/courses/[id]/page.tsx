@@ -82,6 +82,61 @@ export default function CoursePage() {
         <h1 className="text-3xl font-bold text-primary">{module.title}</h1>
       </div>
 
+      {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
+      <div className="mb-4 lg:hidden">
+        <Card className="border-primary/20">
+          <CardContent className="p-6">
+            <div
+              className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
+              onClick={() => setIsVideoModalOpen(true)}
+            >
+              <Image
+                src={module.image}
+                alt={module.title}
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </div>
+            <div className="mt-4 mb-4">
+              <span className="text-2xl font-bold text-primary">{price}</span>
+              {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+            </div>
+            <Button
+              className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={handleStartCourse}
+            >
+              {buttonText}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            <div className="space-y-2 text-muted-foreground">
+              <div className="flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-primary" />
+                <span>4 hours of on-demand video</span>
+              </div>
+              <div className="flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-primary" />
+                <span>8 downloadable resources</span>
+              </div>
+              <div className="flex items-center">
+                <Globe className="w-5 h-5 mr-2 text-primary" />
+                <span>{access}</span>
+              </div>
+              <div className="flex items-center">
+                <Award className="w-5 h-5 mr-2 text-primary" />
+                <span>Certificate of completion</span>
+              </div>
+              <div className="flex items-center">
+                <Users className="w-5 h-5 mr-2 text-primary" />
+                <span>{module.enrolledStudents || 0} learners enrolled</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           {/* Course Overview Section */}
@@ -196,7 +251,8 @@ export default function CoursePage() {
           />
         </div>
 
-        <div className="lg:col-span-1">
+        {/* Video Preview Section - Show only on large screens */}
+        <div className="hidden lg:block lg:col-span-1">
           <Card className="sticky top-24 border-primary/20 h-fit">
             <CardContent className="p-6">
               <div
