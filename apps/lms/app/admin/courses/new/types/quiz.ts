@@ -54,7 +54,6 @@ export type Question = MultipleChoiceQuestion | TrueFalseQuestion | FillInBlankQ
 export interface Quiz {
   enabled: boolean
   questions: Question[]
-  passingScore: number
   shuffleQuestions?: boolean
   shuffleAnswers?: boolean
   showResultsImmediately?: boolean

@@ -15,9 +15,10 @@ interface QuizProps {
     }[]
   }
   onComplete: () => void
+  minimumQuizScore?: number
 }
 
-export default function QuizComponent({ quiz, onComplete }: QuizProps) {
+export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50 }: QuizProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([])
   const [showResults, setShowResults] = useState(false)
@@ -103,10 +104,10 @@ export default function QuizComponent({ quiz, onComplete }: QuizProps) {
           You scored <span className="font-bold">{score}</span> out of{" "}
           <span className="font-bold">{quiz.questions.length}</span>
         </p>
-        {percentage >= 70 ? (
+        {percentage >= minimumQuizScore ? (
           <p className="text-green-500">Congratulations! You passed the quiz.</p>
         ) : (
-          <p className="text-red-500">You need 70% to pass. Try again!</p>
+          <p className="text-red-500">You need {minimumQuizScore}% to pass. Try again!</p>
         )}
         <Button onClick={handleRetryQuiz} className="mt-4">
           Retry Quiz

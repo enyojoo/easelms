@@ -348,6 +348,7 @@ export default function CourseLearningPage() {
                     <QuizComponent
                       quiz={lessonQuizzes[currentLesson.title as keyof typeof lessonQuizzes]}
                       onComplete={handleQuizComplete}
+                      minimumQuizScore={course?.settings?.minimumQuizScore || 50}
                     />
                   )}
                 </TabsContent>

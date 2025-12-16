@@ -12,8 +12,6 @@ import { Trash2, Link as LinkIcon, FileUp, ChevronDown, ChevronUp, Eye, External
 import FileUpload from "@/components/FileUpload"
 import ResourcePreview from "./ResourcePreview"
 import { Resource } from "./ResourceManager"
-import { useResourceLibrary } from "../hooks/useResourceLibrary"
-import { Database } from "lucide-react"
 
 interface ResourceCardProps {
   resource: Resource
@@ -25,7 +23,6 @@ interface ResourceCardProps {
 export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }: ResourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
-  const { saveResource } = useResourceLibrary()
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return ""
@@ -70,14 +67,6 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
                 <Eye className="w-4 h-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => saveResource(resource)}
-              title="Save to Library"
-            >
-              <Database className="w-4 h-4" />
-            </Button>
             <Button variant="ghost" size="icon" onClick={onDelete} title="Delete">
               <Trash2 className="w-4 h-4" />
             </Button>

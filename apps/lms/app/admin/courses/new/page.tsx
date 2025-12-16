@@ -85,24 +85,11 @@ function NewCourseContent() {
   const editCourseId = searchParams?.get("edit")
   
   // Auto-save hook (silent, no UI)
-  const { loadDraft, clearDraft } = useAutoSave({
+  const { clearDraft } = useAutoSave({
     data: courseData,
     courseId: editCourseId || "new",
     enabled: true,
   })
-
-  // Load draft on mount
-  useEffect(() => {
-    if (!editCourseId) {
-      const draft = loadDraft()
-      if (draft) {
-        const shouldLoad = window.confirm("A draft was found. Would you like to restore it?")
-        if (shouldLoad) {
-          setCourseData(draft as typeof courseData)
-        }
-      }
-    }
-  }, [editCourseId, loadDraft])
 
 
   useEffect(() => {
@@ -133,7 +120,6 @@ function NewCourseContent() {
             },
             quiz: lesson.quiz ?? {
               enabled: false,
-              passingScore: 70,
               questions: [],
             },
           })),
@@ -242,7 +228,11 @@ function NewCourseContent() {
           </TabsContent>
 
           <TabsContent value="lessons" className="space-y-4">
-            <LessonBuilder lessons={courseData.lessons} onUpdate={(lessons) => updateCourseData("lessons", lessons)} />
+            <LessonBuilder 
+              lessons={courseData.lessons} 
+              onUpdate={(lessons) => updateCourseData("lessons", lessons)}
+              minimumQuizScore={courseData.settings.minimumQuizScore}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">

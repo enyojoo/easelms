@@ -36,7 +36,6 @@ export interface Lesson {
   }
   quiz: {
     enabled: boolean
-    passingScore: number
     questions: Question[]
   }
   estimatedDuration?: number
@@ -45,9 +44,10 @@ export interface Lesson {
 interface LessonBuilderProps {
   lessons: Lesson[]
   onUpdate: (lessons: Lesson[]) => void
+  minimumQuizScore?: number
 }
 
-export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps) {
+export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50 }: LessonBuilderProps) {
   const [localLessons, setLocalLessons] = useState<Lesson[]>(lessons)
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
@@ -71,7 +71,6 @@ export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps)
       },
       quiz: {
         enabled: false,
-        passingScore: 70,
         questions: [],
       },
       estimatedDuration: 0,
@@ -235,6 +234,7 @@ export default function LessonBuilder({ lessons, onUpdate }: LessonBuilderProps)
                           onDelete={deleteLesson}
                           onDuplicate={duplicateLesson}
                           dragHandleProps={provided.dragHandleProps}
+                          minimumQuizScore={minimumQuizScore}
                         />
                       </div>
                     </div>

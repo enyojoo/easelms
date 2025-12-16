@@ -43,7 +43,6 @@ interface Lesson {
   }
   quiz: {
     enabled: boolean
-    passingScore: number
     questions: any[]
   }
   estimatedDuration?: number
@@ -58,6 +57,7 @@ interface LessonCardProps {
   onDelete: (lessonId: string) => void
   onDuplicate: (lesson: Lesson) => void
   dragHandleProps?: any
+  minimumQuizScore?: number
 }
 
 export default function LessonCard({
@@ -69,6 +69,7 @@ export default function LessonCard({
   onDelete,
   onDuplicate,
   dragHandleProps,
+  minimumQuizScore = 50,
 }: LessonCardProps) {
   const [localLesson, setLocalLesson] = useState<Lesson>(lesson)
 
@@ -244,6 +245,7 @@ export default function LessonCard({
                 <QuizBuilder
                   quiz={localLesson.quiz}
                   onChange={(quiz) => updateLesson({ quiz })}
+                  minimumQuizScore={minimumQuizScore}
                 />
               </CollapsibleContent>
             </Collapsible>

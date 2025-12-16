@@ -14,18 +14,17 @@ import { Quiz, Question } from "../types/quiz"
 import QuestionEditor, { createQuestion } from "./question-types/QuestionEditor"
 import QuestionTypeSelector from "./question-types/QuestionTypeSelector"
 import QuizSettings from "./QuizSettings"
-import QuestionBank from "./QuestionBank"
 
 interface QuizBuilderProps {
   quiz: {
     enabled: boolean
     questions: any[]
-    passingScore: number
   }
   onChange: (quiz: any) => void
+  minimumQuizScore?: number
 }
 
-export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
+export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: QuizBuilderProps) {
   const [previewMode, setPreviewMode] = useState(false)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, any>>({})
 
@@ -146,18 +145,9 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
             <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
               <div className="space-y-1">
                 <Label className="text-sm font-medium">Passing Score</Label>
-                <p className="text-xs text-muted-foreground">Minimum score required to pass</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={quiz.passingScore}
-                  onChange={(e) => onChange({ ...quiz, passingScore: Number.parseInt(e.target.value) || 0 })}
-                  className="w-20"
-                />
-                <span className="text-sm text-muted-foreground">%</span>
+                <p className="text-xs text-muted-foreground">
+                  Using course minimum: {minimumQuizScore}% (set in Course Settings)
+                </p>
               </div>
             </div>
 
@@ -165,7 +155,6 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
               quiz={{
                 enabled: quiz.enabled,
                 questions: questions,
-                passingScore: quiz.passingScore,
                 shuffleQuestions: quiz.shuffleQuestions,
                 shuffleAnswers: quiz.shuffleAnswers,
                 showResultsImmediately: quiz.showResultsImmediately,
@@ -252,14 +241,6 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
                   <Plus className="w-4 h-4 mr-2" /> Quick Add (MC)
                 </Button>
               </div>
-              <QuestionBank
-                onSelect={(question) => {
-                  onChange({
-                    ...quiz,
-                    questions: [...questions, question],
-                  })
-                }}
-              />
             </div>
           </TabsContent>
 
@@ -288,8 +269,8 @@ export default function QuizBuilder({ quiz, onChange }: QuizBuilderProps) {
                     <span className="text-2xl font-bold text-primary">{calculatePreviewScore()}%</span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Passing score: {quiz.passingScore}% -{" "}
-                    {calculatePreviewScore() >= quiz.passingScore ? (
+                    Passing score: {minimumQuizScore}% -{" "}
+                    {calculatePreviewScore() >= minimumQuizScore ? (
                       <span className="text-green-600 font-semibold">Passed!</span>
                     ) : (
                       <span className="text-red-600 font-semibold">Not passed</span>

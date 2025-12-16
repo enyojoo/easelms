@@ -7,12 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Trash2, FileUp, Link as LinkIcon, Eye, FileText, Image as ImageIcon, Database } from "lucide-react"
+import { Plus, Trash2, FileUp, Link as LinkIcon, Eye, FileText, Image as ImageIcon } from "lucide-react"
 import FileUpload from "@/components/FileUpload"
 import ResourceCard from "./ResourceCard"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import ResourceLibraryModal from "./ResourceLibraryModal"
-import { useResourceLibrary } from "../hooks/useResourceLibrary"
 
 export interface Resource {
   id: string
@@ -32,8 +29,6 @@ interface ResourceManagerProps {
 
 export default function ResourceManager({ resources, onChange, lessonId }: ResourceManagerProps) {
   const [newResourceType, setNewResourceType] = useState<"document" | "link">("link")
-  const [libraryOpen, setLibraryOpen] = useState(false)
-  const { saveResource } = useResourceLibrary()
 
   const addResource = (type: "document" | "link") => {
     const newResource: Resource = {
@@ -76,9 +71,6 @@ export default function ResourceManager({ resources, onChange, lessonId }: Resou
           <Button variant="outline" size="sm" onClick={() => addResource("document")}>
             <FileUp className="w-4 h-4 mr-2" /> Add File
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setLibraryOpen(true)}>
-            <FileText className="w-4 h-4 mr-2" /> From Library
-          </Button>
         </div>
       </div>
 
@@ -102,15 +94,6 @@ export default function ResourceManager({ resources, onChange, lessonId }: Resou
           </p>
         </Card>
       )}
-
-      <ResourceLibraryModal
-        open={libraryOpen}
-        onClose={() => setLibraryOpen(false)}
-        onSelect={(resource) => {
-          onChange([...resources, resource])
-          saveResource(resource)
-        }}
-      />
     </div>
   )
 }
