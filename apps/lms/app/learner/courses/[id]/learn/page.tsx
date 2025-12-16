@@ -156,7 +156,25 @@ export default function CourseLearningPage() {
   }
 
   const handleQuizComplete = () => {
-    setActiveTab("resources")
+    // Go to resources if available, otherwise go to next lesson
+    const hasResources = currentLesson.resources && currentLesson.resources.length > 0
+    if (hasResources) {
+      setActiveTab("resources")
+    } else {
+      // No resources, go to next lesson
+      if (currentLessonIndex < course.lessons.length - 1) {
+        const nextIndex = currentLessonIndex + 1
+        if (!canAccessLesson(nextIndex)) {
+          alert("You must complete all required previous lessons before accessing this lesson.")
+          return
+        }
+        setCurrentLessonIndex(nextIndex)
+        setActiveTab("video")
+        setTimeLimitExceeded(false)
+      } else {
+        router.push(`/learner/courses/${id}/learn/summary`)
+      }
+    }
   }
 
   const handleNextLesson = () => {
@@ -166,14 +184,49 @@ export default function CourseLearningPage() {
         alert("This lesson cannot be skipped. Please complete it before proceeding.")
         return
       }
-      // If quiz is enabled, go to quiz, otherwise go to resources
-      if (currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0) {
+      // Navigate to next available tab: quiz -> resources -> next lesson
+      const hasQuiz = currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0
+      const hasResources = currentLesson.resources && currentLesson.resources.length > 0
+      
+      if (hasQuiz) {
         setActiveTab("quiz")
-      } else {
+      } else if (hasResources) {
         setActiveTab("resources")
+      } else {
+        // No quiz or resources, go to next lesson
+        if (currentLessonIndex < course.lessons.length - 1) {
+          const nextIndex = currentLessonIndex + 1
+          if (!canAccessLesson(nextIndex)) {
+            alert("You must complete all required previous lessons before accessing this lesson.")
+            return
+          }
+          setCurrentLessonIndex(nextIndex)
+          setActiveTab("video")
+          setTimeLimitExceeded(false)
+        } else {
+          router.push(`/learner/courses/${id}/learn/summary`)
+        }
       }
     } else if (activeTab === "quiz") {
-      setActiveTab("resources")
+      // From quiz, go to resources if available, otherwise next lesson
+      const hasResources = currentLesson.resources && currentLesson.resources.length > 0
+      if (hasResources) {
+        setActiveTab("resources")
+      } else {
+        // No resources, go to next lesson
+        if (currentLessonIndex < course.lessons.length - 1) {
+          const nextIndex = currentLessonIndex + 1
+          if (!canAccessLesson(nextIndex)) {
+            alert("You must complete all required previous lessons before accessing this lesson.")
+            return
+          }
+          setCurrentLessonIndex(nextIndex)
+          setActiveTab("video")
+          setTimeLimitExceeded(false)
+        } else {
+          router.push(`/learner/courses/${id}/learn/summary`)
+        }
+      }
     } else if (activeTab === "resources") {
       if (currentLessonIndex < course.lessons.length - 1) {
         const nextIndex = currentLessonIndex + 1
@@ -244,12 +297,14 @@ export default function CourseLearningPage() {
                     Quiz
                   </TabsTrigger>
                 )}
-                <TabsTrigger
-                  value="resources"
-                  className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                >
-                  Resources
-                </TabsTrigger>
+                {currentLesson.resources && currentLesson.resources.length > 0 && (
+                  <TabsTrigger
+                    value="resources"
+                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
+                  >
+                    Resources
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="video" className="flex-1 m-0 p-0 flex overflow-hidden min-h-0">
@@ -265,7 +320,7 @@ export default function CourseLearningPage() {
                   </div>
                 ) : currentLesson.type === "text" ? (
                   <ScrollArea className="w-full h-full">
-                    <div className="p-3 sm:p-4 md:p-6">
+                    <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
                       <div 
                         className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
                         dangerouslySetInnerHTML={{
@@ -295,7 +350,7 @@ export default function CourseLearningPage() {
               {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
                   <ScrollArea className="w-full h-full">
-                    <div className="p-3 sm:p-4 md:p-6">
+                    <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
                       <QuizComponent
                       quiz={{
                         questions: currentLesson.quiz.questions.map((q: any) => {
@@ -357,15 +412,17 @@ export default function CourseLearningPage() {
                 </TabsContent>
               )}
 
-              <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
-                <ScrollArea className="w-full h-full">
-                  <div className="p-3 sm:p-4 md:p-6">
-                    <ResourcesPanel 
-                      resources={currentLesson.resources || []} 
-                    />
-                  </div>
-                </ScrollArea>
-              </TabsContent>
+              {currentLesson.resources && currentLesson.resources.length > 0 && (
+                <TabsContent value="resources" className="flex-1 m-0 p-0 min-h-0 overflow-hidden">
+                  <ScrollArea className="w-full h-full">
+                    <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
+                      <ResourcesPanel 
+                        resources={currentLesson.resources || []} 
+                      />
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              )}
             </Tabs>
 
             {/* Footer - Fixed */}
