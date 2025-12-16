@@ -9,22 +9,7 @@ export interface CourseData {
     thumbnail: string
     previewVideo: string
     price: string
-    tags?: string[]
-    learningObjectives?: string[]
-    outcomes?: string[]
-    prerequisites?: number[]
-    estimatedDuration?: number
-    difficulty?: string
-    language?: string
-    instructorId?: string
   }
-  sections?: Array<{
-    id: string
-    title: string
-    description: string
-    order: number
-    lessons: string[]
-  }>
   lessons: Array<{
     id: string
     title: string
@@ -33,7 +18,6 @@ export interface CourseData {
     resources: any[]
     settings: any
     quiz: any
-    sectionId?: string
     estimatedDuration?: number
   }>
   settings: {
@@ -67,17 +51,8 @@ export const courseValidationSchema = z.object({
     thumbnail: z.string().optional(),
     previewVideo: z.string().optional(),
     price: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    learningObjectives: z.array(z.string()).optional(),
-    outcomes: z.array(z.string()).optional(),
-    prerequisites: z.array(z.number()).optional(),
-    estimatedDuration: z.number().optional(),
-    difficulty: z.string().optional(),
-    language: z.string().optional(),
-    instructorId: z.string().optional(),
   }),
   lessons: z.array(z.any()).optional(),
-  sections: z.array(z.any()).optional(),
   settings: z.object({
     isPublished: z.boolean(),
     requiresSequentialProgress: z.boolean(),

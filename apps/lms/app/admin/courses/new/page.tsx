@@ -11,12 +11,8 @@ import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
 import CourseProgressIndicator from "./components/CourseProgressIndicator"
-import CourseSections from "./components/CourseSections"
-import CourseTemplates from "./components/CourseTemplates"
-import TemplateSelector from "./components/TemplateSelector"
 import { useAutoSave } from "./hooks/useAutoSave"
 import { modules } from "@/data/courses"
-import { Clock } from "lucide-react"
 
 function NewCourseContent() {
   const router = useRouter()
@@ -31,22 +27,7 @@ function NewCourseContent() {
       thumbnail: string
       previewVideo: string
       price: string
-      tags?: string[]
-      learningObjectives?: string[]
-      outcomes?: string[]
-      prerequisites?: number[]
-      estimatedDuration?: number
-      difficulty?: string
-      language?: string
-      instructorId?: string
     }
-    sections?: Array<{
-      id: string
-      title: string
-      description: string
-      order: number
-      lessons: string[]
-    }>
     lessons: any[]
     settings: {
       isPublished: boolean
@@ -78,7 +59,6 @@ function NewCourseContent() {
       previewVideo: "",
       price: "",
     },
-    sections: [],
     lessons: [],
     settings: {
       isPublished: false,
@@ -104,21 +84,16 @@ function NewCourseContent() {
 
   const editCourseId = searchParams?.get("edit")
   
-  // Auto-save hook
-  const { lastSaved, loadDraft, clearDraft, saveNow } = useAutoSave({
+  // Auto-save hook (silent, no UI)
+  const { loadDraft, clearDraft } = useAutoSave({
     data: courseData,
     courseId: editCourseId || "new",
     enabled: true,
   })
 
-  // Load draft or template on mount
+  // Load draft on mount
   useEffect(() => {
     if (!editCourseId) {
-      const templateId = searchParams?.get("template")
-      if (templateId) {
-        // Load from template - would need to fetch from template storage
-        // For now, just check draft
-      }
       const draft = loadDraft()
       if (draft) {
         const shouldLoad = window.confirm("A draft was found. Would you like to restore it?")
@@ -127,7 +102,7 @@ function NewCourseContent() {
         }
       }
     }
-  }, [editCourseId, loadDraft, searchParams])
+  }, [editCourseId, loadDraft])
 
 
   useEffect(() => {
@@ -171,7 +146,9 @@ function NewCourseContent() {
               enrollment: courseToEdit.settings.enrollment
                 ? {
                     ...courseToEdit.settings.enrollment,
-                    enrollmentMode: courseToEdit.settings.enrollment.enrollmentMode as "open" | "free" | "buy" | "recurring" | "closed",
+                    enrollmentMode: (["free", "buy", "recurring"].includes(courseToEdit.settings.enrollment.enrollmentMode)
+                      ? courseToEdit.settings.enrollment.enrollmentMode
+                      : "free") as "free" | "buy" | "recurring",
                   }
                 : courseData.settings.enrollment,
               certificate: courseToEdit.settings.certificate
@@ -227,33 +204,11 @@ function NewCourseContent() {
 
   return (
     <div className="pt-4 md:pt-8">
-      <div className="flex justify-between items-start mb-8">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-primary mb-2">
-            {searchParams?.get("edit") ? "Edit Course" : "New Course"}
-          </h1>
-          {lastSaved && (
-            <p className="text-sm text-muted-foreground flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              Last saved: {lastSaved.toLocaleTimeString()}
-            </p>
-          )}
-        </div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-primary">
+          {searchParams?.get("edit") ? "Edit Course" : "New Course"}
+        </h1>
         <div className="space-x-2 flex items-center">
-          {!editCourseId && (
-            <>
-              <TemplateSelector
-                onSelect={(templateData) => {
-                  setCourseData(templateData)
-                  toast.success("Template loaded")
-                }}
-              />
-              <CourseTemplates courseData={courseData} />
-            </>
-          )}
-          <Button variant="outline" onClick={saveNow}>
-            Save Draft
-          </Button>
           <Button variant="outline" onClick={() => router.push("/admin/courses")}>
             Cancel
           </Button>
@@ -286,21 +241,8 @@ function NewCourseContent() {
             />
           </TabsContent>
 
-          <TabsContent value="lessons" className="space-y-6">
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Course Sections</h3>
-                <CourseSections
-                  sections={courseData.sections || []}
-                  lessons={courseData.lessons.map((l) => ({ id: l.id, title: l.title }))}
-                  onChange={(sections) => updateCourseData("sections", sections)}
-                />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Lessons</h3>
-                <LessonBuilder lessons={courseData.lessons} onUpdate={(lessons) => updateCourseData("lessons", lessons)} />
-              </div>
-            </div>
+          <TabsContent value="lessons" className="space-y-4">
+            <LessonBuilder lessons={courseData.lessons} onUpdate={(lessons) => updateCourseData("lessons", lessons)} />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
