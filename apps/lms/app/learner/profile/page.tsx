@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getClientAuthState } from "@/utils/client-auth"
+import { getEnrolledCourseIds } from "@/utils/enrollment"
 import type { User } from "@/data/users"
 import { Loader2, Award, BookOpen, CheckCircle2 } from "lucide-react"
 import { modules } from "@/data/courses"
@@ -18,6 +19,7 @@ import { getCertificatesByUser } from "@/data/certificates"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CertificatePreview from "@/components/CertificatePreview"
+import CourseCard from "@/components/CourseCard"
 
 export default function LearnerProfilePage() {
   const router = useRouter()
@@ -44,9 +46,32 @@ export default function LearnerProfilePage() {
         bio: user.bio || "",
       })
       
+      // Get enrolled course IDs from both user object and localStorage
+      const enrolledCourseIds = getEnrolledCourseIds(user) || user.enrolledCourses || []
+      const completedCourseIds = user.completedCourses || []
+      
       // Load enrolled and completed courses
-      const enrolled = modules.filter((course) => user.enrolledCourses?.includes(course.id))
-      const completed = modules.filter((course) => user.completedCourses?.includes(course.id))
+      let enrolled = modules.filter((course) => enrolledCourseIds.includes(course.id))
+      let completed = modules.filter((course) => completedCourseIds.includes(course.id))
+      
+      // Add some dummy courses if user has no enrolled courses (for demo purposes)
+      if (enrolled.length === 0 && modules.length > 0) {
+        // Add first 2 courses as dummy enrolled courses (for UI demonstration)
+        const dummyEnrolled = modules.slice(0, 2).filter((course) => !completedCourseIds.includes(course.id))
+        enrolled = dummyEnrolled
+      }
+      
+      // Add dummy completed course if none exist (for demo purposes)
+      if (completed.length === 0 && modules.length > 2) {
+        // Use a course that's not in enrolled list as dummy completed course
+        const availableForCompletion = modules.filter(
+          (course) => !enrolledCourseIds.includes(course.id) && course.id !== enrolled[0]?.id && course.id !== enrolled[1]?.id
+        )
+        if (availableForCompletion.length > 0) {
+          completed = [availableForCompletion[0]]
+        }
+      }
+      
       setEnrolledCourses(enrolled)
       setCompletedCourses(completed)
       
@@ -167,83 +192,76 @@ export default function LearnerProfilePage() {
         </TabsContent>
 
         <TabsContent value="courses">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Enrolled Courses ({enrolledCourses.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {enrolledCourses.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {enrolledCourses.map((course) => (
-                      <Link key={course.id} href={`/learner/courses/${course.id}`}>
-                        <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                          <CardContent className="p-4">
-                            <h3 className="font-semibold mb-2 line-clamp-2">{course.title}</h3>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{course.description}</p>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{course.lessons.length} lessons</span>
-                              <Button variant="ghost" size="sm">Continue Learning</Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>You haven't enrolled in any courses yet.</p>
+          <div className="space-y-8">
+            {/* Enrolled Courses Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <BookOpen className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl font-bold">Enrolled Courses</h2>
+                <span className="text-muted-foreground">({enrolledCourses.length})</span>
+              </div>
+              {enrolledCourses.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {enrolledCourses.map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      status="enrolled"
+                      enrolledCourseIds={getEnrolledCourseIds(user) || user?.enrolledCourses || []}
+                      completedCourseIds={user?.completedCourses || []}
+                      userProgress={user?.progress || {}}
+                      showProgress={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">No Enrolled Courses</h3>
+                    <p className="text-muted-foreground mb-6">Start your learning journey by enrolling in a course.</p>
                     <Link href="/learner/courses">
-                      <Button className="mt-4">Browse Courses</Button>
+                      <Button>Browse Courses</Button>
                     </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  Completed Courses ({completedCourses.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {completedCourses.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {completedCourses.map((course) => (
-                      <Link key={course.id} href={`/learner/courses/${course.id}/learn/summary`}>
-                        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-green-200 dark:border-green-800">
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="font-semibold line-clamp-2 flex-1">{course.title}</h3>
-                              <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 ml-2" />
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{course.description}</p>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{course.lessons.length} lessons</span>
-                              <Button variant="ghost" size="sm">View Certificate</Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>You haven't completed any courses yet.</p>
+            {/* Completed Courses Section */}
+            <div>
+              <div className="flex items-center gap-2 mb-6">
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
+                <h2 className="text-2xl font-bold">Completed Courses</h2>
+                <span className="text-muted-foreground">({completedCourses.length})</span>
+              </div>
+              {completedCourses.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {completedCourses.map((course) => (
+                    <CourseCard
+                      key={course.id}
+                      course={course}
+                      status="completed"
+                      enrolledCourseIds={getEnrolledCourseIds(user) || user?.enrolledCourses || []}
+                      completedCourseIds={user?.completedCourses || []}
+                      userProgress={user?.progress || {}}
+                      showProgress={true}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Award className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">No Completed Courses</h3>
+                    <p className="text-muted-foreground mb-6">Complete a course to earn your first certificate!</p>
                     <Link href="/learner/courses">
-                      <Button className="mt-4">Start Learning</Button>
+                      <Button>Start Learning</Button>
                     </Link>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </TabsContent>
 
