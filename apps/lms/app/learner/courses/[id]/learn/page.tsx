@@ -156,6 +156,17 @@ export default function CourseLearningPage() {
   }
 
   const handleQuizComplete = () => {
+    // Mark lesson as completed when quiz is passed
+    if (!completedLessons.includes(currentLessonIndex)) {
+      const newCompletedLessons = [...completedLessons, currentLessonIndex]
+      setCompletedLessons(newCompletedLessons)
+      const newProgress = (newCompletedLessons.length / course.lessons.length) * 100
+      setProgress(newProgress)
+      if (newCompletedLessons.length === course.lessons.length) {
+        setAllLessonsCompleted(true)
+      }
+    }
+    
     // Go to resources if available, otherwise go to next lesson
     const hasResources = currentLesson.resources && currentLesson.resources.length > 0
     if (hasResources) {
@@ -495,28 +506,13 @@ export default function CourseLearningPage() {
         {/* Sidebar - Scrollable on mobile, fixed on desktop */}
         <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-none lg:h-full">
           <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-3 md:p-4">
-            <div className="mb-3 sm:mb-4 flex-shrink-0">
-              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2">Course Progress</h3>
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
-                  <span className="text-muted-foreground">Overall Progress</span>
-                  <span className="font-semibold">{Math.round(progress)}%</span>
-                </div>
-                <Progress value={progress} className="h-1 sm:h-1.5 md:h-2" />
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {completedLessons.length} of {course.lessons.length} lessons completed
-                </p>
-              </div>
-            </div>
-            <div className="border-t pt-2 sm:pt-3 md:pt-4 flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0">
               <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
               <ScrollArea className="flex-1 min-h-0 w-full">
                 <div className="space-y-1 sm:space-y-1.5 md:space-y-2 pr-1 sm:pr-2">
                 {course.lessons.map((lesson: any, index: number) => {
                   const isCompleted = completedLessons.includes(index)
                   const isCurrent = index === currentLessonIndex
-                  const videoProgressPercent = videoProgress[index] || 0
-                  const lessonProgress = isCompleted ? 100 : isCurrent ? Math.max(50, videoProgressPercent) : videoProgressPercent
                   const canAccess = canAccessLesson(index)
                   const isRequired = lesson?.settings?.isRequired ?? false
 
@@ -562,12 +558,6 @@ export default function CourseLearningPage() {
                               </span>
                             )}
                           </div>
-                          {(isCurrent || videoProgressPercent > 0) && (
-                            <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 mt-0.5 sm:mt-1">
-                              <Progress value={lessonProgress} className="h-0.5 sm:h-1 w-12 sm:w-16 md:w-20" />
-                              <span className="text-[9px] sm:text-[10px] md:text-xs opacity-75">{Math.round(lessonProgress)}%</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </button>
