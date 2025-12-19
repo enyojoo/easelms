@@ -11,15 +11,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getClientAuthState } from "@/utils/client-auth"
-import { getEnrolledCourseIds } from "@/utils/enrollment"
+import { getEnrolledCourseIds, getPurchaseHistory, cancelSubscription, type Purchase } from "@/utils/enrollment"
 import type { User } from "@/data/users"
-import { Loader2, Award, BookOpen, CheckCircle2 } from "lucide-react"
+import { Loader2, Award, BookOpen, CheckCircle2, ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
 import { modules } from "@/data/courses"
 import { getCertificatesByUser } from "@/data/certificates"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CertificatePreview from "@/components/CertificatePreview"
 import CourseCard from "@/components/CourseCard"
+import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
 
 export default function LearnerProfilePage() {
   const router = useRouter()
@@ -28,6 +30,7 @@ export default function LearnerProfilePage() {
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([])
   const [completedCourses, setCompletedCourses] = useState<any[]>([])
   const [certificates, setCertificates] = useState<any[]>([])
+  const [purchases, setPurchases] = useState<Purchase[]>([])
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -78,6 +81,38 @@ export default function LearnerProfilePage() {
       // Load certificates
       const userCertificates = getCertificatesByUser(user.id?.toString() || "")
       setCertificates(userCertificates)
+      
+      // Load purchase history
+      const purchaseHistory = getPurchaseHistory()
+      // Add some dummy purchases if none exist (for demo purposes)
+      if (purchaseHistory.length === 0 && modules.length > 0) {
+        const dummyPurchases: Purchase[] = [
+          {
+            id: "dummy-1",
+            courseId: modules[1]?.id || 2,
+            courseTitle: modules[1]?.title || "Successful Marriage Course",
+            type: "buy",
+            amount: 99,
+            currency: "USD",
+            status: "active",
+            purchasedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
+          },
+          {
+            id: "dummy-2",
+            courseId: modules[2]?.id || 3,
+            courseTitle: modules[2]?.title || "Purpose Discovery Course",
+            type: "recurring",
+            amount: 29,
+            currency: "USD",
+            recurringPrice: 29,
+            status: "active",
+            purchasedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
+          },
+        ]
+        setPurchases(dummyPurchases)
+      } else {
+        setPurchases(purchaseHistory)
+      }
     }
   }, [router])
 
@@ -110,6 +145,7 @@ export default function LearnerProfilePage() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="courses">My Courses</TabsTrigger>
+          <TabsTrigger value="purchases">Purchase History</TabsTrigger>
           <TabsTrigger value="certificates">Certificates</TabsTrigger>
         </TabsList>
 
@@ -263,6 +299,136 @@ export default function LearnerProfilePage() {
               )}
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="purchases">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                Purchase History ({purchases.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {purchases.length > 0 ? (
+                <div className="space-y-4">
+                  {purchases.map((purchase) => {
+                    const course = modules.find((c) => c.id === purchase.courseId)
+                    const isSubscription = purchase.type === "recurring"
+                    const isActive = purchase.status === "active"
+                    
+                    return (
+                      <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
+                        <CardContent className="p-6">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">{purchase.courseTitle}</h3>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge
+                                      variant={isSubscription ? "secondary" : "outline"}
+                                      className={
+                                        isSubscription
+                                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                      }
+                                    >
+                                      {isSubscription ? "Subscription" : "One-time Purchase"}
+                                    </Badge>
+                                    <Badge
+                                      variant={isActive ? "default" : "secondary"}
+                                      className={
+                                        isActive
+                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                          : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                                      }
+                                    >
+                                      {isActive ? "Active" : "Cancelled"}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span>
+                                    {purchase.currency} {purchase.amount}
+                                    {isSubscription && purchase.recurringPrice && " /month"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>
+                                    Purchased: {new Date(purchase.purchasedAt).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "long",
+                                      day: "numeric",
+                                    })}
+                                  </span>
+                                </div>
+                                {purchase.cancelledAt && (
+                                  <div className="flex items-center gap-2">
+                                    <XCircle className="h-4 w-4" />
+                                    <span>
+                                      Cancelled: {new Date(purchase.cancelledAt).toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 md:items-end">
+                              {course && (
+                                <Link href={`/learner/courses/${course.id}`}>
+                                  <Button variant="outline" size="sm">
+                                    View Course
+                                  </Button>
+                                </Link>
+                              )}
+                              {isSubscription && isActive && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (window.confirm("Are you sure you want to cancel this subscription? You will be redirected to support to complete the cancellation.")) {
+                                      cancelSubscription(purchase.id)
+                                      setPurchases((prev) =>
+                                        prev.map((p) =>
+                                          p.id === purchase.id
+                                            ? { ...p, status: "cancelled" as const, cancelledAt: new Date().toISOString() }
+                                            : p
+                                        )
+                                      )
+                                      router.push("/support")
+                                    }
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Cancel Subscription
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>You don't have any purchases yet.</p>
+                  <Link href="/learner/courses">
+                    <Button className="mt-4">Browse Courses</Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="certificates">

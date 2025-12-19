@@ -115,7 +115,8 @@ export default function CoursePage() {
           Number.parseInt(id),
           enrollmentMode,
           coursePrice,
-          recurringPrice
+          recurringPrice,
+          module.title
         )
         if (success) {
           setIsEnrolled(true)
