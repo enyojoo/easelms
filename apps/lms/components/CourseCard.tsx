@@ -2,12 +2,16 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Clock, Banknote, Eye, Play } from "lucide-react"
 import type { Module } from "@/data/courses"
+import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
+import { useState, useEffect } from "react"
+import { getClientAuthState } from "@/utils/client-auth"
 
 interface CourseCardProps {
   course: Module
@@ -32,10 +36,46 @@ export default function CourseCard({
   courseImage,
   className,
 }: CourseCardProps) {
-  const isEnrolled = enrolledCourseIds.includes(course.id)
+  const router = useRouter()
+  const [isEnrolling, setIsEnrolling] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  
+  useEffect(() => {
+    const authState = getClientAuthState()
+    setUser(authState.user)
+  }, [])
+  
+  // Check enrollment status using utility function
+  const isEnrolled = isEnrolledInCourse(course.id, user) || enrolledCourseIds.includes(course.id)
   const isCompleted = completedCourseIds.includes(course.id)
   const actualStatus = status || (isCompleted ? "completed" : isEnrolled ? "enrolled" : "available")
   const courseProgress = progress !== undefined ? progress : (userProgress[course.id] || 0)
+  
+  const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
+
+  const handleEnroll = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsEnrolling(true)
+    try {
+      if (enrollmentMode === "free") {
+        // Enroll directly for free courses
+        const success = await enrollInCourse(course.id, user)
+        if (success) {
+          // Dispatch event to notify parent components
+          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
+          // Redirect to learn page
+          router.push(`/learner/courses/${course.id}/learn`)
+        }
+      } else {
+        // For paid/subscription, redirect to course detail page to handle payment
+        router.push(`/learner/courses/${course.id}`)
+      }
+    } catch (error) {
+      console.error("Error enrolling in course:", error)
+    } finally {
+      setIsEnrolling(false)
+    }
+  }
 
   const getCTAButtons = () => {
     const previewButton = (
@@ -63,55 +103,25 @@ export default function CourseCard({
           <Button asChild className="flex-1">
             <Link href={`/learner/courses/${course.id}/learn`}>
               <Play className="w-4 h-4 mr-2" />
-              Continue
+              Start
             </Link>
           </Button>
         </>
       )
     } else {
-      // Available courses - determine access type from enrollment mode
-      const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
-      const coursePrice = course.settings?.enrollment?.price || course.price || 0
-      const recurringPrice = course.settings?.enrollment?.recurringPrice
-
-      switch (enrollmentMode) {
-        case "free":
-          return (
-            <>
-              {previewButton}
-              <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>Start</Link>
-              </Button>
-            </>
-          )
-        case "buy":
-          return (
-            <>
-              {previewButton}
-              <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>Buy</Link>
-              </Button>
-            </>
-          )
-        case "recurring":
-          return (
-            <>
-              {previewButton}
-              <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>Subscribe</Link>
-              </Button>
-            </>
-          )
-        default:
-          return (
-            <>
-              {previewButton}
-              <Button asChild className="flex-1">
-                <Link href={`/learner/courses/${course.id}`}>Request Access</Link>
-              </Button>
-            </>
-          )
-      }
+      // Available courses - show Enroll button
+      return (
+        <>
+          {previewButton}
+          <Button 
+            className="flex-1" 
+            onClick={handleEnroll}
+            disabled={isEnrolling}
+          >
+            {isEnrolling ? "Enrolling..." : "Enroll"}
+          </Button>
+        </>
+      )
     }
   }
 
@@ -133,11 +143,13 @@ export default function CourseCard({
   // Get course type badge
   const getCourseTypeBadge = () => {
     if (actualStatus === "enrolled" || actualStatus === "completed") {
-      return null // Don't show badge for enrolled/completed courses
+      return (
+        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          Enrolled
+        </Badge>
+      )
     }
 
-    const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
-    
     switch (enrollmentMode) {
       case "free":
         return (

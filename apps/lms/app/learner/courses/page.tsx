@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowUpDown, Loader2 } from "lucide-react"
 import { getClientAuthState } from "@/utils/client-auth"
+import { getEnrolledCourseIds } from "@/utils/enrollment"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -36,7 +37,8 @@ export default function CoursesPage() {
     )
   }
 
-  const enrolledCourseIds = user.enrolledCourses || []
+  // Get enrolled courses from both user object and localStorage
+  const enrolledCourseIds = getEnrolledCourseIds(user) || user.enrolledCourses || []
   const completedCourseIds = user.completedCourses || []
   
   const enrolledCourses = modules.filter((course) => enrolledCourseIds.includes(course.id))

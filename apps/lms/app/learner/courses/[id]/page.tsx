@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { notFound, useParams } from "next/navigation"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
 import { modules } from "@/data/courses"
@@ -14,13 +15,27 @@ import { BrainCircuit } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
+import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
+import { getClientAuthState } from "@/utils/client-auth"
 
 export default function CoursePage() {
   const params = useParams()
   const id = params.id as string
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [isEnrolling, setIsEnrolling] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [isEnrolled, setIsEnrolled] = useState(false)
   const module = modules.find((m) => m.id === Number.parseInt(id))
   const router = useRouter()
+
+  useEffect(() => {
+    const authState = getClientAuthState()
+    setUser(authState.user)
+    if (authState.user) {
+      const enrolled = isEnrolledInCourse(Number.parseInt(id), authState.user)
+      setIsEnrolled(enrolled)
+    }
+  }, [id])
 
   if (!module) {
     notFound()
@@ -39,11 +54,19 @@ export default function CoursePage() {
   const recurringPrice = module.settings?.enrollment?.recurringPrice
 
   const getAccessDetails = () => {
+    if (isEnrolled) {
+      return {
+        price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
+        buttonText: "Start",
+        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full lifetime access",
+      }
+    }
+    
     switch (enrollmentMode) {
       case "free":
         return {
           price: "Free",
-          buttonText: "Start",
+          buttonText: "Enroll",
           access: "Full lifetime access",
         }
       case "buy":
@@ -61,7 +84,7 @@ export default function CoursePage() {
       default:
         return {
           price: "Free",
-          buttonText: "Start",
+          buttonText: "Enroll",
           access: "Full lifetime access",
         }
     }
@@ -69,8 +92,75 @@ export default function CoursePage() {
 
   const { price, buttonText, access } = getAccessDetails()
 
-  const handleStartCourse = () => {
-    router.push(`/learner/courses/${id}/learn`)
+  const handleEnrollOrStart = async () => {
+    if (isEnrolled) {
+      // Already enrolled, go to learn page
+      router.push(`/learner/courses/${id}/learn`)
+      return
+    }
+
+    setIsEnrolling(true)
+    try {
+      if (enrollmentMode === "free") {
+        // Enroll directly for free courses
+        const success = await enrollInCourse(Number.parseInt(id), user)
+        if (success) {
+          setIsEnrolled(true)
+          // Redirect to learn page
+          router.push(`/learner/courses/${id}/learn`)
+        }
+      } else {
+        // Handle payment/subscription for paid courses
+        const success = await handleCoursePayment(
+          Number.parseInt(id),
+          enrollmentMode,
+          coursePrice,
+          recurringPrice
+        )
+        if (success) {
+          setIsEnrolled(true)
+          // Redirect to learn page after successful payment
+          router.push(`/learner/courses/${id}/learn`)
+        }
+      }
+    } catch (error) {
+      console.error("Error enrolling in course:", error)
+    } finally {
+      setIsEnrolling(false)
+    }
+  }
+
+  const getCourseBadge = () => {
+    if (isEnrolled) {
+      return (
+        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          Enrolled
+        </Badge>
+      )
+    }
+
+    switch (enrollmentMode) {
+      case "free":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+            Free
+          </Badge>
+        )
+      case "buy":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            Paid
+          </Badge>
+        )
+      case "recurring":
+        return (
+          <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+            Subscription
+          </Badge>
+        )
+      default:
+        return null
+    }
   }
 
   return (
@@ -100,15 +190,19 @@ export default function CoursePage() {
                 <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <div className="mt-4 mb-4">
-              <span className="text-2xl font-bold text-primary">{price}</span>
-              {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+            <div className="mt-4 mb-4 flex items-center justify-between">
+              <div>
+                <span className="text-2xl font-bold text-primary">{price}</span>
+                {enrollmentMode === "recurring" && !isEnrolled && <span className="text-sm text-muted-foreground">/month</span>}
+              </div>
+              {getCourseBadge()}
             </div>
             <Button
               className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={handleStartCourse}
+              onClick={handleEnrollOrStart}
+              disabled={isEnrolling}
             >
-              {buttonText}
+              {isEnrolling ? "Processing..." : buttonText}
             </Button>
             <p className="text-left lg:text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
             <div className="space-y-2 text-muted-foreground">
@@ -269,15 +363,19 @@ export default function CoursePage() {
                   <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
-              <div className="mt-4 mb-4">
-                <span className="text-2xl font-bold text-primary">{price}</span>
-                {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+              <div className="mt-4 mb-4 flex items-center justify-between">
+                <div>
+                  <span className="text-2xl font-bold text-primary">{price}</span>
+                  {enrollmentMode === "recurring" && !isEnrolled && <span className="text-sm text-muted-foreground">/month</span>}
+                </div>
+                {getCourseBadge()}
               </div>
               <Button
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={handleStartCourse}
+                onClick={handleEnrollOrStart}
+                disabled={isEnrolling}
               >
-                {buttonText}
+                {isEnrolling ? "Processing..." : buttonText}
               </Button>
               <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">
