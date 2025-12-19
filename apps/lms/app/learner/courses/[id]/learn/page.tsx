@@ -506,7 +506,20 @@ export default function CourseLearningPage() {
         {/* Sidebar - Scrollable on mobile, fixed on desktop */}
         <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-none lg:h-full">
           <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-3 md:p-4">
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="mb-3 sm:mb-4 flex-shrink-0">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2">Course Progress</h3>
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+                  <span className="text-muted-foreground">Overall Progress</span>
+                  <span className="font-semibold">{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} className="h-1 sm:h-1.5 md:h-2" />
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  {completedLessons.length} of {course.lessons.length} lessons completed
+                </p>
+              </div>
+            </div>
+            <div className="border-t pt-2 sm:pt-3 md:pt-4 flex-1 flex flex-col min-h-0">
               <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
               <ScrollArea className="flex-1 min-h-0 w-full">
                 <div className="space-y-1 sm:space-y-1.5 md:space-y-2 pr-1 sm:pr-2">
