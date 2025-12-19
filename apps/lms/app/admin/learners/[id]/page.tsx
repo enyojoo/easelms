@@ -16,21 +16,42 @@ import {
   TrendingUp,
   Calendar,
   DollarSign,
+  ShoppingBag,
+  XCircle,
 } from "lucide-react"
 import { users } from "@/data/users"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
+import { getPurchaseHistory, type Purchase } from "@/utils/enrollment"
 import Link from "next/link"
 
 export default function LearnerDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const [learner, setLearner] = useState<User | null>(null)
+  const [purchases, setPurchases] = useState<Purchase[]>([])
 
   useEffect(() => {
     const foundUser = users.find((u) => u.id === params.id && u.userType === "user")
     if (foundUser) {
       setLearner(foundUser)
+      // Load purchase history for this learner
+      // Try to match by user ID or email
+      const allPurchases = getPurchaseHistory()
+      const learnerPurchases = allPurchases.filter(
+        (p) => p.userId === foundUser.id || p.userId === foundUser.email
+      )
+      // If no purchases found, add some dummy data for demonstration
+      if (learnerPurchases.length === 0 && allPurchases.length > 0) {
+        // Use first 2 purchases as dummy data for this learner
+        const dummyPurchases = allPurchases.slice(0, 2).map((p) => ({
+          ...p,
+          userId: foundUser.id,
+        }))
+        setPurchases(dummyPurchases)
+      } else {
+        setPurchases(learnerPurchases)
+      }
     }
   }, [params.id])
 
@@ -147,6 +168,7 @@ export default function LearnerDetailsPage() {
         <TabsList>
           <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
           <TabsTrigger value="progress">Progress</TabsTrigger>
+          <TabsTrigger value="purchases">Purchases</TabsTrigger>
         </TabsList>
 
         <TabsContent value="enrollments" className="space-y-4">
@@ -215,6 +237,111 @@ export default function LearnerDetailsPage() {
                 </div>
               ) : (
                 <p className="text-center py-8 text-muted-foreground">No progress data</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="purchases" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                Purchase History ({purchases.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {purchases.length > 0 ? (
+                <div className="space-y-4">
+                  {purchases.map((purchase) => {
+                    const course = modules.find((c) => c.id === purchase.courseId)
+                    const isSubscription = purchase.type === "recurring"
+                    const isActive = purchase.status === "active"
+                    
+                    return (
+                      <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
+                        <CardContent className="p-6">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between mb-2">
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-1">{purchase.courseTitle}</h3>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge
+                                      variant={isSubscription ? "secondary" : "outline"}
+                                      className={
+                                        isSubscription
+                                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                      }
+                                    >
+                                      {isSubscription ? "Subscription" : "One-time Purchase"}
+                                    </Badge>
+                                    <Badge
+                                      variant={isActive ? "default" : "secondary"}
+                                      className={
+                                        isActive
+                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                          : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                                      }
+                                    >
+                                      {isActive ? "Active" : "Cancelled"}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="space-y-2 text-sm text-muted-foreground mt-3">
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-4 w-4" />
+                                  <span>
+                                    {purchase.currency} {purchase.amount}
+                                    {isSubscription && purchase.recurringPrice && " /month"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4" />
+                                  <span>
+                                    Purchased: {new Date(purchase.purchasedAt).toLocaleDateString("en-US", {
+                                      year: "numeric",
+                                      month: "long",
+                                      day: "numeric",
+                                    })}
+                                  </span>
+                                </div>
+                                {purchase.cancelledAt && (
+                                  <div className="flex items-center gap-2">
+                                    <XCircle className="h-4 w-4" />
+                                    <span>
+                                      Cancelled: {new Date(purchase.cancelledAt).toLocaleDateString("en-US", {
+                                        year: "numeric",
+                                        month: "long",
+                                        day: "numeric",
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 md:items-end">
+                              {course && (
+                                <Link href={`/admin/courses/preview/${course.id}`}>
+                                  <Button variant="outline" size="sm">
+                                    View Course
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No purchases found for this learner.</p>
+                </div>
               )}
             </CardContent>
           </Card>

@@ -81,6 +81,7 @@ export function getEnrolledCourseIds(user?: any): number[] {
 
 export interface Purchase {
   id: string
+  userId?: string // Optional for backward compatibility
   courseId: number
   courseTitle: string
   type: "buy" | "recurring"
@@ -95,11 +96,16 @@ export interface Purchase {
 /**
  * Get purchase history from localStorage
  */
-export function getPurchaseHistory(): Purchase[] {
+export function getPurchaseHistory(userId?: string): Purchase[] {
   try {
     const purchases = localStorage.getItem("purchase-history")
     if (purchases) {
-      return JSON.parse(purchases)
+      const allPurchases: Purchase[] = JSON.parse(purchases)
+      // If userId is provided, filter by userId
+      if (userId) {
+        return allPurchases.filter((p) => p.userId === userId)
+      }
+      return allPurchases
     }
   } catch (error) {
     console.error("Error getting purchase history:", error)
@@ -110,13 +116,14 @@ export function getPurchaseHistory(): Purchase[] {
 /**
  * Add a purchase to history
  */
-export function addPurchase(purchase: Omit<Purchase, "id" | "purchasedAt">): void {
+export function addPurchase(purchase: Omit<Purchase, "id" | "purchasedAt">, userId?: string): void {
   try {
     const purchases = getPurchaseHistory()
     const newPurchase: Purchase = {
       ...purchase,
       id: `purchase-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       purchasedAt: new Date().toISOString(),
+      userId: userId || purchase.userId,
     }
     purchases.push(newPurchase)
     localStorage.setItem("purchase-history", JSON.stringify(purchases))
@@ -156,7 +163,8 @@ export function handleCoursePayment(
   enrollmentMode: "buy" | "recurring",
   price: number,
   recurringPrice?: number,
-  courseTitle?: string
+  courseTitle?: string,
+  user?: any
 ): Promise<boolean> {
   return new Promise((resolve) => {
     // TODO: Integrate with payment provider (Stripe, Flutterwave, etc.)
@@ -170,6 +178,8 @@ export function handleCoursePayment(
       enrollInCourse(courseId).then((success) => {
         if (success) {
           // Add to purchase history
+          // Get userId from user object if available
+          const userId = user?.id || user?.email || undefined
           addPurchase({
             courseId,
             courseTitle: courseTitle || `Course ${courseId}`,
@@ -178,7 +188,7 @@ export function handleCoursePayment(
             currency: "USD",
             recurringPrice: enrollmentMode === "recurring" ? (recurringPrice || price) : undefined,
             status: "active",
-          })
+          }, userId)
           
           alert("Payment successful! You are now enrolled in this course.")
           resolve(true)

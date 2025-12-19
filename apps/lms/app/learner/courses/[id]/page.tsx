@@ -116,7 +116,8 @@ export default function CoursePage() {
           enrollmentMode,
           coursePrice,
           recurringPrice,
-          module.title
+          module.title,
+          user
         )
         if (success) {
           setIsEnrolled(true)

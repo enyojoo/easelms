@@ -75,7 +75,8 @@ export default function CourseCard({
           enrollmentMode,
           coursePrice,
           recurringPrice,
-          course.title
+          course.title,
+          user
         )
         if (success) {
           // Dispatch event to notify parent components
