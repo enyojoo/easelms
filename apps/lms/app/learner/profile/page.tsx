@@ -21,7 +21,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CertificatePreview from "@/components/CertificatePreview"
 import CourseCard from "@/components/CourseCard"
 import { Badge } from "@/components/ui/badge"
-import { useRouter } from "next/navigation"
 
 export default function LearnerProfilePage() {
   const router = useRouter()
