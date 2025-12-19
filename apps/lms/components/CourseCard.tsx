@@ -67,8 +67,21 @@ export default function CourseCard({
           router.push(`/learner/courses/${course.id}/learn`)
         }
       } else {
-        // For paid/subscription, redirect to course detail page to handle payment
-        router.push(`/learner/courses/${course.id}`)
+        // For paid/subscription, handle payment directly
+        const coursePrice = course.settings?.enrollment?.price || course.price || 0
+        const recurringPrice = course.settings?.enrollment?.recurringPrice
+        const success = await handleCoursePayment(
+          course.id,
+          enrollmentMode,
+          coursePrice,
+          recurringPrice
+        )
+        if (success) {
+          // Dispatch event to notify parent components
+          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
+          // Redirect to learn page after successful payment
+          router.push(`/learner/courses/${course.id}/learn`)
+        }
       }
     } catch (error) {
       console.error("Error enrolling in course:", error)
@@ -112,9 +125,22 @@ export default function CourseCard({
     } else {
       // Available courses - show appropriate CTA based on enrollment mode
       const getButtonText = () => {
+        if (isEnrolling) {
+          switch (enrollmentMode) {
+            case "free":
+              return "Enrolling..."
+            case "buy":
+              return "Processing..."
+            case "recurring":
+              return "Processing..."
+            default:
+              return "Processing..."
+          }
+        }
+        
         switch (enrollmentMode) {
           case "free":
-            return isEnrolling ? "Enrolling..." : "Enroll"
+            return "Enroll"
           case "buy":
             return "Buy"
           case "recurring":
