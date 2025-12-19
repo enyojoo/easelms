@@ -97,6 +97,7 @@ export default function CourseCard({
         </>
       )
     } else if (actualStatus === "enrolled") {
+      // When enrolled, always show "Start" regardless of course type
       return (
         <>
           {previewButton}
@@ -109,7 +110,20 @@ export default function CourseCard({
         </>
       )
     } else {
-      // Available courses - show Enroll button
+      // Available courses - show appropriate CTA based on enrollment mode
+      const getButtonText = () => {
+        switch (enrollmentMode) {
+          case "free":
+            return isEnrolling ? "Enrolling..." : "Enroll"
+          case "buy":
+            return "Buy"
+          case "recurring":
+            return "Subscribe"
+          default:
+            return "Enroll"
+        }
+      }
+
       return (
         <>
           {previewButton}
@@ -118,7 +132,7 @@ export default function CourseCard({
             onClick={handleEnroll}
             disabled={isEnrolling}
           >
-            {isEnrolling ? "Enrolling..." : "Enroll"}
+            {getButtonText()}
           </Button>
         </>
       )
