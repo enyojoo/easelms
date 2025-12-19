@@ -457,18 +457,11 @@ export default function CourseLearningPage() {
                   variant="outline"
                   onClick={handlePreviousLesson}
                   disabled={currentLessonIndex === 0 || timeLimitExceeded}
-                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto order-2 sm:order-1 h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
                   size="sm"
                 >
                   <ChevronLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Previous
                 </Button>
-
-                <div className="text-left sm:text-center w-full sm:w-auto order-1 sm:order-2">
-                  <p className="text-[10px] sm:text-xs md:text-sm text-muted-foreground mb-1">
-                    Lesson {currentLessonIndex + 1} of {course.lessons.length}
-                  </p>
-                  <Progress value={progress} className="w-full sm:w-[180px] md:w-[200px] bg-secondary h-1 sm:h-1.5 md:h-2" />
-                </div>
 
                 <Button
                   variant={allLessonsCompleted ? "default" : "outline"}
