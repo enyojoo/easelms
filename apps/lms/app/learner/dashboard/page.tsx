@@ -94,8 +94,8 @@ export default function LearnerDashboard() {
   const firstName = user.name?.split(" ")[0] || user.name || "there"
 
   return (
-    <div className="pt-2 md:pt-4 lg:pt-0 pb-2 md:pb-4 max-w-7xl mx-auto px-4 lg:px-6">
-      <div className="flex justify-between items-center mb-3 md:mb-4">
+    <div className="pt-2 md:pt-4 lg:pt-0 pb-2 md:pb-2 max-w-7xl mx-auto px-4 lg:px-6">
+      <div className="flex justify-between items-center mb-3 md:mb-4 pt-4 md:pt-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary">Hi, {firstName} 👋🏻</h1>
         </div>
