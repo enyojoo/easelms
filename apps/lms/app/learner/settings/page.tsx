@@ -103,7 +103,6 @@ export default function LearnerSettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Currency</Label>
               <Select value={selectedCurrency} onValueChange={handleCurrencyChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select currency" />
@@ -154,17 +153,17 @@ export default function LearnerSettingsPage() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle>Delete Account</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between bg-destructive/10 p-4 rounded-lg">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-destructive/10 p-4 rounded-lg">
               <div className="space-y-1">
                 <p className="font-medium">Permanently delete your account</p>
                 <p className="text-sm text-muted-foreground">Once deleted, your account cannot be recovered</p>
               </div>
-              <Button variant="destructive">Delete Account</Button>
+              <Button variant="destructive" className="w-full sm:w-auto">Delete Account</Button>
             </div>
           </CardContent>
         </Card>
