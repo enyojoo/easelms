@@ -3,20 +3,28 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  // Use Supabase session check
-  const supabaseResponse = await updateSession(request)
+  const url = request.nextUrl.clone()
+
+  // Always redirect root to learner login first
+  if (url.pathname === "/") {
+    url.pathname = "/auth/learner/login"
+    return NextResponse.redirect(url)
+  }
+
+  // Use Supabase session check with error handling
+  let supabaseResponse
+  try {
+    supabaseResponse = await updateSession(request)
+  } catch (error) {
+    // If updateSession fails, still handle the request
+    console.error("Middleware error in updateSession:", error)
+    // For other routes, allow through (will be handled by page-level auth)
+    return NextResponse.next()
+  }
   
   // If updateSession redirected, return that redirect
   if (supabaseResponse.status === 307 || supabaseResponse.status === 308) {
     return supabaseResponse
-  }
-
-  const url = request.nextUrl.clone()
-
-  // If accessing root, redirect to learner login
-  if (url.pathname === "/") {
-    url.pathname = "/auth/learner/login"
-    return NextResponse.redirect(url)
   }
 
   // Allow access to auth routes, forgot-password, and support without authentication

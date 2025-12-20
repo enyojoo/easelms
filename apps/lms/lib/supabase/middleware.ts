@@ -2,13 +2,22 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
+  // Check if Supabase is configured
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // If Supabase is not configured, just return next response
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -76,9 +85,9 @@ export async function updateSession(request: NextRequest) {
       if (!error && data) {
         profile = data
       } else {
-        // If RLS blocks, try with service role client
-        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        // If RLS blocks, try with service role client (only if available)
         try {
+          const { createServiceRoleClient } = await import('@/lib/supabase/server')
           const serviceClient = createServiceRoleClient()
           const { data: serviceData } = await serviceClient
             .from('profiles')
@@ -89,9 +98,9 @@ export async function updateSession(request: NextRequest) {
           if (serviceData) {
             profile = serviceData
           }
-        } catch (serviceError) {
-          // Service role not available, continue with regular client result
-          console.warn('Service role client not available in middleware:', serviceError)
+        } catch (serviceError: any) {
+          // Service role not available or failed, continue with regular client result
+          // This is expected if service role key is not set
         }
       }
     } catch (error) {
