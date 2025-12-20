@@ -104,12 +104,7 @@ export default function AdminLoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
-                  <Link href="/forgot-password" className="text-xs sm:text-sm underline">
-                    Forgot password?
-                  </Link>
-                </div>
+                <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"

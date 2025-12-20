@@ -32,19 +32,73 @@ export default function ClientLayout({
   useEffect(() => {
     setMounted(true)
     if (typeof window !== "undefined") {
-      if (isSupabase && !supabaseAuthState.loading && supabaseAuthState.user) {
-        // Ensure we have the correct user structure from Supabase
-        setAuthState({
-          isLoggedIn: supabaseAuthState.isLoggedIn,
-          userType: supabaseAuthState.userType,
-          user: {
-            name: supabaseAuthState.user.name || "",
-            profileImage: supabaseAuthState.user.profileImage || "",
-            email: supabaseAuthState.user.email || "",
-            id: supabaseAuthState.user.id,
-          },
-        })
-      } else if (!isSupabase) {
+      if (isSupabase) {
+        // Check if we have a session even if hook is still loading
+        const checkSession = async () => {
+          try {
+            const supabase = createClient()
+            const { data: { session } } = await supabase.auth.getSession()
+            
+            if (session?.user) {
+              // If we have a session, use the hook state if available, otherwise fetch profile
+              if (!supabaseAuthState.loading && supabaseAuthState.user) {
+                setAuthState({
+                  isLoggedIn: supabaseAuthState.isLoggedIn,
+                  userType: supabaseAuthState.userType,
+                  user: {
+                    name: supabaseAuthState.user.name || "",
+                    profileImage: supabaseAuthState.user.profileImage || "",
+                    email: supabaseAuthState.user.email || "",
+                    id: supabaseAuthState.user.id,
+                  },
+                })
+              } else {
+                // Hook still loading, but we have a session - fetch profile directly
+                const profileResponse = await fetch("/api/profile")
+                if (profileResponse.ok) {
+                  const profileData = await profileResponse.json()
+                  if (profileData.profile) {
+                    setAuthState({
+                      isLoggedIn: true,
+                      userType: profileData.profile.user_type,
+                      user: {
+                        id: profileData.profile.id,
+                        name: profileData.profile.name || "",
+                        email: profileData.profile.email || "",
+                        profileImage: profileData.profile.profile_image || "",
+                      },
+                    })
+                  }
+                }
+              }
+            } else if (!supabaseAuthState.loading) {
+              // No session and hook finished loading
+              setAuthState({
+                isLoggedIn: false,
+              })
+            }
+          } catch (error) {
+            console.error("Error checking session:", error)
+            // Fallback to hook state or cookies
+            if (!supabaseAuthState.loading && supabaseAuthState.user) {
+              setAuthState({
+                isLoggedIn: supabaseAuthState.isLoggedIn,
+                userType: supabaseAuthState.userType,
+                user: {
+                  name: supabaseAuthState.user.name || "",
+                  profileImage: supabaseAuthState.user.profileImage || "",
+                  email: supabaseAuthState.user.email || "",
+                  id: supabaseAuthState.user.id,
+                },
+              })
+            } else if (!isSupabase) {
+              setAuthState(getClientAuthState())
+            }
+          }
+        }
+        
+        checkSession()
+      } else {
         setAuthState(getClientAuthState())
       }
     }
@@ -53,19 +107,69 @@ export default function ClientLayout({
   // Update auth state when pathname changes (in case user logs in/out or navigates)
   useEffect(() => {
     if (mounted && typeof window !== "undefined") {
-      if (isSupabase && !supabaseAuthState.loading && supabaseAuthState.user) {
-        // Ensure we have the correct user structure from Supabase
-        setAuthState({
-          isLoggedIn: supabaseAuthState.isLoggedIn,
-          userType: supabaseAuthState.userType,
-          user: {
-            name: supabaseAuthState.user.name || "",
-            profileImage: supabaseAuthState.user.profileImage || "",
-            email: supabaseAuthState.user.email || "",
-            id: supabaseAuthState.user.id,
-          },
-        })
-      } else if (!isSupabase) {
+      if (isSupabase) {
+        // Check session on pathname change to catch login/logout
+        const checkSession = async () => {
+          try {
+            const supabase = createClient()
+            const { data: { session } } = await supabase.auth.getSession()
+            
+            if (session?.user) {
+              if (!supabaseAuthState.loading && supabaseAuthState.user) {
+                setAuthState({
+                  isLoggedIn: supabaseAuthState.isLoggedIn,
+                  userType: supabaseAuthState.userType,
+                  user: {
+                    name: supabaseAuthState.user.name || "",
+                    profileImage: supabaseAuthState.user.profileImage || "",
+                    email: supabaseAuthState.user.email || "",
+                    id: supabaseAuthState.user.id,
+                  },
+                })
+              } else {
+                // Fetch profile if hook hasn't loaded yet
+                const profileResponse = await fetch("/api/profile")
+                if (profileResponse.ok) {
+                  const profileData = await profileResponse.json()
+                  if (profileData.profile) {
+                    setAuthState({
+                      isLoggedIn: true,
+                      userType: profileData.profile.user_type,
+                      user: {
+                        id: profileData.profile.id,
+                        name: profileData.profile.name || "",
+                        email: profileData.profile.email || "",
+                        profileImage: profileData.profile.profile_image || "",
+                      },
+                    })
+                  }
+                }
+              }
+            } else {
+              // No session
+              setAuthState({
+                isLoggedIn: false,
+              })
+            }
+          } catch (error) {
+            console.error("Error checking session on pathname change:", error)
+            if (!supabaseAuthState.loading && supabaseAuthState.user) {
+              setAuthState({
+                isLoggedIn: supabaseAuthState.isLoggedIn,
+                userType: supabaseAuthState.userType,
+                user: {
+                  name: supabaseAuthState.user.name || "",
+                  profileImage: supabaseAuthState.user.profileImage || "",
+                  email: supabaseAuthState.user.email || "",
+                  id: supabaseAuthState.user.id,
+                },
+              })
+            }
+          }
+        }
+        
+        checkSession()
+      } else {
         setAuthState(getClientAuthState())
       }
     }
@@ -132,27 +236,64 @@ export default function ClientLayout({
 
   const { isLoggedIn, userType, user } = authState
 
-  // During SSR and initial render, show children without layout to avoid hydration mismatch
-  // After mount, show the proper layout based on auth state
+  // During SSR and initial render, preserve layout structure to avoid layout shift
+  // Show loading state with layout structure, then update with auth state after mount
   if (!mounted) {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-        <PageTransition>{children}</PageTransition>
+        <div className="flex flex-col h-screen">
+          <div className="hidden lg:flex h-screen">
+            <div className="w-64 h-screen bg-background-element border-r border-border" />
+            <div className="flex flex-col flex-grow lg:ml-64">
+              <div className="h-16 border-b border-border" />
+              <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
+                <main className="container-fluid">
+                  <PageTransition>{children}</PageTransition>
+                </main>
+              </div>
+            </div>
+          </div>
+          <div className="lg:hidden">
+            <div className="h-16 border-b border-border" />
+          </div>
+          <div className="lg:hidden flex-grow overflow-y-auto mt-16 mb-16 pb-4">
+            <main className="container-fluid">
+              <PageTransition>{children}</PageTransition>
+            </main>
+          </div>
+        </div>
       </ThemeProvider>
     )
   }
 
+  // Determine if we should show the layout
+  // Show layout if: logged in and not on auth page, OR if we're on a protected route (to preserve structure during loading)
+  const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
+  const shouldShowLayout = (isLoggedIn && !isAuthPage) || (isProtectedRoute && !isAuthPage)
+
   return (
     <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">
-      {isLoggedIn && !isAuthPage ? (
+      {shouldShowLayout ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">
-            <MobileMenu userType={userType || "user"} user={user} />
+            {isLoggedIn && user ? (
+              <MobileMenu userType={userType || "user"} user={user} />
+            ) : (
+              <div className="h-16 border-b border-border" />
+            )}
           </div>
           <div className="hidden lg:flex h-screen">
-            <LeftSidebar userType={userType || "user"} />
+            {isLoggedIn && userType ? (
+              <LeftSidebar userType={userType || "user"} />
+            ) : (
+              <div className="w-64 h-screen bg-background-element border-r border-border" />
+            )}
             <div className="flex flex-col flex-grow lg:ml-64">
-              <Header isLoggedIn={isLoggedIn} userType={userType} user={user} />
+              {isLoggedIn && user ? (
+                <Header isLoggedIn={isLoggedIn} userType={userType} user={user} />
+              ) : (
+                <div className="h-16 border-b border-border" />
+              )}
               <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
                 <main className="container-fluid">
                   <PageTransition>{children}</PageTransition>

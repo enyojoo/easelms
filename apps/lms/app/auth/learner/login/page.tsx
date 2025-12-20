@@ -44,7 +44,16 @@ export default function UserLoginPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Login failed")
+        // Show specific error message from API
+        const errorMessage = data.error || "Login failed"
+        setError(errorMessage)
+        
+        // If admin tried to login, redirect to admin login after a short delay
+        if (errorMessage.includes("Admin accounts cannot login")) {
+          setTimeout(() => {
+            router.push("/auth/admin/login")
+          }, 2000)
+        }
         return
       }
 

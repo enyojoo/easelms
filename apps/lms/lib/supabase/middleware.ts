@@ -39,13 +39,14 @@ export async function updateSession(request: NextRequest) {
   const publicPaths = ['/auth', '/forgot-password', '/support']
   const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
 
+  // NO ACTIVE SESSION: Redirect to login if accessing protected routes
   if (
     !user &&
     !isPublicPath &&
     !request.nextUrl.pathname.startsWith('/api') &&
     request.nextUrl.pathname !== '/'
   ) {
-    // no user, redirect to appropriate login page based on route
+    // No active session - redirect to appropriate login page based on route
     const url = request.nextUrl.clone()
     
     // Admin routes redirect to admin login
@@ -59,20 +60,74 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // If user is logged in, check user type and protect routes
+  // ACTIVE SESSION EXISTS: Allow access to protected routes (with user type checks)
   if (user) {
     // Get user type from profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('id', user.id)
-      .single()
+    // Try to use service role client to bypass RLS if available
+    let profile = null
+    try {
+      // First try with regular client
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', user.id)
+        .single()
+      
+      if (!error && data) {
+        profile = data
+      } else {
+        // If RLS blocks, try with service role client
+        const { createServiceRoleClient } = await import('@/lib/supabase/server')
+        try {
+          const serviceClient = createServiceRoleClient()
+          const { data: serviceData } = await serviceClient
+            .from('profiles')
+            .select('user_type')
+            .eq('id', user.id)
+            .single()
+          
+          if (serviceData) {
+            profile = serviceData
+          }
+        } catch (serviceError) {
+          // Service role not available, continue with regular client result
+          console.warn('Service role client not available in middleware:', serviceError)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile in middleware:', error)
+    }
 
+    // Determine user type - default to 'user' only if profile fetch completely failed
+    // If profile exists but user_type is null/undefined, still default to 'user'
     const userType = profile?.user_type || 'user'
     const url = request.nextUrl.clone()
 
+    // Debug logging (remove in production if needed)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Middleware user type check:', {
+        userId: user.id,
+        userType,
+        profileExists: !!profile,
+        pathname: request.nextUrl.pathname,
+      })
+    }
+
     // If trying to access auth pages, redirect to appropriate dashboard
     if (request.nextUrl.pathname.startsWith('/auth')) {
+      // Prevent admins from accessing learner auth pages
+      if (request.nextUrl.pathname.startsWith('/auth/learner') && userType === 'admin') {
+        url.pathname = '/auth/admin/login'
+        return NextResponse.redirect(url)
+      }
+      
+      // Prevent learners from accessing admin auth pages
+      if (request.nextUrl.pathname.startsWith('/auth/admin') && userType !== 'admin') {
+        url.pathname = '/auth/learner/login'
+        return NextResponse.redirect(url)
+      }
+      
+      // If already logged in and accessing correct auth page, redirect to dashboard
       if (userType === 'admin') {
         url.pathname = '/admin/dashboard'
       } else {
@@ -95,6 +150,9 @@ export async function updateSession(request: NextRequest) {
     //   url.pathname = '/admin/dashboard'
     //   return NextResponse.redirect(url)
     // }
+
+    // If we reach here, user has active session and proper permissions
+    // Allow access to the protected route by returning supabaseResponse
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

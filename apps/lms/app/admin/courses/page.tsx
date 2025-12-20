@@ -78,8 +78,8 @@ export default function ManageCoursesPage() {
 
   const renderCourseCard = (course: typeof modules[0]) => (
     <Card key={course.id} className="flex flex-col h-full">
-      <CardHeader className="p-6">
-        <div className="aspect-video relative rounded-md overflow-hidden mb-4">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="aspect-video relative rounded-md overflow-hidden mb-3 sm:mb-4">
           <Image
             src={course.image || "/placeholder.svg?height=200&width=300"}
             alt={course.title}
@@ -87,8 +87,8 @@ export default function ManageCoursesPage() {
             className="object-cover"
           />
         </div>
-        <CardTitle className="text-lg mb-2">{course.title}</CardTitle>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-4">
+        <CardTitle className="text-base sm:text-lg mb-2 line-clamp-2">{course.title}</CardTitle>
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <div className="flex items-center">
             <BookOpen className="w-4 h-4 mr-1" />
             <span>{course.lessons.length} lessons</span>
@@ -121,26 +121,38 @@ export default function ManageCoursesPage() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow px-6 pb-6">
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-3">{course.description}</p>
+      <CardContent className="flex-grow px-4 sm:px-6 pb-4 sm:pb-6">
+        <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-3">{course.description}</p>
       </CardContent>
-      <CardFooter className="flex gap-2 p-6 pt-0 justify-center">
-        <Link href={`/admin/courses/preview/${course.id}`} passHref>
-          <Button variant="outline" className="flex items-center w-full justify-center text-sm py-1">
-            <Eye className="mr-1 h-4 w-4" /> Preview
+      <CardFooter className="flex flex-col gap-2 p-4 sm:p-6 pt-0">
+        <Link href={`/admin/courses/preview/${course.id}`} className="w-full">
+          <Button 
+            variant="outline" 
+            className="flex items-center justify-center w-full min-h-[44px] text-sm"
+            size="sm"
+          >
+            <Eye className="mr-2 h-4 w-4 flex-shrink-0" /> 
+            Preview
           </Button>
         </Link>
-        <Link href={`/admin/courses/new?edit=${course.id}`}>
-          <Button variant="outline" className="flex items-center w-full justify-center text-sm py-1">
-            <Edit className="mr-1 h-4 w-4" /> Edit
+        <Link href={`/admin/courses/new?edit=${course.id}`} className="w-full">
+          <Button 
+            variant="outline" 
+            className="flex items-center justify-center w-full min-h-[44px] text-sm"
+            size="sm"
+          >
+            <Edit className="mr-2 h-4 w-4 flex-shrink-0" /> 
+            Edit
           </Button>
         </Link>
         <Button
           variant="destructive"
-          className="flex items-center w-full justify-center text-sm py-1"
+          className="flex items-center justify-center w-full min-h-[44px] text-sm"
+          size="sm"
           onClick={() => handleDeleteClick(course.id)}
         >
-          <Trash2 className="mr-1 h-4 w-4" /> Delete
+          <Trash2 className="mr-2 h-4 w-4 flex-shrink-0" /> 
+          Delete
         </Button>
       </CardFooter>
     </Card>
@@ -148,22 +160,22 @@ export default function ManageCoursesPage() {
 
   return (
     <div className=" pt-4 md:pt-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-primary mb-2">Course Management</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Course Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Create, edit, and manage all courses in your learning platform
           </p>
         </div>
-        <Link href="/admin/courses/new" passHref>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-            <BookOpen className="mr-2 h-4 w-4" /> Create
+        <Link href="/admin/courses/new" className="w-full sm:w-auto">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-h-[44px]">
+            <BookOpen className="mr-2 h-4 w-4" /> Create Course
           </Button>
         </Link>
       </div>
 
       <div className="mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1">
             <Input
               id="search"
@@ -171,13 +183,13 @@ export default function ManageCoursesPage() {
               placeholder="Search by course title..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
+              className="w-full min-h-[44px] text-sm sm:text-base"
             />
           </div>
           <div className="flex gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]">
-                <Filter className="mr-2 h-4 w-4" />
+              <SelectTrigger className="w-full sm:w-[140px] min-h-[44px] text-sm sm:text-base">
+                <Filter className="mr-2 h-4 w-4 flex-shrink-0" />
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -187,7 +199,7 @@ export default function ManageCoursesPage() {
               </SelectContent>
             </Select>
             <Select value={priceFilter} onValueChange={setPriceFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px] min-h-[44px] text-sm sm:text-base">
                 <SelectValue placeholder="Price" />
               </SelectTrigger>
               <SelectContent>
@@ -224,7 +236,7 @@ export default function ManageCoursesPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-4 lg:gap-5 xl:gap-6">
           {filteredCourses.map(renderCourseCard)}
         </div>
       )}
