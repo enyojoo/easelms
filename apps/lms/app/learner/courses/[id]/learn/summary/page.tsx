@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getClientAuthState } from "@/utils/client-auth" // Correct import
 import { modules } from "@/data/courses"
 import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star } from "lucide-react"
-import CertificatePreview from "@/components/CertificatePreview"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 // Mock data for quiz results
@@ -181,18 +180,22 @@ export default function CourseCompletionPage() {
           </Card>
         </div>
 
-        {/* Certificate Preview */}
+        {/* Certificate Download */}
         <Card className="mb-6 md:mb-8">
           <CardHeader className="p-4 md:p-6">
             <CardTitle className="text-lg md:text-xl">Your Certificate</CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
-            <CertificatePreview
-              courseTitle={course.title}
-              learnerName={user.name || "Student"}
-              completionDate={completionDate}
-              onDownload={handleDownloadCertificate}
-            />
+            <div className="flex flex-col items-center justify-center py-6 md:py-8">
+              <Award className="h-16 w-16 md:h-20 md:w-20 text-primary mb-4 opacity-50" />
+              <p className="text-sm md:text-base text-muted-foreground mb-6 text-center">
+                Download your certificate of completion for {course.title}
+              </p>
+              <Button onClick={handleDownloadCertificate} className="min-h-[44px]" size="lg">
+                <Download className="mr-2 h-4 w-4" />
+                Download Certificate
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

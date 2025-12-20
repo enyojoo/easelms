@@ -162,8 +162,12 @@ export default function LearnerDashboard() {
             <CardContent className="p-4 md:p-6 pt-0">
               {recommendedCourses.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3 md:gap-4">
-                  {recommendedCourses.map((course) => (
-                    <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex min-w-0">
+                  {recommendedCourses.map((course, index) => (
+                    <Link 
+                      key={course.id} 
+                      href={`/learner/courses/${course.id}`} 
+                      className={`flex min-w-0 ${index >= 2 ? 'hidden sm:flex' : ''}`}
+                    >
                       <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full min-w-0">
                         <div className="relative w-full h-32 sm:h-24 md:h-32">
                           <Image

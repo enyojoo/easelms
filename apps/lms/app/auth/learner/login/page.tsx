@@ -15,18 +15,18 @@ import { Copy, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const DemoAccess = ({ setCredentials }: { setCredentials: (email: string, password: string) => void }) => (
-  <div className="text-center mb-6 space-y-2">
-    <p className="text-sm font-medium text-muted-foreground">Interactive Demo Access - Try on PC:</p>
+  <div className="text-center mb-4 sm:mb-6 space-y-2">
+    <p className="text-xs sm:text-sm font-medium text-muted-foreground">Interactive Demo Access - Try on PC:</p>
     <div className="space-y-1">
-      <div className="flex items-center justify-center space-x-2">
-        <span className="text-sm">User: user@example.com | password123</span>
+      <div className="flex items-center justify-center flex-wrap gap-2 px-2">
+        <span className="text-xs sm:text-sm break-words">User: user@example.com | password123</span>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="h-8 w-8 sm:h-6 sm:w-6 flex-shrink-0"
           onClick={() => setCredentials("user@example.com", "password123")}
         >
-          <Copy className="h-4 w-4" />
+          <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
       </div>
     </div>
@@ -77,27 +77,27 @@ export default function UserLoginPage() {
   }
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background px-4 sm:px-0">
-      <div className="w-full max-w-md space-y-6">
+    <div className="flex justify-center items-center min-h-screen bg-background px-4 sm:px-6 py-6 sm:py-8">
+      <div className="w-full max-w-md space-y-4 sm:space-y-6">
         <div className="text-center">
-          <Logo className="mx-auto mb-4" />
+          <Logo className="mx-auto mb-4 sm:mb-6 w-full max-w-[140px] sm:max-w-[180px]" />
           <DemoAccess setCredentials={setCredentials} />
         </div>
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>User Login</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+        <Card className="w-full">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl">User Login</CardTitle>
+            <CardDescription className="text-sm sm:text-base">Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
               {error && (
-                <Alert variant="destructive">
+                <Alert variant="destructive" className="text-sm">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
                 </Alert>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
                 <Input
                   id="email"
                   type="email"
@@ -105,12 +105,13 @@ export default function UserLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  className="min-h-[44px] text-sm sm:text-base"
                 />
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link href="/forgot-password" className="text-sm hover:underline">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
+                  <Link href="/forgot-password" className="text-xs sm:text-sm hover:underline">
                     Forgot password?
                   </Link>
                 </div>
@@ -121,29 +122,29 @@ export default function UserLoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pr-10"
+                    className="pr-10 min-h-[44px] text-sm sm:text-base"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent min-w-[44px]"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                     ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                     )}
                   </Button>
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full" disabled={loading}>
+            <CardFooter className="p-4 sm:p-6 pt-0 flex flex-col space-y-3 sm:space-y-4">
+              <Button type="submit" className="w-full min-h-[44px] text-sm sm:text-base" disabled={loading}>
                 {loading ? "Logging in..." : "Login"}
               </Button>
-              <div className="text-center text-sm">
+              <div className="text-center text-xs sm:text-sm">
                 Don't have an account?{" "}
                 <Link href="/auth/learner/signup" className="text-primary hover:underline">
                   Sign up
