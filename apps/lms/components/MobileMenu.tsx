@@ -35,27 +35,26 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
 
   const menuItems = {
     user: [
-      { href: "/learner/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/learner/dashboard", icon: Home, label: "Home" },
       { href: "/learner/courses", icon: BookOpen, label: "Courses" },
-      { href: "/support", icon: HelpCircle, label: "Support" },
+      { href: "/learner/profile", icon: User, label: "Profile" },
     ],
     admin: [
-      { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
-      { href: "/admin/courses", icon: BookOpen, label: "Manage Courses" },
-      { href: "https://t.me/enyosam", icon: HelpCircle, label: "Support", external: true },
+      { href: "/admin/dashboard", icon: Home, label: "Home" },
+      { href: "/admin/courses", icon: BookOpen, label: "Courses" },
+      { href: "/admin/profile", icon: User, label: "Profile" },
     ],
   }
 
   const sidebarItems = {
     user: [
-      { href: "/learner/profile", label: "Profile", icon: User },
       { href: "/support", label: "Support", icon: HelpCircle },
       { href: "/learner/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
     admin: [
-      { href: "/admin/profile", label: "Profile", icon: User },
       { href: "/admin/learners", label: "Learners", icon: Users },
+      { href: "https://t.me/enyosam", label: "Support", icon: HelpCircle, external: true },
       { href: "/admin/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
@@ -150,14 +149,11 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
               <div className="mt-auto p-4">
                 <ThemeToggle disableTooltip />
               </div>
-              <div className="p-4 text-left text-xs text-muted-foreground">
-                © 2025 Enthronement University. All rights reserved.
-              </div>
             </div>
           </SheetContent>
         </Sheet>
         <div className="flex-1 flex justify-end">
-          <Logo className="w-44" />
+          <Logo className="w-10 h-10" variant="icon" />
         </div>
       </header>
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md h-16 px-4 flex items-center justify-around lg:hidden border-t border-border">
