@@ -11,7 +11,7 @@ export function getBucketForType(type: "thumbnail" | "document" | "avatar" | "ce
   const bucketMap: Record<string, StorageBucket> = {
     thumbnail: "course-thumbnails",
     document: "course-documents",
-    avatar: "user-avatars",
+    avatar: "course-documents", // Using course-documents until user-avatars bucket is created
     certificate: "certificates",
   }
 
@@ -37,6 +37,7 @@ export function getStoragePath(
     case "document":
       return `documents/${userId}/${path}${timestamp}-${sanitizedFilename}`
     case "avatar":
+      // Store avatars in avatars folder within course-documents bucket (until user-avatars bucket exists)
       return `avatars/${userId}/${timestamp}-${sanitizedFilename}`
     case "certificate":
       return `certificates/${userId}/${timestamp}-${sanitizedFilename}`
@@ -64,7 +65,8 @@ export function isValidFileType(file: File, bucket: StorageBucket): boolean {
     case "user-avatars":
       return ["jpg", "jpeg", "png", "gif", "webp"].includes(fileExtension)
     case "course-documents":
-      return ["pdf", "doc", "docx", "txt", "zip"].includes(fileExtension)
+      // Allow both images (for avatars) and documents in course-documents bucket
+      return ["jpg", "jpeg", "png", "gif", "webp", "pdf", "doc", "docx", "txt", "zip"].includes(fileExtension)
     case "certificates":
       return ["pdf", "png", "jpg", "jpeg"].includes(fileExtension)
     default:

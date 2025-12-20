@@ -156,7 +156,7 @@ export function cancelSubscription(purchaseId: string): void {
 
 /**
  * Handle payment/subscription for paid courses
- * This is a stub - should be replaced with actual payment integration
+ * Redirects to Stripe Checkout (hosted page) or Flutterwave payment link
  */
 export function handleCoursePayment(
   courseId: number,
@@ -166,39 +166,48 @@ export function handleCoursePayment(
   courseTitle?: string,
   user?: any
 ): Promise<boolean> {
-  return new Promise((resolve) => {
-    // TODO: Integrate with payment provider (Stripe, Flutterwave, etc.)
-    // For now, show a confirmation dialog
-    const confirmed = window.confirm(
-      `This will ${enrollmentMode === "buy" ? "purchase" : "subscribe"} you to this course for $${enrollmentMode === "recurring" ? (recurringPrice || price) + "/month" : price}. Continue?`
-    )
-
-    if (confirmed) {
-      // Simulate payment success and enroll user
-      enrollInCourse(courseId).then((success) => {
-        if (success) {
-          // Add to purchase history
-          // Get userId from user object if available
-          const userId = user?.id || user?.email || undefined
-          addPurchase({
-            courseId,
-            courseTitle: courseTitle || `Course ${courseId}`,
-            type: enrollmentMode,
-            amount: enrollmentMode === "recurring" ? (recurringPrice || price) : price,
-            currency: "USD",
-            recurringPrice: enrollmentMode === "recurring" ? (recurringPrice || price) : undefined,
-            status: "active",
-          }, userId)
-          
-          alert("Payment successful! You are now enrolled in this course.")
-          resolve(true)
-        } else {
-          alert("Payment failed. Please try again.")
-          resolve(false)
-        }
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Call API to create payment intent/checkout session
+      const response = await fetch("/api/payments/create-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseId,
+          amountUSD: enrollmentMode === "recurring" ? (recurringPrice || price) : price,
+          courseTitle: courseTitle || `Course ${courseId}`,
+        }),
       })
-    } else {
-      resolve(false)
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create payment session")
+      }
+
+      const data = await response.json()
+
+      // Redirect to payment gateway
+      if (data.gateway === "stripe" && data.checkoutUrl) {
+        // Redirect to Stripe Checkout (hosted page)
+        window.location.href = data.checkoutUrl
+        // Note: The promise won't resolve until after redirect, but that's okay
+        // The callback URL will handle enrollment
+        resolve(true)
+      } else if (data.gateway === "flutterwave" && data.paymentLink) {
+        // Redirect to Flutterwave payment page
+        window.location.href = data.paymentLink
+        // Note: The promise won't resolve until after redirect, but that's okay
+        // The callback URL will handle enrollment
+        resolve(true)
+      } else {
+        throw new Error("Invalid payment gateway response")
+      }
+    } catch (error: any) {
+      console.error("Error initiating payment:", error)
+      alert(`Payment error: ${error.message || "Failed to initiate payment. Please try again."}`)
+      reject(error)
     }
   })
 }

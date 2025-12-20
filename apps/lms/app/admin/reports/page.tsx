@@ -86,21 +86,6 @@ const fetchRevenueByCoursesData = () =>
     ),
   )
 
-const fetchPayoutSummary = () =>
-  new Promise((resolve) =>
-    setTimeout(
-      () =>
-        resolve({
-          availableForPayout: 3750,
-          lastPayout: { amount: 3000, date: "June 15, 2023" },
-          grossEarnings: 2500,
-          platformFees: 250,
-          netEarnings: 2250,
-          nextPayoutDate: "July 15, 2023",
-        }),
-      1000,
-    ),
-  )
 
 interface RevenueDataPoint {
   date: string
@@ -128,14 +113,6 @@ interface RevenueByCourse {
   dateRange: string
 }
 
-interface PayoutSummary {
-  availableForPayout: number
-  lastPayout: { amount: number; date: string }
-  grossEarnings: number
-  platformFees: number
-  netEarnings: number
-  nextPayoutDate: string
-}
 
 export default function ReportPage() {
   const router = useRouter()
@@ -145,7 +122,6 @@ export default function ReportPage() {
   const [completionRateData, setCompletionRateData] = useState<CompletionRateDataPoint[]>([])
   const [learnerDemographics, setLearnerDemographics] = useState<LearnerDemographic[]>([])
   const [revenueByCoursesData, setRevenueByCoursesData] = useState<RevenueByCourse[]>([])
-  const [payoutSummary, setPayoutSummary] = useState<PayoutSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
@@ -163,20 +139,18 @@ export default function ReportPage() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const [revenue, learners, completionRate, demographics, revenueByCourses, payout] = await Promise.all([
+      const [revenue, learners, completionRate, demographics, revenueByCourses] = await Promise.all([
         fetchRevenueData(),
         fetchLearnersData(),
         fetchCompletionRateData(),
         fetchLearnerDemographics(),
         fetchRevenueByCoursesData(),
-        fetchPayoutSummary(),
       ])
       setRevenueData(revenue as RevenueDataPoint[])
       setLearnersData(learners as LearnersDataPoint[])
       setCompletionRateData(completionRate as CompletionRateDataPoint[])
       setLearnerDemographics(demographics as LearnerDemographic[])
       setRevenueByCoursesData(revenueByCourses as RevenueByCourse[])
-      setPayoutSummary(payout as PayoutSummary)
     } catch (error) {
       console.error("Error fetching data:", error)
       // Handle error (e.g., show error message to user)
@@ -405,44 +379,6 @@ export default function ReportPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payout Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-6">
-            {payoutSummary && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm font-medium text-muted-foreground">Available for Payout</p>
-                  <p className="text-3xl font-bold">${payoutSummary.availableForPayout}</p>
-                </div>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Last Payout ({payoutSummary.lastPayout.date}):</span>
-                    <span>${payoutSummary.lastPayout.amount}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Gross Earnings (Last 4 Weeks):</span>
-                    <span>${payoutSummary.grossEarnings}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Platform Fees (Last 4 Weeks):</span>
-                    <span>${payoutSummary.platformFees}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Net Earnings (Last 4 Weeks):</span>
-                    <span>${payoutSummary.netEarnings}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Next Auto Payout Date:</span>
-                    <span>{payoutSummary.nextPayoutDate}</span>
-                  </div>
-                </div>
-                <Button className="w-full">Payout Funds</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

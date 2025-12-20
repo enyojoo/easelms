@@ -50,11 +50,46 @@ export default function UserSignUpPage() {
     setLoading(true)
 
     try {
-      // In a real app, you would send this data to your backend to create a new user
-      console.log("Sign up:", { firstName, lastName, email, password })
-      // Simulate email verification
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name: `${firstName} ${lastName}`.trim(),
+          userType: "user",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Signup failed")
+        return
+      }
+
+      // Fetch user profile data
+      const profileResponse = await fetch("/api/profile")
+      const profileData = await profileResponse.json()
+
+      // Set the authentication cookie with user data
+      const authData = {
+        userType: "user",
+        email: data.user.email,
+        name: data.user.user_metadata?.name || profileData.profile?.name || `${firstName} ${lastName}`,
+        profileImage: profileData.profile?.profile_image || "/placeholder-user.jpg",
+        bio: profileData.profile?.bio || "",
+        currency: profileData.profile?.currency || "USD",
+      }
+      document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
+
+      // Show success message and redirect
       setEmailSent(true)
-      // In real app, redirect to verification page or show message
+      setTimeout(() => {
+        router.push("/learner/dashboard")
+      }, 2000)
     } catch (err) {
       setError("An error occurred. Please try again.")
     } finally {
@@ -191,11 +226,11 @@ export default function UserSignUpPage() {
                 />
                 <Label htmlFor="terms" className="text-xs sm:text-sm leading-relaxed cursor-pointer">
                   I agree to the{" "}
-                  <Link href="/terms" className="text-primary hover:underline">
+                  <Link href="/terms" className="text-primary underline">
                     Terms
                   </Link>{" "}
                   and{" "}
-                  <Link href="/privacy" className="text-primary hover:underline">
+                  <Link href="/privacy" className="text-primary underline">
                     Privacy Policy
                   </Link>
                 </Label>
@@ -207,7 +242,7 @@ export default function UserSignUpPage() {
               </Button>
               <div className="text-center text-xs sm:text-sm">
                 Already have an account?{" "}
-                <Link href="/auth/learner/login" className="text-primary hover:underline">
+                <Link href="/auth/learner/login" className="text-primary underline">
                   Log in
                 </Link>
               </div>

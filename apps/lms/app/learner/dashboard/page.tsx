@@ -7,20 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Award, BookOpen, ChevronRight, Clock, Loader2 } from "lucide-react"
-import { getClientAuthState } from "@/utils/client-auth"
+import { useClientAuthState } from "@/utils/client-auth"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
 
 
 export default function LearnerDashboard() {
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading } = useClientAuthState()
+  const [dashboardUser, setDashboardUser] = useState<User | null>(null)
 
   useEffect(() => {
-    const { user } = getClientAuthState()
-    setUser(user)
-  }, [])
+    if (!loading && user) {
+      setDashboardUser(user as User)
+    }
+  }, [user, loading])
 
-  if (!user) {
+  // Listen for profile updates - the hook will update automatically
+  // No need for separate listener, just react to user changes
+
+  if (loading || !dashboardUser) {
     return (
       <div className="pt-4 md:pt-8">
         <div className="flex justify-center items-center h-64">
@@ -31,24 +36,24 @@ export default function LearnerDashboard() {
   }
 
   // Get enrolled courses from user data and match with modules
-  const enrolledCourses = (user.enrolledCourses || [])
+  const enrolledCourses = (dashboardUser.enrolledCourses || [])
     .map((courseId) => {
       const course = modules.find((m) => m.id === courseId)
       if (!course) return null
       return {
         id: course.id,
         title: course.title,
-        progress: user.progress?.[courseId] || 0,
+        progress: dashboardUser.progress?.[courseId] || 0,
       }
     })
     .filter((course): course is { id: number; title: string; progress: number } => course !== null)
 
   // Get completed courses count
-  const completedCoursesCount = (user.completedCourses || []).length
+  const completedCoursesCount = (dashboardUser.completedCourses || []).length
 
   // Get courses in progress (enrolled but not completed)
   const coursesInProgress = enrolledCourses.filter(
-    (course) => !(user.completedCourses || []).includes(course.id)
+    (course) => !(dashboardUser.completedCourses || []).includes(course.id)
   )
 
   // Get recommended courses with random selection that changes every 12 hours

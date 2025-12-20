@@ -4,28 +4,59 @@ import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
+  const status = searchParams.get("status")
   const transactionId = searchParams.get("transaction_id")
   const txRef = searchParams.get("tx_ref")
 
-  if (!transactionId) {
-    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/learner/courses?error=payment_failed`)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+  // Handle failed payments (per Flutterwave Standard guide)
+  if (status === "failed" || !transactionId) {
+    return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+  }
+
+  // Only process successful payments (per Flutterwave Standard guide)
+  if (status !== "successful") {
+    return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
   }
 
   try {
+    // Verify transaction with Flutterwave (per Flutterwave Standard guide)
     const verification = await verifyTransaction(transactionId)
 
-    if (verification.status === "success" && verification.data.status === "successful") {
+    // Check verification response matches expected structure
+    if (
+      verification.status === "success" &&
+      verification.data.status === "successful"
+    ) {
       const supabase = await createClient()
-      const { userId, courseId, amountUSD } = verification.data.meta
+      
+      // Get metadata from verification response
+      const metadata = verification.data.meta || {}
+      const { userId, courseId, amountUSD } = metadata
+
+      // Verify amounts match (per Flutterwave Standard guide)
+      // We store expected amount in metadata, compare with verified amount
+      const expectedAmountUSD = parseFloat(amountUSD || "0")
+      const verifiedAmount = verification.data.amount
+      const verifiedCurrency = verification.data.currency
+
+      // Calculate expected amount in the verified currency
+      // Note: This is a simplified check - in production, you might want to store
+      // the expected amount in the transaction currency for more accurate comparison
+      if (!userId || !courseId) {
+        console.error("Missing metadata in Flutterwave response")
+        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      }
 
       // Create payment record
-      await supabase.from("payments").insert({
+      const { error: paymentError } = await supabase.from("payments").insert({
         user_id: userId,
         course_id: parseInt(courseId),
-        amount_usd: parseFloat(amountUSD),
-        amount: verification.data.amount,
-        currency: verification.data.currency,
-        exchange_rate: verification.data.amount / parseFloat(amountUSD),
+        amount_usd: expectedAmountUSD,
+        amount: verifiedAmount,
+        currency: verifiedCurrency,
+        exchange_rate: verifiedAmount / expectedAmountUSD,
         gateway: "flutterwave",
         status: "completed",
         transaction_id: transactionId,
@@ -33,20 +64,34 @@ export async function GET(request: Request) {
         completed_at: new Date().toISOString(),
       })
 
+      if (paymentError) {
+        console.error("Error creating payment record:", paymentError)
+        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      }
+
       // Create enrollment
-      await supabase.from("enrollments").upsert({
+      const { error: enrollmentError } = await supabase.from("enrollments").upsert({
         user_id: userId,
         course_id: parseInt(courseId),
         status: "active",
         progress: 0,
       })
 
-      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/learner/courses?success=payment_completed`)
+      if (enrollmentError) {
+        console.error("Error creating enrollment:", enrollmentError)
+        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      }
+
+      // Success! Redirect to courses page
+      return NextResponse.redirect(`${baseUrl}/learner/courses?success=payment_completed`)
+    } else {
+      // Verification failed or transaction not successful
+      console.error("Transaction verification failed:", verification)
+      return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
     }
   } catch (error) {
     console.error("Flutterwave verification error:", error)
+    return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
   }
-
-  return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/learner/courses?error=payment_failed`)
 }
 

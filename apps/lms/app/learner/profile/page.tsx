@@ -11,11 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getClientAuthState } from "@/utils/client-auth"
-import { getEnrolledCourseIds, getPurchaseHistory, cancelSubscription, type Purchase } from "@/utils/enrollment"
+import { cancelSubscription, type Purchase } from "@/utils/enrollment"
 import type { User } from "@/data/users"
-import { Loader2, Award, BookOpen, CheckCircle2, ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
-import { modules } from "@/data/courses"
-import { getCertificatesByUser } from "@/data/certificates"
+import { Loader2, Award, BookOpen, CheckCircle2, ShoppingBag, XCircle, Calendar, DollarSign, Upload } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CertificatePreview from "@/components/CertificatePreview"
@@ -35,103 +33,202 @@ export default function LearnerProfilePage() {
     email: "",
     bio: "",
   })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
-    const { isLoggedIn, userType, user } = getClientAuthState()
+    loadProfileData()
+  }, [router])
+
+  const loadProfileData = async () => {
+    const { isLoggedIn, userType } = getClientAuthState()
     if (!isLoggedIn || userType !== "user") {
       router.push("/auth/learner/login")
-    } else {
-      setUser(user)
-      setFormData({
-        name: user.name,
-        email: user.email,
-        bio: user.bio || "",
-      })
-      
-      // Get enrolled course IDs from both user object and localStorage
-      const enrolledCourseIds = getEnrolledCourseIds(user) || user.enrolledCourses || []
-      const completedCourseIds = user.completedCourses || []
-      
-      // Load enrolled and completed courses
-      let enrolled = modules.filter((course) => enrolledCourseIds.includes(course.id))
-      let completed = modules.filter((course) => completedCourseIds.includes(course.id))
-      
-      // Add some dummy courses if user has no enrolled courses (for demo purposes)
-      if (enrolled.length === 0 && modules.length > 0) {
-        // Add first 2 courses as dummy enrolled courses (for UI demonstration)
-        const dummyEnrolled = modules.slice(0, 2).filter((course) => !completedCourseIds.includes(course.id))
-        enrolled = dummyEnrolled
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      // Load profile data
+      const profileResponse = await fetch("/api/profile")
+      const profileData = await profileResponse.json()
+
+      if (profileResponse.ok) {
+        const profile = profileData.profile
+        setFormData({
+          name: profile.name || "",
+          email: profile.email || "",
+          bio: profile.bio || "",
+        })
+
+        // Set user data for display
+        setUser({
+          id: profile.id,
+          name: profile.name || "",
+          email: profile.email || "",
+          userType: "user",
+          enrolledCourses: [],
+          progress: {},
+          completedCourses: [],
+          profileImage: profile.profile_image || "",
+          currency: profile.currency || "USD",
+          bio: profile.bio || "",
+        })
       }
-      
-      // Add dummy completed course if none exist (for demo purposes)
-      if (completed.length === 0 && modules.length > 2) {
-        // Use a course that's not in enrolled list as dummy completed course
-        const availableForCompletion = modules.filter(
-          (course) => !enrolledCourseIds.includes(course.id) && course.id !== enrolled[0]?.id && course.id !== enrolled[1]?.id
-        )
-        if (availableForCompletion.length > 0) {
-          completed = [availableForCompletion[0]]
+
+      // Load enrolled courses
+      const enrollmentsResponse = await fetch("/api/enrollments")
+      if (enrollmentsResponse.ok) {
+        const enrollmentsData = await enrollmentsResponse.json()
+        const enrolledIds = enrollmentsData.enrollments?.map((e: any) => e.course_id) || []
+
+        if (enrolledIds.length > 0) {
+          const coursesResponse = await fetch(`/api/courses?ids=${enrolledIds.join(',')}`)
+          if (coursesResponse.ok) {
+            const coursesData = await coursesResponse.json()
+            setEnrolledCourses(coursesData.courses || [])
+          }
         }
       }
-      
-      setEnrolledCourses(enrolled)
-      setCompletedCourses(completed)
-      
+
       // Load certificates
-      const userCertificates = getCertificatesByUser(user.id?.toString() || "")
-      setCertificates(userCertificates)
-      
-      // Load purchase history
-      const purchaseHistory = getPurchaseHistory()
-      // Add some dummy purchases if none exist (for demo purposes)
-      if (purchaseHistory.length === 0 && modules.length > 0) {
-        const dummyPurchases: Purchase[] = [
-          {
-            id: "dummy-1",
-            courseId: modules[1]?.id || 2,
-            courseTitle: modules[1]?.title || "Successful Marriage Course",
-            type: "buy",
-            amount: 99,
-            currency: "USD",
-            status: "active",
-            purchasedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
-          },
-          {
-            id: "dummy-2",
-            courseId: modules[2]?.id || 3,
-            courseTitle: modules[2]?.title || "Purpose Discovery Course",
-            type: "recurring",
-            amount: 29,
-            currency: "USD",
-            recurringPrice: 29,
-            status: "active",
-            purchasedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
-          },
-        ]
-        setPurchases(dummyPurchases)
-      } else {
-        setPurchases(purchaseHistory)
+      const certificatesResponse = await fetch("/api/certificates")
+      if (certificatesResponse.ok) {
+        const certificatesData = await certificatesResponse.json()
+        setCertificates(certificatesData.certificates || [])
       }
+
+      // Load purchases
+      const purchasesResponse = await fetch("/api/purchases")
+      if (purchasesResponse.ok) {
+        const purchasesData = await purchasesResponse.json()
+        setPurchases(purchasesData.purchases || [])
+      }
+
+    } catch (error) {
+      console.error("Error loading profile data:", error)
+    } finally {
+      setLoading(false)
     }
-  }, [router])
+  }
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("Updated profile:", formData)
-    setIsEditing(false)
-    setUser((prev) => (prev ? { ...prev, ...formData } : null))
+
+    try {
+      setSaving(true)
+
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          bio: formData.bio,
+        }),
+      })
+
+      if (response.ok) {
+        setIsEditing(false)
+        // Reload profile data to reflect changes
+        await loadProfileData()
+        
+        // Dispatch event to refresh header
+        window.dispatchEvent(new CustomEvent("profileUpdated"))
+      } else {
+        console.error("Failed to update profile")
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  if (!user) {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file")
+      return
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size must be less than 5MB")
+      return
+    }
+
+    try {
+      setUploadingImage(true)
+
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("type", "avatar")
+      // Let the API determine the bucket from type
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to upload image")
+      }
+
+      const data = await response.json()
+
+      // Update profile with new image URL
+      const updateResponse = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          profile_image: data.url,
+        }),
+      })
+
+      if (updateResponse.ok) {
+        // Reload profile data to show new image
+        await loadProfileData()
+        
+        // Dispatch event to refresh header
+        window.dispatchEvent(new CustomEvent("profileUpdated"))
+      } else {
+        const errorData = await updateResponse.json()
+        throw new Error(errorData.error || "Failed to update profile with new image")
+      }
+    } catch (error: any) {
+      console.error("Error uploading image:", error)
+      alert(error.message || "Failed to upload image")
+    } finally {
+      setUploadingImage(false)
+      // Reset file input
+      e.target.value = ""
+    }
+  }
+
+  if (loading || !user) {
     return (
       <div className="pt-4 md:pt-8">
         <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading profile...</p>
+          </div>
         </div>
       </div>
     )
@@ -175,10 +272,10 @@ export default function LearnerProfilePage() {
                     name="email"
                     type="email"
                     value={formData.email}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className="mt-1.5 md:mt-2"
+                    disabled={true}
+                    className="mt-1.5 md:mt-2 bg-muted cursor-not-allowed"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
                 </div>
                 <div>
                   <Label htmlFor="bio" className="text-sm md:text-base">Bio</Label>
@@ -195,7 +292,16 @@ export default function LearnerProfilePage() {
                 </div>
                 {isEditing ? (
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
-                    <Button type="submit" className="w-full sm:w-auto min-h-[44px]">Save Changes</Button>
+                    <Button type="submit" className="w-full sm:w-auto min-h-[44px]" disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
                     <Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="w-full sm:w-auto min-h-[44px]">
                       Cancel
                     </Button>
@@ -214,16 +320,53 @@ export default function LearnerProfilePage() {
             <CardTitle className="text-lg md:text-xl">Profile Picture</CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0 flex flex-col items-center">
-            <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden mb-4">
-              <Image
-                src={user.profileImage}
-                alt={user.name}
-                width={500}
-                height={500}
-                className="object-cover w-full h-full"
-              />
+            <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden mb-4 bg-muted relative">
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10 rounded-full">
+                  <Loader2 className="h-8 w-8 animate-spin text-white" />
+                </div>
+              )}
+              {user.profileImage && user.profileImage.trim() !== "" ? (
+                <Image
+                  src={user.profileImage}
+                  alt={user.name}
+                  width={500}
+                  height={500}
+                  className="object-cover w-full h-full"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder-user.jpg"
+                  }}
+                />
+              ) : (
+                <Image
+                  src="/placeholder-user.jpg"
+                  alt={user.name}
+                  width={500}
+                  height={500}
+                  className="object-cover w-full h-full"
+                />
+              )}
             </div>
-            <Button className="w-full sm:w-auto min-h-[44px]">Change Picture</Button>
+            <div>
+              <input
+                id="profile-image-upload-learner"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={uploadingImage}
+              />
+              <Button
+                type="button"
+                onClick={() => document.getElementById("profile-image-upload-learner")?.click()}
+                disabled={uploadingImage}
+                className="w-full sm:w-auto min-h-[44px]"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {uploadingImage ? "Uploading..." : "Change Picture"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Max size: 5MB</p>
           </CardContent>
         </Card>
           </div>

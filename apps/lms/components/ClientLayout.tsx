@@ -6,9 +6,10 @@ import { usePathname } from "next/navigation"
 import Header from "./Header"
 import LeftSidebar from "./LeftSidebar"
 import MobileMenu from "./MobileMenu"
-import { getClientAuthState } from "../utils/client-auth"
+import { getClientAuthState, useClientAuthState } from "../utils/client-auth"
 import { ThemeProvider } from "./ThemeProvider"
 import { PageTransition } from "./PageTransition"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 
 export default function ClientLayout({
   children,
@@ -16,6 +17,10 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  
+  // Use the hook for Supabase auth if configured, otherwise use state
+  const supabaseAuthState = useClientAuthState()
+  const isSupabase = isSupabaseConfigured()
   
   // Initialize auth state - start with false to match server render
   const [authState, setAuthState] = useState<{ isLoggedIn: boolean; userType?: string; user?: any }>({
@@ -27,16 +32,93 @@ export default function ClientLayout({
   useEffect(() => {
     setMounted(true)
     if (typeof window !== "undefined") {
-      setAuthState(getClientAuthState())
+      if (isSupabase && !supabaseAuthState.loading && supabaseAuthState.user) {
+        // Ensure we have the correct user structure from Supabase
+        setAuthState({
+          isLoggedIn: supabaseAuthState.isLoggedIn,
+          userType: supabaseAuthState.userType,
+          user: {
+            name: supabaseAuthState.user.name || "",
+            profileImage: supabaseAuthState.user.profileImage || "",
+            email: supabaseAuthState.user.email || "",
+            id: supabaseAuthState.user.id,
+          },
+        })
+      } else if (!isSupabase) {
+        setAuthState(getClientAuthState())
+      }
     }
-  }, [])
+  }, [isSupabase, supabaseAuthState])
 
   // Update auth state when pathname changes (in case user logs in/out or navigates)
   useEffect(() => {
     if (mounted && typeof window !== "undefined") {
-      setAuthState(getClientAuthState())
+      if (isSupabase && !supabaseAuthState.loading && supabaseAuthState.user) {
+        // Ensure we have the correct user structure from Supabase
+        setAuthState({
+          isLoggedIn: supabaseAuthState.isLoggedIn,
+          userType: supabaseAuthState.userType,
+          user: {
+            name: supabaseAuthState.user.name || "",
+            profileImage: supabaseAuthState.user.profileImage || "",
+            email: supabaseAuthState.user.email || "",
+            id: supabaseAuthState.user.id,
+          },
+        })
+      } else if (!isSupabase) {
+        setAuthState(getClientAuthState())
+      }
     }
-  }, [pathname, mounted])
+  }, [pathname, mounted, isSupabase, supabaseAuthState])
+
+  // Listen for profile updates to refresh header
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return
+
+    const handleProfileUpdate = async () => {
+      // If using Supabase, refetch profile from database
+      if (isSupabase) {
+        try {
+          const supabase = createClient()
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single()
+
+            if (profile) {
+              setAuthState({
+                isLoggedIn: true,
+                userType: profile.user_type,
+                user: {
+                  id: profile.id,
+                  name: profile.name || "",
+                  email: profile.email || "",
+                  profileImage: profile.profile_image || "",
+                  currency: profile.currency || "USD",
+                  userType: profile.user_type,
+                },
+              })
+            }
+          }
+        } catch (error) {
+          console.error("Error refreshing profile:", error)
+          // Fallback to cookie-based auth
+          setAuthState(getClientAuthState())
+        }
+      } else {
+        // Refresh from cookies
+        setAuthState(getClientAuthState())
+      }
+    }
+
+    window.addEventListener("profileUpdated", handleProfileUpdate)
+    return () => {
+      window.removeEventListener("profileUpdated", handleProfileUpdate)
+    }
+  }, [mounted, isSupabase])
 
   // Check if current path is an auth page
   const isAuthPage = [

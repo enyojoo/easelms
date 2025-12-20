@@ -35,16 +35,66 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
+  // Public paths that don't require authentication
+  const publicPaths = ['/auth', '/forgot-password', '/support']
+  const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
+
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/auth') &&
+    !isPublicPath &&
     !request.nextUrl.pathname.startsWith('/api') &&
     request.nextUrl.pathname !== '/'
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // no user, redirect to appropriate login page based on route
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/learner/login'
+    
+    // Admin routes redirect to admin login
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+      url.pathname = '/auth/admin/login'
+    } else {
+      // All other protected routes (learner routes) redirect to learner login
+      url.pathname = '/auth/learner/login'
+    }
+    
     return NextResponse.redirect(url)
+  }
+
+  // If user is logged in, check user type and protect routes
+  if (user) {
+    // Get user type from profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('id', user.id)
+      .single()
+
+    const userType = profile?.user_type || 'user'
+    const url = request.nextUrl.clone()
+
+    // If trying to access auth pages, redirect to appropriate dashboard
+    if (request.nextUrl.pathname.startsWith('/auth')) {
+      if (userType === 'admin') {
+        url.pathname = '/admin/dashboard'
+      } else {
+        url.pathname = '/learner/dashboard'
+      }
+      return NextResponse.redirect(url)
+    }
+
+    // Protect admin routes - only admins can access
+    if (request.nextUrl.pathname.startsWith('/admin') && userType !== 'admin') {
+      // Non-admin trying to access admin route, redirect to admin login
+      url.pathname = '/auth/admin/login'
+      return NextResponse.redirect(url)
+    }
+
+    // Protect learner routes - only learners can access (admins can also access learner routes if needed)
+    // For now, we allow both admins and learners to access learner routes
+    // If you want to restrict admins from learner routes, uncomment below:
+    // if (request.nextUrl.pathname.startsWith('/learner') && userType === 'admin') {
+    //   url.pathname = '/admin/dashboard'
+    //   return NextResponse.redirect(url)
+    // }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
-import { createPaymentIntent } from "@/lib/payments/stripe"
+import { createCheckoutSession } from "@/lib/payments/stripe"
 import { initializePayment } from "@/lib/payments/flutterwave"
 import { convertCurrency } from "@/lib/payments/currency"
 import { NextResponse } from "next/server"
@@ -12,7 +12,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId, amountUSD } = await request.json()
+  const { courseId, amountUSD, courseTitle } = await request.json()
+
+  // Get course title if not provided
+  let courseTitleToUse = courseTitle
+  if (!courseTitleToUse) {
+    const { data: course } = await supabase
+      .from("courses")
+      .select("title")
+      .eq("id", courseId)
+      .single()
+    courseTitleToUse = course?.title || "Course Enrollment"
+  }
 
   // Get user's currency
   const { data: profile } = await supabase
@@ -28,30 +39,56 @@ export async function POST(request: Request) {
   // Determine payment gateway
   const gateway = userCurrency === "NGN" ? "flutterwave" : "stripe"
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
+  // Get user profile for name (optional, email is required)
+  const { data: userProfile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single()
+
+  const customerName = userProfile?.name || user.email?.split("@")[0] || undefined
+
   try {
     if (gateway === "stripe") {
-      const paymentIntent = await createPaymentIntent(convertedAmount, userCurrency, {
-        userId: user.id,
-        courseId: courseId.toString(),
-        amountUSD: amountUSD.toString(),
-      })
+      const checkoutSession = await createCheckoutSession(
+        convertedAmount,
+        userCurrency,
+        {
+          userId: user.id,
+          courseId: courseId.toString(),
+          amountUSD: amountUSD.toString(),
+        },
+        `${baseUrl}/api/payments/callback/stripe?success=true&courseId=${courseId}`,
+        `${baseUrl}/learner/courses/${courseId}?canceled=true`,
+        user.email!, // Required: customer email
+        courseTitleToUse
+      )
 
       return NextResponse.json({
-        clientSecret: paymentIntent.client_secret,
+        checkoutUrl: checkoutSession.url,
         gateway: "stripe",
         amount: convertedAmount,
         currency: userCurrency,
         exchangeRate,
       })
     } else {
-      // Flutterwave
+      // Flutterwave - Only email is required, name is optional
       const txRef = `tx_${Date.now()}_${user.id}`
       const payment = await initializePayment({
         amount: convertedAmount,
         currency: userCurrency,
-        email: user.email!,
+        email: user.email!, // Required
         tx_ref: txRef,
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/callback/flutterwave`,
+        callback_url: `${baseUrl}/api/payments/callback/flutterwave`,
+        customer: {
+          ...(customerName && { name: customerName }), // Optional
+        },
+        customizations: {
+          title: courseTitleToUse,
+          description: `Payment for ${courseTitleToUse}`,
+        },
         metadata: {
           userId: user.id,
           courseId: courseId.toString(),

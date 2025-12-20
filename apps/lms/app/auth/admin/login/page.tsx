@@ -9,29 +9,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { getUserByEmail } from "@/data/users"
 import Logo from "@/components/Logo"
-import { Copy, AlertCircle, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-const DemoAccess = ({ setCredentials }: { setCredentials: (email: string, password: string) => void }) => (
-  <div className="text-center mb-4 sm:mb-6 space-y-2">
-    <p className="text-xs sm:text-sm font-medium text-muted-foreground">Admin Demo Access:</p>
-    <div className="space-y-1">
-      <div className="flex items-center justify-center flex-wrap gap-2 px-2">
-        <span className="text-xs sm:text-sm break-words">Admin: admin@example.com | password123</span>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 sm:h-6 sm:w-6 flex-shrink-0"
-          onClick={() => setCredentials("admin@example.com", "password123")}
-        >
-          <Copy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        </Button>
-      </div>
-    </div>
-  </div>
-)
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
@@ -41,10 +22,6 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const setCredentials = (newEmail: string, newPassword: string) => {
-    setEmail(newEmail)
-    setPassword(newPassword)
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,24 +29,41 @@ export default function AdminLoginPage() {
     setLoading(true)
 
     try {
-      const user = getUserByEmail(email)
-      if (user && user.userType === "admin" && password === "password123") {
-        // In a real app, you would validate the password here
-        // Set the authentication cookie with more user data
-        const authData = {
-          userType: user.userType,
-          email: user.email,
-          name: user.name,
-          profileImage: user.profileImage,
-          bio: user.bio,
-        }
-        document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          userType: "admin",
+        }),
+      })
 
-        // Redirect to the admin dashboard
-        router.push("/admin/dashboard")
-      } else {
-        setError("Invalid email or password. Admin access only.")
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Login failed")
+        return
       }
+
+      // Fetch user profile data
+      const profileResponse = await fetch("/api/profile")
+      const profileData = await profileResponse.json()
+
+      // Set the authentication cookie with user data
+      const authData = {
+        userType: "admin",
+        email: data.user.email,
+        name: data.user.user_metadata?.name || profileData.profile?.name || "Admin",
+        profileImage: profileData.profile?.profile_image || "/placeholder-user.jpg",
+        bio: profileData.profile?.bio || "",
+      }
+      document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
+
+      // Redirect to the admin dashboard
+      router.push("/admin/dashboard")
     } catch (err) {
       setError("An error occurred. Please try again.")
     } finally {
@@ -83,7 +77,6 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md space-y-4 sm:space-y-6">
         <div className="text-center">
           <Logo className="mx-auto mb-4 sm:mb-6 w-full max-w-[140px] sm:max-w-[180px]" />
-          <DemoAccess setCredentials={setCredentials} />
         </div>
         <Card className="w-full">
           <CardHeader className="p-4 sm:p-6">
@@ -113,7 +106,7 @@ export default function AdminLoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
-                  <Link href="/forgot-password" className="text-xs sm:text-sm hover:underline">
+                  <Link href="/forgot-password" className="text-xs sm:text-sm underline">
                     Forgot password?
                   </Link>
                 </div>
@@ -147,7 +140,7 @@ export default function AdminLoginPage() {
                 {loading ? "Logging in..." : "Login"}
               </Button>
               <div className="text-center text-xs sm:text-sm">
-                <Link href="/auth/learner/login" className="text-primary hover:underline">
+                <Link href="/auth/learner/login" className="text-primary underline">
                   Learner Login
                 </Link>
               </div>

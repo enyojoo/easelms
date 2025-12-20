@@ -1,37 +1,42 @@
+import { updateSession } from "@/lib/supabase/middleware"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  // Use Supabase session check
+  const supabaseResponse = await updateSession(request)
+  
+  // If updateSession redirected, return that redirect
+  if (supabaseResponse.status === 307 || supabaseResponse.status === 308) {
+    return supabaseResponse
+  }
+
   const url = request.nextUrl.clone()
 
-  // This middleware is only for the LMS app (app folder)
-  // The website folder has its own deployment and doesn't need this middleware
-  
   // If accessing root, redirect to learner login
   if (url.pathname === "/") {
     url.pathname = "/auth/learner/login"
     return NextResponse.redirect(url)
   }
 
-  // Allow access to auth routes, learner routes, admin routes, and shared routes
-  const allowedPaths = [
+  // Allow access to auth routes, forgot-password, and support without authentication
+  const publicPaths = [
     "/auth",
-    "/learner",
-    "/admin",
     "/forgot-password",
-    "/logout",
     "/support",
   ]
 
-  const isAllowed = allowedPaths.some((path) => url.pathname.startsWith(path))
+  const isPublicPath = publicPaths.some((path) => url.pathname.startsWith(path))
 
-  if (!isAllowed && url.pathname !== "/") {
-    // Redirect unknown routes to learner login
-    url.pathname = "/auth/learner/login"
-    return NextResponse.redirect(url)
+  if (isPublicPath) {
+    return supabaseResponse
   }
 
-  return NextResponse.next()
+  // For protected routes, check user type via API
+  // The updateSession already checked if user exists, so we just need to verify user type
+  // This will be handled by individual page components or we can add it here
+  
+  return supabaseResponse
 }
 
 export const config = {

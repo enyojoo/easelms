@@ -27,14 +27,16 @@ export async function POST(request: Request) {
   }
 
   // Create profile
-  const { error: profileError } = await supabase.from("profiles").insert({
+  const profileData = {
     id: authData.user.id,
     email,
     name,
     user_type: userType,
-    currency: "USD",
-    email_verified: false,
-  })
+    currency: "USD", // All users get USD as default currency
+    bio: "",
+  }
+
+  const { error: profileError } = await supabase.from("profiles").insert(profileData)
 
   if (profileError) {
     // Rollback: delete the auth user if profile creation fails

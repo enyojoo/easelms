@@ -44,7 +44,7 @@ export default function CoursePage() {
   // Instructor information
   const instructor = {
     name: "Dr Ifeoma Eze",
-    bio: "I use my voice in reaching the voiceless and passionately share God's transformative word with those seeking to discover their purpose in life and launch them into their destiny​​",
+    bio: "",
     profileImage: "https://www.pastorifeomaeze.com/wp-content/uploads/2020/01/Ifeoma-Eze.jpeg",
   }
 

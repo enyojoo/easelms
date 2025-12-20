@@ -24,10 +24,34 @@ export async function initializePayment(data: {
   email: string
   tx_ref: string
   callback_url: string
+  customer?: {
+    name?: string
+  }
+  customizations?: {
+    title?: string
+    logo?: string
+    description?: string
+  }
   metadata?: Record<string, any>
 }) {
   const client = getFlutterwaveClient()
-  return await client.Payment.initialize(data)
+  
+  // Build payment payload according to Flutterwave Standard
+  // Only email is required, name is optional
+  const payload: any = {
+    tx_ref: data.tx_ref,
+    amount: data.amount.toString(),
+    currency: data.currency,
+    redirect_url: data.callback_url,
+    customer: {
+      email: data.email,
+      ...(data.customer?.name && { name: data.customer.name }),
+    },
+    ...(data.customizations && { customizations: data.customizations }),
+    ...(data.metadata && { meta: data.metadata }),
+  }
+  
+  return await client.Payment.initialize(payload)
 }
 
 export async function verifyTransaction(transactionId: string) {

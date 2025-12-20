@@ -81,11 +81,11 @@ export default function ResetCodePage() {
               </Button>
               <div className="text-center text-sm">
                 Didn't receive the code?{" "}
-                <Link href="/forgot-password" className="text-primary hover:underline">
+                <Link href="/forgot-password" className="text-primary underline">
                   Resend
                 </Link>
                 {" | "}
-                <Link href="/login" className="text-primary hover:underline">
+                <Link href="/login" className="text-primary underline">
                   Back to Login
                 </Link>
               </div>

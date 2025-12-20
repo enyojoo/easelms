@@ -1,20 +1,45 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createClient()
+  const { searchParams } = new URL(request.url)
+  const recommended = searchParams.get("recommended") === "true"
+  const ids = searchParams.get("ids")
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("courses")
     .select("*")
     .eq("is_published", true)
-    .order("created_at", { ascending: false })
+
+  if (ids) {
+    // Filter by specific course IDs
+    const courseIds = ids.split(',').map(id => parseInt(id.trim()))
+    query = query.in("id", courseIds)
+  } else if (recommended) {
+    // For recommended courses, we can use various criteria:
+    // - Most enrolled courses
+    // - Highest rated courses
+    // - Recently published courses
+    // For now, we'll return recently published courses with enrollment count
+    query = query
+      .select(`
+        *,
+        enrollments (count)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(4)
+  } else {
+    query = query.order("created_at", { ascending: false })
+  }
+
+  const { data, error } = await query
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ courses: data })
+  return NextResponse.json({ courses: data || [] })
 }
 
 export async function POST(request: Request) {

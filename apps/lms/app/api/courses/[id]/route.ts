@@ -38,6 +38,17 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.user_type !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
   const courseData = await request.json()
 
   const { data, error } = await supabase
@@ -65,6 +76,18 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.user_type !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
+
+  // Delete course (cascade should handle related data like lessons, quizzes, etc.)
   const { error } = await supabase
     .from("courses")
     .delete()
@@ -74,6 +97,5 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json({ message: "Course deleted successfully" })
 }
-

@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
                 Send Reset Code
               </Button>
               <div className="text-center text-sm">
-                <Link href="/login" className="text-center text-sm hover:underline">
+                <Link href="/login" className="text-center text-sm underline">
                   Back to Login
                 </Link>
               </div>

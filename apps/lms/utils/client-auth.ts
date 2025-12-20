@@ -45,6 +45,90 @@ export function useClientAuthState(): { isLoggedIn: boolean; userType?: UserType
         })
       })
 
+      async function fetchUserProfile(userId: string) {
+        console.log("useClientAuthState: Fetching profile for user", userId)
+        
+        // Use API endpoint instead of direct Supabase query to avoid RLS issues
+        let profile = null
+        let error = null
+        
+        try {
+          const response = await fetch("/api/profile")
+          if (response.ok) {
+            const data = await response.json()
+            profile = data.profile
+          } else {
+            const errorData = await response.json()
+            error = new Error(errorData.error || "Failed to fetch profile")
+            console.error("useClientAuthState: API error", errorData)
+          }
+        } catch (fetchError: any) {
+          error = fetchError
+          console.error("useClientAuthState: Fetch error", fetchError)
+        }
+
+        if (error || !profile) {
+          console.warn("useClientAuthState: Profile fetch failed, falling back to cookies", error)
+          // Fallback to cookies
+          const cookieState = getClientAuthState()
+          setAuthState({
+            ...cookieState,
+            loading: false,
+          })
+          return
+        }
+
+        // Fetch enrollments and progress (handle errors gracefully)
+        let enrollments = null
+        try {
+          const { data: enrollmentsData, error: enrollmentsError } = await supabase
+            .from("enrollments")
+            .select("course_id, status, progress")
+            .eq("user_id", profile.id)
+          
+          if (!enrollmentsError) {
+            enrollments = enrollmentsData
+          } else {
+            console.warn("useClientAuthState: Error fetching enrollments", enrollmentsError)
+          }
+        } catch (enrollErr) {
+          console.warn("useClientAuthState: Exception fetching enrollments", enrollErr)
+        }
+
+        const enrolledCourseIds = enrollments?.map((e) => e.course_id) || []
+        const completedCourseIds = enrollments?.filter((e) => e.status === "completed").map((e) => e.course_id) || []
+        const progressMap: Record<number, number> = {}
+        enrollments?.forEach((e) => {
+          progressMap[e.course_id] = e.progress || 0
+        })
+
+        const newUser = {
+          id: profile.id,
+          name: profile.name || "",
+          email: profile.email || "",
+          profileImage: profile.profile_image || "",
+          currency: profile.currency || "USD",
+          userType: profile.user_type,
+          enrolledCourses: enrolledCourseIds,
+          completedCourses: completedCourseIds,
+          progress: progressMap,
+        }
+
+        console.log("useClientAuthState: Setting new auth state with profile", {
+          id: profile.id,
+          name: profile.name,
+          profile_image: profile.profile_image,
+          user_type: profile.user_type,
+        })
+
+        setAuthState({
+          isLoggedIn: true,
+          userType: profile.user_type as UserType,
+          user: newUser,
+          loading: false,
+        })
+      }
+
       // Listen for auth changes
       const {
         data: { subscription },
@@ -60,56 +144,21 @@ export function useClientAuthState(): { isLoggedIn: boolean; userType?: UserType
         }
       })
 
-      async function fetchUserProfile(userId: string) {
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .single()
-
-        if (error || !profile) {
-          // Fallback to cookies
-          const cookieState = getClientAuthState()
-          setAuthState({
-            ...cookieState,
-            loading: false,
-          })
-          return
+      // Listen for profile updates
+      const handleProfileUpdate = async () => {
+        console.log("useClientAuthState: profileUpdated event received")
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          console.log("useClientAuthState: Refetching profile for user", session.user.id)
+          await fetchUserProfile(session.user.id)
         }
-
-        // Fetch enrollments and progress
-        const { data: enrollments } = await supabase
-          .from("enrollments")
-          .select("course_id, status, progress")
-          .eq("user_id", profile.id)
-
-        const enrolledCourseIds = enrollments?.map((e) => e.course_id) || []
-        const completedCourseIds = enrollments?.filter((e) => e.status === "completed").map((e) => e.course_id) || []
-        const progressMap: Record<number, number> = {}
-        enrollments?.forEach((e) => {
-          progressMap[e.course_id] = e.progress || 0
-        })
-
-        setAuthState({
-          isLoggedIn: true,
-          userType: profile.user_type as UserType,
-          user: {
-            id: profile.id,
-            name: profile.name,
-            email: profile.email,
-            profileImage: profile.profile_image,
-            currency: profile.currency || "USD",
-            userType: profile.user_type,
-            enrolledCourses: enrolledCourseIds,
-            completedCourses: completedCourseIds,
-            progress: progressMap,
-          },
-          loading: false,
-        })
       }
+
+      window.addEventListener("profileUpdated", handleProfileUpdate)
 
       return () => {
         subscription.unsubscribe()
+        window.removeEventListener("profileUpdated", handleProfileUpdate)
       }
     } catch (error) {
       // If Supabase client creation fails, use cookies
