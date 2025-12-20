@@ -124,35 +124,35 @@ export default function ManageCoursesPage() {
       <CardContent className="flex-grow px-4 sm:px-6 pb-4 sm:pb-6">
         <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-3">{course.description}</p>
       </CardContent>
-      <CardFooter className="flex flex-col gap-2 p-4 sm:p-6 pt-0">
-        <Link href={`/admin/courses/preview/${course.id}`} className="w-full">
+      <CardFooter className="flex flex-row gap-2 p-4 sm:p-6 pt-0">
+        <Link href={`/admin/courses/preview/${course.id}`} className="flex-1">
           <Button 
             variant="outline" 
-            className="flex items-center justify-center w-full min-h-[44px] text-sm"
+            className="flex items-center justify-center w-full h-8 text-xs"
             size="sm"
+            title="Preview"
           >
-            <Eye className="mr-2 h-4 w-4 flex-shrink-0" /> 
-            Preview
+            <Eye className="h-3.5 w-3.5" /> 
           </Button>
         </Link>
-        <Link href={`/admin/courses/new?edit=${course.id}`} className="w-full">
+        <Link href={`/admin/courses/new?edit=${course.id}`} className="flex-1">
           <Button 
             variant="outline" 
-            className="flex items-center justify-center w-full min-h-[44px] text-sm"
+            className="flex items-center justify-center w-full h-8 text-xs"
             size="sm"
+            title="Edit"
           >
-            <Edit className="mr-2 h-4 w-4 flex-shrink-0" /> 
-            Edit
+            <Edit className="h-3.5 w-3.5" /> 
           </Button>
         </Link>
         <Button
           variant="destructive"
-          className="flex items-center justify-center w-full min-h-[44px] text-sm"
+          className="flex items-center justify-center flex-1 h-8 text-xs"
           size="sm"
           onClick={() => handleDeleteClick(course.id)}
+          title="Delete"
         >
-          <Trash2 className="mr-2 h-4 w-4 flex-shrink-0" /> 
-          Delete
+          <Trash2 className="h-3.5 w-3.5" /> 
         </Button>
       </CardFooter>
     </Card>
