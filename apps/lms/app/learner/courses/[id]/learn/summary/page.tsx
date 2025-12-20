@@ -6,93 +6,199 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getClientAuthState } from "@/utils/client-auth" // Correct import
-import { modules } from "@/data/courses"
-import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star } from "lucide-react"
+import { getClientAuthState } from "@/utils/client-auth"
+import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star, Loader2 } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
-// Mock data for quiz results
-const mockQuizResults = {
-  "Intro to Communication": {
-    score: 90,
-    totalQuestions: 10,
-    answers: [true, true, false, true, true, true, true, false, true, true],
-  },
-  "Public Speaking Essentials": {
-    score: 85,
-    totalQuestions: 10,
-    answers: [true, false, true, true, true, false, true, true, true, true],
-  },
-  "Non-Verbal Communication": {
-    score: 95,
-    totalQuestions: 10,
-    answers: [true, true, true, true, false, true, true, true, true, true],
-  },
-  "Active Listening Skills": {
-    score: 80,
-    totalQuestions: 10,
-    answers: [true, true, false, true, true, false, true, true, true, false],
-  },
-  "Persuasive Communication": {
-    score: 100,
-    totalQuestions: 10,
-    answers: [true, true, true, true, true, true, true, true, true, true],
-  },
-  "Effective Storytelling": {
-    score: 90,
-    totalQuestions: 10,
-    answers: [true, true, true, false, true, true, true, true, true, true],
-  },
-  "Presentation Skills with Tech": {
-    score: 85,
-    totalQuestions: 10,
-    answers: [true, true, false, true, true, true, false, true, true, true],
-  },
-  "Handling Q&A and Feedback": {
-    score: 95,
-    totalQuestions: 10,
-    answers: [true, true, true, true, true, false, true, true, true, true],
-  },
+interface Course {
+  id: number
+  title: string
+  lessons: Array<{
+    id: number
+    title: string
+  }>
 }
 
+interface QuizResult {
+  lessonId: number
+  lessonTitle?: string
+  score: number
+  totalQuestions: number
+  answers: boolean[]
+}
 
 export default function CourseCompletionPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
-  const [course, setCourse] = useState<any>(null)
-  const [quizResults, setQuizResults] = useState<any>(null)
+  const [course, setCourse] = useState<Course | null>(null)
+  const [quizResults, setQuizResults] = useState<{ [key: string]: QuizResult }>({})
   const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [certificateId, setCertificateId] = useState<string | null>(null)
+  const [downloadingCertificate, setDownloadingCertificate] = useState(false)
 
   useEffect(() => {
-    const { isLoggedIn, userType, user } = getClientAuthState()
-    if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/learner/login")
-    } else {
-      setUser(user)
-      const courseData = modules.find((m) => m.id === Number.parseInt(id))
-      if (courseData) {
-        setCourse(courseData)
-        setQuizResults(mockQuizResults)
-      } else {
+    const fetchData = async () => {
+      const { isLoggedIn, userType, user } = getClientAuthState()
+      if (!isLoggedIn || userType !== "user") {
+        router.push("/auth/learner/login")
+        return
+      }
+
+      if (!id) {
         router.push("/learner/courses")
+        return
+      }
+
+      setUser(user)
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Fetch course data
+        const courseResponse = await fetch(`/api/courses/${id}`)
+        if (!courseResponse.ok) {
+          if (courseResponse.status === 404) {
+            router.push("/learner/courses")
+            return
+          }
+          throw new Error("Failed to fetch course")
+        }
+        const courseData = await courseResponse.json()
+        setCourse(courseData.course)
+
+        // Fetch quiz results
+        const quizResponse = await fetch(`/api/courses/${id}/quiz-results`)
+        if (quizResponse.ok) {
+          const quizData = await quizResponse.json()
+          
+          // Transform quiz results to match component structure
+          // Group by lessonId
+          const groupedResults: { [key: string]: QuizResult } = {}
+          
+          if (quizData.results && Array.isArray(quizData.results)) {
+            const lessonGroups: { [lessonId: number]: any[] } = {}
+            
+            quizData.results.forEach((result: any) => {
+              if (!lessonGroups[result.lessonId]) {
+                lessonGroups[result.lessonId] = []
+              }
+              lessonGroups[result.lessonId].push(result)
+            })
+
+            // Convert to component format
+            Object.keys(lessonGroups).forEach((lessonIdStr) => {
+              const lessonId = parseInt(lessonIdStr)
+              const lessonResults = lessonGroups[lessonId]
+              const lesson = courseData.course.lessons?.find((l: any) => l.id === lessonId)
+              
+              const correctCount = lessonResults.filter((r: any) => r.isCorrect).length
+              const totalQuestions = lessonResults.length
+              const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0
+              
+              groupedResults[lesson?.title || `Lesson ${lessonId}`] = {
+                lessonId,
+                lessonTitle: lesson?.title,
+                score,
+                totalQuestions,
+                answers: lessonResults.map((r: any) => r.isCorrect),
+              }
+            })
+          }
+          
+          setQuizResults(groupedResults)
+        } else {
+          // No quiz results yet, set empty
+          setQuizResults({})
+        }
+
+        // Fetch certificate if exists
+        const certificatesResponse = await fetch("/api/certificates")
+        if (certificatesResponse.ok) {
+          const certificatesData = await certificatesResponse.json()
+          const certificates = certificatesData.certificates || []
+          const certificate = certificates.find((c: any) => c.courseId === parseInt(id))
+          if (certificate) {
+            setCertificateId(certificate.id.toString())
+          }
+        }
+      } catch (err: any) {
+        console.error("Error fetching data:", err)
+        setError(err.message || "Failed to load course completion data")
+      } finally {
+        setLoading(false)
       }
     }
-  }, [router, id])
+
+    fetchData()
+  }, [id, router])
 
   const calculateOverallScore = () => {
-    if (!quizResults) return 0
-    const scores = Object.values(quizResults).map((result: any) => result.score)
+    if (!quizResults || Object.keys(quizResults).length === 0) return 0
+    const scores = Object.values(quizResults).map((result: QuizResult) => result.score)
     return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
   }
 
-  const handleDownloadCertificate = () => {
-    // In a real application, this would generate and download a PDF certificate
-    console.log("Downloading certificate...")
-    alert("Certificate download started!")
+  const handleDownloadCertificate = async () => {
+    if (!certificateId) {
+      alert("Certificate is not available yet. Please contact support.")
+      return
+    }
+
+    try {
+      setDownloadingCertificate(true)
+      const response = await fetch(`/api/certificates/${certificateId}/download`)
+      
+      if (!response.ok) {
+        throw new Error("Failed to download certificate")
+      }
+
+      // Get PDF blob
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `certificate-${course?.title || "course"}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error: any) {
+      console.error("Error downloading certificate:", error)
+      alert("Failed to download certificate. Please try again later.")
+    } finally {
+      setDownloadingCertificate(false)
+    }
   }
 
-  if (!course || !user) return null
+  if (loading) {
+    return (
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading completion data...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !course || !user) {
+    return (
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+        <div className="flex flex-col justify-center items-center h-64 space-y-4">
+          <p className="text-destructive">{error || "Failed to load completion data"}</p>
+          <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
+        </div>
+      </div>
+    )
+  }
 
   const overallScore = calculateOverallScore()
   const totalTimeSpent = "4 hours" // Mock data
@@ -191,9 +297,23 @@ export default function CourseCompletionPage() {
               <p className="text-sm md:text-base text-muted-foreground mb-6 text-center">
                 Download your certificate of completion for {course.title}
               </p>
-              <Button onClick={handleDownloadCertificate} className="min-h-[44px]" size="lg">
-                <Download className="mr-2 h-4 w-4" />
-                Download Certificate
+              <Button 
+                onClick={handleDownloadCertificate} 
+                className="min-h-[44px]" 
+                size="lg"
+                disabled={!certificateId || downloadingCertificate}
+              >
+                {downloadingCertificate ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    {certificateId ? "Download Certificate" : "Certificate Not Available"}
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -204,8 +324,9 @@ export default function CourseCompletionPage() {
             <CardTitle className="text-lg md:text-xl">Quiz Results</CardTitle>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
-            <div className="space-y-3 md:space-y-4">
-              {Object.entries(quizResults).map(([lesson, result]: [string, any]) => (
+            {Object.keys(quizResults).length > 0 ? (
+              <div className="space-y-3 md:space-y-4">
+                {Object.entries(quizResults).map(([lesson, result]: [string, QuizResult]) => (
                 <Accordion key={lesson} type="single" collapsible className="w-full">
                   <AccordionItem value={lesson} className="border-b">
                     <AccordionTrigger className="py-3 md:py-4">
@@ -257,11 +378,18 @@ export default function CourseCompletionPage() {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-              ))}
-            </div>
-            <div className="mt-4 md:mt-6 text-center">
-              <span className="text-lg md:text-xl font-semibold">Overall Score: {calculateOverallScore()}%</span>
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="text-sm md:text-base">No quiz results available yet.</p>
+              </div>
+            )}
+            {Object.keys(quizResults).length > 0 && (
+              <div className="mt-4 md:mt-6 text-center">
+                <span className="text-lg md:text-xl font-semibold">Overall Score: {calculateOverallScore()}%</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

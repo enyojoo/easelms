@@ -25,9 +25,11 @@ interface QuizProps {
   }
   onComplete: () => void
   minimumQuizScore?: number
+  courseId?: string
+  lessonId?: number
 }
 
-export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50 }: QuizProps) {
+export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50, courseId, lessonId }: QuizProps) {
   // Shuffle questions if enabled (only once on mount)
   const shuffledQuestions = useMemo(() => {
     if (!quiz.questions || quiz.questions.length === 0) return []
@@ -71,6 +73,8 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50 
   const [showResults, setShowResults] = useState(false)
   const [attemptCount, setAttemptCount] = useState(0)
   const [originalAnswers, setOriginalAnswers] = useState<number[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
 
   // Reset quiz when questions change
   useEffect(() => {
@@ -85,12 +89,66 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50 
     setSelectedAnswers(newSelectedAnswers)
   }
 
-  const handleNextQuestion = () => {
+  const submitQuizResults = async () => {
+    if (!courseId || !lessonId) {
+      console.warn("Cannot submit quiz results: courseId or lessonId missing")
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      setSubmissionError(null)
+
+      // Prepare answers array with question IDs
+      // Map shuffled questions back to original question IDs
+      const answers = shuffledQuestions.map((question, shuffledIndex) => {
+        // Find the original question index in the original quiz.questions array
+        const originalIndex = quiz.questions.findIndex(
+          (q) => q.id === question.id || (q.question === question.question && q.options?.join(",") === question.options?.join(","))
+        )
+        const originalQuestion = originalIndex >= 0 ? quiz.questions[originalIndex] : question
+        
+        return {
+          questionId: originalQuestion.id ? parseInt(originalQuestion.id) : shuffledIndex,
+          userAnswer: selectedAnswers[shuffledIndex] ?? null,
+        }
+      })
+
+      const response = await fetch(`/api/courses/${courseId}/quiz-results`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          lessonId,
+          answers,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to submit quiz results")
+      }
+
+      const data = await response.json()
+      console.log("Quiz results submitted successfully:", data)
+    } catch (error: any) {
+      console.error("Error submitting quiz results:", error)
+      setSubmissionError(error.message || "Failed to save quiz results")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleNextQuestion = async () => {
     if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
       // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
+      
+      // Submit quiz results to API
+      await submitQuizResults()
       
       // Show results immediately if enabled, otherwise wait
       if (quiz.showResultsImmediately) {
@@ -186,6 +244,14 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50 
             <p className="text-red-500 font-semibold">
               You need {minimumQuizScore}% to pass. {canRetry ? "Try again!" : "Please contact your instructor."}
             </p>
+          )}
+          {submissionError && (
+            <p className="text-sm text-destructive mt-2">
+              Note: {submissionError} (Results may not be saved)
+            </p>
+          )}
+          {submitting && (
+            <p className="text-sm text-muted-foreground mt-2">Saving quiz results...</p>
           )}
         </div>
 

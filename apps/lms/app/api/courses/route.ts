@@ -2,44 +2,133 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { searchParams } = new URL(request.url)
-  const recommended = searchParams.get("recommended") === "true"
-  const ids = searchParams.get("ids")
+  try {
+    // For public course listing, we don't need authentication
+    // Use service role client to bypass RLS and avoid recursion issues
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    
+    let supabase
+    try {
+      supabase = createServiceRoleClient()
+    } catch (serviceError: any) {
+      // If service role not available, use regular client (might have RLS issues)
+      const { createClient } = await import("@/lib/supabase/server")
+      supabase = await createClient()
+      console.warn("Courses API: Service role not available, using regular client")
+    }
+    
+    const { searchParams } = new URL(request.url)
+    const recommended = searchParams.get("recommended") === "true"
+    const ids = searchParams.get("ids")
 
-  let query = supabase
-    .from("courses")
-    .select("*")
-    .eq("is_published", true)
-
-  if (ids) {
-    // Filter by specific course IDs
-    const courseIds = ids.split(',').map(id => parseInt(id.trim()))
-    query = query.in("id", courseIds)
-  } else if (recommended) {
-    // For recommended courses, we can use various criteria:
-    // - Most enrolled courses
-    // - Highest rated courses
-    // - Recently published courses
-    // For now, we'll return recently published courses with enrollment count
-    query = query
+    // Fetch courses with lesson counts
+    // Try to include lessons count, but fallback to basic query if RLS blocks it
+    let query = supabase
+      .from("courses")
       .select(`
         *,
-        enrollments (count)
+        lessons (id)
       `)
-      .order("created_at", { ascending: false })
-      .limit(4)
-  } else {
-    query = query.order("created_at", { ascending: false })
+      .eq("is_published", true)
+
+    if (ids) {
+      // Filter by specific course IDs
+      const courseIds = ids.split(',').map(id => parseInt(id.trim()))
+      query = query.in("id", courseIds)
+    } else if (recommended) {
+      // For recommended courses, return recently published courses
+      query = query
+        .order("created_at", { ascending: false })
+        .limit(4)
+    } else {
+      query = query.order("created_at", { ascending: false })
+    }
+
+    let { data, error } = await query
+
+    // If error with lessons relation, try without it
+    if (error) {
+      console.warn("Courses API: Error with lessons relation, trying without:", error.message)
+      let basicQuery = supabase
+        .from("courses")
+        .select("*")
+        .eq("is_published", true)
+
+      if (ids) {
+        const courseIds = ids.split(',').map(id => parseInt(id.trim()))
+        basicQuery = basicQuery.in("id", courseIds)
+      } else if (recommended) {
+        basicQuery = basicQuery
+          .order("created_at", { ascending: false })
+          .limit(4)
+      } else {
+        basicQuery = basicQuery.order("created_at", { ascending: false })
+      }
+
+      const { data: basicData, error: basicError } = await basicQuery
+      
+      if (!basicError) {
+        data = basicData
+        error = null
+      } else {
+        error = basicError
+      }
+    }
+
+    if (error) {
+      console.error("Courses API: Database error", {
+        error: error,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        recommended,
+        ids,
+      })
+      return NextResponse.json({ 
+        error: error.message,
+        details: error.details,
+        hint: error.hint,
+      }, { status: 500 })
+    }
+
+    // Process courses to ensure they have the expected structure
+    const processedCourses = (data || []).map((course: any) => {
+      // Ensure lessons is an array (either from relation or empty array)
+      const lessons = Array.isArray(course.lessons) ? course.lessons : []
+      
+      // Parse settings if it's a string (JSON stored as text)
+      let settings = course.settings
+      if (typeof settings === 'string') {
+        try {
+          settings = JSON.parse(settings)
+        } catch (e) {
+          console.warn("Failed to parse course settings:", e)
+          settings = {}
+        }
+      }
+
+      return {
+        ...course,
+        lessons: lessons, // Ensure lessons is always an array
+        settings: settings || {}, // Ensure settings exists
+        // Map database fields to expected structure
+        image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+        description: course.description || "",
+        price: course.price || 0,
+      }
+    })
+
+    return NextResponse.json({ courses: processedCourses })
+  } catch (error: any) {
+    console.error("Courses API: Unexpected error", {
+      message: error?.message,
+      stack: error?.stack,
+    })
+    return NextResponse.json({ 
+      error: error?.message || "An unexpected error occurred while fetching courses",
+    }, { status: 500 })
   }
-
-  const { data, error } = await query
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ courses: data || [] })
 }
 
 export async function POST(request: Request) {

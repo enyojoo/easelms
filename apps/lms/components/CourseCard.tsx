@@ -241,7 +241,7 @@ export default function CourseCard({
         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-4">
           <div className="flex items-center">
             <BookOpen className="w-4 h-4 mr-1" />
-            <span>{course.lessons.length} lessons</span>
+            <span>{Array.isArray(course.lessons) ? course.lessons.length : 0} lessons</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />

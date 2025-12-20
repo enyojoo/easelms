@@ -54,20 +54,94 @@ export function useClientAuthState(): { isLoggedIn: boolean; userType?: UserType
         
         try {
           const response = await fetch("/api/profile")
+          
+          // Check if response is ok
           if (response.ok) {
-            const data = await response.json()
-            profile = data.profile
+            try {
+              const data = await response.json()
+              profile = data.profile
+              
+              // If profile is null/undefined even though response is ok, treat as error
+              if (!profile) {
+                error = new Error("Profile data not found in response")
+                console.warn("useClientAuthState: Profile not found in response", data)
+              }
+            } catch (parseError: any) {
+              error = new Error("Failed to parse profile response")
+              console.error("useClientAuthState: Failed to parse response", {
+                status: response.status,
+                parseError: parseError.message,
+              })
+            }
           } else {
-            const errorData = await response.json()
-            error = new Error(errorData.error || "Failed to fetch profile")
-            console.error("useClientAuthState: API error", errorData)
+            // Response is not ok - try to get error message
+            let errorMessage = `HTTP ${response.status}: Failed to fetch profile`
+            
+            try {
+              // Try to read response as text first to see what we're dealing with
+              const responseText = await response.text()
+              
+              if (responseText) {
+                try {
+                  const errorData = JSON.parse(responseText)
+                  // Check if errorData has an error property and it's not empty
+                  if (errorData && typeof errorData === 'object') {
+                    if (errorData.error && typeof errorData.error === 'string' && errorData.error.trim()) {
+                      errorMessage = errorData.error
+                    } else if (errorData.message && typeof errorData.message === 'string' && errorData.message.trim()) {
+                      errorMessage = errorData.message
+                    }
+                  }
+                } catch (jsonError) {
+                  // If it's not valid JSON, use the text as error message if it's not empty
+                  if (responseText.trim()) {
+                    errorMessage = responseText.trim()
+                  }
+                }
+              }
+              
+              console.error("useClientAuthState: API error", {
+                status: response.status,
+                statusText: response.statusText,
+                responseText: responseText ? responseText.substring(0, 200) : "(empty response)", // Log first 200 chars
+                hasResponseText: !!responseText,
+                responseTextLength: responseText?.length || 0,
+              })
+            } catch (readError: any) {
+              // If we can't read the response, use status-based message
+              errorMessage = response.statusText || `HTTP ${response.status}: Failed to fetch profile`
+              console.error("useClientAuthState: Failed to read error response", {
+                status: response.status,
+                statusText: response.statusText,
+                readError: readError.message,
+              })
+            }
+            
+            error = new Error(errorMessage)
           }
         } catch (fetchError: any) {
           error = fetchError
-          console.error("useClientAuthState: Fetch error", fetchError)
+          console.error("useClientAuthState: Fetch error", {
+            message: fetchError.message,
+            name: fetchError.name,
+            stack: fetchError.stack,
+          })
         }
 
         if (error || !profile) {
+          // If profile doesn't exist and we got a 500 error, the profile creation failed
+          // Don't fall back to cookies - return an error state so the UI can handle it
+          if (error && error.message?.includes("constraint") && !profile) {
+            console.error("useClientAuthState: Profile creation failed due to database constraint", error)
+            setAuthState({
+              isLoggedIn: false,
+              user: null,
+              userType: undefined,
+              loading: false,
+            })
+            return
+          }
+          
           console.warn("useClientAuthState: Profile fetch failed, falling back to cookies", error)
           // Fallback to cookies
           const cookieState = getClientAuthState()

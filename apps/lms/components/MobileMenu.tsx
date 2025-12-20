@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Settings,
   LogOut,
+  ShoppingBag,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -48,8 +49,8 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
 
   const sidebarItems = {
     user: [
+      { href: "/learner/purchase", label: "Purchase", icon: ShoppingBag },
       { href: "/support", label: "Support", icon: HelpCircle },
-      { href: "/learner/settings", label: "Settings", icon: Settings },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
     admin: [

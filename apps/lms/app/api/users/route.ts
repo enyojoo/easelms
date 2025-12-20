@@ -69,6 +69,25 @@ export async function POST(request: Request) {
     )
   }
 
+  // Validate and sanitize userType to ensure it's either "user" or "admin"
+  let validatedUserType = "user"
+  if (typeof userType === "string") {
+    const trimmed = userType.trim().toLowerCase()
+    if (trimmed === "user" || trimmed === "admin") {
+      validatedUserType = trimmed
+    } else {
+      return NextResponse.json(
+        { error: `Invalid userType "${userType}". Must be "user" or "admin"` },
+        { status: 400 }
+      )
+    }
+  } else {
+    return NextResponse.json(
+      { error: `userType must be a string. Received: ${typeof userType}` },
+      { status: 400 }
+    )
+  }
+
   // Create auth user
   const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
     email,
@@ -87,7 +106,7 @@ export async function POST(request: Request) {
       id: authUser.user.id,
       email,
       name,
-      user_type: userType,
+      user_type: validatedUserType,
     })
     .select()
     .single()

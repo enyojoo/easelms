@@ -8,24 +8,88 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Award, BookOpen, ChevronRight, Clock, Loader2 } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
-import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
+
+interface Course {
+  id: number
+  title: string
+  image?: string
+  progress?: number
+}
 
 
 export default function LearnerDashboard() {
-  const { user, loading } = useClientAuthState()
+  const { user, loading: authLoading } = useClientAuthState()
   const [dashboardUser, setDashboardUser] = useState<User | null>(null)
+  const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([])
+  const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([])
+  const [coursesLoading, setCoursesLoading] = useState(true)
+  const [coursesError, setCoursesError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!authLoading && user) {
       setDashboardUser(user as User)
     }
-  }, [user, loading])
+  }, [user, authLoading])
 
-  // Listen for profile updates - the hook will update automatically
-  // No need for separate listener, just react to user changes
+  // Fetch enrolled courses and recommended courses
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (authLoading || !dashboardUser) return
 
-  if (loading || !dashboardUser) {
+      try {
+        setCoursesLoading(true)
+        setCoursesError(null)
+
+        // Fetch enrollments (includes course data)
+        const enrollmentsResponse = await fetch("/api/enrollments")
+        if (!enrollmentsResponse.ok) {
+          const errorData = await enrollmentsResponse.json().catch(() => ({}))
+          console.error("Failed to fetch enrollments:", {
+            status: enrollmentsResponse.status,
+            statusText: enrollmentsResponse.statusText,
+            error: errorData,
+          })
+          // Don't throw - just use empty array so dashboard can still load
+          setEnrolledCourses([])
+        } else {
+          const enrollmentsData = await enrollmentsResponse.json()
+          const enrollments = enrollmentsData.enrollments || []
+
+          // Map enrollments to courses with progress
+          const enrolledCoursesData = enrollments
+            .filter((e: any) => e.courses) // Only include enrollments with course data
+            .map((enrollment: any) => ({
+              id: enrollment.course_id,
+              title: enrollment.courses?.title || "Untitled Course",
+              progress: enrollment.progress || 0,
+            }))
+          setEnrolledCourses(enrolledCoursesData)
+        }
+
+        // Fetch recommended courses
+        const recommendedResponse = await fetch("/api/courses?recommended=true")
+        if (recommendedResponse.ok) {
+          const recommendedData = await recommendedResponse.json()
+          const recommended = (recommendedData.courses || []).slice(0, 4).map((course: any) => ({
+            id: course.id,
+            title: course.title,
+            image: course.image || "/placeholder.svg?height=200&width=300",
+          }))
+          setRecommendedCourses(recommended)
+        }
+      } catch (error: any) {
+        console.error("Error fetching courses:", error)
+        setCoursesError(error.message || "Failed to load courses")
+      } finally {
+        setCoursesLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [authLoading, dashboardUser])
+
+  if (authLoading) {
     return (
       <div className="pt-4 md:pt-8">
         <div className="flex justify-center items-center h-64">
@@ -35,68 +99,28 @@ export default function LearnerDashboard() {
     )
   }
 
-  // Get enrolled courses from user data and match with modules
-  const enrolledCourses = (dashboardUser.enrolledCourses || [])
-    .map((courseId) => {
-      const course = modules.find((m) => m.id === courseId)
-      if (!course) return null
-      return {
-        id: course.id,
-        title: course.title,
-        progress: dashboardUser.progress?.[courseId] || 0,
-      }
-    })
-    .filter((course): course is { id: number; title: string; progress: number } => course !== null)
-
-  // Get completed courses count
-  const completedCoursesCount = (dashboardUser.completedCourses || []).length
-
-  // Get courses in progress (enrolled but not completed)
-  const coursesInProgress = enrolledCourses.filter(
-    (course) => !(dashboardUser.completedCourses || []).includes(course.id)
-  )
-
-  // Get recommended courses with random selection that changes every 12 hours
-  const getRecommendedCourses = () => {
-    const enrolledCourseIds = new Set(user.enrolledCourses || [])
-    const availableCourses = modules.filter((course) => !enrolledCourseIds.has(course.id))
-
-    if (availableCourses.length === 0) return []
-
-    // Generate a seed based on the current 12-hour period
-    // This ensures the same courses are shown for 12 hours, then change
-    const now = new Date()
-    const hoursSinceEpoch = Math.floor(now.getTime() / (1000 * 60 * 60))
-    const twelveHourPeriod = Math.floor(hoursSinceEpoch / 12)
-    
-    // Seeded random number generator (Linear Congruential Generator)
-    let seed = twelveHourPeriod
-    const seededRandom = () => {
-      seed = (seed * 9301 + 49297) % 233280
-      return seed / 233280
-    }
-
-    // Create array with indices and shuffle using seeded random
-    const indices = availableCourses.map((_, i) => i)
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(seededRandom() * (i + 1));
-      [indices[i], indices[j]] = [indices[j], indices[i]]
-    }
-
-    // Take first 4 courses based on shuffled indices
-    return indices.slice(0, 4).map((idx) => {
-      const course = availableCourses[idx]
-      return {
-        id: course.id,
-        title: course.title,
-        image: course.image,
-      }
-    })
+  // If not loading but no user, show error message
+  if (!dashboardUser) {
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="flex flex-col justify-center items-center h-64 space-y-4">
+          <p className="text-destructive">Unable to load your profile. Please try refreshing the page.</p>
+          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+        </div>
+      </div>
+    )
   }
 
-  const recommendedCourses = getRecommendedCourses()
+  // Get completed courses count
+  const completedCoursesCount = enrolledCourses.filter((course) => {
+    // Check if course is completed based on progress or enrollment status
+    return course.progress === 100
+  }).length
 
-  const firstName = user.name?.split(" ")[0] || user.name || "there"
+  // Get courses in progress (enrolled but not completed)
+  const coursesInProgress = enrolledCourses.filter((course) => course.progress < 100)
+
+  const firstName = dashboardUser.name?.split(" ")[0] || dashboardUser.name || "there"
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 max-w-7xl mx-auto px-4 lg:px-6">
@@ -137,14 +161,20 @@ export default function LearnerDashboard() {
               <CardTitle className="text-base md:text-lg">Continue Learning</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 pt-0">
-              {coursesInProgress.length > 0 ? (
+              {coursesLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : coursesError ? (
+                <p className="text-muted-foreground text-sm md:text-base text-destructive">{coursesError}</p>
+              ) : coursesInProgress.length > 0 ? (
                 <div className="space-y-4 md:space-y-6">
                   {coursesInProgress.map((course) => (
                     <div key={course.id} className="space-y-2">
                       <h3 className="font-semibold text-sm md:text-base break-words line-clamp-2">{course.title}</h3>
                       <div className="flex items-center gap-2 md:gap-4">
-                        <Progress value={course.progress} className="flex-grow min-w-0" />
-                        <span className="text-sm font-medium flex-shrink-0">{course.progress}%</span>
+                        <Progress value={course.progress || 0} className="flex-grow min-w-0" />
+                        <span className="text-sm font-medium flex-shrink-0">{course.progress || 0}%</span>
                       </div>
                       <Link href={`/learner/courses/${course.id}/learn`}>
                         <Button variant="link" className="mt-1 md:mt-2 p-0 h-auto text-sm md:text-base">
@@ -165,7 +195,13 @@ export default function LearnerDashboard() {
               <CardTitle className="text-base md:text-lg">Recommended Courses</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 pt-0">
-              {recommendedCourses.length > 0 ? (
+              {coursesLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : coursesError ? (
+                <p className="text-muted-foreground text-sm md:text-base text-destructive">{coursesError}</p>
+              ) : recommendedCourses.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3 md:gap-4">
                   {recommendedCourses.map((course, index) => (
                     <Link 
@@ -176,7 +212,7 @@ export default function LearnerDashboard() {
                       <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full min-w-0">
                         <div className="relative w-full h-32 sm:h-24 md:h-32">
                           <Image
-                            src={course.image}
+                            src={course.image || "/placeholder.svg?height=200&width=300"}
                             alt={course.title}
                             fill
                             className="object-cover"

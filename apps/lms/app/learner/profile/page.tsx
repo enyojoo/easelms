@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,24 +10,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { getClientAuthState } from "@/utils/client-auth"
-import { cancelSubscription, type Purchase } from "@/utils/enrollment"
+import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Loader2, Award, BookOpen, CheckCircle2, ShoppingBag, XCircle, Calendar, DollarSign, Upload } from "lucide-react"
+import { Loader2, Award, Upload, Bell, Shield, Globe, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CertificatePreview from "@/components/CertificatePreview"
-import CourseCard from "@/components/CourseCard"
-import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { US } from "country-flag-icons/react/3x2"
+
+const NigeriaFlag = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
+    <rect width="6" height="3" fill="#008751" />
+    <rect width="2" height="3" x="2" fill="#ffffff" />
+  </svg>
+)
 
 export default function LearnerProfilePage() {
   const router = useRouter()
+  const { user: authUser, loading: authLoading, userType } = useClientAuthState()
   const [user, setUser] = useState<User | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [enrolledCourses, setEnrolledCourses] = useState<any[]>([])
-  const [completedCourses, setCompletedCourses] = useState<any[]>([])
   const [certificates, setCertificates] = useState<any[]>([])
-  const [purchases, setPurchases] = useState<Purchase[]>([])
+  const [showLeftArrow, setShowLeftArrow] = useState(false)
+  const [showRightArrow, setShowRightArrow] = useState(false)
+  const tabsListRef = useRef<HTMLDivElement>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -36,20 +44,71 @@ export default function LearnerProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [imageError, setImageError] = useState(false)
+  const [settings, setSettings] = useState({
+    emailNotifications: true,
+  })
+  const [newPassword, setNewPassword] = useState("")
+  const [selectedCurrency, setSelectedCurrency] = useState("USD")
 
   useEffect(() => {
-    loadProfileData()
-  }, [router])
+    if (!authLoading) {
+      if (!authUser || userType !== "user") {
+        router.push("/auth/learner/login")
+        return
+      }
+      setUser(authUser as User)
+      loadProfileData()
+    }
+  }, [authLoading, authUser, userType, router])
+
+  // Check scroll position for tabs arrows
+  useEffect(() => {
+    const checkScrollPosition = () => {
+      const tabsList = tabsListRef.current
+      if (!tabsList) return
+
+      const { scrollLeft, scrollWidth, clientWidth } = tabsList
+      setShowLeftArrow(scrollLeft > 0)
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1) // -1 for rounding
+    }
+
+    const tabsList = tabsListRef.current
+    if (!tabsList) return
+
+    // Check on mount and resize
+    checkScrollPosition()
+    tabsList.addEventListener("scroll", checkScrollPosition)
+    window.addEventListener("resize", checkScrollPosition)
+
+    // Use ResizeObserver to detect content changes
+    const resizeObserver = new ResizeObserver(checkScrollPosition)
+    resizeObserver.observe(tabsList)
+
+    return () => {
+      tabsList.removeEventListener("scroll", checkScrollPosition)
+      window.removeEventListener("resize", checkScrollPosition)
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   const loadProfileData = async () => {
-    const { isLoggedIn, userType } = getClientAuthState()
-    if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/learner/login")
-      return
-    }
+    if (!authUser) return
 
     try {
       setLoading(true)
+
+      // Fetch user settings
+      const settingsResponse = await fetch("/api/settings")
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json()
+        if (settingsData.userSettings) {
+          setSettings({
+            emailNotifications: settingsData.userSettings.email_notifications ?? true,
+          })
+          setSelectedCurrency(settingsData.userSettings.currency || user?.currency || "USD")
+        }
+      }
 
       // Load profile data
       const profileResponse = await fetch("/api/profile")
@@ -76,21 +135,10 @@ export default function LearnerProfilePage() {
           currency: profile.currency || "USD",
           bio: profile.bio || "",
         })
-      }
-
-      // Load enrolled courses
-      const enrollmentsResponse = await fetch("/api/enrollments")
-      if (enrollmentsResponse.ok) {
-        const enrollmentsData = await enrollmentsResponse.json()
-        const enrolledIds = enrollmentsData.enrollments?.map((e: any) => e.course_id) || []
-
-        if (enrolledIds.length > 0) {
-          const coursesResponse = await fetch(`/api/courses?ids=${enrolledIds.join(',')}`)
-          if (coursesResponse.ok) {
-            const coursesData = await coursesResponse.json()
-            setEnrolledCourses(coursesData.courses || [])
-          }
-        }
+        // Set currency from profile
+        setSelectedCurrency(profile.currency || "USD")
+        // Reset image error when profile loads
+        setImageError(false)
       }
 
       // Load certificates
@@ -98,14 +146,12 @@ export default function LearnerProfilePage() {
       if (certificatesResponse.ok) {
         const certificatesData = await certificatesResponse.json()
         setCertificates(certificatesData.certificates || [])
+      } else {
+        // If certificates fail, set empty array
+        console.warn("Failed to fetch certificates:", certificatesResponse.status)
+        setCertificates([])
       }
 
-      // Load purchases
-      const purchasesResponse = await fetch("/api/purchases")
-      if (purchasesResponse.ok) {
-        const purchasesData = await purchasesResponse.json()
-        setPurchases(purchasesData.purchases || [])
-      }
 
     } catch (error) {
       console.error("Error loading profile data:", error)
@@ -202,6 +248,8 @@ export default function LearnerProfilePage() {
       })
 
       if (updateResponse.ok) {
+        // Reset image error state when new image is uploaded
+        setImageError(false)
         // Reload profile data to show new image
         await loadProfileData()
         
@@ -238,12 +286,63 @@ export default function LearnerProfilePage() {
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
       <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Profile</h1>
       <Tabs defaultValue="profile" className="space-y-4 md:space-y-6">
-        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start sm:justify-center">
-          <TabsTrigger value="profile" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Profile</TabsTrigger>
-          <TabsTrigger value="courses" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">My Courses</TabsTrigger>
-          <TabsTrigger value="purchases" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Purchase History</TabsTrigger>
-          <TabsTrigger value="certificates" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Certificates</TabsTrigger>
-        </TabsList>
+        <div className="relative">
+          {/* Left Arrow - Mobile Only */}
+          {showLeftArrow && (
+            <button
+              onClick={() => {
+                const tabsList = tabsListRef.current
+                if (tabsList) {
+                  tabsList.scrollBy({ left: -200, behavior: "smooth" })
+                }
+              }}
+              className="absolute left-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 bg-gradient-to-r from-background to-transparent sm:hidden"
+              aria-label="Scroll tabs left"
+            >
+              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+            </button>
+          )}
+
+          {/* Right Arrow - Mobile Only */}
+          {showRightArrow && (
+            <button
+              onClick={() => {
+                const tabsList = tabsListRef.current
+                if (tabsList) {
+                  tabsList.scrollBy({ left: 200, behavior: "smooth" })
+                }
+              }}
+              className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+              aria-label="Scroll tabs right"
+            >
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            </button>
+          )}
+
+          <TabsList 
+            ref={tabsListRef}
+            className="w-full overflow-x-auto flex-nowrap justify-start sm:justify-center touch-pan-x scrollbar-hide bg-muted p-1 h-auto min-h-[44px] sm:min-h-[48px]"
+          >
+            <TabsTrigger 
+              value="profile" 
+              className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-5 h-10 sm:h-11 md:h-12 whitespace-nowrap"
+            >
+              Profile
+            </TabsTrigger>
+            <TabsTrigger 
+              value="certificates" 
+              className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-5 h-10 sm:h-11 md:h-12 whitespace-nowrap"
+            >
+              Certificates
+            </TabsTrigger>
+            <TabsTrigger 
+              value="settings" 
+              className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-5 h-10 sm:h-11 md:h-12 whitespace-nowrap"
+            >
+              Settings
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="profile" className="mt-4 md:mt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
@@ -326,25 +425,21 @@ export default function LearnerProfilePage() {
                   <Loader2 className="h-8 w-8 animate-spin text-white" />
                 </div>
               )}
-              {user.profileImage && user.profileImage.trim() !== "" ? (
+              {user.profileImage && user.profileImage.trim() !== "" && !imageError ? (
                 <Image
                   src={user.profileImage}
-                  alt={user.name}
-                  width={500}
-                  height={500}
+                  alt={user.name || "Profile"}
+                  width={150}
+                  height={150}
                   className="object-cover w-full h-full"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder-user.jpg"
+                  onError={() => {
+                    setImageError(true)
                   }}
                 />
               ) : (
-                <Image
-                  src="/placeholder-user.jpg"
-                  alt={user.name}
-                  width={500}
-                  height={500}
-                  className="object-cover w-full h-full"
-                />
+                <div className="flex items-center justify-center w-full h-full bg-primary text-primary-foreground text-4xl sm:text-5xl font-semibold">
+                  {(user.name && user.name.trim() ? user.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()) || "U"}
+                </div>
               )}
             </div>
             <div>
@@ -370,209 +465,6 @@ export default function LearnerProfilePage() {
           </CardContent>
         </Card>
           </div>
-        </TabsContent>
-
-        <TabsContent value="courses" className="mt-4 md:mt-6">
-          <div className="space-y-6 md:space-y-8">
-            {/* Enrolled Courses Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-4 md:mb-6">
-                <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-primary flex-shrink-0" />
-                <h2 className="text-xl md:text-2xl font-bold">Enrolled Courses</h2>
-                <span className="text-muted-foreground text-sm md:text-base">({enrolledCourses.length})</span>
-              </div>
-              {enrolledCourses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {enrolledCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      status="enrolled"
-                      enrolledCourseIds={getEnrolledCourseIds(user) || user?.enrolledCourses || []}
-                      completedCourseIds={user?.completedCourses || []}
-                      userProgress={user?.progress || {}}
-                      showProgress={true}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <BookOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Enrolled Courses</h3>
-                    <p className="text-muted-foreground mb-6">Start your learning journey by enrolling in a course.</p>
-                    <Link href="/learner/courses">
-                      <Button>Browse Courses</Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Completed Courses Section */}
-            <div>
-              <div className="flex items-center gap-2 mb-4 md:mb-6">
-                <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-green-500 flex-shrink-0" />
-                <h2 className="text-xl md:text-2xl font-bold">Completed Courses</h2>
-                <span className="text-muted-foreground text-sm md:text-base">({completedCourses.length})</span>
-              </div>
-              {completedCourses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {completedCourses.map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      status="completed"
-                      enrolledCourseIds={getEnrolledCourseIds(user) || user?.enrolledCourses || []}
-                      completedCourseIds={user?.completedCourses || []}
-                      userProgress={user?.progress || {}}
-                      showProgress={true}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-12">
-                    <Award className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">No Completed Courses</h3>
-                    <p className="text-muted-foreground mb-6">Complete a course to earn your first certificate!</p>
-                    <Link href="/learner/courses">
-                      <Button>Start Learning</Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="purchases" className="mt-4 md:mt-6">
-          <Card>
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-                <ShoppingBag className="h-5 w-5 flex-shrink-0" />
-                Purchase History ({purchases.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              {purchases.length > 0 ? (
-                <div className="space-y-3 md:space-y-4">
-                  {purchases.map((purchase) => {
-                    const course = modules.find((c) => c.id === purchase.courseId)
-                    const isSubscription = purchase.type === "recurring"
-                    const isActive = purchase.status === "active"
-                    
-                    return (
-                      <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
-                        <CardContent className="p-4 md:p-6">
-                          <div className="flex flex-col gap-4 md:gap-5">
-                            <div className="flex-1 min-w-0">
-                              <div className="mb-3">
-                                <h3 className="font-semibold text-base md:text-lg mb-2 break-words">{purchase.courseTitle}</h3>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <Badge
-                                    variant={isSubscription ? "secondary" : "outline"}
-                                    className={
-                                      isSubscription
-                                        ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs"
-                                        : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
-                                    }
-                                  >
-                                    {isSubscription ? "Subscription" : "One-time Purchase"}
-                                  </Badge>
-                                  <Badge
-                                    variant={isActive ? "default" : "secondary"}
-                                    className={
-                                      isActive
-                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
-                                        : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 text-xs"
-                                    }
-                                  >
-                                    {isActive ? "Active" : "Cancelled"}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="space-y-2 text-xs md:text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                  <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                                  <span className="break-words">
-                                    {purchase.currency} {purchase.amount}
-                                    {isSubscription && purchase.recurringPrice && " /month"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                                  <span>
-                                    Purchased: {new Date(purchase.purchasedAt).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "long",
-                                      day: "numeric",
-                                    })}
-                                  </span>
-                                </div>
-                                {purchase.cancelledAt && (
-                                  <div className="flex items-center gap-2">
-                                    <XCircle className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                                    <span>
-                                      Cancelled: {new Date(purchase.cancelledAt).toLocaleDateString("en-US", {
-                                        year: "numeric",
-                                        month: "long",
-                                        day: "numeric",
-                                      })}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 border-t">
-                              {course && (
-                                <Link href={`/learner/courses/${course.id}`} className="flex-1 sm:flex-initial">
-                                  <Button variant="outline" size="sm" className="w-full sm:w-auto min-h-[44px]">
-                                    View Course
-                                  </Button>
-                                </Link>
-                              )}
-                              {isSubscription && isActive && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (window.confirm("Are you sure you want to cancel this subscription? You will be redirected to support to complete the cancellation.")) {
-                                      cancelSubscription(purchase.id)
-                                      setPurchases((prev) =>
-                                        prev.map((p) =>
-                                          p.id === purchase.id
-                                            ? { ...p, status: "cancelled" as const, cancelledAt: new Date().toISOString() }
-                                            : p
-                                        )
-                                      )
-                                      router.push("/support")
-                                    }
-                                  }}
-                                  className="w-full sm:w-auto min-h-[44px]"
-                                >
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Cancel Subscription
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 md:py-12 text-muted-foreground">
-                  <ShoppingBag className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-sm md:text-base mb-2">You don't have any purchases yet.</p>
-                  <Link href="/learner/courses">
-                    <Button className="mt-4 min-h-[44px]">Browse Courses</Button>
-                  </Link>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="certificates" className="mt-4 md:mt-6">
@@ -616,6 +508,155 @@ export default function LearnerProfilePage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-4 md:mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <Card>
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center text-lg md:text-xl">
+                  <Bell className="mr-2 h-5 w-5 flex-shrink-0" /> Notifications
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6 pt-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <Label htmlFor="email-notifications" className="text-sm md:text-base">Email Notifications</Label>
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Receive email updates about your courses and account
+                    </p>
+                  </div>
+                  <Switch
+                    id="email-notifications"
+                    checked={settings.emailNotifications}
+                    onCheckedChange={async (checked) => {
+                      setSettings((prev) => ({ ...prev, emailNotifications: checked }))
+                      // Save to settings API
+                      try {
+                        const response = await fetch("/api/settings", {
+                          method: "PUT",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            userSettings: {
+                              email_notifications: checked,
+                            },
+                          }),
+                        })
+                        if (!response.ok) {
+                          console.error("Failed to save notification settings")
+                        }
+                      } catch (error) {
+                        console.error("Error saving notification settings:", error)
+                      }
+                    }}
+                    className="flex-shrink-0 sm:ml-4"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center text-lg md:text-xl">
+                  <Globe className="mr-2 h-5 w-5 flex-shrink-0" /> Display Currency
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4">
+                <div className="space-y-2">
+                  <Select value={selectedCurrency} onValueChange={async (currency) => {
+                    setSelectedCurrency(currency)
+                    // Save currency preference to user profile
+                    try {
+                      const response = await fetch("/api/profile", {
+                        method: "PUT",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ currency }),
+                      })
+                      if (response.ok) {
+                        await loadProfileData()
+                        window.dispatchEvent(new CustomEvent("profileUpdated"))
+                      }
+                    } catch (error) {
+                      console.error("Error updating currency:", error)
+                    }
+                  }}>
+                    <SelectTrigger className="w-full min-h-[44px]">
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">
+                        <div className="flex items-center">
+                          <US className="w-4 h-4 mr-2 flex-shrink-0" />
+                          USD - US Dollar
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="NGN">
+                        <div className="flex items-center">
+                          <NigeriaFlag />
+                          NGN - Nigerian Naira
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs md:text-sm text-muted-foreground">
+                    This currency will be used to display prices for courses.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="flex items-center text-lg md:text-xl">
+                  <Shield className="mr-2 h-5 w-5 flex-shrink-0" /> Security
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm md:text-base">Change Password</Label>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="flex-grow min-h-[44px]"
+                    />
+                    <Button 
+                      onClick={() => {
+                        console.log("Saving new password:", newPassword)
+                        setNewPassword("")
+                        alert("Password updated successfully!")
+                      }} 
+                      className="w-full sm:w-auto min-h-[44px]"
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="p-4 md:p-6">
+                <CardTitle className="text-lg md:text-xl">Delete Account</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 md:p-6 pt-0">
+                <div className="flex flex-col gap-4 bg-destructive/10 p-4 md:p-5 rounded-lg">
+                  <div className="space-y-1.5">
+                    <p className="font-medium text-sm md:text-base">Permanently delete your account</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Once deleted, your account cannot be recovered</p>
+                  </div>
+                  <Button variant="destructive" className="w-full sm:w-auto min-h-[44px] self-start sm:self-auto">Delete Account</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

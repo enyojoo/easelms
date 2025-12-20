@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
         userType: "admin",
         email: data.user.email,
         name: data.user.user_metadata?.name || profileData.profile?.name || "Admin",
-        profileImage: profileData.profile?.profile_image || "/placeholder-user.jpg",
+        profileImage: profileData.profile?.profile_image || "",
         bio: profileData.profile?.bio || "",
       }
       document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`

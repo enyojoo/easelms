@@ -34,24 +34,34 @@ export function isEnrolledInCourse(courseId: number, user?: any): boolean {
  * Enroll user in a course (for free courses)
  */
 export function enrollInCourse(courseId: number, user?: any): Promise<boolean> {
-  return new Promise((resolve) => {
-    // If user object exists, we should ideally call an API
-    // For now, we'll use localStorage as a fallback
+  return new Promise(async (resolve) => {
     try {
-      // Update localStorage
-      const enrollments = localStorage.getItem("course-enrollments")
-      const enrollmentList: number[] = enrollments ? JSON.parse(enrollments) : []
-      
-      if (!enrollmentList.includes(courseId)) {
-        enrollmentList.push(courseId)
-        localStorage.setItem("course-enrollments", JSON.stringify(enrollmentList))
+      // Call API endpoint to enroll user
+      const response = await fetch("/api/enrollments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseId,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to enroll in course")
       }
 
-      // TODO: Call API endpoint to enroll user
-      // For now, we'll just use localStorage
+      const data = await response.json()
+      console.log("Enrolled successfully:", data)
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId } }))
+      
       resolve(true)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error enrolling in course:", error)
+      alert(`Enrollment error: ${error.message || "Failed to enroll. Please try again."}`)
       resolve(false)
     }
   })

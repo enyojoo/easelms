@@ -4,6 +4,17 @@ import { NextResponse } from "next/server"
 export async function POST(request: Request) {
   const { email, password, name, userType = "user" } = await request.json()
 
+  // Validate and sanitize userType to ensure it's either "user" or "admin"
+  let validatedUserType = "user"
+  if (typeof userType === "string") {
+    const trimmed = userType.trim().toLowerCase()
+    if (trimmed === "user" || trimmed === "admin") {
+      validatedUserType = trimmed
+    } else {
+      console.warn(`Invalid userType "${userType}" in signup, defaulting to "user"`)
+    }
+  }
+
   const supabase = await createClient()
 
   // Sign up the user
@@ -13,7 +24,7 @@ export async function POST(request: Request) {
     options: {
       data: {
         name,
-        user_type: userType,
+        user_type: validatedUserType,
       },
     },
   })
@@ -27,11 +38,13 @@ export async function POST(request: Request) {
   }
 
   // Create profile using service role client to bypass RLS
+  // IMPORTANT: Always use "user" for signup to avoid constraint violations
+  // Admin users should be created through the admin endpoint
   const profileData = {
     id: authData.user.id,
     email,
     name,
-    user_type: userType,
+    user_type: "user", // Always "user" for signup - hardcoded to avoid constraint issues
     currency: "USD", // All users get USD as default currency
     bio: "",
   }
@@ -45,6 +58,8 @@ export async function POST(request: Request) {
   }
 
   const clientToUse = serviceClient || supabase
+
+  console.log("Signup: Creating profile with user_type:", profileData.user_type)
 
   const { error: profileError } = await clientToUse.from("profiles").insert(profileData)
 

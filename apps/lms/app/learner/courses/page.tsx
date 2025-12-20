@@ -4,30 +4,95 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowUpDown, Loader2 } from "lucide-react"
-import { getClientAuthState } from "@/utils/client-auth"
-import { getEnrolledCourseIds } from "@/utils/enrollment"
-import { modules } from "@/data/courses"
+import { ArrowUpDown, Loader2, BookOpen } from "lucide-react"
+import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CourseCard from "@/components/CourseCard"
 
+interface Course {
+  id: number
+  title: string
+  description?: string
+  image?: string
+  price?: number
+  enrolledStudents?: number
+  settings?: any
+}
+
 export default function CoursesPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading, userType } = useClientAuthState()
+  const [dashboardUser, setDashboardUser] = useState<User | null>(null)
+  const [courses, setCourses] = useState<Course[]>([])
+  const [enrollments, setEnrollments] = useState<any[]>([])
+  const [coursesLoading, setCoursesLoading] = useState(true)
+  const [coursesError, setCoursesError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("relevance")
 
   useEffect(() => {
-    const { isLoggedIn, userType, user } = getClientAuthState()
-    if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/learner/login")
-    } else {
-      setUser(user)
+    if (!authLoading) {
+      if (!user || userType !== "user") {
+        router.push("/auth/learner/login")
+      } else {
+        setDashboardUser(user as User)
+      }
     }
-  }, [router])
+  }, [user, userType, authLoading, router])
 
-  if (!user) {
+  // Fetch courses and enrollments
+  useEffect(() => {
+    const fetchData = async () => {
+      if (authLoading || !dashboardUser) return
+
+      try {
+        setCoursesLoading(true)
+        setCoursesError(null)
+
+        // Fetch all courses
+        const coursesResponse = await fetch("/api/courses")
+        if (!coursesResponse.ok) {
+          const errorData = await coursesResponse.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch courses")
+        }
+        const coursesData = await coursesResponse.json()
+        const fetchedCourses = coursesData.courses || []
+        
+        // Ensure courses have required fields for CourseCard
+        const processedCourses = fetchedCourses.map((course: any) => ({
+          ...course,
+          lessons: Array.isArray(course.lessons) ? course.lessons : [],
+          settings: course.settings || {},
+          price: course.price || 0,
+          description: course.description || "",
+          image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+        }))
+        
+        setCourses(processedCourses)
+
+        // Fetch enrollments
+        const enrollmentsResponse = await fetch("/api/enrollments")
+        if (enrollmentsResponse.ok) {
+          const enrollmentsData = await enrollmentsResponse.json()
+          setEnrollments(enrollmentsData.enrollments || [])
+        } else {
+          // Don't throw - just use empty array
+          console.warn("Failed to fetch enrollments:", enrollmentsResponse.status)
+          setEnrollments([])
+        }
+      } catch (error: any) {
+        console.error("Error fetching data:", error)
+        setCoursesError(error.message || "Failed to load courses")
+      } finally {
+        setCoursesLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [authLoading, dashboardUser])
+
+  if (authLoading || !dashboardUser) {
     return (
       <div className="pt-4 md:pt-8">
         <div className="flex justify-center items-center h-64">
@@ -37,18 +102,20 @@ export default function CoursesPage() {
     )
   }
 
-  // Get enrolled courses from both user object and localStorage
-  const enrolledCourseIds = getEnrolledCourseIds(user) || user.enrolledCourses || []
-  const completedCourseIds = user.completedCourses || []
+  // Get enrolled and completed course IDs from enrollments
+  const enrolledCourseIds = enrollments.map((e: any) => e.course_id)
+  const completedCourseIds = enrollments
+    .filter((e: any) => e.status === "completed")
+    .map((e: any) => e.course_id)
   
-  const enrolledCourses = modules.filter((course) => enrolledCourseIds.includes(course.id))
-  const completedCourses = modules.filter((course) => completedCourseIds.includes(course.id) || course.id === 4)
-  const availableCourses = modules.filter(
+  const enrolledCourses = courses.filter((course) => enrolledCourseIds.includes(course.id))
+  const completedCourses = courses.filter((course) => completedCourseIds.includes(course.id))
+  const availableCourses = courses.filter(
     (course) => !enrolledCourseIds.includes(course.id) && !completedCourseIds.includes(course.id),
   )
 
-  const filterCourses = (courses: typeof modules) => {
-    let filtered = courses.filter((course) => course.title.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filterCourses = (coursesList: Course[]) => {
+    let filtered = coursesList.filter((course) => course.title.toLowerCase().includes(searchTerm.toLowerCase()))
 
     // Sorting
     if (sortBy === "price-low") {
@@ -63,6 +130,12 @@ export default function CoursesPage() {
 
     return filtered
   }
+
+  // Get user progress from enrollments
+  const userProgress: Record<number, number> = {}
+  enrollments.forEach((enrollment: any) => {
+    userProgress[enrollment.course_id] = enrollment.progress || 0
+  })
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
@@ -107,25 +180,53 @@ export default function CoursesPage() {
         </TabsList>
 
         <TabsContent value="all" className="mt-4 md:mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {filterCourses([
-              ...enrolledCourses,
-              ...availableCourses,
-              ...completedCourses.filter((course) => course.id !== 4),
-            ]).map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                enrolledCourseIds={enrolledCourseIds}
-                completedCourseIds={completedCourseIds}
-                userProgress={user.progress || {}}
-              />
-            ))}
-          </div>
+          {coursesLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : coursesError ? (
+            <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
+          ) : filterCourses([
+            ...enrolledCourses,
+            ...availableCourses,
+            ...completedCourses,
+          ]).length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {filterCourses([
+                ...enrolledCourses,
+                ...availableCourses,
+                ...completedCourses,
+              ]).map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  enrolledCourseIds={enrolledCourseIds}
+                  completedCourseIds={completedCourseIds}
+                  userProgress={userProgress}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No courses available</h3>
+              <p className="text-sm text-muted-foreground">
+                {searchTerm
+                  ? "No courses match your search. Try adjusting your search terms."
+                  : "There are currently no published courses available. Check back later for new courses."}
+              </p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="enrolled" className="mt-4 md:mt-6">
-          {filterCourses(enrolledCourses).length > 0 ? (
+          {coursesLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : coursesError ? (
+            <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
+          ) : filterCourses(enrolledCourses).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filterCourses(enrolledCourses).map((course) => (
                 <CourseCard
@@ -134,17 +235,31 @@ export default function CoursesPage() {
                   status="enrolled"
                   enrolledCourseIds={enrolledCourseIds}
                   completedCourseIds={completedCourseIds}
-                  userProgress={user.progress || {}}
+                  userProgress={userProgress}
                 />
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm md:text-base text-center py-8">No enrolled courses found.</p>
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No enrolled courses</h3>
+              <p className="text-sm text-muted-foreground">
+                {searchTerm
+                  ? "No enrolled courses match your search. Try adjusting your search terms."
+                  : "You haven't enrolled in any courses yet. Browse available courses to get started."}
+              </p>
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="completed" className="mt-4 md:mt-6">
-          {filterCourses(completedCourses).length > 0 ? (
+          {coursesLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : coursesError ? (
+            <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
+          ) : filterCourses(completedCourses).length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filterCourses(completedCourses).map((course) => (
                 <CourseCard
@@ -153,12 +268,20 @@ export default function CoursesPage() {
                   status="completed"
                   enrolledCourseIds={enrolledCourseIds}
                   completedCourseIds={completedCourseIds}
-                  userProgress={user.progress || {}}
+                  userProgress={userProgress}
                 />
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm md:text-base text-center py-8">No completed courses found.</p>
+            <div className="text-center py-12">
+              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No completed courses</h3>
+              <p className="text-sm text-muted-foreground">
+                {searchTerm
+                  ? "No completed courses match your search. Try adjusting your search terms."
+                  : "You haven't completed any courses yet. Continue learning to complete your enrolled courses."}
+              </p>
+            </div>
           )}
         </TabsContent>
       </Tabs>

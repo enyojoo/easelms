@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -87,6 +88,8 @@ export default function ProfilePage() {
           profileImage: profile.profile_image || "",
           bio: profile.bio || "",
         })
+        // Reset image error when profile loads
+        setImageError(false)
       } else if (authUser) {
         // Fallback to auth user if profile is empty
         setFormData({
@@ -202,6 +205,8 @@ export default function ProfilePage() {
       })
 
       if (updateResponse.ok) {
+        // Reset image error state when new image is uploaded
+        setImageError(false)
         // Reload profile data to show new image
         await loadProfileData()
         
@@ -325,27 +330,22 @@ export default function ProfilePage() {
                   <Loader2 className="h-8 w-8 animate-spin text-white" />
                 </div>
               )}
-              {user.profileImage && user.profileImage.trim() !== "" ? (
+              {user.profileImage && user.profileImage.trim() !== "" && !imageError ? (
                 <Image
                   src={user.profileImage}
-                  alt={user.name}
-                  width={500}
-                  height={500}
+                  alt={user.name || "Profile"}
+                  width={150}
+                  height={150}
                   className="object-cover w-full h-full"
                   style={{ objectPosition: "center 20%" }}
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder-user.jpg"
+                  onError={() => {
+                    setImageError(true)
                   }}
                 />
               ) : (
-                <Image
-                  src="/placeholder-user.jpg"
-                  alt={user.name}
-                  width={500}
-                  height={500}
-                  className="object-cover w-full h-full"
-                  style={{ objectPosition: "center 20%" }}
-                />
+                <div className="flex items-center justify-center w-full h-full bg-primary text-primary-foreground text-5xl font-semibold">
+                  {(user.name && user.name.trim() ? user.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()) || "U"}
+                </div>
               )}
             </div>
             <div>

@@ -12,6 +12,7 @@ import {
   User,
   Settings,
   LogOut,
+  ShoppingBag,
 } from "lucide-react"
 import Logo from "./Logo"
 import { ThemeToggle } from "./ThemeToggle"
@@ -28,6 +29,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
     user: [
       { href: "/learner/dashboard", icon: Home, label: "Dashboard" },
       { href: "/learner/courses", icon: BookOpen, label: "Courses" },
+      { href: "/learner/purchase", icon: ShoppingBag, label: "Purchase" },
       { href: "/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
@@ -40,7 +42,6 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
   const bottomMenuItems = {
     user: [
       { href: "/learner/profile", icon: User, label: "Profile" },
-      { href: "/learner/settings", icon: Settings, label: "Settings" },
       { href: "#", icon: LogOut, label: "Log Out", isLogout: true },
     ],
     admin: [

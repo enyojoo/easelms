@@ -1,23 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { getClientAuthState } from "@/utils/client-auth" // Correct import
-import { modules } from "@/data/courses"
+import { getClientAuthState } from "@/utils/client-auth"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, Loader2 } from "lucide-react"
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
+interface Course {
+  id: number
+  title: string
+  lessons: Array<{
+    id: number
+    title: string
+    type?: string
+    settings?: any
+    resources?: Array<any>
+    quiz_questions?: Array<any>
+  }>
+}
+
 export default function CourseLearningPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
-  const [course, setCourse] = useState<any>(null)
+  const [course, setCourse] = useState<Course | null>(null)
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [progress, setProgress] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
@@ -27,60 +39,146 @@ export default function CourseLearningPage() {
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
   const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Fetch course data and check enrollment
   useEffect(() => {
-    const { isLoggedIn, userType } = getClientAuthState()
-    if (!isLoggedIn || userType !== "user") {
-      router.push("/auth/learner/login")
-    } else {
-      const courseData = modules.find((m) => m.id === Number.parseInt(id))
-      if (courseData) {
-        setCourse(courseData)
-        // Load saved progress from localStorage
-        try {
-          const savedProgress = localStorage.getItem(`course-${id}-progress`)
-          if (savedProgress) {
-            const { completedLessons: saved, videoProgress: savedVideo } = JSON.parse(savedProgress)
-            if (saved && Array.isArray(saved)) {
-              setCompletedLessons(saved)
-              setProgress((saved.length / courseData.lessons.length) * 100)
-            }
-            if (savedVideo) {
-              setVideoProgress(savedVideo)
-            }
-          }
-        } catch (error) {
-          console.error("Error loading saved progress:", error)
-        }
-      } else {
+    const fetchCourseData = async () => {
+      const { isLoggedIn, userType } = getClientAuthState()
+      if (!isLoggedIn || userType !== "user") {
+        router.push("/auth/learner/login")
+        return
+      }
+
+      if (!id) {
         router.push("/learner/courses")
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Fetch course data
+        const courseResponse = await fetch(`/api/courses/${id}`)
+        if (!courseResponse.ok) {
+          if (courseResponse.status === 404) {
+            router.push("/learner/courses")
+            return
+          }
+          throw new Error("Failed to fetch course")
+        }
+        const courseData = await courseResponse.json()
+        setCourse(courseData.course)
+
+        // Check enrollment
+        const enrollmentsResponse = await fetch("/api/enrollments")
+        if (enrollmentsResponse.ok) {
+          const enrollmentsData = await enrollmentsResponse.json()
+          const enrollments = enrollmentsData.enrollments || []
+          const enrollment = enrollments.find((e: any) => e.course_id === parseInt(id))
+          if (!enrollment) {
+            router.push(`/learner/courses/${id}`)
+            return
+          }
+        } else {
+          router.push(`/learner/courses/${id}`)
+          return
+        }
+
+        // Fetch progress
+        const progressResponse = await fetch(`/api/progress?courseId=${id}`)
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json()
+          const progressList = progressData.progress || []
+          
+          // Map progress to completed lessons and video progress
+          const completed: number[] = []
+          const videoProg: { [key: number]: number } = {}
+          
+          progressList.forEach((p: any) => {
+            if (p.completed) {
+              const lessonIndex = courseData.course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
+              if (lessonIndex >= 0) {
+                completed.push(lessonIndex)
+              }
+            }
+            if (p.video_progress !== undefined && p.video_progress !== null) {
+              const lessonIndex = courseData.course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
+              if (lessonIndex >= 0) {
+                videoProg[lessonIndex] = p.video_progress
+              }
+            }
+          })
+          
+          setCompletedLessons(completed)
+          setVideoProgress(videoProg)
+          
+          if (courseData.course.lessons) {
+            const progressPercent = (completed.length / courseData.course.lessons.length) * 100
+            setProgress(progressPercent)
+            setAllLessonsCompleted(completed.length === courseData.course.lessons.length)
+          }
+        }
+      } catch (err: any) {
+        console.error("Error fetching course data:", err)
+        setError(err.message || "Failed to load course")
+      } finally {
+        setLoading(false)
       }
     }
-  }, [router, id])
 
-  // Save progress to localStorage
-  useEffect(() => {
-    if (course && id) {
+    fetchCourseData()
+  }, [id, router])
+
+  // Save progress to API (debounced)
+  const saveProgress = async (lessonId: number, completed: boolean, videoProg?: number) => {
+    if (!course || !id) return
+
+    // Clear existing timeout
+    if (progressSaveTimeoutRef.current) {
+      clearTimeout(progressSaveTimeoutRef.current)
+    }
+
+    // Debounce progress saves
+    progressSaveTimeoutRef.current = setTimeout(async () => {
       try {
-        localStorage.setItem(
-          `course-${id}-progress`,
-          JSON.stringify({
-            completedLessons,
-            videoProgress,
-            lastUpdated: new Date().toISOString(),
-          })
-        )
+        const lesson = course.lessons[currentLessonIndex]
+        if (!lesson) return
+
+        const progressPayload: any = {
+          course_id: parseInt(id),
+          lesson_id: lesson.id,
+          completed: completed,
+          progress_percentage: (completedLessons.length / course.lessons.length) * 100,
+        }
+
+        if (videoProg !== undefined) {
+          progressPayload.video_progress = videoProg
+        }
+
+        await fetch("/api/progress", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(progressPayload),
+        })
       } catch (error) {
         console.error("Error saving progress:", error)
       }
-    }
-  }, [completedLessons, videoProgress, course, id])
+    }, 1000) // Debounce by 1 second
+  }
 
   // Time limit enforcement
   useEffect(() => {
     if (!course) return
     const currentLesson = course.lessons[currentLessonIndex]
-    if (!currentLesson?.settings?.timeLimit || currentLesson.settings.timeLimit === 0) {
+    const settings = currentLesson.settings
+    const timeLimit = settings && typeof settings === "object" ? (settings as any).timeLimit : null
+    if (!timeLimit || timeLimit === 0) {
       setTimeRemaining(null)
       setTimeLimitExceeded(false)
       setLessonStartTime(null)
@@ -90,7 +188,7 @@ export default function CourseLearningPage() {
     // Set start time when lesson is accessed
     const startTime = Date.now()
     setLessonStartTime(startTime)
-    const limitInMs = currentLesson.settings.timeLimit * 60 * 1000 // Convert minutes to milliseconds
+    const limitInMs = timeLimit * 60 * 1000 // Convert minutes to milliseconds
 
     // Check time limit every second
     const interval = setInterval(() => {
@@ -113,15 +211,24 @@ export default function CourseLearningPage() {
   const canAccessLesson = (lessonIndex: number): boolean => {
     if (!course) return false
     const lesson = course.lessons[lessonIndex]
+    if (!lesson) return false
+    
+    // Check lesson settings for required flag
+    const settings = lesson.settings
+    const isRequired = settings && typeof settings === "object" ? (settings as any).isRequired : false
     
     // If lesson is not required, always allow access
-    if (!lesson?.settings?.isRequired) return true
+    if (!isRequired) return true
 
     // Check if all previous required lessons are completed
     for (let i = 0; i < lessonIndex; i++) {
       const prevLesson = course.lessons[i]
-      if (prevLesson?.settings?.isRequired && !completedLessons.includes(i)) {
-        return false
+      if (prevLesson) {
+        const prevSettings = prevLesson.settings
+        const prevIsRequired = prevSettings && typeof prevSettings === "object" ? (prevSettings as any).isRequired : false
+        if (prevIsRequired && !completedLessons.includes(i)) {
+          return false
+        }
       }
     }
 
@@ -135,27 +242,49 @@ export default function CourseLearningPage() {
     return currentLesson?.settings?.allowSkip ?? true
   }
 
-  const handleLessonComplete = () => {
-    if (!completedLessons.includes(currentLessonIndex)) {
-      const newCompletedLessons = [...completedLessons, currentLessonIndex]
-      setCompletedLessons(newCompletedLessons)
-      const newProgress = (newCompletedLessons.length / course.lessons.length) * 100
-      setProgress(newProgress)
-      if (newCompletedLessons.length === course.lessons.length) {
-        setAllLessonsCompleted(true)
-      }
+  const handleLessonComplete = async () => {
+    if (!course || completedLessons.includes(currentLessonIndex)) {
+      setActiveTab("quiz")
+      return
     }
+
+    const lesson = course.lessons[currentLessonIndex]
+    if (!lesson) return
+
+    const newCompletedLessons = [...completedLessons, currentLessonIndex]
+    setCompletedLessons(newCompletedLessons)
+    const newProgress = (newCompletedLessons.length / course.lessons.length) * 100
+    setProgress(newProgress)
+    if (newCompletedLessons.length === course.lessons.length) {
+      setAllLessonsCompleted(true)
+    }
+
+    // Save progress to API
+    await saveProgress(lesson.id, true)
     setActiveTab("quiz")
   }
 
-  const handleVideoProgressUpdate = (progressPercentage: number) => {
+  const handleVideoProgressUpdate = async (progressPercentage: number) => {
     setVideoProgress((prev) => ({
       ...prev,
       [currentLessonIndex]: progressPercentage,
     }))
+
+    // Save video progress to API (debounced)
+    if (course) {
+      const lesson = course.lessons[currentLessonIndex]
+      if (lesson) {
+        await saveProgress(lesson.id, completedLessons.includes(currentLessonIndex), progressPercentage)
+      }
+    }
   }
 
-  const handleQuizComplete = () => {
+  const handleQuizComplete = async () => {
+    if (!course) return
+
+    const lesson = course.lessons[currentLessonIndex]
+    if (!lesson) return
+
     // Mark lesson as completed when quiz is passed
     if (!completedLessons.includes(currentLessonIndex)) {
       const newCompletedLessons = [...completedLessons, currentLessonIndex]
@@ -165,10 +294,13 @@ export default function CourseLearningPage() {
       if (newCompletedLessons.length === course.lessons.length) {
         setAllLessonsCompleted(true)
       }
+
+      // Save progress to API
+      await saveProgress(lesson.id, true)
     }
     
     // Go to resources if available, otherwise go to next lesson
-    const hasResources = currentLesson.resources && currentLesson.resources.length > 0
+    const hasResources = lesson.resources && lesson.resources.length > 0
     if (hasResources) {
       setActiveTab("resources")
     } else {
@@ -196,7 +328,7 @@ export default function CourseLearningPage() {
         return
       }
       // Navigate to next available tab: quiz -> resources -> next lesson
-      const hasQuiz = currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0
+      const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
       const hasResources = currentLesson.resources && currentLesson.resources.length > 0
       
       if (hasQuiz) {
@@ -270,9 +402,30 @@ export default function CourseLearningPage() {
     }
   }
 
-  if (!course) return null
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+          <p className="text-muted-foreground">Loading course...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !course) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">{error || "Course not found"}</p>
+          <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
+        </div>
+      </div>
+    )
+  }
 
   const currentLesson = course.lessons[currentLessonIndex]
+  if (!currentLesson) return null
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y">
@@ -298,9 +451,9 @@ export default function CourseLearningPage() {
                   value="video"
                   className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
                 >
-                  {currentLesson.type === "text" ? "Content" : "Video"}
+                  {(currentLesson.type === "text" || currentLesson.type === "content") ? "Content" : "Video"}
                 </TabsTrigger>
-                {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
+                {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
                   <TabsTrigger
                     value="quiz"
                     className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
@@ -351,73 +504,60 @@ export default function CourseLearningPage() {
                       vimeoVideoId={currentLesson.content?.vimeoVideoId}
                       courseId={id}
                       lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                      videoProgression={currentLesson.settings?.videoProgression ?? false}
+                      videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
                       onProgressUpdate={handleVideoProgressUpdate}
                     />
                   </div>
                 )}
               </TabsContent>
 
-              {currentLesson.quiz?.enabled && currentLesson.quiz?.questions && currentLesson.quiz.questions.length > 0 && (
+              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
                   <ScrollArea className="w-full h-full flex-1 min-h-0">
                     <div className="pt-0 pb-3 sm:pb-4 md:pb-6 px-3 sm:px-4 md:px-6">
                       <QuizComponent
                       quiz={{
-                        questions: currentLesson.quiz.questions.map((q: any) => {
-                          // Convert admin quiz format to learner format
-                          if (q.type === "multiple-choice") {
-                            return {
-                              question: q.text || "",
-                              options: q.options || [],
-                              correctAnswer: q.correctOption || 0,
-                              id: q.id,
-                            }
+                        questions: currentLesson.quiz_questions.map((q: any) => {
+                          // Map API quiz question structure to component format
+                          let options: string[] = []
+                          let correctAnswer = 0
+
+                          if (q.type === "multiple_choice") {
+                            options = Array.isArray(q.options) ? q.options : (q.options_json ? JSON.parse(q.options_json) : [])
+                            correctAnswer = typeof q.correct_answer === "number" ? q.correct_answer : 0
+                          } else if (q.type === "fill_blank" || q.type === "fill-blank") {
+                            options = Array.isArray(q.correct_answers) ? q.correct_answers : []
+                            correctAnswer = 0
+                          } else if (q.type === "short_answer" || q.type === "short-answer") {
+                            options = Array.isArray(q.correct_keywords) ? q.correct_keywords : []
+                            correctAnswer = 0
+                          } else if (q.type === "essay") {
+                            options = []
+                            correctAnswer = -1
+                          } else {
+                            // Default fallback
+                            options = Array.isArray(q.options) ? q.options : []
+                            correctAnswer = typeof q.correct_answer === "number" ? q.correct_answer : 0
                           }
-                          // For fill-in-blank, convert to multiple choice format for now
-                          if (q.type === "fill-blank") {
-                            return {
-                              question: q.text || "",
-                              options: q.correctAnswers || [],
-                              correctAnswer: 0, // First option is correct for fill-blank
-                              id: q.id,
-                            }
-                          }
-                          // For short-answer, show as text input (simplified for now)
-                          if (q.type === "short-answer") {
-                            return {
-                              question: q.text || "",
-                              options: q.correctKeywords || [],
-                              correctAnswer: 0,
-                              id: q.id,
-                            }
-                          }
-                          // For essay/longer answer, show as text area (simplified for now)
-                          if (q.type === "essay") {
-                            return {
-                              question: q.text || "",
-                              options: [],
-                              correctAnswer: -1, // No correct answer for essay
-                              id: q.id,
-                            }
-                          }
-                          // Default fallback
+
                           return {
-                            question: q.text || q.question || "",
-                            options: q.options || [],
-                            correctAnswer: q.correctOption || q.correctAnswer || 0,
-                            id: q.id,
+                            question: q.question || q.text || "",
+                            options: options,
+                            correctAnswer: correctAnswer,
+                            id: q.id?.toString() || "",
                           }
                         }),
-                        shuffleQuestions: (currentLesson.quiz as any).shuffleQuestions,
-                        shuffleAnswers: (currentLesson.quiz as any).shuffleAnswers,
-                        showResultsImmediately: (currentLesson.quiz as any).showResultsImmediately,
-                        allowMultipleAttempts: (currentLesson.quiz as any).allowMultipleAttempts,
-                        showCorrectAnswers: (currentLesson.quiz as any).showCorrectAnswers,
+                        shuffleQuestions: false,
+                        shuffleAnswers: false,
+                        showResultsImmediately: true,
+                        allowMultipleAttempts: true,
+                        showCorrectAnswers: true,
                       }}
-                        onComplete={handleQuizComplete}
-                        minimumQuizScore={course?.settings?.minimumQuizScore || 50}
-                      />
+                      onComplete={handleQuizComplete}
+                      minimumQuizScore={course?.settings?.minimumQuizScore || course?.settings?.certificate?.minimumQuizScore || 50}
+                      courseId={id}
+                      lessonId={currentLesson.id}
+                    />
                     </div>
                   </ScrollArea>
                 </TabsContent>
