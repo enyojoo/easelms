@@ -112,14 +112,14 @@ export default function CourseCard({
         </>
       )
     } else if (actualStatus === "enrolled") {
-      // When enrolled, always show "Start" regardless of course type
+      // When enrolled, always show "Continue" regardless of course type
       return (
         <>
           {previewButton}
           <Button asChild className="flex-1">
             <Link href={`/learner/courses/${course.id}/learn`}>
               <Play className="w-4 h-4 mr-2" />
-              Start
+              Continue
             </Link>
           </Button>
         </>

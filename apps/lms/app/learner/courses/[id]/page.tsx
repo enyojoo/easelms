@@ -57,7 +57,7 @@ export default function CoursePage() {
     if (isEnrolled) {
       return {
         price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
-        buttonText: "Start",
+        buttonText: "Continue",
         access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full lifetime access",
       }
     }

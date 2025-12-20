@@ -159,11 +159,11 @@ export default function LearnerDashboard() {
             </CardHeader>
             <CardContent>
               {recommendedCourses.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {recommendedCourses.map((course) => (
                     <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex">
                       <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
-                        <div className="relative w-full h-32">
+                        <div className="relative w-full h-24 sm:h-32">
                           <Image
                             src={course.image}
                             alt={course.title}
@@ -172,7 +172,7 @@ export default function LearnerDashboard() {
                           />
                         </div>
                         <div className="p-2 flex-grow flex items-center">
-                          <h3 className="font-semibold text-sm line-clamp-2">{course.title}</h3>
+                          <h3 className="font-semibold text-xs sm:text-sm line-clamp-2">{course.title}</h3>
                         </div>
                       </div>
                     </Link>
