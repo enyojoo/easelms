@@ -19,7 +19,7 @@ const DemoAccess = ({ setCredentials }: { setCredentials: (email: string, passwo
     <p className="text-xs sm:text-sm font-medium text-muted-foreground">Interactive Demo Access - Try on PC:</p>
     <div className="space-y-1">
       <div className="flex items-center justify-center flex-wrap gap-2 px-2">
-        <span className="text-xs sm:text-sm break-words">User: user@example.com | password123</span>
+        <span className="text-xs sm:text-sm break-words">Learner: user@example.com | password123</span>
         <Button
           variant="ghost"
           size="icon"
@@ -64,7 +64,7 @@ export default function UserLoginPage() {
         }
         document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
 
-        // Redirect to the user dashboard
+        // Redirect to the learner dashboard
         router.push("/learner/dashboard")
       } else {
         setError("Invalid email or password. Please try again.")
@@ -85,7 +85,7 @@ export default function UserLoginPage() {
         </div>
         <Card className="w-full">
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl">User Login</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Learner Login</CardTitle>
             <CardDescription className="text-sm sm:text-base">Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>

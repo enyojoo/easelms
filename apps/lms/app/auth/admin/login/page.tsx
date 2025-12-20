@@ -148,7 +148,7 @@ export default function AdminLoginPage() {
               </Button>
               <div className="text-center text-xs sm:text-sm">
                 <Link href="/auth/learner/login" className="text-primary hover:underline">
-                  User Login
+                  Learner Login
                 </Link>
               </div>
             </CardFooter>
