@@ -65,14 +65,14 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="pt-4 md:pt-8 px-4 lg:px-6">
-      <div className="flex items-center mb-4">
-        <h1 className="text-3xl font-bold text-primary">Courses</h1>
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="flex items-center mb-4 md:mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-primary">Courses</h1>
       </div>
 
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
+      <div className="mb-4 md:mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+          <div className="flex-1 min-w-0">
             <Input
               type="text"
               placeholder="Search courses..."
@@ -81,10 +81,10 @@ export default function CoursesPage() {
               className="w-full"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:w-auto w-full sm:min-w-[180px]">
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-[180px]">
-                <ArrowUpDown className="mr-2 h-4 w-4" />
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <ArrowUpDown className="mr-2 h-4 w-4 flex-shrink-0" />
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
@@ -99,15 +99,15 @@ export default function CoursesPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="all">All Courses</TabsTrigger>
-          <TabsTrigger value="enrolled">Enrolled</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
+      <Tabs defaultValue="all" className="space-y-4 md:space-y-6">
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start sm:justify-center">
+          <TabsTrigger value="all" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">All Courses</TabsTrigger>
+          <TabsTrigger value="enrolled" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Enrolled</TabsTrigger>
+          <TabsTrigger value="completed" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Completed</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="all">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <TabsContent value="all" className="mt-4 md:mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {filterCourses([
               ...enrolledCourses,
               ...availableCourses,
@@ -124,9 +124,9 @@ export default function CoursesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="enrolled">
+        <TabsContent value="enrolled" className="mt-4 md:mt-6">
           {filterCourses(enrolledCourses).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filterCourses(enrolledCourses).map((course) => (
                 <CourseCard
                   key={course.id}
@@ -139,13 +139,13 @@ export default function CoursesPage() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">No enrolled courses found.</p>
+            <p className="text-muted-foreground text-sm md:text-base text-center py-8">No enrolled courses found.</p>
           )}
         </TabsContent>
 
-        <TabsContent value="completed">
+        <TabsContent value="completed" className="mt-4 md:mt-6">
           {filterCourses(completedCourses).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filterCourses(completedCourses).map((course) => (
                 <CourseCard
                   key={course.id}
@@ -158,7 +158,7 @@ export default function CoursesPage() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">No completed courses found.</p>
+            <p className="text-muted-foreground text-sm md:text-base text-center py-8">No completed courses found.</p>
           )}
         </TabsContent>
       </Tabs>

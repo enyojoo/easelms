@@ -437,30 +437,30 @@ export default function CourseLearningPage() {
             </Tabs>
 
             {/* Footer - Fixed */}
-            <div className="flex-shrink-0 p-2 sm:p-3 md:p-4 border-t border-border bg-background">
+            <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-background">
               {/* Time Limit Display */}
               {timeRemaining !== null && timeRemaining > 0 && (() => {
                 const mins = Math.floor(timeRemaining / 60)
                 const secs = Math.floor(timeRemaining % 60)
                 const secsStr = secs < 10 ? "0" + secs.toString() : secs.toString()
                 return (
-                  <div className="mb-2 sm:mb-3 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs md:text-sm">
-                    <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4" />
+                  <div className="mb-2.5 sm:mb-3 flex items-center justify-center gap-2 text-xs sm:text-sm">
+                    <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span className="font-medium">
                       Time Remaining: {mins.toString()}:{secsStr}
                     </span>
                   </div>
                 )
               })()}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={handlePreviousLesson}
                   disabled={currentLessonIndex === 0 || timeLimitExceeded}
-                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto h-8 sm:h-9 md:h-10 text-xs sm:text-sm"
+                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm"
                   size="sm"
                 >
-                  <ChevronLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Previous
+                  <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
 
                 <Button
@@ -474,20 +474,20 @@ export default function CourseLearningPage() {
                       activeTab === "resources" &&
                       currentLessonIndex === course.lessons.length - 1)
                   }
-                  className={`text-foreground w-full sm:w-auto order-3 h-8 sm:h-9 md:h-10 text-xs sm:text-sm ${
+                  className={`text-foreground w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm ${
                     allLessonsCompleted
-                      ? "bg-primary hover:bg-primary-dark text-primary-foreground"
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
                   }`}
                   size="sm"
                 >
                   {allLessonsCompleted ? (
                     <>
-                      Complete Course <CheckCircle2 className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      Complete Course <CheckCircle2 className="ml-2 h-4 w-4" />
                     </>
                   ) : (
                     <>
-                      Next <ChevronRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      Next <ChevronRight className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
@@ -497,25 +497,25 @@ export default function CourseLearningPage() {
         </div>
 
         {/* Sidebar - Scrollable on mobile, fixed on desktop */}
-        <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0 max-h-[40vh] sm:max-h-[50vh] lg:max-h-none lg:h-full">
-          <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-3 md:p-4">
+        <div className="flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0 max-h-[35vh] sm:max-h-[45vh] md:max-h-[50vh] lg:max-h-none lg:h-full">
+          <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4 md:p-5">
             <div className="mb-3 sm:mb-4 flex-shrink-0">
-              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-1.5 sm:mb-2">Course Progress</h3>
-              <div className="space-y-1.5 sm:space-y-2">
-                <div className="flex items-center justify-between text-[10px] sm:text-xs md:text-sm">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-2.5">Course Progress</h3>
+              <div className="space-y-2 sm:space-y-2.5">
+                <div className="flex items-center justify-between text-xs sm:text-sm">
                   <span className="text-muted-foreground">Overall Progress</span>
                   <span className="font-semibold">{Math.round(progress)}%</span>
                 </div>
-                <Progress value={progress} className="h-1 sm:h-1.5 md:h-2" />
-                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                <Progress value={progress} className="h-1.5 sm:h-2 md:h-2.5" />
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   {completedLessons.length} of {course.lessons.length} lessons completed
                 </p>
               </div>
             </div>
-            <div className="border-t pt-2 sm:pt-3 md:pt-4 flex-1 flex flex-col min-h-0">
-              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
+            <div className="border-t pt-3 sm:pt-4 flex-1 flex flex-col min-h-0">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2.5 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
               <ScrollArea className="flex-1 min-h-0 w-full">
-                <div className="space-y-1 sm:space-y-1.5 md:space-y-2 pr-1 sm:pr-2">
+                <div className="space-y-1.5 sm:space-y-2 md:space-y-2.5 pr-2 sm:pr-3">
                 {course.lessons.map((lesson: any, index: number) => {
                   const isCompleted = completedLessons.includes(index)
                   const isCurrent = index === currentLessonIndex
@@ -535,7 +535,7 @@ export default function CourseLearningPage() {
                         setTimeLimitExceeded(false)
                       }}
                       disabled={!canAccess}
-                      className={`w-full text-left p-1.5 sm:p-2 md:p-3 rounded-md sm:rounded-lg flex items-center justify-between transition-colors text-[10px] sm:text-xs md:text-sm border ${
+                      className={`w-full text-left p-2 sm:p-2.5 md:p-3 rounded-md sm:rounded-lg flex items-center justify-between transition-colors text-xs sm:text-sm border min-h-[44px] sm:min-h-[48px] ${
                         !canAccess
                           ? "opacity-50 cursor-not-allowed bg-muted border-border"
                           : isCurrent
@@ -547,19 +547,19 @@ export default function CourseLearningPage() {
                     >
                       <div className="flex items-center flex-1 min-w-0">
                         {isCompleted ? (
-                          <CheckCircle2 className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0 text-green-500" />
+                          <CheckCircle2 className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-green-500" />
                         ) : isCurrent ? (
-                          <PlayCircle className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0" />
+                          <PlayCircle className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0" />
                         ) : (
-                          <BookOpen className="mr-1.5 sm:mr-2 md:mr-3 h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
+                          <BookOpen className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
+                          <div className="flex items-start gap-1.5 sm:gap-2 flex-wrap">
                             <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
                               {index + 1}. {lesson.title}
                             </span>
                             {isRequired && (
-                              <span className="text-[9px] sm:text-[10px] md:text-xs bg-yellow-500 text-yellow-900 dark:text-yellow-100 px-0.5 sm:px-1 md:px-1.5 py-0.5 rounded flex-shrink-0">
+                              <span className="text-[10px] sm:text-xs bg-yellow-500 text-yellow-900 dark:text-yellow-100 px-1 sm:px-1.5 py-0.5 rounded flex-shrink-0">
                                 Required
                               </span>
                             )}

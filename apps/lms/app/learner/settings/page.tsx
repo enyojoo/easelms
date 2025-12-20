@@ -68,21 +68,21 @@ export default function LearnerSettingsPage() {
   }
 
   return (
-    <div className="pt-4 md:pt-8">
-      <h1 className="text-3xl font-bold text-primary mb-8">Settings</h1>
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Settings</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Bell className="mr-2 h-5 w-5" /> Notifications
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="flex items-center text-lg md:text-xl">
+              <Bell className="mr-2 h-5 w-5 flex-shrink-0" /> Notifications
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="email-notifications">Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div className="space-y-1 flex-1 min-w-0">
+                <Label htmlFor="email-notifications" className="text-sm md:text-base">Email Notifications</Label>
+                <p className="text-xs md:text-sm text-muted-foreground">
                   Receive email updates about your courses and account
                 </p>
               </div>
@@ -90,27 +90,28 @@ export default function LearnerSettingsPage() {
                 id="email-notifications"
                 checked={settings.emailNotifications}
                 onCheckedChange={handleSwitchChange("emailNotifications")}
+                className="flex-shrink-0 sm:ml-4"
               />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Globe className="mr-2 h-5 w-5" /> Display Currency
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="flex items-center text-lg md:text-xl">
+              <Globe className="mr-2 h-5 w-5 flex-shrink-0" /> Display Currency
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4">
             <div className="space-y-2">
               <Select value={selectedCurrency} onValueChange={handleCurrencyChange}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full min-h-[44px]">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="USD">
                     <div className="flex items-center">
-                      <US className="w-4 h-4 mr-2" />
+                      <US className="w-4 h-4 mr-2 flex-shrink-0" />
                       USD - US Dollar
                     </div>
                   </SelectItem>
@@ -122,7 +123,7 @@ export default function LearnerSettingsPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs md:text-sm text-muted-foreground">
                 This currency will be used to display prices for courses.
               </p>
             </div>
@@ -130,40 +131,40 @@ export default function LearnerSettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Shield className="mr-2 h-5 w-5" /> Security
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="flex items-center text-lg md:text-xl">
+              <Shield className="mr-2 h-5 w-5 flex-shrink-0" /> Security
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 md:p-6 pt-0 space-y-3 md:space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Change Password</Label>
-              <div className="flex space-x-2">
+              <Label htmlFor="password" className="text-sm md:text-base">Change Password</Label>
+              <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
                 <Input
                   id="password"
                   type="password"
                   placeholder="Enter new password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="flex-grow"
+                  className="flex-grow min-h-[44px]"
                 />
-                <Button onClick={handleSavePassword}>Save</Button>
+                <Button onClick={handleSavePassword} className="w-full sm:w-auto min-h-[44px]">Save</Button>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Delete Account</CardTitle>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Delete Account</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-destructive/10 p-4 rounded-lg">
-              <div className="space-y-1">
-                <p className="font-medium">Permanently delete your account</p>
-                <p className="text-sm text-muted-foreground">Once deleted, your account cannot be recovered</p>
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="flex flex-col gap-4 bg-destructive/10 p-4 md:p-5 rounded-lg">
+              <div className="space-y-1.5">
+                <p className="font-medium text-sm md:text-base">Permanently delete your account</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Once deleted, your account cannot be recovered</p>
               </div>
-              <Button variant="destructive" className="w-full sm:w-auto">Delete Account</Button>
+              <Button variant="destructive" className="w-full sm:w-auto min-h-[44px] self-start sm:self-auto">Delete Account</Button>
             </div>
           </CardContent>
         </Card>

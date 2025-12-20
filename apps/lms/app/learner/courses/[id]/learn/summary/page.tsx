@@ -104,89 +104,89 @@ export default function CourseCompletionPage() {
   })
 
   return (
-    <div className="pt-4 md:pt-8">
-      <div className="container-fluid max-w-[1600px] mx-auto py-2 flex-grow">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="max-w-[1600px] mx-auto">
         {/* Completion Celebration */}
-        <Card className="mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardHeader>
-            <div className="flex items-center mb-4">
-              <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <Card className="mb-6 md:mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardHeader className="p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0">
                 <ArrowLeft className="mr-2 h-4 w-4" />
               </Button>
-              <CardTitle>
-                <h1 className="text-2xl font-bold">Course Completed! 🎉</h1>
+              <CardTitle className="text-xl md:text-2xl">
+                Course Completed! 🎉
               </CardTitle>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
               <div className="flex-shrink-0">
-                <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Trophy className="w-12 h-12 text-primary" />
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Trophy className="w-10 h-10 md:w-12 md:h-12 text-primary" />
                 </div>
               </div>
               <div className="flex-1 text-center md:text-left">
-                <h2 className="text-3xl font-bold mb-2 text-primary">Congratulations, {user.name?.split(" ")[0] || "Student"}!</h2>
-                <p className="text-lg text-muted-foreground mb-4">
-                  You've successfully completed <strong>{course.title}</strong>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-primary">Congratulations, {user.name?.split(" ")[0] || "Student"}!</h2>
+                <p className="text-base md:text-lg text-muted-foreground mb-4">
+                  You've successfully completed <strong className="break-words">{course.title}</strong>
                 </p>
                 <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
                   <div className="flex items-center gap-1">
-                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold text-lg">{overallScore}%</span>
+                    <Star className="h-4 w-4 md:h-5 md:w-5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-semibold text-base md:text-lg">{overallScore}%</span>
                   </div>
-                  <span className="text-muted-foreground">Overall Score</span>
+                  <span className="text-sm md:text-base text-muted-foreground">Overall Score</span>
                 </div>
-                <Progress value={100} className="h-3 mb-4" />
-                <p className="text-sm text-muted-foreground">Completed on {completionDate}</p>
+                <Progress value={100} className="h-2 md:h-3 mb-4" />
+                <p className="text-xs md:text-sm text-muted-foreground">Completed on {completionDate}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Course Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Lessons</p>
-                  <p className="text-2xl font-bold">{course.lessons.length}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Total Lessons</p>
+                  <p className="text-xl md:text-2xl font-bold">{course.lessons.length}</p>
                 </div>
-                <BookOpen className="h-8 w-8 text-primary opacity-50" />
+                <BookOpen className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Time Spent</p>
-                  <p className="text-2xl font-bold">{totalTimeSpent}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Time Spent</p>
+                  <p className="text-xl md:text-2xl font-bold">{totalTimeSpent}</p>
                 </div>
-                <Clock className="h-8 w-8 text-primary opacity-50" />
+                <Clock className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Average Score</p>
-                  <p className="text-2xl font-bold">{overallScore}%</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Average Score</p>
+                  <p className="text-xl md:text-2xl font-bold">{overallScore}%</p>
                 </div>
-                <Award className="h-8 w-8 text-primary opacity-50" />
+                <Award className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Certificate Preview */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Your Certificate</CardTitle>
+        <Card className="mb-6 md:mb-8">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Your Certificate</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             <CertificatePreview
               courseTitle={course.title}
               learnerName={user.name || "Student"}
@@ -196,72 +196,87 @@ export default function CourseCompletionPage() {
           </CardContent>
         </Card>
 
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Quiz Results</CardTitle>
+        <Card className="mb-6 md:mb-8">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Quiz Results</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 md:p-6 pt-0">
+            <div className="space-y-3 md:space-y-4">
               {Object.entries(quizResults).map(([lesson, result]: [string, any]) => (
                 <Accordion key={lesson} type="single" collapsible className="w-full">
-                  <AccordionItem value={lesson}>
-                    <AccordionTrigger>
-                      <div className="flex justify-between w-full">
-                        <span>{lesson}</span>
-                        <span>
+                  <AccordionItem value={lesson} className="border-b">
+                    <AccordionTrigger className="py-3 md:py-4">
+                      <div className="flex justify-between w-full items-center gap-2">
+                        <span className="text-sm md:text-base text-left break-words flex-1">{lesson}</span>
+                        <span className="text-sm md:text-base font-semibold flex-shrink-0">
                           {result.score}/{result.totalQuestions}
                         </span>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Question</TableHead>
-                            <TableHead>Result</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {result.answers.map((answer: boolean, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell>Question {index + 1}</TableCell>
-                              <TableCell>
-                                {answer ? (
-                                  <CheckCircle className="text-green-500" />
-                                ) : (
-                                  <XCircle className="text-red-500" />
-                                )}
-                              </TableCell>
+                    <AccordionContent className="pt-2 pb-3 md:pt-3 md:pb-4">
+                      {/* Mobile: Card view, Desktop: Table view */}
+                      <div className="block md:hidden space-y-2">
+                        {result.answers.map((answer: boolean, index: number) => (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded-md">
+                            <span className="text-sm">Question {index + 1}</span>
+                            {answer ? (
+                              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="hidden md:block overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Question</TableHead>
+                              <TableHead>Result</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {result.answers.map((answer: boolean, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell>Question {index + 1}</TableCell>
+                                <TableCell>
+                                  {answer ? (
+                                    <CheckCircle className="text-green-500" />
+                                  ) : (
+                                    <XCircle className="text-red-500" />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
               ))}
             </div>
-            <div className="mt-6 text-center">
-              <span className="text-xl font-semibold">Overall Score: {calculateOverallScore()}%</span>
+            <div className="mt-4 md:mt-6 text-center">
+              <span className="text-lg md:text-xl font-semibold">Overall Score: {calculateOverallScore()}%</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Next Steps */}
         <Card>
-          <CardHeader>
-            <CardTitle>What's Next?</CardTitle>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">What's Next?</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             <div className="space-y-4">
-              <p className="text-muted-foreground">
+              <p className="text-sm md:text-base text-muted-foreground">
                 Continue your learning journey! Explore more courses to expand your skills and knowledge.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button onClick={() => router.push("/learner/courses")} variant="outline" className="flex-1">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                <Button onClick={() => router.push("/learner/courses")} variant="outline" className="flex-1 min-h-[44px]">
                   Browse More Courses
                 </Button>
-                <Button onClick={() => router.push("/learner/dashboard")} variant="outline" className="flex-1">
+                <Button onClick={() => router.push("/learner/dashboard")} variant="outline" className="flex-1 min-h-[44px]">
                   Go to Dashboard
                 </Button>
               </div>

@@ -138,37 +138,38 @@ export default function LearnerProfilePage() {
   }
 
   return (
-    <div className="pt-4 md:pt-8">
-      <h1 className="text-3xl font-bold text-primary mb-8">Profile</h1>
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="courses">My Courses</TabsTrigger>
-          <TabsTrigger value="purchases">Purchase History</TabsTrigger>
-          <TabsTrigger value="certificates">Certificates</TabsTrigger>
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Profile</h1>
+      <Tabs defaultValue="profile" className="space-y-4 md:space-y-6">
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start sm:justify-center">
+          <TabsTrigger value="profile" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Profile</TabsTrigger>
+          <TabsTrigger value="courses" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">My Courses</TabsTrigger>
+          <TabsTrigger value="purchases" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Purchase History</TabsTrigger>
+          <TabsTrigger value="certificates" className="flex-shrink-0 text-xs sm:text-sm md:text-base px-3 sm:px-4">Certificates</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <TabsContent value="profile" className="mt-4 md:mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
         <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Personal Information</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
+              <div className="space-y-4 md:space-y-5">
                 <div>
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name" className="text-sm md:text-base">Name</Label>
                   <Input
                     id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
                     disabled={!isEditing}
+                    className="mt-1.5 md:mt-2"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm md:text-base">Email</Label>
                   <Input
                     id="email"
                     name="email"
@@ -176,10 +177,11 @@ export default function LearnerProfilePage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     disabled={!isEditing}
+                    className="mt-1.5 md:mt-2"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="bio" className="text-sm md:text-base">Bio</Label>
                   <Textarea
                     id="bio"
                     name="bio"
@@ -188,17 +190,18 @@ export default function LearnerProfilePage() {
                     disabled={!isEditing}
                     rows={6}
                     placeholder="Tell us about yourself..."
+                    className="mt-1.5 md:mt-2"
                   />
                 </div>
                 {isEditing ? (
-                  <div className="flex justify-end space-x-2">
-                    <Button type="submit">Save Changes</Button>
-                    <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
+                    <Button type="submit" className="w-full sm:w-auto min-h-[44px]">Save Changes</Button>
+                    <Button type="button" variant="outline" onClick={() => setIsEditing(false)} className="w-full sm:w-auto min-h-[44px]">
                       Cancel
                     </Button>
                   </div>
                 ) : (
-                  <Button type="button" onClick={() => setIsEditing(true)}>
+                  <Button type="button" onClick={() => setIsEditing(true)} className="min-h-[44px]">
                     Edit Profile
                   </Button>
                 )}
@@ -207,11 +210,11 @@ export default function LearnerProfilePage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle>Profile Picture</CardTitle>
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="text-lg md:text-xl">Profile Picture</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col items-center">
-            <div className="w-[150px] h-[150px] rounded-full overflow-hidden mb-4">
+          <CardContent className="p-4 md:p-6 pt-0 flex flex-col items-center">
+            <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] rounded-full overflow-hidden mb-4">
               <Image
                 src={user.profileImage}
                 alt={user.name}
@@ -220,23 +223,23 @@ export default function LearnerProfilePage() {
                 className="object-cover w-full h-full"
               />
             </div>
-            <Button>Change Picture</Button>
+            <Button className="w-full sm:w-auto min-h-[44px]">Change Picture</Button>
           </CardContent>
         </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="courses">
-          <div className="space-y-8">
+        <TabsContent value="courses" className="mt-4 md:mt-6">
+          <div className="space-y-6 md:space-y-8">
             {/* Enrolled Courses Section */}
             <div>
-              <div className="flex items-center gap-2 mb-6">
-                <BookOpen className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl font-bold">Enrolled Courses</h2>
-                <span className="text-muted-foreground">({enrolledCourses.length})</span>
+              <div className="flex items-center gap-2 mb-4 md:mb-6">
+                <BookOpen className="h-5 w-5 md:h-6 md:w-6 text-primary flex-shrink-0" />
+                <h2 className="text-xl md:text-2xl font-bold">Enrolled Courses</h2>
+                <span className="text-muted-foreground text-sm md:text-base">({enrolledCourses.length})</span>
               </div>
               {enrolledCourses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {enrolledCourses.map((course) => (
                     <CourseCard
                       key={course.id}
@@ -265,13 +268,13 @@ export default function LearnerProfilePage() {
 
             {/* Completed Courses Section */}
             <div>
-              <div className="flex items-center gap-2 mb-6">
-                <CheckCircle2 className="h-6 w-6 text-green-500" />
-                <h2 className="text-2xl font-bold">Completed Courses</h2>
-                <span className="text-muted-foreground">({completedCourses.length})</span>
+              <div className="flex items-center gap-2 mb-4 md:mb-6">
+                <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-green-500 flex-shrink-0" />
+                <h2 className="text-xl md:text-2xl font-bold">Completed Courses</h2>
+                <span className="text-muted-foreground text-sm md:text-base">({completedCourses.length})</span>
               </div>
               {completedCourses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                   {completedCourses.map((course) => (
                     <CourseCard
                       key={course.id}
@@ -300,17 +303,17 @@ export default function LearnerProfilePage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="purchases">
+        <TabsContent value="purchases" className="mt-4 md:mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5" />
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <ShoppingBag className="h-5 w-5 flex-shrink-0" />
                 Purchase History ({purchases.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6 pt-0">
               {purchases.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {purchases.map((purchase) => {
                     const course = modules.find((c) => c.id === purchase.courseId)
                     const isSubscription = purchase.type === "recurring"
@@ -318,46 +321,44 @@ export default function LearnerProfilePage() {
                     
                     return (
                       <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
-                        <CardContent className="p-6">
-                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-2">
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-1">{purchase.courseTitle}</h3>
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge
-                                      variant={isSubscription ? "secondary" : "outline"}
-                                      className={
-                                        isSubscription
-                                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                                      }
-                                    >
-                                      {isSubscription ? "Subscription" : "One-time Purchase"}
-                                    </Badge>
-                                    <Badge
-                                      variant={isActive ? "default" : "secondary"}
-                                      className={
-                                        isActive
-                                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                          : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                                      }
-                                    >
-                                      {isActive ? "Active" : "Cancelled"}
-                                    </Badge>
-                                  </div>
+                        <CardContent className="p-4 md:p-6">
+                          <div className="flex flex-col gap-4 md:gap-5">
+                            <div className="flex-1 min-w-0">
+                              <div className="mb-3">
+                                <h3 className="font-semibold text-base md:text-lg mb-2 break-words">{purchase.courseTitle}</h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge
+                                    variant={isSubscription ? "secondary" : "outline"}
+                                    className={
+                                      isSubscription
+                                        ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs"
+                                        : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
+                                    }
+                                  >
+                                    {isSubscription ? "Subscription" : "One-time Purchase"}
+                                  </Badge>
+                                  <Badge
+                                    variant={isActive ? "default" : "secondary"}
+                                    className={
+                                      isActive
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
+                                        : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 text-xs"
+                                    }
+                                  >
+                                    {isActive ? "Active" : "Cancelled"}
+                                  </Badge>
                                 </div>
                               </div>
-                              <div className="space-y-2 text-sm text-muted-foreground">
+                              <div className="space-y-2 text-xs md:text-sm text-muted-foreground">
                                 <div className="flex items-center gap-2">
-                                  <DollarSign className="h-4 w-4" />
-                                  <span>
+                                  <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                                  <span className="break-words">
                                     {purchase.currency} {purchase.amount}
                                     {isSubscription && purchase.recurringPrice && " /month"}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Calendar className="h-4 w-4" />
+                                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
                                   <span>
                                     Purchased: {new Date(purchase.purchasedAt).toLocaleDateString("en-US", {
                                       year: "numeric",
@@ -368,7 +369,7 @@ export default function LearnerProfilePage() {
                                 </div>
                                 {purchase.cancelledAt && (
                                   <div className="flex items-center gap-2">
-                                    <XCircle className="h-4 w-4" />
+                                    <XCircle className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
                                     <span>
                                       Cancelled: {new Date(purchase.cancelledAt).toLocaleDateString("en-US", {
                                         year: "numeric",
@@ -380,10 +381,10 @@ export default function LearnerProfilePage() {
                                 )}
                               </div>
                             </div>
-                            <div className="flex flex-col gap-2 md:items-end">
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 border-t">
                               {course && (
-                                <Link href={`/learner/courses/${course.id}`}>
-                                  <Button variant="outline" size="sm">
+                                <Link href={`/learner/courses/${course.id}`} className="flex-1 sm:flex-initial">
+                                  <Button variant="outline" size="sm" className="w-full sm:w-auto min-h-[44px]">
                                     View Course
                                   </Button>
                                 </Link>
@@ -405,6 +406,7 @@ export default function LearnerProfilePage() {
                                       router.push("/support")
                                     }
                                   }}
+                                  className="w-full sm:w-auto min-h-[44px]"
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
                                   Cancel Subscription
@@ -418,11 +420,11 @@ export default function LearnerProfilePage() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>You don't have any purchases yet.</p>
+                <div className="text-center py-8 md:py-12 text-muted-foreground">
+                  <ShoppingBag className="h-12 w-12 md:h-16 md:w-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm md:text-base mb-2">You don't have any purchases yet.</p>
                   <Link href="/learner/courses">
-                    <Button className="mt-4">Browse Courses</Button>
+                    <Button className="mt-4 min-h-[44px]">Browse Courses</Button>
                   </Link>
                 </div>
               )}
@@ -430,17 +432,17 @@ export default function LearnerProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="certificates">
+        <TabsContent value="certificates" className="mt-4 md:mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Award className="h-5 w-5 flex-shrink-0" />
                 Certificates ({certificates.length})
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6 pt-0">
               {certificates.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   {certificates.map((cert) => (
                     <CertificatePreview
                       key={cert.id}

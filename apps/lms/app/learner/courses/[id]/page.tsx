@@ -166,18 +166,18 @@ export default function CoursePage() {
   }
 
   return (
-    <div className=" pt-4 md:pt-8">
-      <div className="flex items-center mb-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0">
           <ArrowLeft className="mr-2 h-4 w-4" />
         </Button>
-        <h1 className="text-3xl font-bold text-primary">{module.title}</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{module.title}</h1>
       </div>
 
       {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
-      <div className="mb-4 lg:hidden">
+      <div className="mb-4 md:mb-6 lg:hidden">
         <Card className="border-primary/20">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div
               className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
               onClick={() => setIsVideoModalOpen(true)}
@@ -192,56 +192,56 @@ export default function CoursePage() {
                 <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
-            <div className="mt-4 mb-4 flex items-center justify-between">
-              <div>
-                <span className="text-2xl font-bold text-primary">{price}</span>
-                {enrollmentMode === "recurring" && !isEnrolled && <span className="text-sm text-muted-foreground">/month</span>}
+            <div className="mt-4 mb-4 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
+                {enrollmentMode === "recurring" && !isEnrolled && <span className="text-xs md:text-sm text-muted-foreground">/month</span>}
               </div>
-              {getCourseBadge()}
+              <div className="flex-shrink-0">{getCourseBadge()}</div>
             </div>
             <Button
-              className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
               onClick={handleEnrollOrStart}
               disabled={isEnrolling}
             >
               {isEnrolling ? "Processing..." : buttonText}
             </Button>
-            <p className="text-left lg:text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
-            <div className="space-y-2 text-muted-foreground">
+            <p className="text-left lg:text-center text-xs md:text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
               <div className="flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-primary" />
-                <span>4 hours of on-demand video</span>
+                <Clock className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm">4 hours of on-demand video</span>
               </div>
               <div className="flex items-center">
-                <FileText className="w-5 h-5 mr-2 text-primary" />
-                <span>8 downloadable resources</span>
+                <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm">8 downloadable resources</span>
               </div>
               <div className="flex items-center">
-                <Globe className="w-5 h-5 mr-2 text-primary" />
-                <span>{access}</span>
+                <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm break-words">{access}</span>
               </div>
               <div className="flex items-center">
-                <Award className="w-5 h-5 mr-2 text-primary" />
-                <span>Certificate of completion</span>
+                <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm">Certificate of completion</span>
               </div>
               <div className="flex items-center">
-                <Users className="w-5 h-5 mr-2 text-primary" />
-                <span>{module.enrolledStudents || 0} learners enrolled</span>
+                <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm">{module.enrolledStudents || 0} learners enrolled</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2">
           {/* Course Overview Section */}
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Course Overview</h2>
-              <p className="text-muted-foreground mb-4 leading-relaxed">{module.description}</p>
-              <div className="flex items-center gap-4 pt-4 border-t">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Overview</h2>
+              <p className="text-sm md:text-base text-muted-foreground mb-4 leading-relaxed">{module.description}</p>
+              <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-4 border-t">
+                <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
                   <span>{module.lessons.length} lessons</span>
                   <span>•</span>
                   <span>4 hours</span>
@@ -252,49 +252,48 @@ export default function CoursePage() {
             </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Course Content</h2>
-              <div className="bg-muted p-4 rounded-lg mb-4">
-                <p className="font-semibold">{module.lessons.length} lessons • 4 hours total length</p>
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
+              <div className="bg-muted p-3 md:p-4 rounded-lg mb-4">
+                <p className="font-semibold text-sm md:text-base">{module.lessons.length} lessons • 4 hours total length</p>
               </div>
               <Accordion type="single" collapsible className="w-full">
                 {module.lessons.map((lesson, index) => (
-                  <AccordionItem value={`item-${index}`} key={index}>
-                    <AccordionTrigger>
+                  <AccordionItem value={`item-${index}`} key={index} className="border-b">
+                    <AccordionTrigger className="py-3 md:py-4">
                       <div className="flex items-start justify-between w-full text-left">
-                        <div className="flex items-start flex-1 min-w-0">
-                          <PlayCircle className="w-5 h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="font-medium text-left break-words">{lesson.title}</span>
+                        <div className="flex items-start flex-1 min-w-0 pr-2">
+                          <PlayCircle className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="font-medium text-sm md:text-base text-left break-words">{lesson.title}</span>
                         </div>
-                        {/* Time removed */}
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-2">
+                    <AccordionContent className="pt-2 pb-3 md:pt-3 md:pb-4">
+                      <div className="space-y-2 md:space-y-3">
                         {/* Quiz section */}
-                        <div className="flex items-center justify-between py-2 pl-7">
-                          <div className="flex items-center">
-                            <BrainCircuit className="w-4 h-4 mr-2 text-primary" />
-                            <span className="text-sm">Quiz {index + 1}</span>
+                        <div className="flex items-center justify-between py-2 pl-6 md:pl-7">
+                          <div className="flex items-center min-w-0 flex-1">
+                            <BrainCircuit className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                            <span className="text-xs md:text-sm truncate">Quiz {index + 1}</span>
                           </div>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
                             {lesson.quiz?.questions.length || 4} questions
                           </span>
                         </div>
 
                         {/* Resources */}
                         {lesson.resources?.map((resource, rIndex) => (
-                          <div key={rIndex} className="flex items-center justify-between py-2 pl-7">
-                            <div className="flex items-center">
+                          <div key={rIndex} className="flex items-center justify-between py-2 pl-6 md:pl-7">
+                            <div className="flex items-center min-w-0 flex-1">
                               {resource.type === "document" ? (
-                                <FileText className="w-4 h-4 mr-2 text-primary" />
+                                <FileText className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                               ) : (
-                                <Link className="w-4 h-4 mr-2 text-primary" />
+                                <Link className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                               )}
-                              <span className="text-sm">{resource.title}</span>
+                              <span className="text-xs md:text-sm truncate">{resource.title}</span>
                             </div>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
                               {resource.type === "document" ? "File" : "Link"}
                             </span>
                           </div>
@@ -307,13 +306,13 @@ export default function CoursePage() {
             </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Who this course is for:</h2>
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
               {module.whoIsThisFor ? (
-                <p className="text-muted-foreground leading-relaxed">{module.whoIsThisFor}</p>
+                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{module.whoIsThisFor}</p>
               ) : (
-                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
                   <li>Individuals seeking personal and spiritual growth</li>
                   <li>Those looking to discover their purpose and calling</li>
                   <li>Anyone desiring to deepen their relationship with God</li>
@@ -323,13 +322,13 @@ export default function CoursePage() {
             </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
               {module.requirements ? (
-                <p className="text-muted-foreground leading-relaxed">{module.requirements}</p>
+                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{module.requirements}</p>
               ) : (
-                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
+                <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
                   <li>Open heart and willingness to learn</li>
                   <li>Desire for personal and spiritual growth</li>
                   <li>Commitment to complete the course materials</li>

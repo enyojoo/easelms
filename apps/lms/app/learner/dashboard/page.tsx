@@ -94,76 +94,78 @@ export default function LearnerDashboard() {
   const firstName = user.name?.split(" ")[0] || user.name || "there"
 
   return (
-    <div className="pt-2 md:pt-4 lg:pt-0 pb-2 md:pb-2 max-w-7xl mx-auto px-4 lg:px-6">
-      <div className="flex justify-between items-center mb-3 md:mb-4 pt-4 md:pt-6">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 max-w-7xl mx-auto px-4 lg:px-6">
+      <div className="flex justify-between items-center mb-4 md:mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary">Hi, {firstName} 👋🏻</h1>
         </div>
       </div>
 
-      <div className="space-y-3 md:space-y-4">
+      <div className="space-y-4 md:space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <BookOpen className="mr-2 h-4 w-4" /> Courses in Progress
+              <CardTitle className="text-sm md:text-base font-medium flex items-center">
+                <BookOpen className="mr-2 h-4 w-4 flex-shrink-0" /> Courses in Progress
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <p className="text-3xl font-bold">{coursesInProgress.length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center">
-                <Award className="mr-2 h-4 w-4" /> Completed Courses
+              <CardTitle className="text-sm md:text-base font-medium flex items-center">
+                <Award className="mr-2 h-4 w-4 flex-shrink-0" /> Completed Courses
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6">
               <p className="text-3xl font-bold">{completedCoursesCount}</p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 lg:mb-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Continue Learning</CardTitle>
+            <CardHeader className="p-4 md:p-6 pb-3 md:pb-4">
+              <CardTitle className="text-base md:text-lg">Continue Learning</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6 pt-0">
               {coursesInProgress.length > 0 ? (
-                coursesInProgress.map((course) => (
-                  <div key={course.id} className="mb-4">
-                    <h3 className="font-semibold mb-2">{course.title}</h3>
-                    <div className="flex items-center">
-                      <Progress value={course.progress} className="flex-grow mr-4" />
-                      <span className="text-sm font-medium">{course.progress}%</span>
+                <div className="space-y-4 md:space-y-6">
+                  {coursesInProgress.map((course) => (
+                    <div key={course.id} className="space-y-2">
+                      <h3 className="font-semibold text-sm md:text-base break-words line-clamp-2">{course.title}</h3>
+                      <div className="flex items-center gap-2 md:gap-4">
+                        <Progress value={course.progress} className="flex-grow min-w-0" />
+                        <span className="text-sm font-medium flex-shrink-0">{course.progress}%</span>
+                      </div>
+                      <Link href={`/learner/courses/${course.id}/learn`}>
+                        <Button variant="link" className="mt-1 md:mt-2 p-0 h-auto text-sm md:text-base">
+                          Continue <ChevronRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </Link>
                     </div>
-                    <Link href={`/learner/courses/${course.id}/learn`}>
-                      <Button variant="link" className="mt-2 p-0">
-                        Continue <ChevronRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </Link>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <p className="text-muted-foreground">No courses in progress</p>
+                <p className="text-muted-foreground text-sm md:text-base">No courses in progress</p>
               )}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle>Recommended Courses</CardTitle>
+            <CardHeader className="p-4 md:p-6 pb-3 md:pb-4">
+              <CardTitle className="text-base md:text-lg">Recommended Courses</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 md:p-6 pt-0">
               {recommendedCourses.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3 md:gap-4">
                   {recommendedCourses.map((course) => (
-                    <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex">
-                      <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full">
-                        <div className="relative w-full h-24 sm:h-32">
+                    <Link key={course.id} href={`/learner/courses/${course.id}`} className="flex min-w-0">
+                      <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full min-w-0">
+                        <div className="relative w-full h-32 sm:h-24 md:h-32">
                           <Image
                             src={course.image}
                             alt={course.title}
@@ -171,15 +173,15 @@ export default function LearnerDashboard() {
                             className="object-cover"
                           />
                         </div>
-                        <div className="p-2 flex-grow flex items-center">
-                          <h3 className="font-semibold text-xs sm:text-sm line-clamp-2">{course.title}</h3>
+                        <div className="p-2 sm:p-3 flex-grow flex items-center min-h-[3rem]">
+                          <h3 className="font-semibold text-xs sm:text-sm md:text-base line-clamp-2 break-words">{course.title}</h3>
                         </div>
                       </div>
                     </Link>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No recommended courses available</p>
+                <p className="text-muted-foreground text-sm md:text-base">No recommended courses available</p>
               )}
             </CardContent>
           </Card>
