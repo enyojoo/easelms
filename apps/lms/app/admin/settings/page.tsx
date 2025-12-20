@@ -15,6 +15,7 @@ import {
   Users,
   UserCog,
   Globe,
+  DollarSign,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TeamManagement from "./components/TeamManagement"
@@ -67,8 +68,8 @@ export default function SettingsPage() {
         <Tabs defaultValue="notifications" className="space-y-6">
           <TabsList className="bg-muted p-1 rounded-lg w-full grid grid-cols-3 gap-2">
             <TabsTrigger value="notifications" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              <span>Notifications</span>
+              <Globe className="h-4 w-4" />
+              <span>Platform Settings</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -93,7 +94,7 @@ export default function SettingsPage() {
                     {/* Default Currency Setting */}
                     <div className="space-y-2 pb-6 border-b">
                       <Label className="text-base font-semibold flex items-center">
-                        <Globe className="mr-2 h-4 w-4" /> Default Currency
+                        <DollarSign className="mr-2 h-4 w-4" /> Default Currency
                       </Label>
                       <Select
                         value={settings.defaultCurrency}
