@@ -255,9 +255,6 @@ export default function CoursePage() {
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
-              <div className="bg-muted p-3 md:p-4 rounded-lg mb-4">
-                <p className="font-semibold text-sm md:text-base">{module.lessons.length} lessons • 4 hours total length</p>
-              </div>
               <Accordion type="single" collapsible className="w-full">
                 {module.lessons.map((lesson, index) => (
                   <AccordionItem value={`item-${index}`} key={index} className="border-b">

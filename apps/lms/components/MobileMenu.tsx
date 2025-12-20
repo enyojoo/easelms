@@ -88,7 +88,6 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
                   </Avatar>
                   <div>
                     <p className="font-semibold text-lg">{user.name}</p>
-                    <p className="text-sm text-muted-foreground capitalize">{userType}</p>
                   </div>
                 </div>
               </div>
