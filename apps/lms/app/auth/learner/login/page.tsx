@@ -57,23 +57,12 @@ export default function UserLoginPage() {
         return
       }
 
-      // Fetch user profile data
-      const profileResponse = await fetch("/api/profile")
-      const profileData = await profileResponse.json()
-
-      // Set the authentication cookie with user data
-      const authData = {
-        userType: "user",
-        email: data.user.email,
-        name: data.user.user_metadata?.name || profileData.profile?.name || "User",
-        profileImage: profileData.profile?.profile_image || "/placeholder-user.jpg",
-        bio: profileData.profile?.bio || "",
-        currency: profileData.profile?.currency || "USD",
-      }
-      document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
-
-      // Redirect to the learner dashboard
-      router.push("/learner/dashboard")
+      // Supabase session is automatically managed via cookies
+      // The useClientAuthState hook will pick up the session automatically
+      // Wait a moment for the session to be established, then redirect
+      setTimeout(() => {
+        router.push("/learner/dashboard")
+      }, 100)
     } catch (err) {
       setError("An error occurred. Please try again.")
     } finally {

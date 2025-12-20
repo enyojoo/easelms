@@ -70,26 +70,20 @@ export default function UserSignUpPage() {
         return
       }
 
-      // Fetch user profile data
-      const profileResponse = await fetch("/api/profile")
-      const profileData = await profileResponse.json()
-
-      // Set the authentication cookie with user data
-      const authData = {
-        userType: "user",
-        email: data.user.email,
-        name: data.user.user_metadata?.name || profileData.profile?.name || `${firstName} ${lastName}`,
-        profileImage: profileData.profile?.profile_image || "/placeholder-user.jpg",
-        bio: profileData.profile?.bio || "",
-        currency: profileData.profile?.currency || "USD",
+      // If email confirmation is required, show message
+      // Otherwise, Supabase session is automatically managed via cookies
+      // The useClientAuthState hook will pick up the session automatically
+      if (data.session) {
+        // User is immediately signed in (email confirmation disabled)
+        // Wait a moment for the session to be established, then redirect
+        setTimeout(() => {
+          router.push("/learner/dashboard")
+        }, 100)
+      } else {
+        // Email confirmation required
+        setEmailSent(true)
+        // Don't redirect - user needs to verify email first
       }
-      document.cookie = `auth=${encodeURIComponent(JSON.stringify(authData))}; path=/; max-age=86400;`
-
-      // Show success message and redirect
-      setEmailSent(true)
-      setTimeout(() => {
-        router.push("/learner/dashboard")
-      }, 2000)
     } catch (err) {
       setError("An error occurred. Please try again.")
     } finally {
