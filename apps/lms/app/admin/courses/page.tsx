@@ -391,8 +391,8 @@ export default function ManageCoursesPage() {
                   const hours = Math.round((totalMinutes / 60) * 10) / 10
                   return `${hours} ${hours === 1 ? 'hour' : 'hours'}`
                 }
-                // Fallback for courses without duration info
-                return "N/A"
+                // Fallback for courses without duration info - show 0 hours
+                return "0 hours"
               })()}
             </span>
           </div>
