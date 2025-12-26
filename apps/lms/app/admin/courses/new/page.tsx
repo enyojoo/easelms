@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
 import CourseBasicInfo from "./components/CourseBasicInfo"
 import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
@@ -106,6 +106,8 @@ function NewCourseContent() {
   
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
   
   // Update last saved time when lastSaved changes
   useEffect(() => {
@@ -202,6 +204,13 @@ function NewCourseContent() {
   }, [])
 
   const handleSaveDraft = async () => {
+    // Validate course title is required
+    if (!courseData.basicInfo.title || courseData.basicInfo.title.trim() === "") {
+      toast.error("Course title is required. Please enter a course title before saving.")
+      return
+    }
+
+    setIsSavingDraft(true)
     try {
       const response = await fetch("/api/courses/drafts", {
         method: "POST",
@@ -237,6 +246,8 @@ function NewCourseContent() {
     } catch (error: any) {
       console.error("Error saving draft:", error)
       toast.error(error.message || "Failed to save draft")
+    } finally {
+      setIsSavingDraft(false)
     }
   }
 
@@ -247,6 +258,7 @@ function NewCourseContent() {
       return
     }
 
+    setIsPublishing(true)
     try {
       const response = await fetch("/api/courses/drafts", {
         method: "POST",
@@ -282,6 +294,8 @@ function NewCourseContent() {
     } catch (error: any) {
       console.error("Error publishing course:", error)
       toast.error(error.message || "Failed to publish course")
+    } finally {
+      setIsPublishing(false)
     }
   }
 
@@ -340,10 +354,30 @@ function NewCourseContent() {
           <Button 
             variant="outline" 
             onClick={handleSaveDraft}
+            disabled={isSavingDraft || isPublishing}
           >
-            Save to Draft
+            {isSavingDraft ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save to Draft"
+            )}
           </Button>
-          <Button onClick={handlePublishCourse}>Publish</Button>
+          <Button 
+            onClick={handlePublishCourse}
+            disabled={isSavingDraft || isPublishing}
+          >
+            {isPublishing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              "Publish"
+            )}
+          </Button>
         </div>
       </div>
 

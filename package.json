@@ -1,5 +1,5 @@
 {
-  "name": "easelms-monorepo",
+  "name": "elms-monorepo",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
