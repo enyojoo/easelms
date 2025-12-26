@@ -84,12 +84,22 @@ function NewCourseContent() {
   const editCourseId = searchParams?.get("edit")
   
   // Auto-save hook (silent, no UI)
-  const { clearDraft } = useAutoSave({
+  const { clearDraft, loadDraft } = useAutoSave({
     data: courseData,
     courseId: editCourseId || "new",
     enabled: true,
   })
 
+  // Load draft on mount (only if not editing)
+  useEffect(() => {
+    if (!editCourseId) {
+      const draft = loadDraft()
+      if (draft) {
+        setCourseData(draft)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount
 
   useEffect(() => {
     if (editCourseId) {

@@ -33,6 +33,19 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
   const [vimeoId, setVimeoId] = useState<string | null>(null)
   const [isValidVideo, setIsValidVideo] = useState(true)
 
+  // Sync local state with data prop changes (for draft restoration)
+  useEffect(() => {
+    if (data.thumbnail && data.thumbnail !== thumbnail) {
+      setThumbnail(data.thumbnail)
+    }
+  }, [data.thumbnail])
+
+  useEffect(() => {
+    if (data.previewVideo !== previewVideoInput) {
+      setPreviewVideoInput(data.previewVideo || "")
+    }
+  }, [data.previewVideo])
+
   useEffect(() => {
     if (previewVideoInput) {
       const extractedId = extractVimeoId(previewVideoInput)
@@ -122,6 +135,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
             accept="image/*"
             maxSize={5 * 1024 * 1024} // 5MB
             multiple={false}
+            initialValue={data.thumbnail && data.thumbnail !== "/placeholder.svg?height=200&width=300" ? data.thumbnail : undefined}
             onUploadComplete={handleThumbnailUpload}
           />
           <p className="text-sm text-muted-foreground">Recommended resolution: 1280x720 px. Max size: 5MB</p>

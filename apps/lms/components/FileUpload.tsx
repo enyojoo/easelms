@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,6 +16,7 @@ interface FileUploadProps {
   className?: string
   bucket?: "course-thumbnails" | "course-documents" | "user-avatars" | "certificates"
   additionalPath?: string
+  initialValue?: string | string[] // URL(s) to restore uploaded state
 }
 
 export default function FileUpload({
@@ -27,6 +28,7 @@ export default function FileUpload({
   className,
   bucket,
   additionalPath,
+  initialValue,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
@@ -34,6 +36,15 @@ export default function FileUpload({
   const [uploaded, setUploaded] = useState(false)
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
+
+  // Restore uploaded state from initialValue
+  useEffect(() => {
+    if (initialValue) {
+      const urls = Array.isArray(initialValue) ? initialValue : [initialValue]
+      setUploadedUrls(urls)
+      setUploaded(true)
+    }
+  }, [initialValue])
 
   const getAcceptTypes = (): Record<string, string[]> | undefined => {
     switch (type) {
@@ -240,7 +251,7 @@ export default function FileUpload({
         )}
       </div>
 
-      {files.length > 0 && (
+      {(files.length > 0 || (uploadedUrls.length > 0 && files.length === 0)) && (
         <div className="mt-4 space-y-2">
           {files.map((file, index) => (
             <Card key={index}>
@@ -271,6 +282,28 @@ export default function FileUpload({
             </Card>
           ))}
 
+          {/* Show restored uploaded state when initialValue is provided but no files */}
+          {uploadedUrls.length > 0 && files.length === 0 && (
+            <Card>
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <File className="h-5 w-5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {uploadedUrls.length === 1 ? "File uploaded" : `${uploadedUrls.length} files uploaded`}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {uploadedUrls[0]}
+                      </p>
+                    </div>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {error && (
             <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
               <p className="text-sm text-destructive">{error}</p>
@@ -288,7 +321,7 @@ export default function FileUpload({
           )}
 
 
-          {uploaded && (
+          {uploaded && files.length > 0 && (
             <div className="flex items-center justify-center gap-2 text-sm text-green-600">
               <CheckCircle2 className="h-4 w-4" />
               <span>Upload complete! {uploadedUrls.length} file{uploadedUrls.length > 1 ? "s" : ""} uploaded</span>
