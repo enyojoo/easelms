@@ -251,7 +251,77 @@ export default function ManageCoursesPage() {
     }
 
     fetchCourses()
-  }, [mounted, authLoading, user, userType, router])
+  }, [mounted, authLoading, user, userType])
+
+  // Refresh courses when page becomes visible (user returns from course builder)
+  useEffect(() => {
+    if (!mounted) return
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible" && user && (userType === "admin" || userType === "instructor")) {
+        // Refetch courses when page becomes visible
+        const fetchCourses = async () => {
+          try {
+            const response = await fetch("/api/courses?all=true")
+            if (response.ok) {
+              const data = await response.json()
+              const fetchedCourses = data.courses || []
+              
+              const mappedCourses: Course[] = fetchedCourses.map((course: any) => {
+                let settings = course.settings
+                if (typeof settings === 'string') {
+                  try {
+                    settings = JSON.parse(settings)
+                  } catch (e) {
+                    settings = {}
+                  }
+                }
+                
+                if (course.is_published !== undefined && settings) {
+                  settings.isPublished = course.is_published
+                }
+                
+                const lessons = Array.isArray(course.lessons) ? course.lessons : []
+                const totalDurationMinutes = course.totalDurationMinutes !== undefined 
+                  ? course.totalDurationMinutes 
+                  : lessons.reduce((total: number, lesson: any) => {
+                      return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
+                    }, 0)
+                const totalHours = course.totalHours !== undefined 
+                  ? course.totalHours 
+                  : Math.round((totalDurationMinutes / 60) * 10) / 10
+                
+                return {
+                  id: course.id,
+                  title: course.title || "",
+                  description: course.description || "",
+                  image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+                  lessons: lessons,
+                  price: course.price || 0,
+                  totalDurationMinutes: totalDurationMinutes,
+                  totalHours: totalHours,
+                  settings: settings || { isPublished: course.is_published || false },
+                }
+              })
+              
+              setCourses(mappedCourses)
+            }
+          } catch (err) {
+            console.error("Error refreshing courses:", err)
+          }
+        }
+        fetchCourses()
+      }
+    }
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", handleVisibilityChange)
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", handleVisibilityChange)
+    }
+  }, [mounted, user, userType])
 
   // Always render page structure, show skeleton for content if loading
   const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading

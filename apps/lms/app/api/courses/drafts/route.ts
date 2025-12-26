@@ -11,8 +11,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin or instructor
-    const { data: profile } = await supabase
+    // Use service role client to bypass RLS for admin operations
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      console.warn("Service role key not available, using regular client:", serviceError.message)
+      serviceClient = null
+    }
+
+    // Check if user is admin or instructor (use service client to bypass RLS)
+    const clientToUse = serviceClient || supabase
+    const { data: profile } = await clientToUse
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
@@ -45,9 +56,12 @@ export async function POST(request: Request) {
 
     let result
 
+    // Use service client for database operations to bypass RLS
+    const dbClient = serviceClient || supabase
+
     if (courseId && courseId !== "new") {
       // Update existing course
-      const { data, error } = await supabase
+      const { data, error } = await dbClient
         .from("courses")
         .update(dbCourseData)
         .eq("id", courseId)
@@ -63,7 +77,7 @@ export async function POST(request: Request) {
       result = data
     } else {
       // Create new course draft
-      const { data, error } = await supabase
+      const { data, error } = await dbClient
         .from("courses")
         .insert({
           ...dbCourseData,
@@ -83,7 +97,7 @@ export async function POST(request: Request) {
     // Save lessons if provided
     if (courseData.lessons && Array.isArray(courseData.lessons) && result.id) {
       // Delete existing lessons for this course
-      await supabase
+      await dbClient
         .from("lessons")
         .delete()
         .eq("course_id", result.id)
@@ -102,7 +116,7 @@ export async function POST(request: Request) {
       }))
 
       if (lessonsToInsert.length > 0) {
-        const { error: lessonsError } = await supabase
+        const { error: lessonsError } = await dbClient
           .from("lessons")
           .insert(lessonsToInsert)
 

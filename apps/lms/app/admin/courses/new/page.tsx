@@ -235,17 +235,24 @@ function NewCourseContent() {
 
       const result = await response.json()
       
+      console.log("Draft saved successfully:", result)
+      
       // If we got a courseId back and we were creating a new course, update the URL
       if (result.courseId && !editCourseId) {
         router.replace(`/admin/courses/new?edit=${result.courseId}`)
       }
       
-      // Clear localStorage draft
-      clearDraft()
+      // Save to localStorage as backup (don't clear, keep it synced)
+      const storageKey = `course-draft-${result.courseId || editCourseId || "new"}`
+      const draftData = {
+        data: courseData,
+        savedAt: new Date().toISOString(),
+      }
+      localStorage.setItem(storageKey, JSON.stringify(draftData))
       
       toast.success("Draft saved successfully")
       
-      // Navigate to courses page
+      // Navigate to courses page - it will fetch fresh data from API
       router.push("/admin/courses")
     } catch (error: any) {
       console.error("Error saving draft:", error)
