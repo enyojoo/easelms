@@ -436,9 +436,6 @@ export default function FileUpload({
                       <p className="text-sm font-medium truncate">
                         {getFileName(uploadedUrls[0])}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {uploadedUrls[0]}
-                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
