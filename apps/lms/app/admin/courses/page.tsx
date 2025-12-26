@@ -30,8 +30,10 @@ interface Course {
   title: string
   description: string
   image: string
-  lessons: Array<{ id?: string | number }>
+  lessons: Array<{ id?: string | number; estimatedDuration?: number }>
   price?: number
+  totalDurationMinutes?: number
+  totalHours?: number
   settings?: {
     isPublished?: boolean
     enrollment?: {
@@ -97,13 +99,39 @@ export default function ManageCoursesPage() {
               }
             }
             
+            // Calculate total duration from lessons
+            const lessons = Array.isArray(draftData.lessons) ? draftData.lessons : []
+            const totalDurationMinutes = lessons.reduce((total: number, lesson: any) => {
+              return total + (lesson.estimatedDuration || 0)
+            }, 0)
+            const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10 // Round to 1 decimal place
+            
+            // Get price from settings.enrollment or basicInfo.price
+            const enrollmentMode = draftData.settings?.enrollment?.enrollmentMode
+            const enrollmentPrice = draftData.settings?.enrollment?.price
+            const recurringPrice = draftData.settings?.enrollment?.recurringPrice
+            const basicPrice = parseFloat(draftData.basicInfo.price) || 0
+            
+            let finalPrice = 0
+            if (enrollmentMode === "recurring" && recurringPrice) {
+              finalPrice = recurringPrice
+            } else if (enrollmentMode === "buy" && enrollmentPrice) {
+              finalPrice = enrollmentPrice
+            } else if (enrollmentMode === "buy" && basicPrice) {
+              finalPrice = basicPrice
+            } else if (basicPrice) {
+              finalPrice = basicPrice
+            }
+            
             drafts.push({
               id: -1, // Use negative ID to indicate draft
               title: draftData.basicInfo.title || "Untitled Course",
               description: descriptionText || "No description",
               image: draftData.basicInfo.thumbnail || "/placeholder.svg?height=200&width=300",
-              lessons: Array.isArray(draftData.lessons) ? draftData.lessons : [],
-              price: parseFloat(draftData.basicInfo.price) || 0,
+              lessons: lessons,
+              price: finalPrice,
+              totalDurationMinutes: totalDurationMinutes,
+              totalHours: totalHours,
               settings: {
                 isPublished: false, // Drafts are never published
                 ...(draftData.settings || {}),
@@ -182,13 +210,26 @@ export default function ManageCoursesPage() {
             settings.isPublished = course.is_published
           }
 
+          // Calculate duration from lessons if not already provided
+          const lessons = Array.isArray(course.lessons) ? course.lessons : []
+          const totalDurationMinutes = course.totalDurationMinutes !== undefined 
+            ? course.totalDurationMinutes 
+            : lessons.reduce((total: number, lesson: any) => {
+                return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
+              }, 0)
+          const totalHours = course.totalHours !== undefined 
+            ? course.totalHours 
+            : Math.round((totalDurationMinutes / 60) * 10) / 10
+
           return {
             id: course.id,
             title: course.title || "",
             description: course.description || "",
             image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
-            lessons: Array.isArray(course.lessons) ? course.lessons : [],
+            lessons: lessons,
             price: course.price || 0,
+            totalDurationMinutes: totalDurationMinutes,
+            totalHours: totalHours,
             settings: settings || { isPublished: course.is_published || false },
           }
         })
@@ -249,13 +290,27 @@ export default function ManageCoursesPage() {
           if (course.is_published !== undefined && settings) {
             settings.isPublished = course.is_published
           }
+          
+          // Calculate duration from lessons if not already provided
+          const lessons = Array.isArray(course.lessons) ? course.lessons : []
+          const totalDurationMinutes = course.totalDurationMinutes !== undefined 
+            ? course.totalDurationMinutes 
+            : lessons.reduce((total: number, lesson: any) => {
+                return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
+              }, 0)
+          const totalHours = course.totalHours !== undefined 
+            ? course.totalHours 
+            : Math.round((totalDurationMinutes / 60) * 10) / 10
+
           return {
             id: course.id,
             title: course.title || "",
             description: course.description || "",
             image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
-            lessons: Array.isArray(course.lessons) ? course.lessons : [],
+            lessons: lessons,
             price: course.price || 0,
+            totalDurationMinutes: totalDurationMinutes,
+            totalHours: totalHours,
             settings: settings || { isPublished: course.is_published || false },
           }
         })
@@ -316,7 +371,24 @@ export default function ManageCoursesPage() {
           </div>
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />
-            <span>4 hours</span>
+            <span>
+              {(() => {
+                // Use calculated totalHours if available, otherwise calculate from lessons
+                if (course.totalHours !== undefined && course.totalHours > 0) {
+                  return `${course.totalHours} ${course.totalHours === 1 ? 'hour' : 'hours'}`
+                }
+                // Calculate from lessons if available
+                const totalMinutes = course.lessons.reduce((total: number, lesson: any) => {
+                  return total + (lesson.estimatedDuration || 0)
+                }, 0)
+                if (totalMinutes > 0) {
+                  const hours = Math.round((totalMinutes / 60) * 10) / 10
+                  return `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+                }
+                // Fallback for courses without duration info
+                return "N/A"
+              })()}
+            </span>
           </div>
           <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />

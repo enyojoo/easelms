@@ -61,13 +61,13 @@ export async function GET(request: Request) {
       }
     }
 
-    // Fetch courses with lesson counts
+    // Fetch courses with lesson counts and duration
     // Try to include lessons count, but fallback to basic query if RLS blocks it
     let query = supabase
       .from("courses")
       .select(`
         *,
-        lessons (id)
+        lessons (id, estimated_duration)
       `)
 
     // Only filter by is_published if not fetching all courses
@@ -145,6 +145,12 @@ export async function GET(request: Request) {
       // Ensure lessons is an array (either from relation or empty array)
       const lessons = Array.isArray(course.lessons) ? course.lessons : []
       
+      // Calculate total duration from lessons
+      const totalDurationMinutes = lessons.reduce((total: number, lesson: any) => {
+        return total + (lesson.estimated_duration || 0)
+      }, 0)
+      const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10 // Round to 1 decimal place
+      
       // Parse settings if it's a string (JSON stored as text)
       let settings = course.settings
       if (typeof settings === 'string') {
@@ -160,6 +166,8 @@ export async function GET(request: Request) {
         ...course,
         lessons: lessons, // Ensure lessons is always an array
         settings: settings || {}, // Ensure settings exists
+        totalDurationMinutes: totalDurationMinutes,
+        totalHours: totalHours,
         // Map database fields to expected structure
         image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
         description: course.description || "",
