@@ -13,7 +13,7 @@ export function useAutoSave<T>({
   data,
   courseId = "new",
   enabled = true,
-  interval = 30000, // 30 seconds
+  interval = 10000, // 10 seconds - good balance for active content creation
   onSave,
 }: UseAutoSaveOptions<T>) {
   const lastSavedRef = useRef<Date | null>(null)
