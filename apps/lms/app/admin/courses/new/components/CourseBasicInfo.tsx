@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import SafeImage from "@/components/SafeImage"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,30 +28,45 @@ interface CourseBasicInfoProps {
 }
 
 export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] }: CourseBasicInfoProps) {
-  const [thumbnail, setThumbnail] = useState(data.thumbnail || "")
-  const [previewVideoInput, setPreviewVideoInput] = useState(data.previewVideo || "")
-  const [vimeoId, setVimeoId] = useState<string | null>(null)
+  // Initialize state from data prop (for draft restoration)
+  const [thumbnail, setThumbnail] = useState(() => data.thumbnail || "")
+  const [previewVideoInput, setPreviewVideoInput] = useState(() => data.previewVideo || "")
+  const [vimeoId, setVimeoId] = useState<string | null>(() => {
+    // Extract vimeoId immediately on mount if video exists
+    if (data.previewVideo) {
+      return extractVimeoId(data.previewVideo)
+    }
+    return null
+  })
   const [isValidVideo, setIsValidVideo] = useState(true)
+  
+  // Use ref to track if update is from user input or data prop sync
+  const isUserInputRef = useRef(false)
+  const isInitialMountRef = useRef(true)
 
   // Sync local state with data prop changes (for draft restoration and tab switching)
   useEffect(() => {
     // Always sync thumbnail from data prop
-    if (data.thumbnail && data.thumbnail.trim() !== "") {
-      setThumbnail(data.thumbnail)
-    } else {
-      setThumbnail("")
+    const newThumbnail = data.thumbnail && data.thumbnail.trim() !== "" ? data.thumbnail : ""
+    if (newThumbnail !== thumbnail) {
+      setThumbnail(newThumbnail)
     }
-  }, [data.thumbnail])
+  }, [data.thumbnail, thumbnail])
 
-  // Sync preview video from data prop and extract vimeoId on mount/change
+  // Sync preview video from data prop and extract vimeoId (only when data changes, not user input)
   useEffect(() => {
+    // Skip if this is from user input
+    if (isUserInputRef.current) {
+      isUserInputRef.current = false
+      return
+    }
+    
     const videoValue = data.previewVideo || ""
-    // Only update if different to avoid unnecessary re-renders
     if (videoValue !== previewVideoInput) {
       setPreviewVideoInput(videoValue)
     }
     
-    // Extract vimeoId if video exists (only when data changes, not on user input)
+    // Extract vimeoId if video exists
     if (videoValue) {
       const extractedId = extractVimeoId(videoValue)
       if (extractedId) {
@@ -68,14 +83,23 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       setVimeoId(null)
       setIsValidVideo(true)
     }
-  }, [data.previewVideo, previewVideoInput]) // Include previewVideoInput to detect when it changes from data
+  }, [data.previewVideo]) // Only depend on data.previewVideo
 
-  // Handle preview video input changes and update parent (only when user types, not from data sync)
+  // Handle preview video input changes and update parent (only when user types)
   useEffect(() => {
-    // Skip if this matches data.previewVideo (means it came from data prop sync, not user input)
+    // Skip on initial mount to prevent unnecessary updates
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false
+      return
+    }
+    
+    // Skip if this matches data.previewVideo (means it came from data prop sync)
     if (previewVideoInput === (data.previewVideo || "")) {
       return
     }
+    
+    // Mark as user input to prevent data sync useEffect from running
+    isUserInputRef.current = true
     
     if (previewVideoInput) {
       const extractedId = extractVimeoId(previewVideoInput)
@@ -99,7 +123,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       setIsValidVideo(true)
       onUpdate({ ...data, previewVideo: "", vimeoVideoId: undefined })
     }
-  }, [previewVideoInput, data]) // Include data to access current state, but check prevents loops
+  }, [previewVideoInput]) // Only trigger on user input changes
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
