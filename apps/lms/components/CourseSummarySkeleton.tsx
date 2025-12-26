@@ -3,7 +3,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function CourseSummarySkeleton() {
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6 max-w-4xl mx-auto">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex items-center mb-6">
         <Skeleton className="h-9 w-20 mr-4" />
@@ -41,6 +42,7 @@ export default function CourseSummarySkeleton() {
           <Skeleton className="h-32 w-full" />
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

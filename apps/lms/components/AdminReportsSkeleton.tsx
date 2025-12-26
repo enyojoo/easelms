@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminReportsSkeleton() {
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+    <div className="pt-4 md:pt-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="space-y-2">
