@@ -22,7 +22,7 @@ import {
   Undo,
   Redo,
 } from "lucide-react"
-import { useCallback } from "react"
+import { useCallback, useState, useEffect } from "react"
 
 interface RichTextEditorProps {
   content: string
@@ -31,6 +31,8 @@ interface RichTextEditorProps {
 }
 
 export default function RichTextEditor({ content, onChange, placeholder = "Start typing..." }: RichTextEditorProps) {
+  const [isEmpty, setIsEmpty] = useState(true)
+  
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -53,13 +55,24 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
     content,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
+      setIsEmpty(editor.isEmpty)
     },
     editorProps: {
       attributes: {
         class: "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[200px] p-4",
       },
     },
+    onSelectionUpdate: ({ editor }) => {
+      setIsEmpty(editor.isEmpty)
+    },
   })
+
+  // Update isEmpty when content prop changes
+  useEffect(() => {
+    if (editor) {
+      setIsEmpty(editor.isEmpty)
+    }
+  }, [editor, content])
 
   const setLink = useCallback(() => {
     if (!editor) return
@@ -230,12 +243,14 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
           <Redo className="w-4 h-4" />
         </Button>
       </div>
-      <EditorContent editor={editor} className="min-h-[200px] max-h-[600px] overflow-y-auto" />
-      {!content && (
-        <div className="absolute pointer-events-none text-muted-foreground p-4" style={{ top: "40px" }}>
-          {placeholder}
-        </div>
-      )}
+      <div className="relative">
+        <EditorContent editor={editor} className="min-h-[200px] max-h-[600px] overflow-y-auto" />
+        {isEmpty && (
+          <div className="absolute pointer-events-none text-muted-foreground p-4" style={{ top: "40px", left: 0, right: 0 }}>
+            {placeholder}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

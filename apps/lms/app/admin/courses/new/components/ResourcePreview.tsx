@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 import { Resource } from "./ResourceManager"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 
 interface ResourcePreviewProps {
   resource: Resource
@@ -29,7 +29,7 @@ export default function ResourcePreview({ resource, onClose }: ResourcePreviewPr
         <div className="flex-1 overflow-auto">
           {isImage ? (
             <div className="relative w-full h-[60vh]">
-              <Image
+              <SafeImage
                 src={resource.url}
                 alt={resource.title || "Resource"}
                 fill

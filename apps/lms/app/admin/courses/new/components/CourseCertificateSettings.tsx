@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
+import SafeImage from "@/components/SafeImage"
 
 interface CourseCertificateSettingsProps {
   settings: {
@@ -67,11 +68,15 @@ export default function CourseCertificateSettings({ settings, onUpdate }: Course
                       }}
                     />
                     {settings.signatureImage && (
-                      <img
-                        src={settings.signatureImage}
-                        alt="Signature Preview"
-                        className="h-12 w-auto object-contain"
-                      />
+                      <div className="relative h-12 w-auto">
+                        <SafeImage
+                          src={settings.signatureImage}
+                          alt="Signature Preview"
+                          width={48}
+                          height={48}
+                          className="h-12 w-auto object-contain"
+                        />
+                      </div>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground">

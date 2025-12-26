@@ -57,37 +57,37 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       if (extractedId) {
         setVimeoId(extractedId)
         setIsValidVideo(true)
-        onUpdate({ previewVideo: previewVideoInput, vimeoVideoId: extractedId })
+        onUpdate({ ...data, previewVideo: previewVideoInput, vimeoVideoId: extractedId })
       } else if (isVimeoUrl(previewVideoInput)) {
         setIsValidVideo(false)
         setVimeoId(null)
       } else {
         setVimeoId(null)
         setIsValidVideo(true)
-        onUpdate({ previewVideo: previewVideoInput, vimeoVideoId: undefined })
+        onUpdate({ ...data, previewVideo: previewVideoInput, vimeoVideoId: undefined })
       }
     } else {
       setVimeoId(null)
       setIsValidVideo(true)
-      onUpdate({ previewVideo: "", vimeoVideoId: undefined })
+      onUpdate({ ...data, previewVideo: "", vimeoVideoId: undefined })
     }
-  }, [previewVideoInput])
+  }, [previewVideoInput, data])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-    onUpdate({ [name]: value })
+    onUpdate({ ...data, [name]: value })
   }
 
   const handleThumbnailUpload = (files: File[], urls: string[]) => {
     if (urls.length > 0) {
       setThumbnail(urls[0])
-      onUpdate({ thumbnail: urls[0] })
+      onUpdate({ ...data, thumbnail: urls[0] })
     }
   }
 
   const handleThumbnailRemove = () => {
     setThumbnail("/placeholder.svg?height=200&width=300")
-    onUpdate({ thumbnail: "" })
+    onUpdate({ ...data, thumbnail: "" })
   }
 
   return (
@@ -107,7 +107,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
         <Label htmlFor="requirements">Requirements</Label>
         <RichTextEditor
           content={data.requirements || ""}
-          onChange={(html) => onUpdate({ requirements: html })}
+          onChange={(html) => onUpdate({ ...data, requirements: html })}
           placeholder="Enter course requirements"
         />
       </div>
@@ -116,7 +116,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
         <Label htmlFor="description">Course Description</Label>
         <RichTextEditor
           content={data.description || ""}
-          onChange={(html) => onUpdate({ description: html })}
+          onChange={(html) => onUpdate({ ...data, description: html })}
           placeholder="Enter course description"
         />
       </div>
@@ -125,7 +125,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
         <Label htmlFor="whoIsThisFor">Who this course is for</Label>
         <RichTextEditor
           content={data.whoIsThisFor || ""}
-          onChange={(html) => onUpdate({ whoIsThisFor: html })}
+          onChange={(html) => onUpdate({ ...data, whoIsThisFor: html })}
           placeholder="Describe the target audience for this course"
         />
       </div>
