@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { CheckCircle2, AlertCircle } from "lucide-react"
+import { AlertCircle } from "lucide-react"
 import { extractVimeoId, isVimeoUrl, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import { useState, useEffect } from "react"
 import RichTextEditor from "./RichTextEditor"
@@ -64,26 +64,12 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
             value={videoInput}
             onChange={(e) => setVideoInput(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            Supported formats: https://vimeo.com/123456789, https://player.vimeo.com/video/123456789, or just the video ID
-          </p>
-          {videoInput && (
-            <Alert variant={isValid ? "default" : "destructive"}>
-              {isValid && vimeoId ? (
-                <>
-                  <CheckCircle2 className="h-4 w-4" />
-                  <AlertDescription>
-                    Valid Vimeo video detected. Video ID: {vimeoId}
-                  </AlertDescription>
-                </>
-              ) : !isValid ? (
-                <>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
-                  </AlertDescription>
-                </>
-              ) : null}
+          {videoInput && !isValid && (
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
+              </AlertDescription>
             </Alert>
           )}
         </div>
