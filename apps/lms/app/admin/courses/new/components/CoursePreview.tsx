@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Video, FileText } from "lucide-react"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 
 interface CoursePreviewProps {
   courseData: any
@@ -24,9 +24,9 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
   return (
     <div className="space-y-6">
       <div className="aspect-video relative rounded-lg overflow-hidden">
-        <Image
+        <SafeImage
           src={courseData.basicInfo.thumbnail || "/placeholder.svg?height=200&width=300"}
-          alt={courseData.basicInfo.title}
+          alt={courseData.basicInfo.title || "Course thumbnail"}
           fill
           className="object-cover"
         />

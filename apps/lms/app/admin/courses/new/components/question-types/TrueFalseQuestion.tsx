@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Trash2 } from "lucide-react"
 import { TrueFalseQuestion as TFQuestionType } from "../types/quiz"
 import FileUpload from "@/components/FileUpload"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 
 interface TrueFalseQuestionProps {
   question: TFQuestionType
@@ -37,7 +37,7 @@ export default function TrueFalseQuestion({ question, onChange, onDelete }: True
             <Label>Question Image (optional)</Label>
             {question.imageUrl && (
               <div className="relative w-full h-48 rounded-lg overflow-hidden border mb-2">
-                <Image src={question.imageUrl} alt="Question image" fill className="object-contain" />
+                <SafeImage src={question.imageUrl} alt="Question image" fill className="object-contain" />
               </div>
             )}
             <FileUpload

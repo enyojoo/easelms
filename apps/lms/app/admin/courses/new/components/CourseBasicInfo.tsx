@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CheckCircle2, AlertCircle } from "lucide-react"
@@ -136,7 +136,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
           <Label>Course Thumbnail</Label>
           {thumbnail && thumbnail !== "/placeholder.svg?height=200&width=300" && (
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border mb-2">
-              <Image src={thumbnail} alt="Course thumbnail" fill className="object-cover" />
+              <SafeImage src={thumbnail} alt="Course thumbnail" fill className="object-cover" />
             </div>
           )}
           <FileUpload

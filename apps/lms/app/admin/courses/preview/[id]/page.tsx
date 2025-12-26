@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { notFound, useParams } from "next/navigation"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { PlayCircle, FileText, Award, Clock, Globe, Link } from "lucide-react"
@@ -202,7 +202,7 @@ export default function InstructorCoursePreviewPage() {
                 className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
                 onClick={() => setIsVideoModalOpen(true)}
               >
-                <Image
+                <SafeImage
                   src={module.image}
                   alt={module.title}
                   fill

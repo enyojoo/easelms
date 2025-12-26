@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, Trash2, CheckCircle2, Image as ImageIcon } from "lucide-react"
 import { MultipleChoiceQuestion as MCQType } from "../types/quiz"
 import FileUpload from "@/components/FileUpload"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 
 interface MultipleChoiceQuestionProps {
   question: MCQType
@@ -63,7 +63,7 @@ export default function MultipleChoiceQuestion({ question, onChange, onDelete }:
             <Label>Question Image (optional)</Label>
             {question.imageUrl && (
               <div className="relative w-full h-48 rounded-lg overflow-hidden border mb-2">
-                <Image src={question.imageUrl} alt="Question image" fill className="object-contain" />
+                <SafeImage src={question.imageUrl} alt="Question image" fill className="object-contain" />
               </div>
             )}
             <FileUpload

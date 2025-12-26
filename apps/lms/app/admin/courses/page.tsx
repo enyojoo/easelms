@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -294,7 +294,7 @@ export default function ManageCoursesPage() {
     <Card key={course.id} className="flex flex-col h-full">
       <CardHeader className="p-4 sm:p-6">
         <div className="aspect-video relative rounded-md overflow-hidden mb-3 sm:mb-4">
-          <Image
+          <SafeImage
             src={course.image || "/placeholder.svg?height=200&width=300"}
             alt={course.title}
             fill
