@@ -18,50 +18,168 @@ import {
   DollarSign,
   ShoppingBag,
   XCircle,
+  Loader2,
 } from "lucide-react"
-import { users } from "@/data/users"
-import { modules } from "@/data/courses"
-import type { User } from "@/data/users"
-import { getPurchaseHistory, type Purchase } from "@/utils/enrollment"
+import { useClientAuthState } from "@/utils/client-auth"
 import Link from "next/link"
+import { toast } from "sonner"
+
+interface Learner {
+  id: string
+  name: string
+  email: string
+  profileImage: string
+  bio?: string
+  currency: string
+  enrolledCourses: number[]
+  completedCourses: number[]
+  progress: { [courseId: number]: number }
+  created_at?: string
+}
+
+interface Course {
+  id: number
+  title: string
+  image?: string
+  lessons?: Array<{ id: number }>
+  enrolledStudents?: number
+}
+
+interface Purchase {
+  id: string
+  courseId: number
+  courseTitle: string
+  courseImage?: string
+  amount: number
+  currency: string
+  gateway?: string
+  status: string
+  type: "one-time" | "recurring"
+  recurringPrice?: number
+  purchasedAt: string
+  completedAt?: string
+  cancelledAt?: string
+}
 
 export default function LearnerDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const [learner, setLearner] = useState<User | null>(null)
+  const { user, loading: authLoading, userType } = useClientAuthState()
+  const [learner, setLearner] = useState<Learner | null>(null)
+  const [courses, setCourses] = useState<Course[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
+  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const foundUser = users.find((u) => u.id === params.id && u.userType === "user")
-    if (foundUser) {
-      setLearner(foundUser)
-      // Load purchase history for this learner
-      // Try to match by user ID or email
-      const allPurchases = getPurchaseHistory()
-      const learnerPurchases = allPurchases.filter(
-        (p) => p.userId === foundUser.id || p.userId === foundUser.email
-      )
-      // If no purchases found, add some dummy data for demonstration
-      if (learnerPurchases.length === 0 && allPurchases.length > 0) {
-        // Use first 2 purchases as dummy data for this learner
-        const dummyPurchases = allPurchases.slice(0, 2).map((p) => ({
-          ...p,
-          userId: foundUser.id,
-        }))
-        setPurchases(dummyPurchases)
-      } else {
-        setPurchases(learnerPurchases)
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading && (!user || (userType !== "admin" && userType !== "instructor"))) {
+      router.push("/auth/admin/login")
+    }
+  }, [user, userType, authLoading, router])
+
+  // Fetch learner data
+  useEffect(() => {
+    const fetchLearner = async () => {
+      if (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor")) return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch(`/api/learners/${params.id}`)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch learner")
+        }
+
+        const data = await response.json()
+        setLearner(data.learner)
+      } catch (err: any) {
+        console.error("Error fetching learner:", err)
+        setError(err.message || "Failed to load learner")
+        toast.error(err.message || "Failed to load learner")
+      } finally {
+        setLoading(false)
       }
     }
-  }, [params.id])
 
-  if (!learner) {
+    fetchLearner()
+  }, [params.id, mounted, authLoading, user, userType])
+
+  // Fetch courses data
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!learner || learner.enrolledCourses.length === 0) return
+
+      try {
+        const courseIds = learner.enrolledCourses.join(",")
+        const response = await fetch(`/api/courses?ids=${courseIds}`)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch courses")
+        }
+
+        const data = await response.json()
+        setCourses(data.courses || [])
+      } catch (err: any) {
+        console.error("Error fetching courses:", err)
+        // Don't show error toast for courses, just log it
+      }
+    }
+
+    fetchCourses()
+  }, [learner])
+
+  // Fetch purchases
+  useEffect(() => {
+    const fetchPurchases = async () => {
+      if (!mounted || authLoading || !user || !params.id) return
+
+      try {
+        const response = await fetch(`/api/learners/${params.id}/purchases`)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          // Don't throw error for purchases, just log it
+          console.warn("Error fetching purchases:", errorData.error)
+          return
+        }
+
+        const data = await response.json()
+        setPurchases(data.purchases || [])
+      } catch (err: any) {
+        console.error("Error fetching purchases:", err)
+        // Don't show error toast for purchases, just log it
+      }
+    }
+
+    fetchPurchases()
+  }, [params.id, mounted, authLoading, user])
+
+  const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
+
+  if (isLoading) {
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !learner) {
     return (
       <div className="pt-4 md:pt-8">
         <div className="text-center py-8">
-          <p className="text-muted-foreground">Learner not found</p>
+          <p className="text-destructive mb-4">{error || "Learner not found"}</p>
           <Link href="/admin/learners">
             <Button variant="outline" className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Learners
             </Button>
           </Link>
@@ -71,12 +189,30 @@ export default function LearnerDetailsPage() {
   }
 
   const getCourseTitle = (courseId: number) => {
-    const course = modules.find((m) => m.id === courseId)
+    const course = courses.find((c) => c.id === courseId)
     return course?.title || `Course ${courseId}`
   }
 
-  const enrolledCourses = modules.filter((course) => learner.enrolledCourses.includes(course.id))
-  const completedCourses = modules.filter((course) => learner.completedCourses.includes(course.id))
+  const getCourse = (courseId: number) => {
+    return courses.find((c) => c.id === courseId)
+  }
+
+  const enrolledCourses = learner.enrolledCourses
+    .map((courseId) => getCourse(courseId))
+    .filter((course): course is Course => course !== undefined)
+  
+  const completedCourses = learner.completedCourses
+    .map((courseId) => getCourse(courseId))
+    .filter((course): course is Course => course !== undefined)
+
+  // Calculate average progress
+  const avgProgress = learner.enrolledCourses.length > 0
+    ? Math.round(
+        (learner.enrolledCourses.reduce((sum, id) => sum + (learner.progress[id] || 0), 0) /
+          learner.enrolledCourses.length) *
+          10
+      ) / 10
+    : 0
 
   return (
     <div className="pt-4 md:pt-8">
@@ -109,8 +245,14 @@ export default function LearnerDetailsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-4 w-4" />
-                  <span>Currency: {learner.currency}</span>
+                  <span>Currency: {learner.currency || "USD"}</span>
                 </div>
+                {learner.created_at && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>Joined: {new Date(learner.created_at).toLocaleDateString()}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -149,16 +291,7 @@ export default function LearnerDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
-              {learner.enrolledCourses.length > 0
-                ? Math.round(
-                    (learner.enrolledCourses.reduce((sum, id) => sum + (learner.progress[id] || 0), 0) /
-                      learner.enrolledCourses.length) *
-                      10
-                  ) / 10
-                : 0}
-              %
-            </p>
+            <p className="text-2xl font-bold">{avgProgress}%</p>
           </CardContent>
         </Card>
       </div>
@@ -186,7 +319,7 @@ export default function LearnerDetailsPage() {
                         <div className="flex-1">
                           <h3 className="font-semibold mb-1">{course.title}</h3>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>{course.lessons.length} lessons</span>
+                            <span>{course.lessons?.length || 0} lessons</span>
                             <span>{course.enrolledStudents || 0} learners</span>
                           </div>
                         </div>
@@ -195,7 +328,7 @@ export default function LearnerDetailsPage() {
                             <Progress value={progress} className="h-2" />
                             <p className="text-xs text-muted-foreground mt-1 text-center">{progress}%</p>
                           </div>
-                          <Link href={`/learner/courses/${course.id}`}>
+                          <Link href={`/admin/courses/${course.id}`}>
                             <Button variant="outline" size="sm">
                               View Course
                             </Button>
@@ -221,7 +354,7 @@ export default function LearnerDetailsPage() {
               {learner.enrolledCourses.length > 0 ? (
                 <div className="space-y-4">
                   {learner.enrolledCourses.map((courseId) => {
-                    const course = modules.find((m) => m.id === courseId)
+                    const course = getCourse(courseId)
                     const progress = learner.progress[courseId] || 0
                     if (!course) return null
                     return (
@@ -254,9 +387,9 @@ export default function LearnerDetailsPage() {
               {purchases.length > 0 ? (
                 <div className="space-y-4">
                   {purchases.map((purchase) => {
-                    const course = modules.find((c) => c.id === purchase.courseId)
+                    const course = getCourse(purchase.courseId)
                     const isSubscription = purchase.type === "recurring"
-                    const isActive = purchase.status === "active"
+                    const isActive = purchase.status === "completed" || purchase.status === "active"
                     
                     return (
                       <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
@@ -285,7 +418,7 @@ export default function LearnerDetailsPage() {
                                           : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
                                       }
                                     >
-                                      {isActive ? "Active" : "Cancelled"}
+                                      {isActive ? "Active" : purchase.status}
                                     </Badge>
                                   </div>
                                 </div>
@@ -294,7 +427,7 @@ export default function LearnerDetailsPage() {
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4" />
                                   <span>
-                                    {purchase.currency} {purchase.amount}
+                                    {purchase.currency || "USD"} {purchase.amount}
                                     {isSubscription && purchase.recurringPrice && " /month"}
                                   </span>
                                 </div>
@@ -324,7 +457,7 @@ export default function LearnerDetailsPage() {
                             </div>
                             <div className="flex flex-col gap-2 md:items-end">
                               {course && (
-                                <Link href={`/admin/courses/preview/${course.id}`}>
+                                <Link href={`/admin/courses/${course.id}`}>
                                   <Button variant="outline" size="sm">
                                     View Course
                                   </Button>
