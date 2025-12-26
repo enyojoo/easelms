@@ -6,12 +6,12 @@ import { useState, useEffect, useRef } from "react"
 import SafeImage from "@/components/SafeImage"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle2, AlertCircle } from "lucide-react"
 import VideoPreview from "@/components/VideoPreview"
 import { extractVimeoId, isVimeoUrl } from "@/lib/vimeo/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import FileUpload from "@/components/FileUpload"
-import RichTextEditor from "./RichTextEditor"
 
 interface CourseBasicInfoProps {
   data: {
@@ -157,28 +157,37 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
 
       <div className="space-y-2">
         <Label htmlFor="requirements">Requirements</Label>
-        <RichTextEditor
-          content={data.requirements || ""}
-          onChange={(html) => onUpdate({ ...data, requirements: html })}
+        <Textarea
+          id="requirements"
+          name="requirements"
+          value={data.requirements || ""}
+          onChange={handleInputChange}
           placeholder="Enter course requirements"
+          rows={4}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="description">Course Description</Label>
-        <RichTextEditor
-          content={data.description || ""}
-          onChange={(html) => onUpdate({ ...data, description: html })}
+        <Textarea
+          id="description"
+          name="description"
+          value={data.description || ""}
+          onChange={handleInputChange}
           placeholder="Enter course description"
+          rows={6}
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="whoIsThisFor">Who this course is for</Label>
-        <RichTextEditor
-          content={data.whoIsThisFor || ""}
-          onChange={(html) => onUpdate({ ...data, whoIsThisFor: html })}
+        <Textarea
+          id="whoIsThisFor"
+          name="whoIsThisFor"
+          value={data.whoIsThisFor || ""}
+          onChange={handleInputChange}
           placeholder="Describe the target audience for this course"
+          rows={4}
         />
       </div>
 

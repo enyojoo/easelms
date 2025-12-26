@@ -35,10 +35,9 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
       <div>
         <h2 className="text-2xl font-bold">{courseData.basicInfo.title || "Untitled Course"}</h2>
         {courseData.basicInfo.description && (
-          <div 
-            className="text-muted-foreground mt-2 prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: courseData.basicInfo.description }}
-          />
+          <p className="text-muted-foreground mt-2 whitespace-pre-wrap">
+            {courseData.basicInfo.description}
+          </p>
         )}
       </div>
 
@@ -48,10 +47,9 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
             <CardTitle>Who this course is for</CardTitle>
           </CardHeader>
           <CardContent>
-            <div 
-              className="text-muted-foreground prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: courseData.basicInfo.whoIsThisFor }}
-            />
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {courseData.basicInfo.whoIsThisFor}
+            </p>
           </CardContent>
         </Card>
       )}
@@ -62,10 +60,9 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
             <CardTitle>Requirements</CardTitle>
           </CardHeader>
           <CardContent>
-            <div 
-              className="text-muted-foreground prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: courseData.basicInfo.requirements }}
-            />
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {courseData.basicInfo.requirements}
+            </p>
           </CardContent>
         </Card>
       )}
