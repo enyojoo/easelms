@@ -45,6 +45,10 @@ interface Course {
   title: string
 }
 
+interface Stats {
+  totalLearners: number
+}
+
 export default function LearnersPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
@@ -58,6 +62,8 @@ export default function LearnersPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>("")
   const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [stats, setStats] = useState<Stats | null>(null)
   const [coursesLoading, setCoursesLoading] = useState(false)
   const [enrolling, setEnrolling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -73,6 +79,32 @@ export default function LearnersPage() {
       }
     }
   }, [user, userType, authLoading, router])
+
+  // Fetch stats (for total learners count)
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!mounted || authLoading || !user || userType !== "admin") return
+
+      try {
+        setStatsLoading(true)
+        const response = await fetch("/api/admin/stats")
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch stats")
+        }
+
+        const data = await response.json()
+        setStats({ totalLearners: data.totalLearners || 0 })
+      } catch (err: any) {
+        console.error("Error fetching stats:", err)
+        // Don't show error toast for stats, just log it
+      } finally {
+        setStatsLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [mounted, authLoading, user, userType])
 
   // Fetch learners
   useEffect(() => {
@@ -208,7 +240,8 @@ export default function LearnersPage() {
   }
 
   const getTotalEnrolled = () => {
-    return learners.length
+    // Use stats from API (same as dashboard) for total learners count
+    return stats?.totalLearners || 0
   }
 
   const getTotalCoursesEnrolled = () => {
@@ -246,7 +279,13 @@ export default function LearnersPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{getTotalEnrolled()}</p>
+            {statsLoading ? (
+              <div className="flex items-center">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : (
+              <p className="text-3xl font-bold">{getTotalEnrolled()}</p>
+            )}
           </CardContent>
         </Card>
         <Card>

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Trash2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useClientAuthState } from "@/utils/client-auth"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,7 @@ interface TeamMember {
 }
 
 export default function TeamManagement() {
+  const { user, loading: authLoading, userType } = useClientAuthState()
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [newMember, setNewMember] = useState<{ name: string; email: string; password: string; role: "admin" }>({
     name: "",
@@ -44,6 +46,9 @@ export default function TeamManagement() {
 
   useEffect(() => {
     const fetchTeamMembers = async () => {
+      // Wait for authentication to complete and verify admin
+      if (authLoading || !user || userType !== "admin") return
+
       try {
         setLoading(true)
         setError(null)
@@ -72,7 +77,7 @@ export default function TeamManagement() {
     }
 
     fetchTeamMembers()
-  }, [])
+  }, [authLoading, user, userType])
 
   const handleAddMember = async () => {
     if (!newMember.name || !newMember.email || !newMember.password) {

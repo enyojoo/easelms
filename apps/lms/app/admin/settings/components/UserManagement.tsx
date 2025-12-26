@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Trash2, Search, Users, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useClientAuthState } from "@/utils/client-auth"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,7 @@ interface PlatformUser {
 }
 
 export default function UserManagement() {
+  const { user, loading: authLoading, userType } = useClientAuthState()
   const [users, setUsers] = useState<PlatformUser[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
@@ -39,6 +41,9 @@ export default function UserManagement() {
 
   useEffect(() => {
     const fetchUsers = async () => {
+      // Wait for authentication to complete and verify admin
+      if (authLoading || !user || userType !== "admin") return
+
       try {
         setLoading(true)
         setError(null)
@@ -69,7 +74,7 @@ export default function UserManagement() {
     }
 
     fetchUsers()
-  }, [])
+  }, [authLoading, user, userType])
 
   // Note: Suspend/Activate functionality requires a status field in the profiles table
   // For now, this is commented out until the database schema supports it

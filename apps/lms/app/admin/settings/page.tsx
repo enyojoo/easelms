@@ -23,7 +23,6 @@ import TeamManagement from "./components/TeamManagement"
 import UserManagement from "./components/UserManagement"
 import { US } from "country-flag-icons/react/3x2"
 import AdminSettingsSkeleton from "@/components/AdminSettingsSkeleton"
-import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
 const NigeriaFlag = () => (
@@ -50,6 +49,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -92,6 +92,7 @@ export default function SettingsPage() {
             emailNotifications: true, // Keep for compatibility
           })
         }
+        setInitialLoadComplete(true)
       } catch (err: any) {
         console.error("Error fetching settings:", err)
         setError(err.message || "Failed to load settings")
@@ -108,45 +109,53 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [name]: checked }))
   }
 
-  const handleSaveSettings = async () => {
-    if (!user || userType !== "admin") return
+  // Auto-save settings with debouncing
+  useEffect(() => {
+    // Don't auto-save on initial load
+    if (!initialLoadComplete || !user || userType !== "admin") return
 
-    try {
-      setSaving(true)
-      setError(null)
+    // Debounce: wait 1 second after user stops changing settings
+    const timeoutId = setTimeout(async () => {
+      try {
+        setSaving(true)
+        setError(null)
 
-      const platformSettings = {
-        default_currency: settings.defaultCurrency,
-        course_enrollment_notifications: settings.courseEnrollmentNotifications,
-        course_completion_notifications: settings.courseCompletionNotifications,
-        platform_announcements: settings.platformAnnouncements,
-        user_email_notifications: settings.userEmailNotifications,
+        const platformSettings = {
+          default_currency: settings.defaultCurrency,
+          course_enrollment_notifications: settings.courseEnrollmentNotifications,
+          course_completion_notifications: settings.courseCompletionNotifications,
+          platform_announcements: settings.platformAnnouncements,
+          user_email_notifications: settings.userEmailNotifications,
+        }
+
+        const response = await fetch("/api/settings", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            platformSettings,
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to save settings")
+        }
+
+        // Show subtle success notification (not too intrusive for auto-save)
+        toast.success("Settings saved", { duration: 2000 })
+      } catch (err: any) {
+        console.error("Error saving settings:", err)
+        setError(err.message || "Failed to save settings")
+        toast.error(err.message || "Failed to save settings")
+      } finally {
+        setSaving(false)
       }
+    }, 1000) // 1 second debounce
 
-      const response = await fetch("/api/settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          platformSettings,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to save settings")
-      }
-
-      toast.success("Settings saved successfully!")
-    } catch (err: any) {
-      console.error("Error saving settings:", err)
-      setError(err.message || "Failed to save settings")
-      toast.error(err.message || "Failed to save settings")
-    } finally {
-      setSaving(false)
-    }
-  }
+    return () => clearTimeout(timeoutId)
+  }, [settings, initialLoadComplete, user, userType])
 
   // Always render page structure, show skeleton for content if loading
   const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
@@ -195,11 +204,12 @@ export default function SettingsPage() {
                       <Label className="text-base font-semibold flex items-center">
                         <DollarSign className="mr-2 h-4 w-4" /> Default Currency
                       </Label>
-                      <Select
-                        value={settings.defaultCurrency}
-                        onValueChange={(value) => setSettings((prev) => ({ ...prev, defaultCurrency: value }))}
-                        disabled={saving}
-                      >
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={settings.defaultCurrency}
+                          onValueChange={(value) => setSettings((prev) => ({ ...prev, defaultCurrency: value }))}
+                          disabled={saving}
+                        >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select default currency" />
                         </SelectTrigger>
@@ -217,7 +227,11 @@ export default function SettingsPage() {
                             </div>
                           </SelectItem>
                         </SelectContent>
-                      </Select>
+                        </Select>
+                        {saving && (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         This currency will be used as the default for courses sold on the platform. Course creators can override this for individual courses.
                       </p>
@@ -236,12 +250,17 @@ export default function SettingsPage() {
                             Send email notifications when users enroll in courses
                           </p>
                         </div>
-                        <Switch
-                          id="course-enrollment-notifications"
-                          checked={settings.courseEnrollmentNotifications}
-                          onCheckedChange={handleSwitchChange("courseEnrollmentNotifications")}
-                          disabled={saving}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="course-enrollment-notifications"
+                            checked={settings.courseEnrollmentNotifications}
+                            onCheckedChange={handleSwitchChange("courseEnrollmentNotifications")}
+                            disabled={saving}
+                          />
+                          {saving && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -251,12 +270,17 @@ export default function SettingsPage() {
                             Send email notifications when users complete courses
                           </p>
                         </div>
-                        <Switch
-                          id="course-completion-notifications"
-                          checked={settings.courseCompletionNotifications}
-                          onCheckedChange={handleSwitchChange("courseCompletionNotifications")}
-                          disabled={saving}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="course-completion-notifications"
+                            checked={settings.courseCompletionNotifications}
+                            onCheckedChange={handleSwitchChange("courseCompletionNotifications")}
+                            disabled={saving}
+                          />
+                          {saving && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -266,12 +290,17 @@ export default function SettingsPage() {
                             Enable sending platform-wide announcements to all users
                           </p>
                         </div>
-                        <Switch
-                          id="platform-announcements"
-                          checked={settings.platformAnnouncements}
-                          onCheckedChange={handleSwitchChange("platformAnnouncements")}
-                          disabled={saving}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="platform-announcements"
+                            checked={settings.platformAnnouncements}
+                            onCheckedChange={handleSwitchChange("platformAnnouncements")}
+                            disabled={saving}
+                          />
+                          {saving && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between">
@@ -281,27 +310,18 @@ export default function SettingsPage() {
                             Default email notification preference for new users. Users can change this in their settings.
                           </p>
                         </div>
-                        <Switch
-                          id="user-email-notifications"
-                          checked={settings.userEmailNotifications}
-                          onCheckedChange={handleSwitchChange("userEmailNotifications")}
-                          disabled={saving}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id="user-email-notifications"
+                            checked={settings.userEmailNotifications}
+                            onCheckedChange={handleSwitchChange("userEmailNotifications")}
+                            disabled={saving}
+                          />
+                          {saving && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
-                    </div>
-
-                    {/* Save Button */}
-                    <div className="pt-4 border-t">
-                      <Button onClick={handleSaveSettings} disabled={saving}>
-                        {saving ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Settings"
-                        )}
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
