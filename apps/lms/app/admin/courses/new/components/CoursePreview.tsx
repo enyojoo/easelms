@@ -34,25 +34,7 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
 
       <div>
         <h2 className="text-2xl font-bold">{courseData.basicInfo.title || "Untitled Course"}</h2>
-        {courseData.basicInfo.description && (
-          <p className="text-muted-foreground mt-2 whitespace-pre-wrap">
-            {courseData.basicInfo.description}
-          </p>
-        )}
       </div>
-
-      {courseData.basicInfo.whoIsThisFor && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Who this course is for</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {courseData.basicInfo.whoIsThisFor}
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {courseData.basicInfo.requirements && (
         <Card>
@@ -62,6 +44,32 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
           <CardContent>
             <p className="text-muted-foreground whitespace-pre-wrap">
               {courseData.basicInfo.requirements}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {courseData.basicInfo.description && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Course Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {courseData.basicInfo.description}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {courseData.basicInfo.whoIsThisFor && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Who this course is for</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {courseData.basicInfo.whoIsThisFor}
             </p>
           </CardContent>
         </Card>
