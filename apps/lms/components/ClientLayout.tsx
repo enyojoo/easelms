@@ -10,7 +10,6 @@ import { getClientAuthState, useClientAuthState } from "../utils/client-auth"
 import { ThemeProvider } from "./ThemeProvider"
 import { PageTransition } from "./PageTransition"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
-import FullPageSkeleton from "./FullPageSkeleton"
 
 export default function ClientLayout({
   children,
@@ -237,52 +236,52 @@ export default function ClientLayout({
 
   const { isLoggedIn, userType, user } = authState
 
-  // During SSR and initial render, check if we should show full-page skeleton
-  // If on protected route and auth is loading, show skeleton instead of layout structure
-  const isProtectedRouteCheck = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
-  const isAuthPageCheck = [
-    "/auth/learner/login",
-    "/auth/learner/signup",
-    "/auth/admin/login",
-    "/forgot-password",
-    "/forgot-password/code",
-    "/forgot-password/new-password",
-  ].includes(pathname) || pathname.startsWith("/auth/")
-  
+  // During SSR and initial render, preserve layout structure to avoid layout shift
+  // Layout will always render, page content will handle its own skeleton
   if (!mounted) {
-    // If on protected route and auth is loading, show full-page skeleton
-    if (isProtectedRouteCheck && !isAuthPageCheck && supabaseAuthState.loading) {
+    const isProtectedRouteCheck = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
+    const isAuthPageCheck = [
+      "/auth/learner/login",
+      "/auth/learner/signup",
+      "/auth/admin/login",
+      "/forgot-password",
+      "/forgot-password/code",
+      "/forgot-password/new-password",
+    ].includes(pathname) || pathname.startsWith("/auth/")
+    
+    // Show layout structure for protected routes, even during SSR
+    if (isProtectedRouteCheck && !isAuthPageCheck) {
       return (
         <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-          <FullPageSkeleton />
+          <div className="flex flex-col h-screen">
+            <div className="lg:hidden">
+              <div className="h-16 border-b border-border" />
+            </div>
+            <div className="hidden lg:flex h-screen">
+              <div className="w-64 h-screen bg-background-element border-r border-border" />
+              <div className="flex flex-col flex-grow lg:ml-64">
+                <div className="h-16 border-b border-border" />
+                <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
+                  <main className="container-fluid">
+                    <PageTransition>{children}</PageTransition>
+                  </main>
+                </div>
+              </div>
+            </div>
+            <div className="lg:hidden flex-grow overflow-y-auto mt-16 mb-16 pb-4">
+              <main className="container-fluid">
+                <PageTransition>{children}</PageTransition>
+              </main>
+            </div>
+          </div>
         </ThemeProvider>
       )
     }
     
-    // Otherwise, preserve layout structure to avoid layout shift
+    // For non-protected routes, just render children
     return (
       <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-        <div className="flex flex-col h-screen">
-          <div className="hidden lg:flex h-screen">
-            <div className="w-64 h-screen bg-background-element border-r border-border" />
-            <div className="flex flex-col flex-grow lg:ml-64">
-              <div className="h-16 border-b border-border" />
-              <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
-                <main className="container-fluid">
-                  <PageTransition>{children}</PageTransition>
-                </main>
-              </div>
-            </div>
-          </div>
-          <div className="lg:hidden">
-            <div className="h-16 border-b border-border" />
-          </div>
-          <div className="lg:hidden flex-grow overflow-y-auto mt-16 mb-16 pb-4">
-            <main className="container-fluid">
-              <PageTransition>{children}</PageTransition>
-            </main>
-          </div>
-        </div>
+        <PageTransition>{children}</PageTransition>
       </ThemeProvider>
     )
   }
@@ -290,41 +289,32 @@ export default function ClientLayout({
   // Determine if we should show the layout
   const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
   
-  // If auth is still loading and we're on a protected route, show full-page skeleton
-  // This prevents the distorted flash of layout + content skeleton
-  const isAuthLoading = supabaseAuthState.loading
-  const shouldShowFullPageSkeleton = isAuthLoading && isProtectedRoute && !isAuthPage
-  
-  // Only show layout once auth is confirmed (not loading and logged in) or if we're not on a protected route
-  // For protected routes, wait until auth is done loading before showing layout
-  const shouldShowLayout = isProtectedRoute 
-    ? (isLoggedIn && !isAuthLoading && !isAuthPage)
-    : (isLoggedIn && !isAuthPage)
+  // Always show layout for protected routes (even if auth is loading)
+  // Page content will handle showing its own skeleton
+  const shouldShowLayout = isProtectedRoute && !isAuthPage
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-      {shouldShowFullPageSkeleton ? (
-        <FullPageSkeleton />
-      ) : shouldShowLayout ? (
+      {shouldShowLayout ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">
-            {isLoggedIn && user ? (
-              <MobileMenu userType={userType || "user"} user={user} />
+            {isLoggedIn && user && userType ? (
+              <MobileMenu userType={userType as "user" | "admin"} user={user} />
             ) : (
-              <div className="h-16 border-b border-border" />
+              <div className="h-16 border-b border-border bg-background-element" />
             )}
           </div>
           <div className="hidden lg:flex h-screen">
             {isLoggedIn && userType ? (
-              <LeftSidebar userType={userType || "user"} />
+              <LeftSidebar userType={userType as "user" | "admin"} />
             ) : (
               <div className="w-64 h-screen bg-background-element border-r border-border" />
             )}
             <div className="flex flex-col flex-grow lg:ml-64">
-              {isLoggedIn && user ? (
-                <Header isLoggedIn={isLoggedIn} userType={userType} user={user} />
+              {isLoggedIn && user && userType ? (
+                <Header isLoggedIn={isLoggedIn} userType={userType as "user" | "admin"} user={user} />
               ) : (
-                <div className="h-16 border-b border-border" />
+                <div className="h-16 border-b border-border bg-background-element" />
               )}
               <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
                 <main className="container-fluid">
