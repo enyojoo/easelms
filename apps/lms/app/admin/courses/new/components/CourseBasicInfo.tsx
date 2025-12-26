@@ -33,12 +33,17 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
   const [vimeoId, setVimeoId] = useState<string | null>(null)
   const [isValidVideo, setIsValidVideo] = useState(true)
 
-  // Sync local state with data prop changes (for draft restoration)
+  // Sync local state with data prop changes (for draft restoration and tab switching)
   useEffect(() => {
-    if (data.thumbnail && data.thumbnail !== thumbnail) {
-      setThumbnail(data.thumbnail)
+    if (data.thumbnail) {
+      if (data.thumbnail !== thumbnail) {
+        setThumbnail(data.thumbnail)
+      }
+    } else if (thumbnail !== "/placeholder.svg?height=200&width=300") {
+      // Reset to placeholder if data.thumbnail is cleared
+      setThumbnail("/placeholder.svg?height=200&width=300")
     }
-  }, [data.thumbnail])
+  }, [data.thumbnail, thumbnail])
 
   useEffect(() => {
     if (data.previewVideo !== previewVideoInput) {

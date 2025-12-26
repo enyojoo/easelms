@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Card, CardContent } from "@/components/ui/card"
-import { Upload, X, File, Image as ImageIcon, Video, FileText, CheckCircle2 } from "lucide-react"
+import { Upload, X, File, Image as ImageIcon, Video, FileText, CheckCircle2, Loader2 } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
 interface FileUploadProps {
@@ -42,16 +41,52 @@ export default function FileUpload({
   const [removedInitialValue, setRemovedInitialValue] = useState(false)
 
   // Restore uploaded state from initialValue (only if not explicitly removed)
+  // This runs on mount and when initialValue changes
   useEffect(() => {
     if (initialValue && !removedInitialValue) {
       const urls = Array.isArray(initialValue) ? initialValue : [initialValue]
-      setUploadedUrls(urls)
-      setUploaded(true)
+      // Always restore if URLs don't match (handles remounts and prop changes)
+      if (JSON.stringify(uploadedUrls) !== JSON.stringify(urls)) {
+        setUploadedUrls(urls)
+        setUploaded(true)
+        // Restore metadata for deletion if needed
+        if (urls.length > 0 && bucket) {
+          // Try to extract path from URL for deletion
+          const url = urls[0]
+          try {
+            const urlParts = url.split(`/${bucket}/`)
+            if (urlParts.length > 1) {
+              const path = urlParts[1]
+              setUploadMetadata([{ url, bucket, path }])
+            } else {
+              // Try alternative URL format
+              const match = url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/)
+              if (match) {
+                setUploadMetadata([{ url, bucket, path: match[1] }])
+              } else {
+                setUploadMetadata([{ url, bucket, path: "" }])
+              }
+            }
+          } catch {
+            // If we can't extract path, that's okay - deletion might still work with URL
+            setUploadMetadata([{ url, bucket, path: "" }])
+          }
+        }
+      }
     } else if (!initialValue) {
-      // Reset removed flag when initialValue is cleared by parent
-      setRemovedInitialValue(false)
+      // If initialValue is cleared by parent, reset removed flag and clear state
+      if (removedInitialValue) {
+        setRemovedInitialValue(false)
+      }
+      // Clear state if initialValue is removed and we have no files
+      if (uploadedUrls.length > 0 && files.length === 0) {
+        setUploadedUrls([])
+        setUploadMetadata([])
+        setUploaded(false)
+      }
     }
-  }, [initialValue, removedInitialValue])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialValue, bucket]) // Removed removedInitialValue from deps to allow restoration on remount
 
   const getAcceptTypes = (): Record<string, string[]> | undefined => {
     switch (type) {
@@ -353,52 +388,12 @@ export default function FileUpload({
       {hasFiles && (
         <div className="space-y-2">
           {/* Show files from File objects */}
-          {files.map((file, index) => {
-            // Calculate progress for each side of the border (filling from left to right around frame)
-            const totalProgress = progress
-            const sideLength = 25 // Each side is 25% of total
-            const topProgress = Math.min(totalProgress / sideLength, 1) * 100
-            const rightProgress = totalProgress > sideLength ? Math.min((totalProgress - sideLength) / sideLength, 1) * 100 : 0
-            const bottomProgress = totalProgress > sideLength * 2 ? Math.min((totalProgress - sideLength * 2) / sideLength, 1) * 100 : 0
-            const leftProgress = totalProgress > sideLength * 3 ? Math.min((totalProgress - sideLength * 3) / sideLength, 1) * 100 : 0
-
-            return (
-              <Card
-                key={index}
-                className="relative overflow-hidden"
-              >
-                {/* Progress bar around the entire frame - filling from left to right */}
-                {uploading && (
-                  <div className="absolute inset-0 pointer-events-none">
-                    {/* Top border - left to right */}
-                    <div
-                      className="absolute top-0 left-0 h-1 bg-primary transition-all duration-300"
-                      style={{ width: `${topProgress}%` }}
-                    />
-                    {/* Right border - top to bottom */}
-                    {totalProgress > sideLength && (
-                      <div
-                        className="absolute top-0 right-0 w-1 bg-primary transition-all duration-300"
-                        style={{ height: `${rightProgress}%` }}
-                      />
-                    )}
-                    {/* Bottom border - right to left */}
-                    {totalProgress > sideLength * 2 && (
-                      <div
-                        className="absolute bottom-0 right-0 h-1 bg-primary transition-all duration-300"
-                        style={{ width: `${bottomProgress}%` }}
-                      />
-                    )}
-                    {/* Left border - bottom to top */}
-                    {totalProgress > sideLength * 3 && (
-                      <div
-                        className="absolute bottom-0 left-0 w-1 bg-primary transition-all duration-300"
-                        style={{ height: `${leftProgress}%` }}
-                      />
-                    )}
-                  </div>
-                )}
-                <CardContent className="p-3">
+          {files.map((file, index) => (
+            <Card
+              key={index}
+              className="relative overflow-hidden"
+            >
+              <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     {getFileIcon(file)}
@@ -408,23 +403,27 @@ export default function FileUpload({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {uploaded && (
+                    {uploading && (
+                      <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
+                    )}
+                    {uploaded && !uploading && (
                       <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFile(index)}
-                      className="h-8 w-8 flex-shrink-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {!uploading && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFile(index)}
+                        className="h-8 w-8 flex-shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
             </Card>
-            )
-          })}
+          ))}
 
           {/* Show restored uploaded state when initialValue is provided but no files */}
           {uploadedUrls.length > 0 && files.length === 0 && (
@@ -443,17 +442,22 @@ export default function FileUpload({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {uploaded && (
+                    {uploading && (
+                      <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
+                    )}
+                    {uploaded && !uploading && (
                       <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFile()}
-                      className="h-8 w-8 flex-shrink-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {!uploading && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFile()}
+                        className="h-8 w-8 flex-shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>
