@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { BookOpen, Edit, Trash2, Eye, Clock, Banknote, Filter, Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import AdminCoursesSkeleton from "@/components/AdminCoursesSkeleton"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
@@ -54,6 +55,7 @@ export default function ManageCoursesPage() {
   const [courseToDelete, setCourseToDelete] = useState<number | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [draftCourses, setDraftCourses] = useState<Course[]>([])
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -65,6 +67,84 @@ export default function ManageCoursesPage() {
       router.push("/auth/admin/login")
     }
   }, [user, userType, authLoading, router])
+
+  // Load draft courses from localStorage
+  const loadDrafts = useCallback(() => {
+    if (typeof window === "undefined") return []
+    
+    try {
+      const drafts: Course[] = []
+      // Check for draft with key "course-draft-new"
+      const draftKey = "course-draft-new"
+      const draftJson = localStorage.getItem(draftKey)
+      
+      if (draftJson) {
+        try {
+          const draft = JSON.parse(draftJson)
+          const draftData = draft.data
+          
+          if (draftData && draftData.basicInfo && (draftData.basicInfo.title || Object.keys(draftData).length > 0)) {
+            // Extract description HTML to plain text for preview
+            let descriptionText = ""
+            if (draftData.basicInfo.description) {
+              try {
+                const tempDiv = document.createElement("div")
+                tempDiv.innerHTML = draftData.basicInfo.description
+                descriptionText = tempDiv.textContent || tempDiv.innerText || ""
+              } catch (e) {
+                // Fallback: strip HTML tags with regex
+                descriptionText = draftData.basicInfo.description.replace(/<[^>]*>/g, "").substring(0, 150)
+              }
+            }
+            
+            drafts.push({
+              id: -1, // Use negative ID to indicate draft
+              title: draftData.basicInfo.title || "Untitled Course",
+              description: descriptionText || "No description",
+              image: draftData.basicInfo.thumbnail || "/placeholder.svg?height=200&width=300",
+              lessons: Array.isArray(draftData.lessons) ? draftData.lessons : [],
+              price: parseFloat(draftData.basicInfo.price) || 0,
+              settings: {
+                isPublished: false, // Drafts are never published
+                ...(draftData.settings || {}),
+              },
+            })
+          }
+        } catch (e) {
+          console.error("Error parsing draft:", e)
+        }
+      }
+      
+      return drafts
+    } catch (err) {
+      console.error("Error loading drafts:", err)
+      return []
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    setDraftCourses(loadDrafts())
+  }, [mounted, loadDrafts])
+
+  // Refresh drafts when page becomes visible (user returns from course builder)
+  useEffect(() => {
+    if (!mounted) return
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setDraftCourses(loadDrafts())
+      }
+    }
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("focus", () => setDraftCourses(loadDrafts()))
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("focus", () => setDraftCourses(loadDrafts()))
+    }
+  }, [mounted, loadDrafts])
 
   // Fetch courses from API
   useEffect(() => {
@@ -189,9 +269,16 @@ export default function ManageCoursesPage() {
     }
   }
 
-  const filteredCourses = courses.filter((course) => {
+  // Combine regular courses and draft courses
+  const allCourses = [...draftCourses, ...courses]
+  
+  const filteredCourses = allCourses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || (statusFilter === "published" && course.settings?.isPublished) || (statusFilter === "draft" && !course.settings?.isPublished)
+    const isDraft = course.id < 0 // Draft courses have negative IDs
+    const matchesStatus = 
+      statusFilter === "all" || 
+      (statusFilter === "published" && course.settings?.isPublished && !isDraft) || 
+      (statusFilter === "draft" && (!course.settings?.isPublished || isDraft))
     const enrollmentPrice = course.settings?.enrollment?.price || course.price || 0
     const matchesPrice =
       priceFilter === "all" ||
@@ -200,7 +287,10 @@ export default function ManageCoursesPage() {
     return matchesSearch && matchesStatus && matchesPrice
   })
 
-  const renderCourseCard = (course: Course) => (
+  const renderCourseCard = (course: Course) => {
+    const isDraft = course.id < 0
+    
+    return (
     <Card key={course.id} className="flex flex-col h-full">
       <CardHeader className="p-4 sm:p-6">
         <div className="aspect-video relative rounded-md overflow-hidden mb-3 sm:mb-4">
@@ -210,6 +300,13 @@ export default function ManageCoursesPage() {
             fill
             className="object-cover"
           />
+          {isDraft && (
+            <div className="absolute top-2 right-2">
+              <Badge variant="secondary" className="bg-yellow-500/90 text-yellow-900">
+                Draft
+              </Badge>
+            </div>
+          )}
         </div>
         <CardTitle className="text-base sm:text-lg mb-2 line-clamp-2">{course.title}</CardTitle>
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
@@ -249,38 +346,58 @@ export default function ManageCoursesPage() {
         <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 line-clamp-3">{course.description}</p>
       </CardContent>
       <CardFooter className="flex flex-row gap-2 p-4 sm:p-6 pt-0">
-        <Link href={`/admin/courses/preview/${course.id}`} className="flex-1">
+        {!isDraft && (
+          <Link href={`/admin/courses/preview/${course.id}`} className="flex-1">
+            <Button 
+              variant="outline" 
+              className="flex items-center justify-center w-full h-8 text-xs"
+              size="sm"
+              title="Preview"
+            >
+              <Eye className="h-3.5 w-3.5" /> 
+            </Button>
+          </Link>
+        )}
+        <Link href={isDraft ? "/admin/courses/new" : `/admin/courses/new?edit=${course.id}`} className="flex-1">
           <Button 
             variant="outline" 
             className="flex items-center justify-center w-full h-8 text-xs"
             size="sm"
-            title="Preview"
-          >
-            <Eye className="h-3.5 w-3.5" /> 
-          </Button>
-        </Link>
-        <Link href={`/admin/courses/new?edit=${course.id}`} className="flex-1">
-          <Button 
-            variant="outline" 
-            className="flex items-center justify-center w-full h-8 text-xs"
-            size="sm"
-            title="Edit"
+            title={isDraft ? "Continue Editing" : "Edit"}
           >
             <Edit className="h-3.5 w-3.5" /> 
           </Button>
         </Link>
-        <Button
-          variant="destructive"
-          className="flex items-center justify-center flex-1 h-8 text-xs"
-          size="sm"
-          onClick={() => handleDeleteClick(course.id)}
-          title="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5" /> 
-        </Button>
+        {!isDraft && (
+          <Button
+            variant="destructive"
+            className="flex items-center justify-center flex-1 h-8 text-xs"
+            size="sm"
+            onClick={() => handleDeleteClick(course.id)}
+            title="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> 
+          </Button>
+        )}
+        {isDraft && (
+          <Button
+            variant="destructive"
+            className="flex items-center justify-center flex-1 h-8 text-xs"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem("course-draft-new")
+              setDraftCourses([])
+              toast.success("Draft deleted")
+            }}
+            title="Delete Draft"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> 
+          </Button>
+        )}
       </CardFooter>
     </Card>
-  )
+    )
+  }
 
   return (
     <div className="pt-4 md:pt-8">

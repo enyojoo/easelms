@@ -6,12 +6,25 @@ import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { ArrowLeft } from "lucide-react"
 import CourseBasicInfo from "./components/CourseBasicInfo"
 import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
 import { useAutoSave } from "./hooks/useAutoSave"
 import { modules } from "@/data/courses"
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffSecs = Math.floor(diffMs / 1000)
+  const diffMins = Math.floor(diffSecs / 60)
+  
+  if (diffSecs < 10) return "just now"
+  if (diffSecs < 60) return `${diffSecs} seconds ago`
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`
+  return "recently"
+}
 
 function NewCourseContent() {
   const router = useRouter()
@@ -83,12 +96,21 @@ function NewCourseContent() {
 
   const editCourseId = searchParams?.get("edit")
   
-  // Auto-save hook (silent, no UI)
-  const { clearDraft, loadDraft } = useAutoSave({
+  // Auto-save hook with last saved tracking
+  const { clearDraft, loadDraft, lastSaved } = useAutoSave({
     data: courseData,
     courseId: editCourseId || "new",
     enabled: true,
   })
+  
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
+  
+  // Update last saved time when lastSaved changes
+  useEffect(() => {
+    if (lastSaved) {
+      setLastSavedTime(lastSaved)
+    }
+  }, [lastSaved])
 
   // Load draft on mount (only if not editing)
   useEffect(() => {
@@ -200,11 +222,35 @@ function NewCourseContent() {
   return (
     <div className="pt-4 md:pt-8 pb-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-primary">
-          {searchParams?.get("edit") ? "Edit Course" : "New Course"}
-        </h1>
-        <div className="space-x-2 flex items-center">
-          <Button variant="outline" onClick={() => router.push("/admin/courses")}>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              clearDraft()
+              router.push("/admin/courses")
+            }}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold text-primary">
+            {searchParams?.get("edit") ? "Edit Course" : "New Course"}
+          </h1>
+        </div>
+        <div className="space-x-2 flex items-center gap-4">
+          {lastSavedTime && (
+            <span className="text-xs text-muted-foreground">
+              Draft auto-saved {formatTimeAgo(lastSavedTime)}
+            </span>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              clearDraft()
+              router.push("/admin/courses")
+            }}
+          >
             Cancel
           </Button>
           <Button onClick={handleSaveCourse}>{searchParams?.get("edit") ? "Save" : "Create"}</Button>
