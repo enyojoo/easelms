@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
+import { ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { cancelSubscription, type Purchase } from "@/utils/enrollment"
 import type { User } from "@/data/users"
+import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
 
 export default function PurchaseHistoryPage() {
   const router = useRouter()
@@ -18,6 +19,12 @@ export default function PurchaseHistoryPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(true)
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([])
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!authLoading) {
@@ -68,21 +75,15 @@ export default function PurchaseHistoryPage() {
     }
   }
 
-  if (loading || !user) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Loading purchase history...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || loading || !user
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      {isLoading ? (
+        <PurchaseHistorySkeleton />
+      ) : (
+        <>
       <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Purchase History</h1>
       
       <Card>
@@ -185,7 +186,7 @@ export default function PurchaseHistoryPage() {
                                         : p
                                     )
                                   )
-                                  router.push("/support")
+                                  router.push("/learner/support")
                                 }
                               }}
                               className="w-full sm:w-auto min-h-[44px]"
@@ -212,6 +213,8 @@ export default function PurchaseHistoryPage() {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   )
 }

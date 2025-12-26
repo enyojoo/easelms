@@ -31,7 +31,6 @@ export async function middleware(request: NextRequest) {
   const publicPaths = [
     "/auth",
     "/forgot-password",
-    "/support",
   ]
 
   const isPublicPath = publicPaths.some((path) => url.pathname.startsWith(path))

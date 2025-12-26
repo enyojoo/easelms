@@ -51,7 +51,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
   const sidebarItems = {
     user: [
       { href: "/learner/purchase", label: "Purchase", icon: ShoppingBag },
-      { href: "/support", label: "Support", icon: HelpCircle },
+      { href: "/learner/support", label: "Support", icon: HelpCircle },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
     admin: [

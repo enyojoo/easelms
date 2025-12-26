@@ -228,8 +228,7 @@ export default function ClientLayout({
   const { isLoggedIn, userType, user } = authState
 
   // Determine if we should show the layout
-  // Include /support as it's accessible from the sidebar
-  const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/') || pathname === '/support'
+  const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
   const isAuthPage = [
     "/auth/learner/login",
     "/auth/learner/signup",

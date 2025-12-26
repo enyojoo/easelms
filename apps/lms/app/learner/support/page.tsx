@@ -41,7 +41,7 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-primary mb-2">Support</h1>
         <p className="text-muted-foreground">
@@ -172,3 +172,4 @@ export default function SupportPage() {
     </div>
   )
 }
+

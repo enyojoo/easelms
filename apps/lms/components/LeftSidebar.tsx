@@ -30,7 +30,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
       { href: "/learner/dashboard", icon: Home, label: "Dashboard" },
       { href: "/learner/courses", icon: BookOpen, label: "Courses" },
       { href: "/learner/purchase", icon: ShoppingBag, label: "Purchase" },
-      { href: "/support", icon: HelpCircle, label: "Support" },
+      { href: "/learner/support", icon: HelpCircle, label: "Support" },
     ],
     admin: [
       { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
