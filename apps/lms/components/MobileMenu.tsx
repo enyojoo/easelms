@@ -21,10 +21,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ThemeToggle } from "./ThemeToggle"
 import Logo from "./Logo"
 import { logout } from "../utils/logout"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface MobileMenuProps {
   userType: "user" | "admin"
-  user: {
+  user?: {
     name: string
     profileImage: string
   }
@@ -63,6 +64,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
 
   const currentMenu = menuItems[userType]
   const currentSidebar = sidebarItems[userType]
+  const isLoading = !user
 
   return (
     <>
@@ -70,10 +72,14 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="lg:hidden bg-transparent">
-              <Avatar className="w-10 h-10 overflow-hidden">
-                <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-              </Avatar>
+              {isLoading ? (
+                <Skeleton className="w-10 h-10 rounded-full" />
+              ) : (
+                <Avatar className="w-10 h-10 overflow-hidden">
+                  <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
+                  <AvatarFallback>{(user.name || "U").charAt(0)}</AvatarFallback>
+                </Avatar>
+              )}
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[250px] sm:w-[300px] p-0">
@@ -83,13 +89,22 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-4">
-                  <Avatar className="w-12 h-12 overflow-hidden">
-                    <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold text-lg">{user.name}</p>
-                  </div>
+                  {isLoading ? (
+                    <>
+                      <Skeleton className="w-12 h-12 rounded-full" />
+                      <Skeleton className="h-5 w-32" />
+                    </>
+                  ) : (
+                    <>
+                      <Avatar className="w-12 h-12 overflow-hidden">
+                        <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
+                        <AvatarFallback>{(user.name || "U").charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold text-lg">{user.name || "User"}</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <nav className="flex-grow px-4 py-6">

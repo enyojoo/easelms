@@ -242,29 +242,24 @@ export default function ClientLayout({
   // Page content will handle showing its own skeleton
   const shouldShowLayout = isProtectedRoute && !isAuthPage
 
+  // Derive userType from pathname if auth state not ready yet
+  const derivedUserType: "user" | "admin" = userType 
+    ? (userType as "user" | "admin")
+    : pathname.startsWith('/admin/') 
+      ? "admin" 
+      : "user"
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
       {shouldShowLayout ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">
-            {isLoggedIn && user && userType ? (
-              <MobileMenu userType={userType as "user" | "admin"} user={user} />
-            ) : (
-              <div className="h-16 border-b border-border bg-background-element" />
-            )}
+            <MobileMenu userType={derivedUserType} user={user} />
           </div>
           <div className="hidden lg:flex h-screen">
-            {isLoggedIn && userType ? (
-              <LeftSidebar userType={userType as "user" | "admin"} />
-            ) : (
-              <div className="w-64 h-screen bg-background-element border-r border-border" />
-            )}
+            <LeftSidebar userType={derivedUserType} />
             <div className="flex flex-col flex-grow lg:ml-64">
-              {isLoggedIn && user && userType ? (
-                <Header isLoggedIn={isLoggedIn} userType={userType as "user" | "admin"} user={user} />
-              ) : (
-                <div className="h-16 border-b border-border bg-background-element" />
-              )}
+              <Header isLoggedIn={isLoggedIn} userType={derivedUserType} user={user} />
               <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
                 <main className="container-fluid">
                   {children}
