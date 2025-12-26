@@ -98,7 +98,7 @@ export async function GET() {
       ? (payments?.reduce((sum, payment) => sum + (payment.amount_usd || 0), 0) || 0)
       : 0
 
-    // Get recent activity (last 10 items from user signups, enrollments, course completions, payments)
+    // Get recent activity (last 5 items from user signups, enrollments, course completions, payments)
     // Use admin client to bypass RLS
     const [recentSignups, enrollments, completions, recentPayments] = await Promise.all([
       adminClient
@@ -188,7 +188,7 @@ export async function GET() {
       })) || []) : [])
     ]
     .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, 10)
+    .slice(0, 5)
 
     return NextResponse.json({
       totalCourses: totalCourses || 0,
