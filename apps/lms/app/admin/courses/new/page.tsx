@@ -114,12 +114,15 @@ function NewCourseContent() {
 
   // Load draft on mount (only if not editing)
   useEffect(() => {
-    if (!editCourseId) {
-      const draft = loadDraft()
-      if (draft) {
-        setCourseData(draft)
+    const loadDraftData = async () => {
+      if (!editCourseId) {
+        const draft = await loadDraft()
+        if (draft) {
+          setCourseData(draft)
+        }
       }
     }
+    loadDraftData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run on mount
 
@@ -200,22 +203,88 @@ function NewCourseContent() {
     })
   }, [])
 
-  const handleSaveCourse = async () => {
+  const handleSaveDraft = async () => {
+    try {
+      const response = await fetch("/api/courses/drafts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseId: editCourseId || "new",
+          courseData: courseData,
+          isPublished: false, // Save as draft
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to save draft")
+      }
+
+      const result = await response.json()
+      
+      // If we got a courseId back and we were creating a new course, update the URL
+      if (result.courseId && !editCourseId) {
+        router.replace(`/admin/courses/new?edit=${result.courseId}`)
+      }
+      
+      // Clear localStorage draft
+      clearDraft()
+      
+      toast.success("Draft saved successfully")
+      
+      // Navigate to courses page
+      router.push("/admin/courses")
+    } catch (error: any) {
+      console.error("Error saving draft:", error)
+      toast.error(error.message || "Failed to save draft")
+    }
+  }
+
+  const handlePublishCourse = async () => {
     // Validate required fields
     if (!courseData.basicInfo.title || !courseData.basicInfo.description) {
       toast.error("Please fill in all required fields")
       return
     }
 
-    // Clear draft on successful save
-    clearDraft()
+    try {
+      const response = await fetch("/api/courses/drafts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseId: editCourseId || "new",
+          courseData: courseData,
+          isPublished: true, // Publish the course
+        }),
+      })
 
-    // Mock save - in real app, this would call an API
-    console.log("Saving course:", courseData)
-    toast.success(searchParams?.get("edit") ? "Course updated successfully" : "Course created successfully")
-    setTimeout(() => {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to publish course")
+      }
+
+      const result = await response.json()
+      
+      // If we got a courseId back and we were creating a new course, update the URL
+      if (result.courseId && !editCourseId) {
+        router.replace(`/admin/courses/new?edit=${result.courseId}`)
+      }
+      
+      // Clear draft on successful publish
+      clearDraft()
+      
+      toast.success("Course published successfully")
+      
+      // Navigate to courses page
       router.push("/admin/courses")
-    }, 1000)
+    } catch (error: any) {
+      console.error("Error publishing course:", error)
+      toast.error(error.message || "Failed to publish course")
+    }
   }
 
 
@@ -227,7 +296,7 @@ function NewCourseContent() {
             variant="ghost"
             size="icon"
             onClick={() => {
-              clearDraft()
+              // Just navigate back, don't clear draft (auto-saved drafts are retained)
               router.push("/admin/courses")
             }}
             className="h-8 w-8"
@@ -246,14 +315,11 @@ function NewCourseContent() {
           )}
           <Button 
             variant="outline" 
-            onClick={() => {
-              clearDraft()
-              router.push("/admin/courses")
-            }}
+            onClick={handleSaveDraft}
           >
-            Cancel
+            Save to Draft
           </Button>
-          <Button onClick={handleSaveCourse}>{searchParams?.get("edit") ? "Save" : "Create"}</Button>
+          <Button onClick={handlePublishCourse}>Publish</Button>
         </div>
       </div>
 
