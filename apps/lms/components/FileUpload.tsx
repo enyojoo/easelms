@@ -49,15 +49,77 @@ export default function FileUpload({
   }
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       const validFiles = acceptedFiles.filter((file) => file.size <= maxSize)
       if (validFiles.length !== acceptedFiles.length) {
         alert(`Some files exceed the maximum size of ${maxSize / 1024 / 1024}MB`)
       }
       setFiles((prev) => (multiple ? [...prev, ...validFiles] : validFiles))
       setUploaded(false)
+      
+      // Auto-upload files immediately after selection
+      if (validFiles.length > 0) {
+        setUploading(true)
+        setProgress(0)
+        setError(null)
+        setUploadedUrls([])
+
+        try {
+          const urls: string[] = []
+          const totalFiles = validFiles.length
+
+          for (let i = 0; i < validFiles.length; i++) {
+            const file = validFiles[i]
+            const formData = new FormData()
+            formData.append("file", file)
+
+            // Determine file type for bucket selection
+            let fileType = type
+            if (type === "all") {
+              if (file.type.startsWith("image/")) {
+                fileType = "document" // Default to document for general uploads
+              } else {
+                fileType = "document"
+              }
+            }
+
+            formData.append("type", fileType)
+            if (bucket) {
+              formData.append("bucket", bucket)
+            }
+            if (additionalPath) {
+              formData.append("additionalPath", additionalPath)
+            }
+
+            const response = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            })
+
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(errorData.error || `Failed to upload ${file.name}`)
+            }
+
+            const data = await response.json()
+            urls.push(data.url)
+
+            // Update progress
+            setProgress(Math.round(((i + 1) / totalFiles) * 100))
+          }
+
+          setUploadedUrls(urls)
+          setUploading(false)
+          setUploaded(true)
+          onUploadComplete?.(validFiles, urls)
+        } catch (err: any) {
+          setError(err.message || "Upload failed")
+          setUploading(false)
+          setUploaded(false)
+        }
+      }
     },
-    [maxSize, multiple]
+    [maxSize, multiple, type, bucket, additionalPath, onUploadComplete]
   )
 
   const acceptTypes = getAcceptTypes()
@@ -225,12 +287,6 @@ export default function FileUpload({
             </div>
           )}
 
-          {!uploading && !uploaded && (
-            <Button onClick={handleUpload} className="w-full" disabled={files.length === 0}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload {files.length} file{files.length > 1 ? "s" : ""}
-            </Button>
-          )}
 
           {uploaded && (
             <div className="space-y-2">
