@@ -4,13 +4,11 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Trash2, Link as LinkIcon, FileUp, ChevronDown, ChevronUp, Eye, ExternalLink } from "lucide-react"
+import { Trash2, Link as LinkIcon, FileUp, ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
 import FileUpload from "@/components/FileUpload"
-import ResourcePreview from "./ResourcePreview"
 import { Resource } from "./ResourceManager"
 
 interface ResourceCardProps {
@@ -22,7 +20,6 @@ interface ResourceCardProps {
 
 export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }: ResourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showPreview, setShowPreview] = useState(false)
 
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return ""
@@ -57,16 +54,6 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
             )}
           </div>
           <div className="flex items-center gap-1">
-            {resource.url && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowPreview(true)}
-                title="Preview"
-              >
-                <Eye className="w-4 h-4" />
-              </Button>
-            )}
             <Button variant="ghost" size="icon" onClick={onDelete} title="Delete">
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -92,12 +79,13 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
             {resource.type === "link" ? (
               <div className="space-y-2">
                 <Label>URL</Label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 max-w-full">
                   <Input
                     value={resource.url}
                     onChange={(e) => onUpdate({ url: e.target.value })}
                     placeholder="https://example.com"
                     type="url"
+                    className="flex-1 min-w-0"
                   />
                   {resource.url && (
                     <Button
@@ -105,6 +93,7 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
                       size="icon"
                       onClick={() => window.open(resource.url, "_blank")}
                       title="Open in new tab"
+                      className="flex-shrink-0"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
@@ -139,35 +128,9 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
                 />
               </div>
             )}
-
-            <div className="space-y-2">
-              <Label>Description (optional)</Label>
-              <Textarea
-                value={resource.description || ""}
-                onChange={(e) => onUpdate({ description: e.target.value })}
-                placeholder="Describe what this resource contains..."
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Category/Tag (optional)</Label>
-              <Input
-                value={resource.category || ""}
-                onChange={(e) => onUpdate({ category: e.target.value })}
-                placeholder="e.g., Reading Material, Reference, Exercise"
-              />
-            </div>
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
-
-      {showPreview && resource.url && (
-        <ResourcePreview
-          resource={resource}
-          onClose={() => setShowPreview(false)}
-        />
-      )}
     </Card>
   )
 }
