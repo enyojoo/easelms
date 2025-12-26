@@ -32,7 +32,10 @@ export default function SafeImage({
 
   // Update src when prop changes
   useEffect(() => {
-    if (src) {
+    // Check if src is valid (not empty, not just whitespace, and not already placeholder)
+    const isValidSrc = src && src.trim() !== "" && src !== placeholder && !src.startsWith("data:")
+    
+    if (isValidSrc) {
       setImgSrc(src)
       setHasError(false)
       setIsLoading(true)

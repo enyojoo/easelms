@@ -123,11 +123,17 @@ export default function ManageCoursesPage() {
               finalPrice = basicPrice
             }
             
+            // Ensure thumbnail is valid - use placeholder if empty or invalid
+            const thumbnail = draftData.basicInfo.thumbnail
+            const validThumbnail = thumbnail && thumbnail.trim() !== "" && thumbnail !== "/placeholder.svg?height=200&width=300"
+              ? thumbnail
+              : "/placeholder.svg?height=200&width=300"
+            
             drafts.push({
               id: -1, // Use negative ID to indicate draft
               title: draftData.basicInfo.title || "Untitled Course",
               description: descriptionText || "No description",
-              image: draftData.basicInfo.thumbnail || "/placeholder.svg?height=200&width=300",
+              image: validThumbnail,
               lessons: lessons,
               price: finalPrice,
               totalDurationMinutes: totalDurationMinutes,
@@ -350,7 +356,7 @@ export default function ManageCoursesPage() {
       <CardHeader className="p-4 sm:p-6">
         <div className="aspect-video relative rounded-md overflow-hidden mb-3 sm:mb-4">
           <SafeImage
-            src={course.image || "/placeholder.svg?height=200&width=300"}
+            src={course.image && course.image.trim() !== "" ? course.image : "/placeholder.svg?height=200&width=300"}
             alt={course.title}
             fill
             className="object-cover"
@@ -419,16 +425,16 @@ export default function ManageCoursesPage() {
       </CardContent>
       <CardFooter className="flex flex-row gap-2 p-4 sm:p-6 pt-0">
         {!isDraft && (
-          <Link href={`/admin/courses/preview/${course.id}`} className="flex-1">
-            <Button 
-              variant="outline" 
-              className="flex items-center justify-center w-full h-8 text-xs"
-              size="sm"
-              title="Preview"
-            >
-              <Eye className="h-3.5 w-3.5" /> 
-            </Button>
-          </Link>
+        <Link href={`/admin/courses/preview/${course.id}`} className="flex-1">
+          <Button 
+            variant="outline" 
+            className="flex items-center justify-center w-full h-8 text-xs"
+            size="sm"
+            title="Preview"
+          >
+            <Eye className="h-3.5 w-3.5" /> 
+          </Button>
+        </Link>
         )}
         <Link href={isDraft ? "/admin/courses/new" : `/admin/courses/new?edit=${course.id}`} className="flex-1">
           <Button 
@@ -441,15 +447,15 @@ export default function ManageCoursesPage() {
           </Button>
         </Link>
         {!isDraft && (
-          <Button
-            variant="destructive"
-            className="flex items-center justify-center flex-1 h-8 text-xs"
-            size="sm"
-            onClick={() => handleDeleteClick(course.id)}
-            title="Delete"
-          >
-            <Trash2 className="h-3.5 w-3.5" /> 
-          </Button>
+        <Button
+          variant="destructive"
+          className="flex items-center justify-center flex-1 h-8 text-xs"
+          size="sm"
+          onClick={() => handleDeleteClick(course.id)}
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5" /> 
+        </Button>
         )}
         {isDraft && (
           <Button
@@ -468,7 +474,7 @@ export default function ManageCoursesPage() {
         )}
       </CardFooter>
     </Card>
-    )
+  )
   }
 
   return (
