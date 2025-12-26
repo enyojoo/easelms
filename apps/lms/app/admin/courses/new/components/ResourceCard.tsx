@@ -79,14 +79,21 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
             {resource.type === "link" ? (
               <div className="space-y-2">
                 <Label>URL</Label>
-                <div className="flex gap-2 max-w-full">
-                  <Input
-                    value={resource.url}
-                    onChange={(e) => onUpdate({ url: e.target.value })}
-                    placeholder="https://example.com"
-                    type="url"
-                    className="flex-1 min-w-0"
-                  />
+                <div className="flex gap-2 w-full">
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      value={resource.url}
+                      onChange={(e) => onUpdate({ url: e.target.value })}
+                      placeholder="https://example.com"
+                      type="url"
+                      className="w-full"
+                      style={{ 
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    />
+                  </div>
                   {resource.url && (
                     <Button
                       variant="outline"
