@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getClientAuthState } from "@/utils/client-auth"
-import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star, Loader2 } from "lucide-react"
+import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star } from "lucide-react"
+import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 
 interface Course {
@@ -177,16 +178,7 @@ export default function CourseCompletionPage() {
   }
 
   if (loading) {
-    return (
-      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Loading completion data...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <CourseSummarySkeleton />
   }
 
   if (error || !course || !user) {

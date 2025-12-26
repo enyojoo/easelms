@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings, Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import Link from "next/link"
+import AdminDashboardSkeleton from "@/components/AdminDashboardSkeleton"
 
 interface DashboardStats {
   totalCourses: number
@@ -92,11 +94,7 @@ export default function InstructorDashboard() {
   }, [authLoading, dashboardUser])
 
   if (authLoading || !dashboardUser) {
-    return (
-      <div className="p-4 md:p-8 pt-20 md:pt-24 flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    )
+    return <AdminDashboardSkeleton />
   }
 
   // Extract first name from full name
@@ -117,9 +115,7 @@ export default function InstructorDashboard() {
           </CardHeader>
           <CardContent>
             {statsLoading ? (
-              <div className="flex items-center justify-center h-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
+              <Skeleton className="h-10 w-24" />
             ) : statsError ? (
               <p className="text-sm text-destructive">Error loading revenue</p>
             ) : (
@@ -139,9 +135,7 @@ export default function InstructorDashboard() {
           </CardHeader>
           <CardContent>
             {statsLoading ? (
-              <div className="flex items-center justify-center h-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
+              <Skeleton className="h-10 w-24" />
             ) : statsError ? (
               <p className="text-sm text-destructive">Error loading learners</p>
             ) : (
@@ -157,9 +151,7 @@ export default function InstructorDashboard() {
           </CardHeader>
           <CardContent>
             {statsLoading ? (
-              <div className="flex items-center justify-center h-16">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
+              <Skeleton className="h-10 w-24" />
             ) : statsError ? (
               <p className="text-sm text-destructive">Error loading courses</p>
             ) : (
@@ -215,8 +207,17 @@ export default function InstructorDashboard() {
           </CardHeader>
           <CardContent className="flex-1 min-h-0 overflow-hidden">
             {statsLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-start space-x-3 pb-4 border-b">
+                    <Skeleton className="h-4 w-4 rounded-full mt-1" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : statsError ? (
               <div className="flex items-center justify-center h-full">

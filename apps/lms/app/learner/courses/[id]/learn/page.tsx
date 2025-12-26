@@ -6,7 +6,8 @@ import { getClientAuthState } from "@/utils/client-auth"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, Loader2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle } from "lucide-react"
+import CourseLearningSkeleton from "@/components/CourseLearningSkeleton"
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
@@ -403,14 +404,7 @@ export default function CourseLearningPage() {
   }
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">Loading course...</p>
-        </div>
-      </div>
-    )
+    return <CourseLearningSkeleton />
   }
 
   if (error || !course) {

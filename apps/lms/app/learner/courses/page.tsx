@@ -4,11 +4,13 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowUpDown, Loader2, BookOpen } from "lucide-react"
+import { ArrowUpDown, BookOpen } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CourseCard from "@/components/CourseCard"
+import CourseCardSkeleton from "@/components/CourseCardSkeleton"
+import CoursesPageSkeleton from "@/components/CoursesPageSkeleton"
 
 interface Course {
   id: number
@@ -93,13 +95,7 @@ export default function CoursesPage() {
   }, [authLoading, dashboardUser])
 
   if (authLoading || !dashboardUser) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    )
+    return <CoursesPageSkeleton />
   }
 
   // Get enrolled and completed course IDs from enrollments
@@ -181,8 +177,10 @@ export default function CoursesPage() {
 
         <TabsContent value="all" className="mt-4 md:mt-6">
           {coursesLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <CourseCardSkeleton key={i} />
+              ))}
             </div>
           ) : coursesError ? (
             <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
@@ -221,8 +219,10 @@ export default function CoursesPage() {
 
         <TabsContent value="enrolled" className="mt-4 md:mt-6">
           {coursesLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {[1, 2, 3].map((i) => (
+                <CourseCardSkeleton key={i} />
+              ))}
             </div>
           ) : coursesError ? (
             <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
@@ -254,8 +254,10 @@ export default function CoursesPage() {
 
         <TabsContent value="completed" className="mt-4 md:mt-6">
           {coursesLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+              {[1, 2, 3].map((i) => (
+                <CourseCardSkeleton key={i} />
+              ))}
             </div>
           ) : coursesError ? (
             <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>

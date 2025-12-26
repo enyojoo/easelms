@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Loader2, Upload } from "lucide-react"
+import { Upload } from "lucide-react"
+import AdminProfileSkeleton from "@/components/AdminProfileSkeleton"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -227,16 +228,7 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Loading profile...</p>
-          </div>
-        </div>
-      </div>
-    )
+    return <AdminProfileSkeleton />
   }
 
   if (!user) {

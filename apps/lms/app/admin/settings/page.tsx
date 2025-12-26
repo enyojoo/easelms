@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TeamManagement from "./components/TeamManagement"
 import UserManagement from "./components/UserManagement"
 import { US } from "country-flag-icons/react/3x2"
+import AdminSettingsSkeleton from "@/components/AdminSettingsSkeleton"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -58,7 +59,7 @@ export default function SettingsPage() {
 
 
   if (!user) {
-    return <div>Loading...</div>
+    return <AdminSettingsSkeleton />
   }
 
   return (

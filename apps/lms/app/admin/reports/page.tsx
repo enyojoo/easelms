@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { getClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Loader2, Download, Calendar as CalendarIcon } from "lucide-react"
+import { Download, Calendar as CalendarIcon } from "lucide-react"
+import AdminReportsSkeleton from "@/components/AdminReportsSkeleton"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
@@ -182,16 +183,8 @@ export default function ReportPage() {
     toast.success("Date filter reset")
   }
 
-  if (!user) {
-    return <div>Loading...</div>
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
+  if (!user || loading) {
+    return <AdminReportsSkeleton />
   }
 
   return (

@@ -6,7 +6,8 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlayCircle, FileText, Award, Clock, Globe, Link, Users, Loader2 } from "lucide-react"
+import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
+import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
 import VideoModal from "@/components/VideoModal"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit } from "lucide-react"
@@ -104,13 +105,7 @@ export default function CoursePage() {
   }, [id, user])
 
   if (loading) {
-    return (
-      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    )
+    return <CourseDetailSkeleton />
   }
 
   if (error || !course) {

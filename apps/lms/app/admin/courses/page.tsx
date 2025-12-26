@@ -18,7 +18,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { BookOpen, Edit, Trash2, Eye, Clock, Banknote, Filter, Loader2 } from "lucide-react"
+import { BookOpen, Edit, Trash2, Eye, Clock, Banknote, Filter } from "lucide-react"
+import AdminCoursesSkeleton from "@/components/AdminCoursesSkeleton"
 import { getClientAuthState } from "@/utils/client-auth"
 import { modules } from "@/data/courses"
 import type { User } from "@/data/users"
@@ -43,13 +44,7 @@ export default function ManageCoursesPage() {
   }, [router])
 
   if (!user) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    )
+    return <AdminCoursesSkeleton />
   }
 
   const handleDeleteClick = (courseId: number) => {

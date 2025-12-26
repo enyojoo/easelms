@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function GET() {
@@ -15,8 +15,19 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Try to fetch enrollments - handle RLS issues gracefully
-    let { data, error } = await supabase
+    // Use service role client to bypass RLS and avoid recursion
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      console.warn("Service role key not available, using regular client:", serviceError.message)
+      serviceClient = null
+    }
+
+    const clientToUse = serviceClient || supabase
+
+    // Try to fetch enrollments with courses relation first
+    let { data, error } = await clientToUse
       .from("enrollments")
       .select(`
         *,
@@ -24,10 +35,10 @@ export async function GET() {
       `)
       .eq("user_id", user.id)
 
-    // If error, try without the courses relation (might be RLS issue)
+    // If error with courses relation, try without it (might be RLS issue even with service client)
     if (error) {
       console.warn("Enrollments API: Error with courses relation, trying without:", error.message)
-      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+      const { data: enrollmentsData, error: enrollmentsError } = await clientToUse
         .from("enrollments")
         .select("*")
         .eq("user_id", user.id)

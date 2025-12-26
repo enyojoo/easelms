@@ -6,9 +6,10 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Award, BookOpen, ChevronRight, Clock, Loader2 } from "lucide-react"
+import { Award, BookOpen, ChevronRight, Clock } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
+import DashboardSkeleton from "@/components/DashboardSkeleton"
 
 interface Course {
   id: number
@@ -90,13 +91,7 @@ export default function LearnerDashboard() {
   }, [authLoading, dashboardUser])
 
   if (authLoading) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   // If not loading but no user, show error message
@@ -162,8 +157,17 @@ export default function LearnerDashboard() {
             </CardHeader>
             <CardContent className="p-4 md:p-6 pt-0">
               {coursesLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="h-5 w-3/4 bg-muted animate-pulse rounded" />
+                      <div className="flex items-center gap-4">
+                        <div className="h-2 flex-grow bg-muted animate-pulse rounded" />
+                        <div className="h-4 w-12 bg-muted animate-pulse rounded" />
+                      </div>
+                      <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                    </div>
+                  ))}
                 </div>
               ) : coursesError ? (
                 <p className="text-muted-foreground text-sm md:text-base text-destructive">{coursesError}</p>
@@ -196,8 +200,16 @@ export default function LearnerDashboard() {
             </CardHeader>
             <CardContent className="p-4 md:p-6 pt-0">
               {coursesLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3 md:gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="border rounded-lg overflow-hidden">
+                      <div className="w-full h-32 sm:h-24 md:h-32 bg-muted animate-pulse" />
+                      <div className="p-2 sm:p-3">
+                        <div className="h-4 w-full bg-muted animate-pulse rounded mb-2" />
+                        <div className="h-4 w-3/4 bg-muted animate-pulse rounded" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : coursesError ? (
                 <p className="text-muted-foreground text-sm md:text-base text-destructive">{coursesError}</p>
