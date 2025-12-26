@@ -44,6 +44,15 @@ interface Course {
   enrolledStudents?: number
   whoIsThisFor?: string
   requirements?: string
+  created_by?: string
+  creator?: {
+    id: string
+    name: string
+    email: string
+    profile_image?: string
+    bio?: string
+    user_type?: string
+  }
 }
 
 export default function CoursePage() {
@@ -123,11 +132,19 @@ export default function CoursePage() {
     )
   }
 
-  // Instructor information
-  const instructor = {
-    name: "Dr Ifeoma Eze",
+  // Instructor information - use course creator's profile
+  const instructor = course.creator ? {
+    name: course.creator.name || "Instructor",
+    bio: course.creator.bio || "",
+    profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
+    title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
+      ? "Course Instructor" 
+      : "Course Creator"
+  } : {
+    name: "Instructor",
     bio: "",
-    profileImage: "https://www.pastorifeomaeze.com/wp-content/uploads/2020/01/Ifeoma-Eze.jpeg",
+    profileImage: "/placeholder.svg?height=200&width=200",
+    title: "Course Instructor"
   }
 
   // Get actual enrollment mode from course settings
@@ -419,12 +436,15 @@ export default function CoursePage() {
           </Card>
 
           {/* Instructor Profile Card */}
-          <InstructorCard
-            name={instructor.name}
-            image={instructor.profileImage}
-            bio={instructor.bio}
-            className="mb-4"
-          />
+          {instructor && (
+            <InstructorCard
+              name={instructor.name}
+              image={instructor.profileImage}
+              bio={instructor.bio}
+              title={instructor.title}
+              className="mb-4"
+            />
+          )}
         </div>
 
         {/* Video Preview Section - Show only on large screens */}

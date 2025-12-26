@@ -7,7 +7,8 @@ export async function GET(
 ) {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  // First get the course
+  const { data: courseData, error: courseError } = await supabase
     .from("courses")
     .select(`
       *,
@@ -19,6 +20,29 @@ export async function GET(
     `)
     .eq("id", params.id)
     .single()
+
+  if (courseError) {
+    return NextResponse.json({ error: courseError.message }, { status: 500 })
+  }
+
+  // Then get the creator's profile if created_by exists
+  let creator = null
+  if (courseData?.created_by) {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, name, email, profile_image, bio, user_type")
+      .eq("id", courseData.created_by)
+      .single()
+    
+    if (!profileError && profileData) {
+      creator = profileData
+    }
+  }
+
+  const data = {
+    ...courseData,
+    creator
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
