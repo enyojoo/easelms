@@ -98,9 +98,21 @@ export async function GET() {
       ? (payments?.reduce((sum, payment) => sum + (payment.amount_usd || 0), 0) || 0)
       : 0
 
-    // Get recent activity (last 10 items from enrollments, course completions, payments)
+    // Get recent activity (last 10 items from user signups, enrollments, course completions, payments)
     // Use admin client to bypass RLS
-    const [enrollments, completions, recentPayments] = await Promise.all([
+    const [recentSignups, enrollments, completions, recentPayments] = await Promise.all([
+      adminClient
+        .from("profiles")
+        .select(`
+          id,
+          created_at,
+          name,
+          email
+        `)
+        .eq("user_type", "user")
+        .order("created_at", { ascending: false })
+        .limit(5),
+
       adminClient
         .from("enrollments")
         .select(`
@@ -140,6 +152,14 @@ export async function GET() {
 
     // Combine and sort recent activity
     const recentActivity = [
+      ...(recentSignups.data?.map(u => ({
+        id: `signup-${u.id}`,
+        type: "signup" as const,
+        user: u.name || u.email || "Unknown User",
+        course: "", // Signups don't have a course
+        time: new Date(u.created_at).toISOString(),
+        timestamp: new Date(u.created_at).getTime()
+      })) || []),
       ...(enrollments.data?.map(e => ({
         id: `enrollment-${e.id}`,
         type: "enrollment" as const,

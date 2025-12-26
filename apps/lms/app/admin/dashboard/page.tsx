@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings } from "lucide-react"
+import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings, UserPlus } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import Link from "next/link"
@@ -16,7 +16,7 @@ interface DashboardStats {
   totalRevenue: number
   recentActivity: Array<{
     id: string
-    type: "enrollment" | "completion" | "payment"
+    type: "signup" | "enrollment" | "completion" | "payment"
     user: string
     course: string
     amount?: string
@@ -244,17 +244,19 @@ export default function InstructorDashboard() {
                 {stats.recentActivity.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b last:border-0 last:pb-0">
                     <div className="flex-shrink-0 mt-1">
+                      {activity.type === "signup" && <UserPlus className="h-4 w-4 text-orange-500" />}
                       {activity.type === "enrollment" && <Users className="h-4 w-4 text-blue-500" />}
                       {activity.type === "completion" && <BookOpen className="h-4 w-4 text-green-500" />}
                       {activity.type === "payment" && <DollarSign className="h-4 w-4 text-purple-500" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">
+                        {activity.type === "signup" && `${activity.user} signed up`}
                         {activity.type === "enrollment" && `${activity.user} enrolled in`}
                         {activity.type === "completion" && `${activity.user} completed`}
                         {activity.type === "payment" && `${activity.user} purchased`}
                       </p>
-                      <p className="text-sm text-muted-foreground truncate">{activity.course}</p>
+                      {activity.course && <p className="text-sm text-muted-foreground truncate">{activity.course}</p>}
                       {activity.amount && <p className="text-sm font-semibold text-green-600">{activity.amount}</p>}
                       <p className="text-xs text-muted-foreground mt-1">{formatRelativeTime(activity.time)}</p>
                     </div>
