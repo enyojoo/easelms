@@ -114,31 +114,29 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
             ) : (
               <div className="space-y-2">
                 <Label>File</Label>
-                {resource.url ? (
-                  <div className="flex items-center justify-between p-2 bg-muted rounded">
-                    <span className="text-sm truncate flex-1">{resource.url}</span>
-                    <Button variant="ghost" size="sm" onClick={() => onUpdate({ url: "" })}>
-                      Change
-                    </Button>
-                  </div>
-                ) : (
-                  <FileUpload
-                    type="document"
-                    bucket="course-documents"
-                    accept="application/pdf,.doc,.docx,.txt,.zip,image/*"
-                    maxSize={50 * 1024 * 1024}
-                    multiple={false}
-                    additionalPath={lessonId ? `lesson-${lessonId}` : undefined}
-                    onUploadComplete={(files, urls) => {
-                      if (urls.length > 0) {
-                        onUpdate({
-                          url: urls[0],
-                          fileSize: files[0]?.size,
-                        })
-                      }
-                    }}
-                  />
-                )}
+                <FileUpload
+                  type="document"
+                  bucket="course-documents"
+                  accept="application/pdf,.doc,.docx,.txt,.zip,image/*"
+                  maxSize={50 * 1024 * 1024}
+                  multiple={false}
+                  additionalPath={lessonId ? `lesson-${lessonId}` : undefined}
+                  initialValue={resource.url || undefined}
+                  onUploadComplete={(files, urls) => {
+                    if (urls.length > 0) {
+                      onUpdate({
+                        url: urls[0],
+                        fileSize: files[0]?.size,
+                      })
+                    }
+                  }}
+                  onRemove={() => {
+                    onUpdate({
+                      url: "",
+                      fileSize: undefined,
+                    })
+                  }}
+                />
               </div>
             )}
 

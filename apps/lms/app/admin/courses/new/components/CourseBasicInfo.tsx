@@ -80,6 +80,11 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
     }
   }
 
+  const handleThumbnailRemove = () => {
+    setThumbnail("/placeholder.svg?height=200&width=300")
+    onUpdate({ thumbnail: "" })
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -137,12 +142,18 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
             multiple={false}
             initialValue={data.thumbnail && data.thumbnail !== "/placeholder.svg?height=200&width=300" ? data.thumbnail : undefined}
             onUploadComplete={handleThumbnailUpload}
+            onRemove={handleThumbnailRemove}
           />
           <p className="text-sm text-muted-foreground">Recommended resolution: 1280x720 px. Max size: 5MB</p>
         </div>
 
         <div className="space-y-2">
           <Label>Course Preview Video (Vimeo)</Label>
+          {previewVideoInput && vimeoId && (
+            <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border mb-2">
+              <VideoPreview videoUrl={previewVideoInput} thumbnailUrl={thumbnail} vimeoVideoId={vimeoId} />
+            </div>
+          )}
           <div className="space-y-2">
             <Input
               type="url"
@@ -150,29 +161,13 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
               onChange={(e) => setPreviewVideoInput(e.target.value)}
               placeholder="Enter Vimeo URL (e.g., https://vimeo.com/123456789) or video ID"
             />
-            {previewVideoInput && (
-              <Alert variant={isValidVideo ? "default" : "destructive"} className="py-2">
-                {isValidVideo && vimeoId ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Valid Vimeo video detected. Video ID: {vimeoId}
-                    </AlertDescription>
-                  </>
-                ) : !isValidVideo ? (
-                  <>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
-                    </AlertDescription>
-                  </>
-                ) : null}
+            {previewVideoInput && !isValidVideo && (
+              <Alert variant="destructive" className="py-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
+                </AlertDescription>
               </Alert>
-            )}
-            {previewVideoInput && vimeoId && (
-              <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border">
-                <VideoPreview videoUrl={previewVideoInput} thumbnailUrl={thumbnail} vimeoVideoId={vimeoId} />
-              </div>
             )}
             <p className="text-xs text-muted-foreground">
               Supported formats: https://vimeo.com/123456789, https://player.vimeo.com/video/123456789, or just the video ID

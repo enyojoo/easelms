@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Plus, Trash2, CheckCircle2, Image as ImageIcon, X } from "lucide-react"
+import { Plus, Trash2, CheckCircle2, Image as ImageIcon } from "lucide-react"
 import { MultipleChoiceQuestion as MCQType } from "../types/quiz"
 import FileUpload from "@/components/FileUpload"
 import Image from "next/image"
@@ -61,34 +61,27 @@ export default function MultipleChoiceQuestion({ question, onChange, onDelete }:
 
           <div className="space-y-2">
             <Label>Question Image (optional)</Label>
-            {question.imageUrl ? (
-              <div className="relative">
-                <div className="relative w-full h-48 rounded-lg overflow-hidden border">
-                  <Image src={question.imageUrl} alt="Question image" fill className="object-contain" />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => updateQuestion({ imageUrl: undefined })}
-                >
-                  <X className="w-4 h-4 mr-2" /> Remove Image
-                </Button>
+            {question.imageUrl && (
+              <div className="relative w-full h-48 rounded-lg overflow-hidden border mb-2">
+                <Image src={question.imageUrl} alt="Question image" fill className="object-contain" />
               </div>
-            ) : (
-              <FileUpload
-                type="image"
-                bucket="course-documents"
-                accept="image/*"
-                maxSize={5 * 1024 * 1024}
-                multiple={false}
-                onUploadComplete={(files, urls) => {
-                  if (urls.length > 0) {
-                    updateQuestion({ imageUrl: urls[0] })
-                  }
-                }}
-              />
             )}
+            <FileUpload
+              type="image"
+              bucket="course-documents"
+              accept="image/*"
+              maxSize={5 * 1024 * 1024}
+              multiple={false}
+              initialValue={question.imageUrl || undefined}
+              onUploadComplete={(files, urls) => {
+                if (urls.length > 0) {
+                  updateQuestion({ imageUrl: urls[0] })
+                }
+              }}
+              onRemove={() => {
+                updateQuestion({ imageUrl: undefined })
+              }}
+            />
           </div>
 
           <div className="space-y-2">
