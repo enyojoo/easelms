@@ -46,6 +46,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
   // Sync preview video from data prop and extract vimeoId on mount/change
   useEffect(() => {
     const videoValue = data.previewVideo || ""
+    // Only update if different to avoid unnecessary re-renders
     if (videoValue !== previewVideoInput) {
       setPreviewVideoInput(videoValue)
     }
@@ -67,12 +68,12 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       setVimeoId(null)
       setIsValidVideo(true)
     }
-  }, [data.previewVideo]) // Only depend on data.previewVideo, not previewVideoInput
+  }, [data.previewVideo, previewVideoInput]) // Include previewVideoInput to detect when it changes from data
 
-  // Handle preview video input changes and update parent (only when user types)
+  // Handle preview video input changes and update parent (only when user types, not from data sync)
   useEffect(() => {
-    // Skip if this is from data prop sync (to avoid double updates)
-    if (previewVideoInput === data.previewVideo) {
+    // Skip if this matches data.previewVideo (means it came from data prop sync, not user input)
+    if (previewVideoInput === (data.previewVideo || "")) {
       return
     }
     
@@ -98,7 +99,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       setIsValidVideo(true)
       onUpdate({ ...data, previewVideo: "", vimeoVideoId: undefined })
     }
-  }, [previewVideoInput]) // Only trigger on user input changes
+  }, [previewVideoInput, data]) // Include data to access current state, but check prevents loops
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
