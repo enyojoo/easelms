@@ -75,10 +75,10 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
               {isLoading ? (
                 <Skeleton className="w-10 h-10 rounded-full" />
               ) : (
-                <Avatar className="w-10 h-10 overflow-hidden">
-                  <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
+              <Avatar className="w-10 h-10 overflow-hidden">
+                <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
                   <AvatarFallback>{(user.name || "U").charAt(0)}</AvatarFallback>
-                </Avatar>
+              </Avatar>
               )}
             </Button>
           </SheetTrigger>
@@ -96,13 +96,13 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
                     </>
                   ) : (
                     <>
-                      <Avatar className="w-12 h-12 overflow-hidden">
-                        <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
+                  <Avatar className="w-12 h-12 overflow-hidden">
+                    <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
                         <AvatarFallback>{(user.name || "U").charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
+                  </Avatar>
+                  <div>
                         <p className="font-semibold text-lg">{user.name || "User"}</p>
-                      </div>
+                  </div>
                     </>
                   )}
                 </div>

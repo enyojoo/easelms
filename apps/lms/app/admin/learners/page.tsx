@@ -14,11 +14,8 @@ import {
 } from "@/components/ui/table"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Search, Mail, BookOpen, Award, TrendingUp, Filter, Plus } from "lucide-react"
+import { Search, Mail, BookOpen, Award, TrendingUp, Filter, Plus, Loader2 } from "lucide-react"
 import AdminLearnersSkeleton from "@/components/AdminLearnersSkeleton"
-import { users } from "@/data/users"
-import { modules } from "@/data/courses"
-import type { User } from "@/data/users"
 import Link from "next/link"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -28,22 +25,42 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { getClientAuthState } from "@/utils/client-auth"
 
+interface Learner {
+  id: string
+  name: string
+  email: string
+  profileImage: string
+  enrolledCourses: number[]
+  completedCourses: number[]
+  progress: { [courseId: number]: number }
+}
+
+interface Course {
+  id: number
+  title: string
+}
+
 export default function LearnersPage() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [enrollmentFilter, setEnrollmentFilter] = useState<string>("all")
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
+  const [learners, setLearners] = useState<Learner[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+  const [filteredLearners, setFilteredLearners] = useState<Learner[]>([])
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<Learner | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string>("")
   const [mounted, setMounted] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [coursesLoading, setCoursesLoading] = useState(false)
+  const [enrolling, setEnrolling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -55,63 +72,153 @@ export default function LearnersPage() {
     }
   }, [router])
 
+  // Fetch learners
   useEffect(() => {
-    // Filter out admin users and apply search
-    const userLearners = users.filter((user) => user.userType === "user")
-    let filtered = userLearners.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const fetchLearners = async () => {
+      if (!mounted || !user) return
 
-    // Apply enrollment filter
-    if (enrollmentFilter === "enrolled") {
-      filtered = filtered.filter((user) => user.enrolledCourses.length > 0)
-    } else if (enrollmentFilter === "not-enrolled") {
-      filtered = filtered.filter((user) => user.enrolledCourses.length === 0)
+      try {
+        setLoading(true)
+        setError(null)
+
+        const params = new URLSearchParams()
+        if (searchTerm) {
+          params.append("search", searchTerm)
+        }
+        if (enrollmentFilter !== "all") {
+          params.append("enrollmentFilter", enrollmentFilter)
+        }
+
+        const response = await fetch(`/api/learners?${params.toString()}`)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch learners")
+        }
+
+        const data = await response.json()
+        setLearners(data.learners || [])
+      } catch (err: any) {
+        console.error("Error fetching learners:", err)
+        setError(err.message || "Failed to load learners")
+        toast.error(err.message || "Failed to load learners")
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setFilteredUsers(filtered)
-  }, [searchTerm, enrollmentFilter])
+    fetchLearners()
+  }, [mounted, user, searchTerm, enrollmentFilter])
 
-  const handleEnrollClick = (user: User) => {
-    setSelectedUser(user)
+  // Fetch courses for enrollment dialog
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!enrollDialogOpen) return
+
+      try {
+        setCoursesLoading(true)
+        const response = await fetch("/api/courses")
+        if (!response.ok) {
+          throw new Error("Failed to fetch courses")
+        }
+        const data = await response.json()
+        setCourses(data.courses || [])
+      } catch (err: any) {
+        console.error("Error fetching courses:", err)
+        toast.error("Failed to load courses")
+      } finally {
+        setCoursesLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [enrollDialogOpen])
+
+  // Filter learners based on search and enrollment filter
+  useEffect(() => {
+    let filtered = [...learners]
+
+    // Apply enrollment filter (API already filters, but we do client-side for search)
+    if (enrollmentFilter === "enrolled") {
+      filtered = filtered.filter((learner) => learner.enrolledCourses.length > 0)
+    } else if (enrollmentFilter === "not-enrolled") {
+      filtered = filtered.filter((learner) => learner.enrolledCourses.length === 0)
+    }
+
+    setFilteredLearners(filtered)
+  }, [learners, enrollmentFilter])
+
+  const handleEnrollClick = (learner: Learner) => {
+    setSelectedUser(learner)
     setEnrollDialogOpen(true)
   }
 
-  const handleEnrollConfirm = () => {
-    if (selectedUser && selectedCourse) {
-      // Mock enrollment - in real app, this would call an API
+  const handleEnrollConfirm = async () => {
+    if (!selectedUser || !selectedCourse) return
+
+    try {
+      setEnrolling(true)
+      const response = await fetch("/api/enrollments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          courseId: parseInt(selectedCourse),
+          userId: selectedUser.id, // We need to pass userId for admin enrollment
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to enroll learner")
+      }
+
       toast.success(`Enrolled ${selectedUser.name} in course`)
       setEnrollDialogOpen(false)
       setSelectedUser(null)
       setSelectedCourse("")
+
+      // Refresh learners list
+      const params = new URLSearchParams()
+      if (searchTerm) {
+        params.append("search", searchTerm)
+      }
+      if (enrollmentFilter !== "all") {
+        params.append("enrollmentFilter", enrollmentFilter)
+      }
+
+      const refreshResponse = await fetch(`/api/learners?${params.toString()}`)
+      if (refreshResponse.ok) {
+        const refreshData = await refreshResponse.json()
+        setLearners(refreshData.learners || [])
+      }
+    } catch (err: any) {
+      console.error("Error enrolling learner:", err)
+      toast.error(err.message || "Failed to enroll learner")
+    } finally {
+      setEnrolling(false)
     }
   }
 
   const getCourseTitle = (courseId: number) => {
-    const course = modules.find((m) => m.id === courseId)
+    const course = courses.find((c) => c.id === courseId)
     return course?.title || `Course ${courseId}`
   }
 
   const getTotalEnrolled = () => {
-    return users.filter((u) => u.userType === "user").length
+    return learners.length
   }
 
   const getTotalCoursesEnrolled = () => {
-    return users
-      .filter((u) => u.userType === "user")
-      .reduce((sum, user) => sum + user.enrolledCourses.length, 0)
+    return learners.reduce((sum, learner) => sum + learner.enrolledCourses.length, 0)
   }
 
   const getTotalCompleted = () => {
-    return users
-      .filter((u) => u.userType === "user")
-      .reduce((sum, user) => sum + user.completedCourses.length, 0)
+    return learners.reduce((sum, learner) => sum + learner.completedCourses.length, 0)
   }
 
   // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || !user
+  const isLoading = !mounted || !user || loading
 
   return (
     <div className="pt-4 md:pt-8">
@@ -204,36 +311,42 @@ export default function LearnersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.length === 0 ? (
+                {error ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-destructive">
+                      {error}
+                    </TableCell>
+                  </TableRow>
+                ) : filteredLearners.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                       No learners found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
+                  filteredLearners.map((learner) => (
+                    <TableRow key={learner.id}>
                       <TableCell className="w-[30%] min-w-[200px]">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage src={user.profileImage} alt={user.name} />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                            <AvatarImage src={learner.profileImage} alt={learner.name} />
+                            <AvatarFallback>{learner.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <p className="font-medium truncate">{user.name}</p>
+                            <p className="font-medium truncate">{learner.name}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="w-[25%] min-w-[180px]">
                         <div className="flex items-center gap-2 min-w-0">
                           <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="text-sm truncate">{user.email}</span>
+                          <span className="text-sm truncate">{learner.email}</span>
                         </div>
                       </TableCell>
                       <TableCell className="w-[30%]">
                         <div className="flex flex-wrap gap-2">
-                          {user.enrolledCourses.length > 0 ? (
-                            user.enrolledCourses.map((courseId) => (
+                          {learner.enrolledCourses.length > 0 ? (
+                            learner.enrolledCourses.map((courseId) => (
                               <Badge key={courseId} variant="secondary" className="text-xs">
                                 {getCourseTitle(courseId)}
                               </Badge>
@@ -245,7 +358,7 @@ export default function LearnersPage() {
                       </TableCell>
                       <TableCell className="w-[15%] min-w-[180px]">
                         <div className="flex gap-2 flex-wrap">
-                          <Link href={`/admin/learners/${user.id}`}>
+                          <Link href={`/admin/learners/${learner.id}`}>
                             <Button variant="outline" size="sm" className="whitespace-nowrap">
                               View Details
                             </Button>
@@ -253,7 +366,7 @@ export default function LearnersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEnrollClick(user)}
+                            onClick={() => handleEnrollClick(learner)}
                             className="whitespace-nowrap"
                           >
                             <Plus className="h-4 w-4 mr-1" />
@@ -282,26 +395,43 @@ export default function LearnersPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Course</label>
+              {coursesLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              ) : (
               <Select value={selectedCourse} onValueChange={setSelectedCourse}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a course" />
                 </SelectTrigger>
                 <SelectContent>
-                  {modules.map((course) => (
+                    {courses.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">No courses available</div>
+                    ) : (
+                      courses.map((course) => (
                     <SelectItem key={course.id} value={course.id.toString()}>
                       {course.title}
                     </SelectItem>
-                  ))}
+                      ))
+                    )}
                 </SelectContent>
               </Select>
+              )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEnrollDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEnrollDialogOpen(false)} disabled={enrolling}>
               Cancel
             </Button>
-            <Button onClick={handleEnrollConfirm} disabled={!selectedCourse}>
-              Enroll
+            <Button onClick={handleEnrollConfirm} disabled={!selectedCourse || enrolling || coursesLoading}>
+              {enrolling ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enrolling...
+                </>
+              ) : (
+                "Enroll"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

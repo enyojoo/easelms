@@ -236,8 +236,8 @@ export default function ProfilePage() {
   // Always render page structure, show skeleton for content if loading
   const isLoading = !mounted || loading
 
-  return (
-    <div className="pt-4 md:pt-8">
+    return (
+      <div className="pt-4 md:pt-8">
       {isLoading ? (
         <AdminProfileSkeleton />
       ) : !user ? (

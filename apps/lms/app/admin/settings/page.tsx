@@ -16,12 +16,15 @@ import {
   UserCog,
   Globe,
   DollarSign,
+  Loader2,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TeamManagement from "./components/TeamManagement"
 import UserManagement from "./components/UserManagement"
 import { US } from "country-flag-icons/react/3x2"
 import AdminSettingsSkeleton from "@/components/AdminSettingsSkeleton"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -44,6 +47,9 @@ export default function SettingsPage() {
     userEmailNotifications: true,
     defaultCurrency: "USD",
   })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -56,12 +62,92 @@ export default function SettingsPage() {
     }
   }, [router])
 
+  // Fetch platform settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (!mounted || !user) return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch("/api/settings")
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch settings")
+        }
+
+        const data = await response.json()
+        const platformSettings = data.platformSettings
+
+        if (platformSettings) {
+          setSettings({
+            defaultCurrency: platformSettings.default_currency || "USD",
+            courseEnrollmentNotifications: platformSettings.course_enrollment_notifications ?? true,
+            courseCompletionNotifications: platformSettings.course_completion_notifications ?? true,
+            platformAnnouncements: platformSettings.platform_announcements ?? true,
+            userEmailNotifications: platformSettings.user_email_notifications ?? true,
+            emailNotifications: true, // Keep for compatibility
+          })
+        }
+      } catch (err: any) {
+        console.error("Error fetching settings:", err)
+        setError(err.message || "Failed to load settings")
+        toast.error(err.message || "Failed to load settings")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSettings()
+  }, [mounted, user])
+
   const handleSwitchChange = (name: string) => (checked: boolean) => {
     setSettings((prev) => ({ ...prev, [name]: checked }))
   }
 
+  const handleSaveSettings = async () => {
+    if (!user) return
+
+    try {
+      setSaving(true)
+      setError(null)
+
+      const platformSettings = {
+        default_currency: settings.defaultCurrency,
+        course_enrollment_notifications: settings.courseEnrollmentNotifications,
+        course_completion_notifications: settings.courseCompletionNotifications,
+        platform_announcements: settings.platformAnnouncements,
+        user_email_notifications: settings.userEmailNotifications,
+      }
+
+      const response = await fetch("/api/settings", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          platformSettings,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to save settings")
+      }
+
+      toast.success("Settings saved successfully!")
+    } catch (err: any) {
+      console.error("Error saving settings:", err)
+      setError(err.message || "Failed to save settings")
+      toast.error(err.message || "Failed to save settings")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || !user
+  const isLoading = !mounted || !user || loading
 
   return (
     <div className="pt-4 md:pt-8">
@@ -96,6 +182,11 @@ export default function SettingsPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {error && (
+                    <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                  )}
                   <div className="space-y-6">
                     {/* Default Currency Setting */}
                     <div className="space-y-2 pb-6 border-b">
@@ -105,6 +196,7 @@ export default function SettingsPage() {
                       <Select
                         value={settings.defaultCurrency}
                         onValueChange={(value) => setSettings((prev) => ({ ...prev, defaultCurrency: value }))}
+                        disabled={saving}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select default currency" />
@@ -146,6 +238,7 @@ export default function SettingsPage() {
                           id="course-enrollment-notifications"
                           checked={settings.courseEnrollmentNotifications}
                           onCheckedChange={handleSwitchChange("courseEnrollmentNotifications")}
+                          disabled={saving}
                         />
                       </div>
 
@@ -160,6 +253,7 @@ export default function SettingsPage() {
                           id="course-completion-notifications"
                           checked={settings.courseCompletionNotifications}
                           onCheckedChange={handleSwitchChange("courseCompletionNotifications")}
+                          disabled={saving}
                         />
                       </div>
 
@@ -174,6 +268,7 @@ export default function SettingsPage() {
                           id="platform-announcements"
                           checked={settings.platformAnnouncements}
                           onCheckedChange={handleSwitchChange("platformAnnouncements")}
+                          disabled={saving}
                         />
                       </div>
 
@@ -188,8 +283,23 @@ export default function SettingsPage() {
                           id="user-email-notifications"
                           checked={settings.userEmailNotifications}
                           onCheckedChange={handleSwitchChange("userEmailNotifications")}
+                          disabled={saving}
                         />
                       </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="pt-4 border-t">
+                      <Button onClick={handleSaveSettings} disabled={saving}>
+                        {saving ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Settings"
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

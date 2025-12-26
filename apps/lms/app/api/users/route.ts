@@ -23,9 +23,17 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const userType = searchParams.get("userType") // "admin" | "user" | null (all)
 
+  // Build query with enrollments for user type
   let query = supabase
     .from("profiles")
-    .select("*")
+    .select(`
+      *,
+      enrollments (
+        course_id,
+        status,
+        progress
+      )
+    `)
     .order("created_at", { ascending: false })
 
   if (userType) {
@@ -38,7 +46,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  return NextResponse.json({ users: users || [] })
+  // Process users to include enrollment counts
+  const processedUsers = (users || []).map((user: any) => {
+    const enrollments = user.enrollments || []
+    const enrolledCourses = enrollments.map((e: any) => e.course_id)
+    const completedCourses = enrollments.filter((e: any) => e.status === "completed").map((e: any) => e.course_id)
+    
+    return {
+      ...user,
+      enrolledCourses,
+      completedCourses,
+      enrolledCoursesCount: enrolledCourses.length,
+      completedCoursesCount: completedCourses.length,
+    }
+  })
+
+  return NextResponse.json({ users: processedUsers })
 }
 
 export async function POST(request: Request) {

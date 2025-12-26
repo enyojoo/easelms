@@ -100,12 +100,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId } = await request.json()
+  const { courseId, userId } = await request.json()
+
+  // Check if user is admin if userId is provided (admin enrolling another user)
+  let targetUserId = user.id
+  if (userId && userId !== user.id) {
+    // Verify the requesting user is an admin
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+
+    if (profile?.user_type !== "admin") {
+      return NextResponse.json({ error: "Forbidden: Only admins can enroll other users" }, { status: 403 })
+    }
+
+    targetUserId = userId
+  }
+
+  if (!courseId) {
+    return NextResponse.json({ error: "courseId is required" }, { status: 400 })
+  }
 
   const { data, error } = await supabase
     .from("enrollments")
     .insert({
-      user_id: user.id,
+      user_id: targetUserId,
       course_id: courseId,
       status: "active",
       progress: 0,
