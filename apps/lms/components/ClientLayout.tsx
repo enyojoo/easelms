@@ -260,14 +260,14 @@ export default function ClientLayout({
             <LeftSidebar userType={derivedUserType} />
             <div className="flex flex-col flex-grow lg:ml-64">
               <Header isLoggedIn={isLoggedIn} userType={derivedUserType} user={user} />
-              <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
+              <div className="flex-grow lg:pt-16 pb-8">
                 <main className="container-fluid">
                   {children}
                 </main>
               </div>
             </div>
           </div>
-          <div className="lg:hidden flex-grow overflow-y-auto mt-16 mb-16 pb-4">
+          <div className="lg:hidden flex-grow mt-16 mb-16 pb-4">
             <main className="container-fluid">
               {children}
             </main>
