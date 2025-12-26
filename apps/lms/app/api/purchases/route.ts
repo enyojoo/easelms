@@ -12,44 +12,44 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
+    const allPurchases = searchParams.get("all") === "true" // Admin can fetch all purchases
 
-    // If userId is provided and user is admin, allow fetching other users' purchases
-    const targetUserId = userId || user.id
-
-    // Check if user is admin if trying to fetch another user's purchases
-    if (userId && userId !== user.id) {
-      // Use service role client to bypass RLS for admin check
-      let serviceClient
-      try {
-        serviceClient = createServiceRoleClient()
-      } catch (e) {
-        // Fallback to regular client
-      }
-
-      const clientToUse = serviceClient || supabase
-      const { data: profile } = await clientToUse
-        .from("profiles")
-        .select("user_type")
-        .eq("id", user.id)
-        .single()
-
-      if (profile?.user_type !== "admin") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-    }
-
-    // Try to fetch purchases with courses relation
-    // Use service role client to bypass RLS if available
+    // Use service role client to bypass RLS for admin check
     let serviceClient
     try {
       serviceClient = createServiceRoleClient()
     } catch (e) {
-      // Service role not available, use regular client
+      // Fallback to regular client
     }
 
     const clientToUse = serviceClient || supabase
 
-    let { data: purchases, error } = await clientToUse
+    // Check if user is admin/instructor
+    const { data: profile } = await clientToUse
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+
+    const isAdmin = profile?.user_type === "admin"
+    const isInstructor = profile?.user_type === "instructor"
+
+    // If userId is provided and user is admin/instructor, allow fetching other users' purchases
+    // If allPurchases is true and user is admin, fetch all purchases
+    let targetUserId: string | null = null
+    if (allPurchases && isAdmin) {
+      targetUserId = null // Fetch all purchases
+    } else if (userId && userId !== user.id) {
+      if (!isAdmin && !isInstructor) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+      targetUserId = userId
+    } else {
+      targetUserId = user.id
+    }
+
+    // Try to fetch purchases with courses and user relation
+    let query = clientToUse
       .from("payments")
       .select(`
         *,
@@ -57,18 +57,35 @@ export async function GET(request: Request) {
           id,
           title,
           image
+        ),
+        profiles:user_id (
+          id,
+          name,
+          email
         )
       `)
-      .eq("user_id", targetUserId)
-      .order("created_at", { ascending: false })
 
-    // If error with courses relation, try without it
+    // If targetUserId is null, fetch all purchases (admin only)
+    if (targetUserId === null) {
+      query = query.order("created_at", { ascending: false })
+    } else {
+      query = query.eq("user_id", targetUserId).order("created_at", { ascending: false })
+    }
+
+    let { data: purchases, error } = await query
+
+    // If error with relations, try without them
     if (error) {
-      console.warn("Purchases API: Error with courses relation, trying without:", error.message)
-      const { data: paymentsData, error: paymentsError } = await clientToUse
+      console.warn("Purchases API: Error with relations, trying without:", error.message)
+      let fallbackQuery = clientToUse
         .from("payments")
         .select("*")
-        .eq("user_id", targetUserId)
+
+      if (targetUserId !== null) {
+        fallbackQuery = fallbackQuery.eq("user_id", targetUserId)
+      }
+
+      const { data: paymentsData, error: paymentsError } = await fallbackQuery
         .order("created_at", { ascending: false })
 
       if (!paymentsError) {
@@ -100,16 +117,20 @@ export async function GET(request: Request) {
       courseId: payment.course_id,
       courseTitle: payment.courses?.title || "Unknown Course",
       courseImage: payment.courses?.image,
-      amount: payment.amount || 0,
+      amount: payment.amount || payment.amount_usd || 0,
       currency: payment.currency || "USD",
       gateway: payment.gateway || "stripe",
-      status: payment.status === "completed" ? "active" : payment.status || "pending",
+      status: payment.status || "pending",
       type: payment.recurring_price ? "recurring" : "one-time",
       recurringPrice: payment.recurring_price,
       purchasedAt: payment.created_at || payment.completed_at,
       createdAt: payment.created_at,
       completedAt: payment.completed_at,
       cancelledAt: payment.cancelled_at,
+      userId: payment.user_id,
+      userName: payment.profiles?.name,
+      userEmail: payment.profiles?.email,
+      transactionId: payment.transaction_id,
     }))
 
     return NextResponse.json({ purchases: formattedPurchases })
