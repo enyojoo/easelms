@@ -34,11 +34,11 @@ export async function GET(request: Request) {
   } else {
     // Fallback to regular client if service role not available
     const { data, error: err } = await supabase
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single()
-    
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user.id)
+    .single()
+
     profile = data
     profileError = err
   }

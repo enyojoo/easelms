@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, BookOpen, DollarSign, TrendingUp, Activity, PlusCircle, Settings, UserPlus } from "lucide-react"
+import { Users, BookOpen, DollarSign, Activity, UserPlus } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import Link from "next/link"
@@ -175,47 +175,9 @@ export default function InstructorDashboard() {
         </Card>
       </div>
 
-      {/* Quick Actions and Recent Activity in 2-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-hidden">
-        {/* Quick Actions */}
-        <Card className="lg:col-span-1 flex flex-col min-h-0">
-          <CardHeader className="flex-shrink-0">
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 min-h-0 flex flex-col">
-            <div className="flex flex-col gap-3 h-full">
-              <Link href="/admin/courses/new" className="flex-1 min-h-0">
-                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
-                  <PlusCircle className="h-5 w-5 flex-shrink-0" />
-                  <span>Create Course</span>
-                </Button>
-              </Link>
-              <Link href="/admin/courses" className="flex-1 min-h-0">
-                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
-                  <BookOpen className="h-5 w-5 flex-shrink-0" />
-                  <span>Manage Courses</span>
-                </Button>
-              </Link>
-              <Link href="/admin/learners" className="flex-1 min-h-0">
-                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
-                  <Users className="h-5 w-5 flex-shrink-0" />
-                  <span>View Learners</span>
-                </Button>
-              </Link>
-              {!isInstructor && (
-                <Link href="/admin/settings" className="flex-1 min-h-0">
-                  <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
-                    <Settings className="h-5 w-5 flex-shrink-0" />
-                    <span>Settings</span>
-                  </Button>
-                </Link>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity - Bigger and scrollable */}
-        <Card className="lg:col-span-2 flex flex-col min-h-0">
+      {/* Recent Activity - Full width */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <Card className="flex flex-col min-h-0 h-full">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="flex items-center">
               <Activity className="mr-2 h-5 w-5" /> Recent Activity

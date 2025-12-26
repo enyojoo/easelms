@@ -289,22 +289,9 @@ export default function FileUpload({
 
 
           {uploaded && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Upload complete! {uploadedUrls.length} file{uploadedUrls.length > 1 ? "s" : ""} uploaded</span>
-              </div>
-              {uploadedUrls.length > 0 && (
-                <div className="text-xs text-muted-foreground space-y-1">
-                  {uploadedUrls.map((url, idx) => (
-                    <div key={idx} className="truncate">
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        {url}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="flex items-center justify-center gap-2 text-sm text-green-600">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Upload complete! {uploadedUrls.length} file{uploadedUrls.length > 1 ? "s" : ""} uploaded</span>
             </div>
           )}
         </div>
