@@ -37,6 +37,7 @@ export default function FileUpload({
   const [progress, setProgress] = useState(0)
   const [uploaded, setUploaded] = useState(false)
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([])
+  const [uploadMetadata, setUploadMetadata] = useState<Array<{ url: string; bucket: string; path: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const [removedInitialValue, setRemovedInitialValue] = useState(false)
 
@@ -83,7 +84,9 @@ export default function FileUpload({
 
         try {
           const urls: string[] = []
+          const metadata: Array<{ url: string; bucket: string; path: string }> = []
           const totalFiles = validFiles.length
+          const currentBucket = bucket || (type === "thumbnail" ? "course-thumbnails" : type === "document" ? "course-documents" : "course-documents")
 
           for (let i = 0; i < validFiles.length; i++) {
             const file = validFiles[i]
@@ -120,12 +123,18 @@ export default function FileUpload({
 
             const data = await response.json()
             urls.push(data.url)
+            metadata.push({
+              url: data.url,
+              bucket: data.bucket,
+              path: data.path,
+            })
 
             // Update progress
             setProgress(Math.round(((i + 1) / totalFiles) * 100))
           }
 
           setUploadedUrls(urls)
+          setUploadMetadata(metadata)
           setUploading(false)
           setUploaded(true)
           onUploadComplete?.(validFiles, urls)
@@ -210,15 +219,70 @@ export default function FileUpload({
     }
   }
 
-  const removeFile = (index?: number) => {
-    if (index !== undefined) {
+  const removeFile = async (index?: number) => {
+    // Delete file from Supabase Storage if it was uploaded
+    if (index !== undefined && uploadMetadata[index]) {
+      const meta = uploadMetadata[index]
+      try {
+        await fetch("/api/upload/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: meta.url,
+            bucket: meta.bucket,
+            path: meta.path,
+          }),
+        })
+      } catch (err) {
+        console.error("Failed to delete file from storage:", err)
+        // Continue with removal even if delete fails
+      }
       setFiles((prev) => prev.filter((_, i) => i !== index))
-    } else {
+      setUploadedUrls((prev) => prev.filter((_, i) => i !== index))
+      setUploadMetadata((prev) => prev.filter((_, i) => i !== index))
+    } else if (index === undefined) {
       // Remove all files (including initialValue)
+      // Delete all uploaded files from Supabase
+      if (uploadMetadata.length > 0) {
+        await Promise.all(
+          uploadMetadata.map((meta) =>
+            fetch("/api/upload/delete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                url: meta.url,
+                bucket: meta.bucket,
+                path: meta.path,
+              }),
+            }).catch((err) => {
+              console.error("Failed to delete file from storage:", err)
+            })
+          )
+        )
+      }
+      // Also try to delete initialValue if it exists
+      if (uploadedUrls.length > 0 && files.length === 0) {
+        // This is an initialValue file, try to extract bucket from URL
+        const url = uploadedUrls[0]
+        const bucketName = bucket || (type === "thumbnail" ? "course-thumbnails" : "course-documents")
+        try {
+          await fetch("/api/upload/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url,
+              bucket: bucketName,
+            }),
+          })
+        } catch (err) {
+          console.error("Failed to delete initialValue file from storage:", err)
+        }
+      }
       setFiles([])
       setRemovedInitialValue(true)
+      setUploadedUrls([])
+      setUploadMetadata([])
     }
-    setUploadedUrls([])
     setUploaded(false)
     setUploading(false)
     setProgress(0)
@@ -290,41 +354,49 @@ export default function FileUpload({
         <div className="space-y-2">
           {/* Show files from File objects */}
           {files.map((file, index) => {
-            // Calculate perimeter for continuous progress bar around frame
-            // Using a ref to get actual dimensions would be better, but for now we'll use a large enough value
-            const perimeter = 2000 // Approximate perimeter value
-            const strokeWidth = 2
-            const offset = perimeter * (1 - progress / 100)
+            // Calculate progress for each side of the border (filling from left to right around frame)
+            const totalProgress = progress
+            const sideLength = 25 // Each side is 25% of total
+            const topProgress = Math.min(totalProgress / sideLength, 1) * 100
+            const rightProgress = totalProgress > sideLength ? Math.min((totalProgress - sideLength) / sideLength, 1) * 100 : 0
+            const bottomProgress = totalProgress > sideLength * 2 ? Math.min((totalProgress - sideLength * 2) / sideLength, 1) * 100 : 0
+            const leftProgress = totalProgress > sideLength * 3 ? Math.min((totalProgress - sideLength * 3) / sideLength, 1) * 100 : 0
 
             return (
               <Card
                 key={index}
                 className="relative overflow-hidden"
               >
-                {/* Progress bar around the entire frame - continuous border */}
+                {/* Progress bar around the entire frame - filling from left to right */}
                 {uploading && (
-                  <svg
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <rect
-                      x={strokeWidth / 2}
-                      y={strokeWidth / 2}
-                      width="calc(100% - 2px)"
-                      height="calc(100% - 2px)"
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={strokeWidth}
-                      rx="8"
-                      strokeDasharray={perimeter}
-                      strokeDashoffset={offset}
-                      className="transition-all duration-300"
-                      style={{ 
-                        strokeLinecap: 'round',
-                        strokeLinejoin: 'round'
-                      }}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {/* Top border - left to right */}
+                    <div
+                      className="absolute top-0 left-0 h-1 bg-primary transition-all duration-300"
+                      style={{ width: `${topProgress}%` }}
                     />
-                  </svg>
+                    {/* Right border - top to bottom */}
+                    {totalProgress > sideLength && (
+                      <div
+                        className="absolute top-0 right-0 w-1 bg-primary transition-all duration-300"
+                        style={{ height: `${rightProgress}%` }}
+                      />
+                    )}
+                    {/* Bottom border - right to left */}
+                    {totalProgress > sideLength * 2 && (
+                      <div
+                        className="absolute bottom-0 right-0 h-1 bg-primary transition-all duration-300"
+                        style={{ width: `${bottomProgress}%` }}
+                      />
+                    )}
+                    {/* Left border - bottom to top */}
+                    {totalProgress > sideLength * 3 && (
+                      <div
+                        className="absolute bottom-0 left-0 w-1 bg-primary transition-all duration-300"
+                        style={{ height: `${leftProgress}%` }}
+                      />
+                    )}
+                  </div>
                 )}
                 <CardContent className="p-3">
                 <div className="flex items-center justify-between">
