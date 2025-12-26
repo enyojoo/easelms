@@ -204,12 +204,16 @@ function NewCourseContent() {
   }, [])
 
   const handleSaveDraft = async () => {
+    console.log("Save to Draft clicked", { title: courseData.basicInfo.title })
+    
     // Validate course title is required
     if (!courseData.basicInfo.title || courseData.basicInfo.title.trim() === "") {
+      console.log("Validation failed: Course title is required")
       toast.error("Course title is required. Please enter a course title before saving.")
       return
     }
 
+    console.log("Starting save draft...")
     setIsSavingDraft(true)
     try {
       const response = await fetch("/api/courses/drafts", {
@@ -252,12 +256,19 @@ function NewCourseContent() {
   }
 
   const handlePublishCourse = async () => {
+    console.log("Publish clicked", { 
+      title: courseData.basicInfo.title, 
+      description: courseData.basicInfo.description 
+    })
+    
     // Validate required fields
     if (!courseData.basicInfo.title || !courseData.basicInfo.description) {
+      console.log("Validation failed: Required fields missing")
       toast.error("Please fill in all required fields")
       return
     }
 
+    console.log("Starting publish...")
     setIsPublishing(true)
     try {
       const response = await fetch("/api/courses/drafts", {
@@ -352,8 +363,13 @@ function NewCourseContent() {
             </span>
           )}
           <Button 
+            type="button"
             variant="outline" 
-            onClick={handleSaveDraft}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleSaveDraft()
+            }}
             disabled={isSavingDraft || isPublishing}
           >
             {isSavingDraft ? (
@@ -366,7 +382,12 @@ function NewCourseContent() {
             )}
           </Button>
           <Button 
-            onClick={handlePublishCourse}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handlePublishCourse()
+            }}
             disabled={isSavingDraft || isPublishing}
           >
             {isPublishing ? (
