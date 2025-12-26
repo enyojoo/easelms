@@ -3,8 +3,14 @@ import { NextResponse } from "next/server"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  
+  if (!id) {
+    return NextResponse.json({ error: "Learner ID is required" }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -69,7 +75,7 @@ export async function GET(
         image
       )
     `)
-    .eq("user_id", params.id)
+    .eq("user_id", id)
     .order("updated_at", { ascending: false })
 
   if (error) {

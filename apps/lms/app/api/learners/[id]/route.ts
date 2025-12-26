@@ -3,8 +3,14 @@ import { NextResponse } from "next/server"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
+  
+  if (!id) {
+    return NextResponse.json({ error: "Learner ID is required" }, { status: 400 })
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -69,7 +75,7 @@ export async function GET(
         progress
       )
     `)
-    .eq("id", params.id)
+    .eq("id", id)
     .eq("user_type", "user")
     .single()
 
