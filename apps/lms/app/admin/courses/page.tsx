@@ -46,10 +46,8 @@ export default function ManageCoursesPage() {
     }
   }, [router])
 
-  // Show skeleton until mounted and user is loaded
-  if (!mounted || !user) {
-    return <AdminCoursesSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || !user
 
   const handleDeleteClick = (courseId: number) => {
     setCourseToDelete(courseId)
@@ -158,7 +156,11 @@ export default function ManageCoursesPage() {
   )
 
   return (
-    <div className=" pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8">
+      {isLoading ? (
+        <AdminCoursesSkeleton />
+      ) : (
+        <>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">Course Management</h1>
@@ -256,6 +258,8 @@ export default function ManageCoursesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        </>
+      )}
     </div>
   )
 }

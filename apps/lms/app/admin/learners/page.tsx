@@ -31,14 +31,29 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { getClientAuthState } from "@/utils/client-auth"
 
 export default function LearnersPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [enrollmentFilter, setEnrollmentFilter] = useState<string>("all")
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string>("")
+  const [mounted, setMounted] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    const { isLoggedIn, userType, user } = getClientAuthState()
+    if (!isLoggedIn || userType !== "admin") {
+      router.push("/auth/admin/login")
+    } else {
+      setUser(user)
+    }
+  }, [router])
 
   useEffect(() => {
     // Filter out admin users and apply search
@@ -95,8 +110,15 @@ export default function LearnersPage() {
       .reduce((sum, user) => sum + user.completedCourses.length, 0)
   }
 
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || !user
+
   return (
     <div className="pt-4 md:pt-8">
+      {isLoading ? (
+        <AdminLearnersSkeleton />
+      ) : (
+        <>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-primary mb-2">Learner Management</h1>
@@ -284,6 +306,8 @@ export default function LearnersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   )
 }

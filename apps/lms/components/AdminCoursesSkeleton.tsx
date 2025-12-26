@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminCoursesSkeleton() {
   return (
-    <div className="pt-4 md:pt-8">
+    <>
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <Skeleton className="h-9 w-32" />
@@ -44,7 +44,7 @@ export default function AdminCoursesSkeleton() {
           </Card>
         ))}
       </div>
-    </div>
+    </>
   )
 }
 

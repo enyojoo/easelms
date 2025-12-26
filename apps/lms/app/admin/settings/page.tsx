@@ -60,13 +60,15 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [name]: checked }))
   }
 
-  // Show skeleton until mounted and user is loaded
-  if (!mounted || !user) {
-    return <AdminSettingsSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || !user
 
   return (
     <div className="pt-4 md:pt-8">
+      {isLoading ? (
+        <AdminSettingsSkeleton />
+      ) : (
+        <>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-primary mb-6">Settings</h1>
         <Tabs defaultValue="notifications" className="space-y-6">
@@ -204,7 +206,8 @@ export default function SettingsPage() {
           </TabsContent>
         </Tabs>
       </div>
-
+        </>
+      )}
     </div>
   )
 }

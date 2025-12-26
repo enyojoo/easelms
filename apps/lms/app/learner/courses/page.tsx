@@ -100,10 +100,8 @@ export default function CoursesPage() {
     fetchData()
   }, [authLoading, dashboardUser])
 
-  // Show skeleton until mounted and auth is loaded
-  if (!mounted || authLoading || !dashboardUser) {
-    return <CoursesPageSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || authLoading || !dashboardUser
 
   // Get enrolled and completed course IDs from enrollments
   const enrolledCourseIds = enrollments.map((e: any) => e.course_id)
@@ -142,6 +140,10 @@ export default function CoursesPage() {
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      {isLoading ? (
+        <CoursesPageSkeleton />
+      ) : (
+        <>
       <div className="flex items-center mb-4 md:mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-primary">Courses</h1>
       </div>
@@ -294,6 +296,8 @@ export default function CoursesPage() {
           )}
         </TabsContent>
       </Tabs>
+        </>
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function AdminSettingsSkeleton() {
   return (
-    <div className="pt-4 md:pt-8">
+    <>
       {/* Header */}
       <div className="mb-6">
         <Skeleton className="h-9 w-32" />
@@ -54,7 +54,7 @@ export default function AdminSettingsSkeleton() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </>
   )
 }
 

@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminProfileSkeleton() {
   return (
-    <div className="pt-4 md:pt-8">
+    <>
       {/* Header */}
       <div className="flex items-center mb-6">
         <Skeleton className="h-9 w-20 mr-4" />
@@ -46,7 +46,7 @@ export default function AdminProfileSkeleton() {
           </Card>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

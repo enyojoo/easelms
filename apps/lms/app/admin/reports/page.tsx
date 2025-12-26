@@ -189,13 +189,15 @@ export default function ReportPage() {
     toast.success("Date filter reset")
   }
 
-  // Show skeleton until mounted and data is loaded
-  if (!mounted || !user || loading) {
-    return <AdminReportsSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || !user || loading
 
   return (
-    <div className=" pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8">
+      {isLoading ? (
+        <AdminReportsSkeleton />
+      ) : (
+        <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-primary mb-2">Reports</h1>
@@ -380,6 +382,8 @@ export default function ReportPage() {
         </Card>
 
       </div>
+        </>
+      )}
     </div>
   )
 }

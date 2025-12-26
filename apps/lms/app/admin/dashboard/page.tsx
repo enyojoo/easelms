@@ -99,16 +99,18 @@ export default function InstructorDashboard() {
     }
   }, [authLoading, dashboardUser])
 
-  // Show skeleton until mounted and auth is loaded
-  if (!mounted || authLoading || !dashboardUser) {
-    return <AdminDashboardSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || authLoading || !dashboardUser
 
   // Extract first name from full name
-  const firstName = dashboardUser.name?.split(" ")[0] || dashboardUser.name || "there"
+  const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
 
   return (
     <div className="pt-4 md:pt-8 h-[calc(100vh-8rem)] flex flex-col">
+      {isLoading ? (
+        <AdminDashboardSkeleton />
+      ) : (
+        <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-primary">Hi, {firstName}!</h1>
       </div>
@@ -260,6 +262,8 @@ export default function InstructorDashboard() {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   )
 }

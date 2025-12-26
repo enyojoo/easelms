@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 export default function AdminLearnersSkeleton() {
   return (
-    <div className="pt-4 md:pt-8">
+    <>
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <Skeleton className="h-9 w-40" />
@@ -70,7 +70,7 @@ export default function AdminLearnersSkeleton() {
           </Table>
         </CardContent>
       </Card>
-    </div>
+    </>
   )
 }
 

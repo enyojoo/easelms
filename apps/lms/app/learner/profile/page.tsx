@@ -276,13 +276,15 @@ export default function LearnerProfilePage() {
     }
   }
 
-  // Show skeleton until mounted and data is loaded
-  if (!mounted || loading || !user) {
-    return <ProfileSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || loading || !user
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      {isLoading ? (
+        <ProfileSkeleton />
+      ) : (
+        <>
       <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Profile</h1>
       <Tabs defaultValue="profile" className="space-y-4 md:space-y-6">
         <div className="relative">
@@ -658,6 +660,8 @@ export default function LearnerProfilePage() {
           </div>
         </TabsContent>
       </Tabs>
+        </>
+      )}
     </div>
   )
 }

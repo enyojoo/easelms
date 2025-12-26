@@ -96,22 +96,8 @@ export default function LearnerDashboard() {
     fetchCourses()
   }, [authLoading, dashboardUser])
 
-  // Show skeleton until mounted and auth is loaded
-  if (!mounted || authLoading) {
-    return <DashboardSkeleton />
-  }
-
-  // If not loading but no user, show error message
-  if (!dashboardUser) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex flex-col justify-center items-center h-64 space-y-4">
-          <p className="text-destructive">Unable to load your profile. Please try refreshing the page.</p>
-          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
-        </div>
-      </div>
-    )
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || authLoading || !dashboardUser
 
   // Get completed courses count
   const completedCoursesCount = enrolledCourses.filter((course) => {
@@ -122,10 +108,14 @@ export default function LearnerDashboard() {
   // Get courses in progress (enrolled but not completed)
   const coursesInProgress = enrolledCourses.filter((course) => (course.progress ?? 0) < 100)
 
-  const firstName = dashboardUser.name?.split(" ")[0] || dashboardUser.name || "there"
+  const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 max-w-7xl mx-auto px-4 lg:px-6">
+      {isLoading ? (
+        <DashboardSkeleton />
+      ) : (
+        <>
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-primary">Hi, {firstName} 👋🏻</h1>
@@ -251,6 +241,8 @@ export default function LearnerDashboard() {
           </Card>
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

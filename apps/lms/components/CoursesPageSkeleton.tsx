@@ -4,7 +4,7 @@ import CourseCardSkeleton from "./CourseCardSkeleton"
 
 export default function CoursesPageSkeleton() {
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+    <>
       {/* Header */}
       <div className="flex items-center mb-4 md:mb-6">
         <Skeleton className="h-9 w-32" />
@@ -34,7 +34,7 @@ export default function CoursesPageSkeleton() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </>
   )
 }
 

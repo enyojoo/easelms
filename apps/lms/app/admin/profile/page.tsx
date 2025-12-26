@@ -233,14 +233,14 @@ export default function ProfilePage() {
     }
   }
 
-  // Show skeleton until mounted and data is loaded
-  if (!mounted || loading) {
-    return <AdminProfileSkeleton />
-  }
+  // Always render page structure, show skeleton for content if loading
+  const isLoading = !mounted || loading
 
-  if (!user) {
-    return (
-      <div className="pt-4 md:pt-8">
+  return (
+    <div className="pt-4 md:pt-8">
+      {isLoading ? (
+        <AdminProfileSkeleton />
+      ) : !user ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <p className="text-destructive mb-4">
@@ -249,12 +249,8 @@ export default function ProfilePage() {
             <Button onClick={() => loadProfileData()}>Retry</Button>
           </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className=" pt-4 md:pt-8">
+      ) : (
+        <>
       <h1 className="text-3xl font-bold text-primary mb-8">Profile</h1>
       {error && (
         <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -369,6 +365,8 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   )
 }
