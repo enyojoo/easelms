@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
-import { getClientAuthState } from "@/utils/client-auth"
+import { useClientAuthState } from "@/utils/client-auth"
 
 interface Learner {
   id: string
@@ -47,6 +47,7 @@ interface Course {
 
 export default function LearnersPage() {
   const router = useRouter()
+  const { user, loading: authLoading, userType } = useClientAuthState()
   const [searchTerm, setSearchTerm] = useState("")
   const [enrollmentFilter, setEnrollmentFilter] = useState<string>("all")
   const [learners, setLearners] = useState<Learner[]>([])
@@ -56,7 +57,6 @@ export default function LearnersPage() {
   const [selectedUser, setSelectedUser] = useState<Learner | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string>("")
   const [mounted, setMounted] = useState(false)
-  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [coursesLoading, setCoursesLoading] = useState(false)
   const [enrolling, setEnrolling] = useState(false)
@@ -64,18 +64,20 @@ export default function LearnersPage() {
 
   useEffect(() => {
     setMounted(true)
-    const { isLoggedIn, userType, user } = getClientAuthState()
-    if (!isLoggedIn || userType !== "admin") {
-      router.push("/auth/admin/login")
-    } else {
-      setUser(user)
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user || userType !== "admin") {
+        router.push("/auth/admin/login")
+      }
     }
-  }, [router])
+  }, [user, userType, authLoading, router])
 
   // Fetch learners
   useEffect(() => {
     const fetchLearners = async () => {
-      if (!mounted || !user) return
+      if (!mounted || authLoading || !user || userType !== "admin") return
 
       try {
         setLoading(true)
@@ -107,7 +109,7 @@ export default function LearnersPage() {
     }
 
     fetchLearners()
-  }, [mounted, user, searchTerm, enrollmentFilter])
+  }, [mounted, authLoading, user, userType, searchTerm, enrollmentFilter])
 
   // Fetch courses for enrollment dialog
   useEffect(() => {
@@ -218,7 +220,7 @@ export default function LearnersPage() {
   }
 
   // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || !user || loading
+  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
 
   return (
     <div className="pt-4 md:pt-8">

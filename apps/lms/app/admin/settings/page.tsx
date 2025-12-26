@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getClientAuthState } from "@/utils/client-auth"
+import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import {
   Bell,
@@ -37,7 +37,7 @@ const NigeriaFlag = () => (
 
 export default function SettingsPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading, userType } = useClientAuthState()
   const [mounted, setMounted] = useState(false)
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -54,18 +54,20 @@ export default function SettingsPage() {
   // Track mount state to prevent flash of content
   useEffect(() => {
     setMounted(true)
-    const { isLoggedIn, userType, user } = getClientAuthState()
-    if (!isLoggedIn || userType !== "admin") {
-      router.push("/auth/admin/login")
-    } else {
-      setUser(user)
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user || userType !== "admin") {
+        router.push("/auth/admin/login")
+      }
     }
-  }, [router])
+  }, [user, userType, authLoading, router])
 
   // Fetch platform settings
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!mounted || !user) return
+      if (!mounted || authLoading || !user || userType !== "admin") return
 
       try {
         setLoading(true)
@@ -100,14 +102,14 @@ export default function SettingsPage() {
     }
 
     fetchSettings()
-  }, [mounted, user])
+  }, [mounted, authLoading, user, userType])
 
   const handleSwitchChange = (name: string) => (checked: boolean) => {
     setSettings((prev) => ({ ...prev, [name]: checked }))
   }
 
   const handleSaveSettings = async () => {
-    if (!user) return
+    if (!user || userType !== "admin") return
 
     try {
       setSaving(true)
@@ -147,7 +149,7 @@ export default function SettingsPage() {
   }
 
   // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || !user || loading
+  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
 
   return (
     <div className="pt-4 md:pt-8">
