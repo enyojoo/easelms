@@ -48,7 +48,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
   }
 
-  if (profile?.user_type !== "admin") {
+  // Allow both admin and instructor access
+  if (profile?.user_type !== "admin" && profile?.user_type !== "instructor") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 

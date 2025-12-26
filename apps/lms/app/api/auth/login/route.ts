@@ -24,6 +24,12 @@ export async function POST(request: Request) {
       .single()
 
     if (profile && profile.user_type !== userType) {
+      // Allow instructors to login through admin portal
+      if (profile.user_type === 'instructor' && userType === 'admin') {
+        // Instructors can login through admin portal, so allow it
+        return NextResponse.json({ user: data.user, session: data.session })
+      }
+      
       await supabase.auth.signOut()
       
       // Provide specific error message based on user type

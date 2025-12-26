@@ -58,6 +58,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!authLoading) {
+      // Only admins can access settings page (instructors are blocked)
       if (!user || userType !== "admin") {
         router.push("/auth/admin/login")
       }

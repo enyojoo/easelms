@@ -49,9 +49,12 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
   }
 
-  if (profile?.user_type !== "admin") {
+  // Allow both admin and instructor access
+  if (profile?.user_type !== "admin" && profile?.user_type !== "instructor") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+  
+  const isAdmin = profile?.user_type === "admin"
 
   try {
     // Use service role client for admin queries to bypass RLS
@@ -90,7 +93,10 @@ export async function GET() {
       throw paymentsError
     }
 
-    const totalRevenue = payments?.reduce((sum, payment) => sum + (payment.amount_usd || 0), 0) || 0
+    // Only calculate revenue for admins (instructors should not see revenue)
+    const totalRevenue = isAdmin 
+      ? (payments?.reduce((sum, payment) => sum + (payment.amount_usd || 0), 0) || 0)
+      : 0
 
     // Get recent activity (last 10 items from enrollments, course completions, payments)
     // Use admin client to bypass RLS
@@ -150,7 +156,8 @@ export async function GET() {
         time: new Date(e.updated_at).toISOString(),
         timestamp: new Date(e.updated_at).getTime()
       })) || []),
-      ...(recentPayments.data?.map(p => ({
+      // Only include payment activities for admins
+      ...(isAdmin ? (recentPayments.data?.map(p => ({
         id: `payment-${p.id}`,
         type: "payment" as const,
         user: p.profiles?.name || "Unknown User",
@@ -158,7 +165,7 @@ export async function GET() {
         amount: `$${p.amount_usd}`,
         time: new Date(p.created_at).toISOString(),
         timestamp: new Date(p.created_at).getTime()
-      })) || [])
+      })) || []) : [])
     ]
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 10)

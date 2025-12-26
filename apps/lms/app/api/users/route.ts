@@ -162,15 +162,15 @@ export async function POST(request: Request) {
     )
   }
 
-  // Validate and sanitize userType to ensure it's either "user" or "admin"
+  // Validate and sanitize userType to ensure it's either "user", "admin", or "instructor"
   let validatedUserType = "user"
   if (typeof userType === "string") {
     const trimmed = userType.trim().toLowerCase()
-    if (trimmed === "user" || trimmed === "admin") {
+    if (trimmed === "user" || trimmed === "admin" || trimmed === "instructor") {
       validatedUserType = trimmed
     } else {
       return NextResponse.json(
-        { error: `Invalid userType "${userType}". Must be "user" or "admin"` },
+        { error: `Invalid userType "${userType}". Must be "user", "admin", or "instructor"` },
         { status: 400 }
       )
     }

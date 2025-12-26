@@ -53,12 +53,15 @@ function formatRelativeTime(isoString: string): string {
 }
 
 export default function InstructorDashboard() {
-  const { user, loading: authLoading } = useClientAuthState()
+  const { user, loading: authLoading, userType } = useClientAuthState()
   const [dashboardUser, setDashboardUser] = useState<User | null>(null)
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
   const [statsError, setStatsError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  
+  // Check if user is instructor (instructors should not see revenue)
+  const isInstructor = userType === "instructor"
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -115,27 +118,29 @@ export default function InstructorDashboard() {
         <h1 className="text-3xl font-bold text-primary">Hi, {firstName}!</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <DollarSign className="mr-2" /> Total Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-10 w-24" />
-            ) : statsError ? (
-              <p className="text-sm text-destructive">Error loading revenue</p>
-            ) : (
-              <>
-                <p className="text-3xl font-bold">
-                  ${stats?.totalRevenue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+      <div className={`grid grid-cols-1 ${isInstructor ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6 mb-6`}>
+        {!isInstructor && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <DollarSign className="mr-2" /> Total Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <Skeleton className="h-10 w-24" />
+              ) : statsError ? (
+                <p className="text-sm text-destructive">Error loading revenue</p>
+              ) : (
+                <>
+                  <p className="text-3xl font-bold">
+                    ${stats?.totalRevenue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -197,12 +202,14 @@ export default function InstructorDashboard() {
                   <span>View Learners</span>
                 </Button>
               </Link>
-              <Link href="/admin/settings" className="flex-1 min-h-0">
-                <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
-                  <Settings className="h-5 w-5 flex-shrink-0" />
-                  <span>Settings</span>
-                </Button>
-              </Link>
+              {!isInstructor && (
+                <Link href="/admin/settings" className="flex-1 min-h-0">
+                  <Button className="h-full w-full flex items-center justify-start gap-3" variant="outline">
+                    <Settings className="h-5 w-5 flex-shrink-0" />
+                    <span>Settings</span>
+                  </Button>
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>
