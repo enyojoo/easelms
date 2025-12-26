@@ -10,6 +10,7 @@ import { getClientAuthState, useClientAuthState } from "../utils/client-auth"
 import { ThemeProvider } from "./ThemeProvider"
 import { PageTransition } from "./PageTransition"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
+import FullPageSkeleton from "./FullPageSkeleton"
 
 export default function ClientLayout({
   children,
@@ -236,9 +237,29 @@ export default function ClientLayout({
 
   const { isLoggedIn, userType, user } = authState
 
-  // During SSR and initial render, preserve layout structure to avoid layout shift
-  // Show loading state with layout structure, then update with auth state after mount
+  // During SSR and initial render, check if we should show full-page skeleton
+  // If on protected route and auth is loading, show skeleton instead of layout structure
+  const isProtectedRouteCheck = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
+  const isAuthPageCheck = [
+    "/auth/learner/login",
+    "/auth/learner/signup",
+    "/auth/admin/login",
+    "/forgot-password",
+    "/forgot-password/code",
+    "/forgot-password/new-password",
+  ].includes(pathname) || pathname.startsWith("/auth/")
+  
   if (!mounted) {
+    // If on protected route and auth is loading, show full-page skeleton
+    if (isProtectedRouteCheck && !isAuthPageCheck && supabaseAuthState.loading) {
+      return (
+        <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
+          <FullPageSkeleton />
+        </ThemeProvider>
+      )
+    }
+    
+    // Otherwise, preserve layout structure to avoid layout shift
     return (
       <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
         <div className="flex flex-col h-screen">
@@ -267,13 +288,24 @@ export default function ClientLayout({
   }
 
   // Determine if we should show the layout
-  // Show layout if: logged in and not on auth page, OR if we're on a protected route (to preserve structure during loading)
   const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
-  const shouldShowLayout = (isLoggedIn && !isAuthPage) || (isProtectedRoute && !isAuthPage)
+  
+  // If auth is still loading and we're on a protected route, show full-page skeleton
+  // This prevents the distorted flash of layout + content skeleton
+  const isAuthLoading = supabaseAuthState.loading
+  const shouldShowFullPageSkeleton = isAuthLoading && isProtectedRoute && !isAuthPage
+  
+  // Only show layout once auth is confirmed (not loading and logged in) or if we're not on a protected route
+  // For protected routes, wait until auth is done loading before showing layout
+  const shouldShowLayout = isProtectedRoute 
+    ? (isLoggedIn && !isAuthLoading && !isAuthPage)
+    : (isLoggedIn && !isAuthPage)
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="enthronement-university-theme">
-      {shouldShowLayout ? (
+    <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
+      {shouldShowFullPageSkeleton ? (
+        <FullPageSkeleton />
+      ) : shouldShowLayout ? (
         <div className="flex flex-col h-screen">
           <div className="lg:hidden">
             {isLoggedIn && user ? (

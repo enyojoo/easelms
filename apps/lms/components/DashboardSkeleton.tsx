@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardSkeleton() {
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 max-w-7xl mx-auto px-4 lg:px-6">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <Skeleton className="h-9 w-48" />
