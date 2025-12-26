@@ -195,15 +195,19 @@ export async function PUT(request: Request) {
           })
 
         if (platformError) {
-          // If table doesn't exist, that's okay
-          if (platformError.code === "42P01" || platformError.code === "PGRST116") {
+          // If table doesn't exist, that's okay - just log and continue
+          if (platformError.code === "42P01" || platformError.code === "PGRST116" || platformError.message?.includes("schema cache")) {
             console.warn("platform_settings table doesn't exist, skipping update")
+            // Don't return error, just skip the update
           } else {
             console.error("Error updating platform_settings:", platformError)
-            return NextResponse.json(
-              { error: platformError.message },
-              { status: 500 }
-            )
+            // Don't fail the request if platform_settings table doesn't exist
+            if (!platformError.message?.includes("schema cache")) {
+              return NextResponse.json(
+                { error: platformError.message },
+                { status: 500 }
+              )
+            }
           }
         }
       } catch (platformTableError: any) {

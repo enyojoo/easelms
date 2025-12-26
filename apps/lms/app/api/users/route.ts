@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
@@ -9,22 +9,57 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("user_type")
-    .eq("id", user.id)
-    .single()
+  // Use service role client to bypass RLS when checking admin status
+  let serviceClient
+  try {
+    serviceClient = createServiceRoleClient()
+  } catch (serviceError: any) {
+    console.warn("Service role key not available, using regular client:", serviceError.message)
+    serviceClient = null
+  }
+
+  // Try to fetch profile using service role client first (bypasses RLS)
+  let profile = null
+  let profileError = null
+
+  if (serviceClient) {
+    const { data, error: err } = await serviceClient
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+    
+    profile = data
+    profileError = err
+  } else {
+    // Fallback to regular client if service role not available
+    const { data, error: err } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+    
+    profile = data
+    profileError = err
+  }
+
+  if (profileError) {
+    console.error("Error fetching profile for admin check:", profileError)
+    return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
+  }
 
   if (profile?.user_type !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
 
+  // Use service role client for admin queries to bypass RLS
+  const adminClient = serviceClient || supabase
+
   const { searchParams } = new URL(request.url)
   const userType = searchParams.get("userType") // "admin" | "user" | null (all)
 
   // Build query with enrollments for user type
-  let query = supabase
+  let query = adminClient
     .from("profiles")
     .select(`
       *,
@@ -72,16 +107,51 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Check if user is admin
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("user_type")
-    .eq("id", user.id)
-    .single()
+  // Use service role client to bypass RLS when checking admin status
+  let serviceClient
+  try {
+    serviceClient = createServiceRoleClient()
+  } catch (serviceError: any) {
+    console.warn("Service role key not available, using regular client:", serviceError.message)
+    serviceClient = null
+  }
 
-  if (profile?.user_type !== "admin") {
+  // Try to fetch profile using service role client first (bypasses RLS)
+  let adminProfile = null
+  let adminProfileError = null
+
+  if (serviceClient) {
+    const { data, error: err } = await serviceClient
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+    
+    adminProfile = data
+    adminProfileError = err
+  } else {
+    // Fallback to regular client if service role not available
+    const { data, error: err } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+    
+    adminProfile = data
+    adminProfileError = err
+  }
+
+  if (adminProfileError) {
+    console.error("Error fetching profile for admin check:", adminProfileError)
+    return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
+  }
+
+  if (adminProfile?.user_type !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 })
   }
+
+  // Use service role client for admin operations
+  const adminClient = serviceClient || supabase
 
   const { email, password, name, userType } = await request.json()
 
@@ -122,8 +192,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: authError.message }, { status: 500 })
   }
 
-  // Create profile
-  const { data: newProfile, error: profileError } = await supabase
+  // Create profile using admin client
+  const { data: newProfile, error: createProfileError } = await adminClient
     .from("profiles")
     .insert({
       id: authUser.user.id,
@@ -134,10 +204,10 @@ export async function POST(request: Request) {
     .select()
     .single()
 
-  if (profileError) {
+  if (createProfileError) {
     // Rollback: delete auth user if profile creation fails
     await supabase.auth.admin.deleteUser(authUser.user.id)
-    return NextResponse.json({ error: profileError.message }, { status: 500 })
+    return NextResponse.json({ error: createProfileError.message }, { status: 500 })
   }
 
   return NextResponse.json({ user: newProfile }, { status: 201 })
