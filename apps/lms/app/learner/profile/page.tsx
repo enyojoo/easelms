@@ -43,6 +43,12 @@ export default function LearnerProfilePage() {
     bio: "",
   })
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState(false)
@@ -270,7 +276,8 @@ export default function LearnerProfilePage() {
     }
   }
 
-  if (loading || !user) {
+  // Show skeleton until mounted and data is loaded
+  if (!mounted || loading || !user) {
     return <ProfileSkeleton />
   }
 

@@ -24,11 +24,17 @@ export default function ProfilePage() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     bio: "",
   })
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     loadProfileData()
@@ -227,7 +233,8 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) {
+  // Show skeleton until mounted and data is loaded
+  if (!mounted || loading) {
     return <AdminProfileSkeleton />
   }
 

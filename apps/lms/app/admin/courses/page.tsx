@@ -33,8 +33,11 @@ export default function ManageCoursesPage() {
   const [priceFilter, setPriceFilter] = useState<string>("all")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [courseToDelete, setCourseToDelete] = useState<number | null>(null)
+  const [mounted, setMounted] = useState(false)
 
+  // Track mount state to prevent flash of content
   useEffect(() => {
+    setMounted(true)
     const { isLoggedIn, userType, user } = getClientAuthState()
     if (!isLoggedIn || userType !== "admin") {
       router.push("/auth/admin/login")
@@ -43,7 +46,8 @@ export default function ManageCoursesPage() {
     }
   }, [router])
 
-  if (!user) {
+  // Show skeleton until mounted and user is loaded
+  if (!mounted || !user) {
     return <AdminCoursesSkeleton />
   }
 

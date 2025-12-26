@@ -57,8 +57,11 @@ export default function CoursePage() {
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
+  // Track mount state to prevent flash of content
   useEffect(() => {
+    setMounted(true)
     const authState = getClientAuthState()
     setUser(authState.user)
   }, [])
@@ -104,7 +107,8 @@ export default function CoursePage() {
     fetchCourseData()
   }, [id, user])
 
-  if (loading) {
+  // Show skeleton until mounted and data is loaded
+  if (!mounted || loading) {
     return <CourseDetailSkeleton />
   }
 

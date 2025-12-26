@@ -26,6 +26,12 @@ export default function LearnerDashboard() {
   const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([])
   const [coursesLoading, setCoursesLoading] = useState(true)
   const [coursesError, setCoursesError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -90,7 +96,8 @@ export default function LearnerDashboard() {
     fetchCourses()
   }, [authLoading, dashboardUser])
 
-  if (authLoading) {
+  // Show skeleton until mounted and auth is loaded
+  if (!mounted || authLoading) {
     return <DashboardSkeleton />
   }
 
@@ -109,11 +116,11 @@ export default function LearnerDashboard() {
   // Get completed courses count
   const completedCoursesCount = enrolledCourses.filter((course) => {
     // Check if course is completed based on progress or enrollment status
-    return course.progress === 100
+    return (course.progress ?? 0) === 100
   }).length
 
   // Get courses in progress (enrolled but not completed)
-  const coursesInProgress = enrolledCourses.filter((course) => course.progress < 100)
+  const coursesInProgress = enrolledCourses.filter((course) => (course.progress ?? 0) < 100)
 
   const firstName = dashboardUser.name?.split(" ")[0] || dashboardUser.name || "there"
 

@@ -32,6 +32,12 @@ export default function CoursesPage() {
   const [coursesError, setCoursesError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("relevance")
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!authLoading) {
@@ -94,7 +100,8 @@ export default function CoursesPage() {
     fetchData()
   }, [authLoading, dashboardUser])
 
-  if (authLoading || !dashboardUser) {
+  // Show skeleton until mounted and auth is loaded
+  if (!mounted || authLoading || !dashboardUser) {
     return <CoursesPageSkeleton />
   }
 

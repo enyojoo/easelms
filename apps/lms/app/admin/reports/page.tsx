@@ -124,8 +124,14 @@ export default function ReportPage() {
   const [learnerDemographics, setLearnerDemographics] = useState<LearnerDemographic[]>([])
   const [revenueByCoursesData, setRevenueByCoursesData] = useState<RevenueByCourse[]>([])
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const { isLoggedIn, userType, user } = getClientAuthState()
@@ -183,7 +189,8 @@ export default function ReportPage() {
     toast.success("Date filter reset")
   }
 
-  if (!user || loading) {
+  // Show skeleton until mounted and data is loaded
+  if (!mounted || !user || loading) {
     return <AdminReportsSkeleton />
   }
 

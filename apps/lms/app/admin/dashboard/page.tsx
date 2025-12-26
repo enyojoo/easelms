@@ -58,6 +58,12 @@ export default function InstructorDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
   const [statsError, setStatsError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -93,7 +99,8 @@ export default function InstructorDashboard() {
     }
   }, [authLoading, dashboardUser])
 
-  if (authLoading || !dashboardUser) {
+  // Show skeleton until mounted and auth is loaded
+  if (!mounted || authLoading || !dashboardUser) {
     return <AdminDashboardSkeleton />
   }
 

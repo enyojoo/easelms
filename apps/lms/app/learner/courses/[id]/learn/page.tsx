@@ -42,7 +42,13 @@ export default function CourseLearningPage() {
   const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Fetch course data and check enrollment
   useEffect(() => {
@@ -403,7 +409,8 @@ export default function CourseLearningPage() {
     }
   }
 
-  if (loading) {
+  // Show skeleton until mounted and data is loaded
+  if (!mounted || loading) {
     return <CourseLearningSkeleton />
   }
 

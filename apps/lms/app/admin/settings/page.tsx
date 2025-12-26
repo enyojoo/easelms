@@ -35,6 +35,7 @@ const NigeriaFlag = () => (
 export default function SettingsPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [mounted, setMounted] = useState(false)
   const [settings, setSettings] = useState({
     emailNotifications: true,
     courseEnrollmentNotifications: true,
@@ -44,7 +45,9 @@ export default function SettingsPage() {
     defaultCurrency: "USD",
   })
 
+  // Track mount state to prevent flash of content
   useEffect(() => {
+    setMounted(true)
     const { isLoggedIn, userType, user } = getClientAuthState()
     if (!isLoggedIn || userType !== "admin") {
       router.push("/auth/admin/login")
@@ -57,8 +60,8 @@ export default function SettingsPage() {
     setSettings((prev) => ({ ...prev, [name]: checked }))
   }
 
-
-  if (!user) {
+  // Show skeleton until mounted and user is loaded
+  if (!mounted || !user) {
     return <AdminSettingsSkeleton />
   }
 

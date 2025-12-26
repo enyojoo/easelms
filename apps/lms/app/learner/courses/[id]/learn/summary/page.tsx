@@ -39,6 +39,12 @@ export default function CourseCompletionPage() {
   const [error, setError] = useState<string | null>(null)
   const [certificateId, setCertificateId] = useState<string | null>(null)
   const [downloadingCertificate, setDownloadingCertificate] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Track mount state to prevent flash of content
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,7 +183,8 @@ export default function CourseCompletionPage() {
     }
   }
 
-  if (loading) {
+  // Show skeleton until mounted and data is loaded
+  if (!mounted || loading) {
     return <CourseSummarySkeleton />
   }
 
