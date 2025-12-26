@@ -225,6 +225,10 @@ export default function ClientLayout({
   }, [mounted, isSupabase])
 
   // Check if current path is an auth page
+  const { isLoggedIn, userType, user } = authState
+
+  // Determine if we should show the layout
+  const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
   const isAuthPage = [
     "/auth/learner/login",
     "/auth/learner/signup",
@@ -233,61 +237,6 @@ export default function ClientLayout({
     "/forgot-password/code",
     "/forgot-password/new-password",
   ].includes(pathname) || pathname.startsWith("/auth/")
-
-  const { isLoggedIn, userType, user } = authState
-
-  // During SSR and initial render, preserve layout structure to avoid layout shift
-  // Layout will always render, page content will handle its own skeleton
-  if (!mounted) {
-    const isProtectedRouteCheck = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
-    const isAuthPageCheck = [
-      "/auth/learner/login",
-      "/auth/learner/signup",
-      "/auth/admin/login",
-      "/forgot-password",
-      "/forgot-password/code",
-      "/forgot-password/new-password",
-    ].includes(pathname) || pathname.startsWith("/auth/")
-    
-    // Show layout structure for protected routes, even during SSR
-    if (isProtectedRouteCheck && !isAuthPageCheck) {
-      return (
-        <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-          <div className="flex flex-col h-screen">
-            <div className="lg:hidden">
-              <div className="h-16 border-b border-border" />
-            </div>
-            <div className="hidden lg:flex h-screen">
-              <div className="w-64 h-screen bg-background-element border-r border-border" />
-              <div className="flex flex-col flex-grow lg:ml-64">
-                <div className="h-16 border-b border-border" />
-                <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
-                  <main className="container-fluid">
-                    <PageTransition>{children}</PageTransition>
-                  </main>
-                </div>
-              </div>
-            </div>
-            <div className="lg:hidden flex-grow overflow-y-auto mt-16 mb-16 pb-4">
-              <main className="container-fluid">
-                <PageTransition>{children}</PageTransition>
-              </main>
-            </div>
-          </div>
-        </ThemeProvider>
-      )
-    }
-    
-    // For non-protected routes, just render children
-    return (
-      <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-        <PageTransition>{children}</PageTransition>
-      </ThemeProvider>
-    )
-  }
-
-  // Determine if we should show the layout
-  const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
   
   // Always show layout for protected routes (even if auth is loading)
   // Page content will handle showing its own skeleton
@@ -318,14 +267,14 @@ export default function ClientLayout({
               )}
               <div className="flex-grow overflow-y-auto lg:pt-16 pb-8">
                 <main className="container-fluid">
-                  <PageTransition>{children}</PageTransition>
+                  {children}
                 </main>
               </div>
             </div>
           </div>
           <div className="lg:hidden flex-grow overflow-y-auto mt-16 mb-16 pb-4">
             <main className="container-fluid">
-              <PageTransition>{children}</PageTransition>
+              {children}
             </main>
           </div>
         </div>
