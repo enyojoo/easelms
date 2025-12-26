@@ -28,30 +28,54 @@ interface CourseBasicInfoProps {
 }
 
 export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] }: CourseBasicInfoProps) {
-  const [thumbnail, setThumbnail] = useState(data.thumbnail || "/placeholder.svg?height=200&width=300")
+  const [thumbnail, setThumbnail] = useState(data.thumbnail || "")
   const [previewVideoInput, setPreviewVideoInput] = useState(data.previewVideo || "")
   const [vimeoId, setVimeoId] = useState<string | null>(null)
   const [isValidVideo, setIsValidVideo] = useState(true)
 
   // Sync local state with data prop changes (for draft restoration and tab switching)
   useEffect(() => {
-    if (data.thumbnail) {
-      if (data.thumbnail !== thumbnail) {
-        setThumbnail(data.thumbnail)
+    // Always sync thumbnail from data prop
+    if (data.thumbnail && data.thumbnail.trim() !== "") {
+      setThumbnail(data.thumbnail)
+    } else {
+      setThumbnail("")
+    }
+  }, [data.thumbnail])
+
+  // Sync preview video from data prop and extract vimeoId on mount/change
+  useEffect(() => {
+    const videoValue = data.previewVideo || ""
+    if (videoValue !== previewVideoInput) {
+      setPreviewVideoInput(videoValue)
+    }
+    
+    // Extract vimeoId if video exists (only when data changes, not on user input)
+    if (videoValue) {
+      const extractedId = extractVimeoId(videoValue)
+      if (extractedId) {
+        setVimeoId(extractedId)
+        setIsValidVideo(true)
+      } else if (isVimeoUrl(videoValue)) {
+        setIsValidVideo(false)
+        setVimeoId(null)
+      } else {
+        setVimeoId(null)
+        setIsValidVideo(true)
       }
-    } else if (thumbnail !== "/placeholder.svg?height=200&width=300") {
-      // Reset to placeholder if data.thumbnail is cleared
-      setThumbnail("/placeholder.svg?height=200&width=300")
+    } else {
+      setVimeoId(null)
+      setIsValidVideo(true)
     }
-  }, [data.thumbnail, thumbnail])
+  }, [data.previewVideo]) // Only depend on data.previewVideo, not previewVideoInput
 
+  // Handle preview video input changes and update parent (only when user types)
   useEffect(() => {
-    if (data.previewVideo !== previewVideoInput) {
-      setPreviewVideoInput(data.previewVideo || "")
+    // Skip if this is from data prop sync (to avoid double updates)
+    if (previewVideoInput === data.previewVideo) {
+      return
     }
-  }, [data.previewVideo])
-
-  useEffect(() => {
+    
     if (previewVideoInput) {
       const extractedId = extractVimeoId(previewVideoInput)
       if (extractedId) {
@@ -61,9 +85,12 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       } else if (isVimeoUrl(previewVideoInput)) {
         setIsValidVideo(false)
         setVimeoId(null)
+        // Still save invalid Vimeo URL so user can see the error
+        onUpdate({ ...data, previewVideo: previewVideoInput, vimeoVideoId: undefined })
       } else {
         setVimeoId(null)
         setIsValidVideo(true)
+        // Save the input even if not a valid Vimeo URL (user might be typing or using different format)
         onUpdate({ ...data, previewVideo: previewVideoInput, vimeoVideoId: undefined })
       }
     } else {
@@ -71,7 +98,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       setIsValidVideo(true)
       onUpdate({ ...data, previewVideo: "", vimeoVideoId: undefined })
     }
-  }, [previewVideoInput, data])
+  }, [previewVideoInput]) // Only trigger on user input changes
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -86,7 +113,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
   }
 
   const handleThumbnailRemove = () => {
-    setThumbnail("/placeholder.svg?height=200&width=300")
+    setThumbnail("")
     onUpdate({ ...data, thumbnail: "" })
   }
 
@@ -134,7 +161,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label>Course Thumbnail</Label>
-          {thumbnail && thumbnail !== "/placeholder.svg?height=200&width=300" && (
+          {thumbnail && thumbnail.trim() !== "" && (
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border mb-2">
               <SafeImage src={thumbnail} alt="Course thumbnail" fill className="object-cover" />
             </div>
@@ -145,7 +172,7 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
             accept="image/*"
             maxSize={5 * 1024 * 1024} // 5MB
             multiple={false}
-            initialValue={data.thumbnail && data.thumbnail !== "/placeholder.svg?height=200&width=300" ? data.thumbnail : undefined}
+            initialValue={data.thumbnail && data.thumbnail.trim() !== "" ? data.thumbnail : undefined}
             onUploadComplete={handleThumbnailUpload}
             onRemove={handleThumbnailRemove}
           />
@@ -174,9 +201,6 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
                 </AlertDescription>
               </Alert>
             )}
-            <p className="text-xs text-muted-foreground">
-              Supported formats: https://vimeo.com/123456789, https://player.vimeo.com/video/123456789, or just the video ID
-            </p>
             <p className="text-xs text-muted-foreground">
               Recommended length: 2-5 minutes.
             </p>
