@@ -24,7 +24,7 @@ import { logout } from "../utils/logout"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface MobileMenuProps {
-  userType: "user" | "admin"
+  userType: "user" | "admin" | "instructor"
   user?: {
     name: string
     profileImage: string
@@ -46,7 +46,30 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
       { href: "/admin/courses", icon: BookOpen, label: "Courses" },
       { href: "/admin/profile", icon: User, label: "Profile" },
     ],
+    instructor: [
+      { href: "/admin/dashboard", icon: Home, label: "Home" },
+      { href: "/admin/courses", icon: BookOpen, label: "Courses" },
+      { href: "/admin/profile", icon: User, label: "Profile" },
+    ],
   }
+
+  // Build admin/instructor sidebar items
+  const adminSidebarItems = [
+    { href: "/admin/learners", label: "Learners", icon: Users },
+    { href: "https://t.me/enyosam", label: "Support", icon: HelpCircle, external: true },
+  ]
+
+  // Add purchases only for admin (not instructor)
+  if (userType === "admin") {
+    adminSidebarItems.push({ href: "/admin/purchases", label: "Purchases", icon: ShoppingBag })
+  }
+
+  // Add settings only for admin (not instructor)
+  if (userType === "admin") {
+    adminSidebarItems.push({ href: "/admin/settings", label: "Settings", icon: Settings })
+  }
+
+  adminSidebarItems.push({ href: "#", label: "Log Out", icon: LogOut, isLogout: true })
 
   const sidebarItems = {
     user: [
@@ -54,16 +77,12 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
       { href: "/learner/support", label: "Support", icon: HelpCircle },
       { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
     ],
-    admin: [
-      { href: "/admin/learners", label: "Learners", icon: Users },
-      { href: "https://t.me/enyosam", label: "Support", icon: HelpCircle, external: true },
-      { href: "/admin/settings", label: "Settings", icon: Settings },
-      { href: "#", label: "Log Out", icon: LogOut, isLogout: true },
-    ],
+    admin: adminSidebarItems,
+    instructor: adminSidebarItems,
   }
 
-  const currentMenu = menuItems[userType]
-  const currentSidebar = sidebarItems[userType]
+  const currentMenu = menuItems[userType] || menuItems.admin
+  const currentSidebar = sidebarItems[userType] || sidebarItems.admin
   const isLoading = !user
 
   return (

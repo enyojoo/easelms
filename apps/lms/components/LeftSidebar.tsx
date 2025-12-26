@@ -19,11 +19,23 @@ import { ThemeToggle } from "./ThemeToggle"
 import { logout } from "../utils/logout"
 
 interface LeftSidebarProps {
-  userType: "user" | "admin"
+  userType: "user" | "admin" | "instructor"
 }
 
 export default function LeftSidebar({ userType }: LeftSidebarProps) {
   const pathname = usePathname()
+
+  // Build admin/instructor menu items
+  const adminMenuItems = [
+    { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
+    { href: "/admin/courses", icon: BookOpen, label: "Courses" },
+    { href: "/admin/learners", icon: Users, label: "Learners" },
+  ]
+
+  // Add purchases only for admin (not instructor)
+  if (userType === "admin") {
+    adminMenuItems.push({ href: "/admin/purchases", icon: ShoppingBag, label: "Purchases" })
+  }
 
   const menuItems = {
     user: [
@@ -32,11 +44,8 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
       { href: "/learner/purchase", icon: ShoppingBag, label: "Purchase" },
       { href: "/learner/support", icon: HelpCircle, label: "Support" },
     ],
-    admin: [
-      { href: "/admin/dashboard", icon: Home, label: "Dashboard" },
-      { href: "/admin/courses", icon: BookOpen, label: "Courses" },
-      { href: "/admin/learners", icon: Users, label: "Learners" },
-    ],
+    admin: adminMenuItems,
+    instructor: adminMenuItems, // Instructors get same menu as admin but purchases is conditionally added above
   }
 
   const bottomMenuItems = {
@@ -51,8 +60,8 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
     ],
   }
 
-  const currentMenu = menuItems[userType]
-  const currentBottomMenu = bottomMenuItems[userType]
+  const currentMenu = menuItems[userType] || menuItems.admin
+  const currentBottomMenu = bottomMenuItems[userType] || bottomMenuItems.admin
 
   return (
     <div className="w-64 h-screen py-4 flex flex-col fixed left-0 top-0 bg-background-element border-r border-border hidden lg:flex">

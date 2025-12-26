@@ -243,8 +243,8 @@ export default function ClientLayout({
   const shouldShowLayout = isProtectedRoute && !isAuthPage
 
   // Derive userType from pathname if auth state not ready yet
-  const derivedUserType: "user" | "admin" = userType 
-    ? (userType as "user" | "admin")
+  const derivedUserType: "user" | "admin" | "instructor" = userType 
+    ? (userType as "user" | "admin" | "instructor")
     : pathname.startsWith('/admin/') 
       ? "admin" 
       : "user"

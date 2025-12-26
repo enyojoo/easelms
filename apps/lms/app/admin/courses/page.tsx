@@ -18,62 +18,189 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { BookOpen, Edit, Trash2, Eye, Clock, Banknote, Filter } from "lucide-react"
+import { BookOpen, Edit, Trash2, Eye, Clock, Banknote, Filter, Loader2 } from "lucide-react"
 import AdminCoursesSkeleton from "@/components/AdminCoursesSkeleton"
-import { getClientAuthState } from "@/utils/client-auth"
-import { modules } from "@/data/courses"
+import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import { toast } from "sonner"
 
+interface Course {
+  id: number
+  title: string
+  description: string
+  image: string
+  lessons: Array<{ id?: string | number }>
+  price?: number
+  settings?: {
+    isPublished?: boolean
+    enrollment?: {
+      enrollmentMode?: "open" | "free" | "buy" | "recurring" | "closed"
+      price?: number
+      recurringPrice?: number
+    }
+  }
+}
+
 export default function ManageCoursesPage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user, loading: authLoading, userType } = useClientAuthState()
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [priceFilter, setPriceFilter] = useState<string>("all")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [courseToDelete, setCourseToDelete] = useState<number | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   // Track mount state to prevent flash of content
   useEffect(() => {
     setMounted(true)
-    const { isLoggedIn, userType, user } = getClientAuthState()
-    if (!isLoggedIn || userType !== "admin") {
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading && (!user || (userType !== "admin" && userType !== "instructor"))) {
       router.push("/auth/admin/login")
-    } else {
-      setUser(user)
     }
-  }, [router])
+  }, [user, userType, authLoading, router])
+
+  // Fetch courses from API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor")) return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch("/api/courses?all=true")
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch courses")
+        }
+
+        const data = await response.json()
+        const fetchedCourses = data.courses || []
+
+        // Map API response to match UI expectations
+        const mappedCourses: Course[] = fetchedCourses.map((course: any) => {
+          // Parse settings if it's a string
+          let settings = course.settings
+          if (typeof settings === 'string') {
+            try {
+              settings = JSON.parse(settings)
+            } catch (e) {
+              settings = {}
+            }
+          }
+
+          // Map is_published to settings.isPublished
+          if (course.is_published !== undefined && settings) {
+            settings.isPublished = course.is_published
+          }
+
+          return {
+            id: course.id,
+            title: course.title || "",
+            description: course.description || "",
+            image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+            lessons: Array.isArray(course.lessons) ? course.lessons : [],
+            price: course.price || 0,
+            settings: settings || { isPublished: course.is_published || false },
+          }
+        })
+
+        setCourses(mappedCourses)
+      } catch (err: any) {
+        console.error("Error fetching courses:", err)
+        setError(err.message || "Failed to load courses")
+        toast.error(err.message || "Failed to load courses")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [mounted, authLoading, user, userType, router])
 
   // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || !user
+  const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
 
   const handleDeleteClick = (courseId: number) => {
     setCourseToDelete(courseId)
     setDeleteDialogOpen(true)
   }
 
-  const handleDeleteConfirm = () => {
-    if (courseToDelete) {
-      // Mock deletion - in real app, this would call an API
+  const handleDeleteConfirm = async () => {
+    if (!courseToDelete) return
+
+    try {
+      setDeleting(true)
+      const response = await fetch(`/api/courses/${courseToDelete}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to delete course")
+      }
+
       toast.success("Course deleted successfully")
       setDeleteDialogOpen(false)
       setCourseToDelete(null)
+
+      // Refresh courses list
+      const refreshResponse = await fetch("/api/courses?all=true")
+      if (refreshResponse.ok) {
+        const data = await refreshResponse.json()
+        const fetchedCourses = data.courses || []
+        const mappedCourses: Course[] = fetchedCourses.map((course: any) => {
+          let settings = course.settings
+          if (typeof settings === 'string') {
+            try {
+              settings = JSON.parse(settings)
+            } catch (e) {
+              settings = {}
+            }
+          }
+          if (course.is_published !== undefined && settings) {
+            settings.isPublished = course.is_published
+          }
+          return {
+            id: course.id,
+            title: course.title || "",
+            description: course.description || "",
+            image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+            lessons: Array.isArray(course.lessons) ? course.lessons : [],
+            price: course.price || 0,
+            settings: settings || { isPublished: course.is_published || false },
+          }
+        })
+        setCourses(mappedCourses)
+      }
+    } catch (err: any) {
+      console.error("Error deleting course:", err)
+      toast.error(err.message || "Failed to delete course")
+    } finally {
+      setDeleting(false)
     }
   }
 
-  const filteredCourses = modules.filter((course) => {
+  const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || (statusFilter === "published" && course.settings?.isPublished) || (statusFilter === "draft" && !course.settings?.isPublished)
+    const enrollmentPrice = course.settings?.enrollment?.price || course.price || 0
     const matchesPrice =
       priceFilter === "all" ||
-      (priceFilter === "free" && (!course.price || course.price === 0)) ||
-      (priceFilter === "paid" && course.price && course.price > 0)
+      (priceFilter === "free" && enrollmentPrice === 0) ||
+      (priceFilter === "paid" && enrollmentPrice > 0)
     return matchesSearch && matchesStatus && matchesPrice
   })
 
-  const renderCourseCard = (course: typeof modules[0]) => (
+  const renderCourseCard = (course: Course) => (
     <Card key={course.id} className="flex flex-col h-full">
       <CardHeader className="p-4 sm:p-6">
         <div className="aspect-video relative rounded-md overflow-hidden mb-3 sm:mb-4">
@@ -159,6 +286,13 @@ export default function ManageCoursesPage() {
     <div className="pt-4 md:pt-8">
       {isLoading ? (
         <AdminCoursesSkeleton />
+      ) : error ? (
+        <div className="text-center py-12">
+          <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Error loading courses</h3>
+          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
       ) : (
         <>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -251,9 +385,20 @@ export default function ManageCoursesPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm} 
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

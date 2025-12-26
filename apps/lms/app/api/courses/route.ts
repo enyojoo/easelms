@@ -3,23 +3,63 @@ import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {
   try {
-    // For public course listing, we don't need authentication
-    // Use service role client to bypass RLS and avoid recursion issues
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
-    
-    let supabase
-    try {
-      supabase = createServiceRoleClient()
-    } catch (serviceError: any) {
-      // If service role not available, use regular client (might have RLS issues)
-      const { createClient } = await import("@/lib/supabase/server")
-      supabase = await createClient()
-      console.warn("Courses API: Service role not available, using regular client")
-    }
-    
     const { searchParams } = new URL(request.url)
     const recommended = searchParams.get("recommended") === "true"
     const ids = searchParams.get("ids")
+    const allCourses = searchParams.get("all") === "true" // Admin/instructor can fetch all courses
+
+    // For public course listing, we don't need authentication
+    // Use service role client to bypass RLS and avoid recursion issues
+    const { createServiceRoleClient, createClient } = await import("@/lib/supabase/server")
+    
+    let supabase
+    let serviceClient
+    let isAdmin = false
+    let isInstructor = false
+
+    // If all=true, check if user is admin/instructor
+    if (allCourses) {
+      const regularClient = await createClient()
+      const { data: { user } } = await regularClient.auth.getUser()
+
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+
+      // Use service role client to bypass RLS when checking admin status
+      try {
+        serviceClient = createServiceRoleClient()
+      } catch (serviceError: any) {
+        console.warn("Service role key not available, using regular client:", serviceError.message)
+        serviceClient = null
+      }
+
+      const clientToUse = serviceClient || regularClient
+
+      // Check if user is admin or instructor
+      const { data: profile } = await clientToUse
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single()
+
+      if (profile?.user_type !== "admin" && profile?.user_type !== "instructor") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
+
+      isAdmin = profile?.user_type === "admin"
+      isInstructor = profile?.user_type === "instructor"
+      supabase = serviceClient || regularClient
+    } else {
+      // Public access - use service role client to bypass RLS
+      try {
+        supabase = createServiceRoleClient()
+      } catch (serviceError: any) {
+        // If service role not available, use regular client (might have RLS issues)
+        supabase = await createClient()
+        console.warn("Courses API: Service role not available, using regular client")
+      }
+    }
 
     // Fetch courses with lesson counts
     // Try to include lessons count, but fallback to basic query if RLS blocks it
@@ -29,7 +69,11 @@ export async function GET(request: Request) {
         *,
         lessons (id)
       `)
-      .eq("is_published", true)
+
+    // Only filter by is_published if not fetching all courses
+    if (!allCourses) {
+      query = query.eq("is_published", true)
+    }
 
     if (ids) {
       // Filter by specific course IDs
@@ -52,7 +96,11 @@ export async function GET(request: Request) {
       let basicQuery = supabase
         .from("courses")
         .select("*")
-        .eq("is_published", true)
+
+      // Only filter by is_published if not fetching all courses
+      if (!allCourses) {
+        basicQuery = basicQuery.eq("is_published", true)
+      }
 
       if (ids) {
         const courseIds = ids.split(',').map(id => parseInt(id.trim()))

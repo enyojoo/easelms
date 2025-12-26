@@ -74,7 +74,9 @@ export default function LearnersPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user || userType !== "admin") {
+      const isAdmin = userType === "admin"
+      const isInstructor = (userType as string) === "instructor"
+      if (!user || (!isAdmin && !isInstructor)) {
         router.push("/auth/admin/login")
       }
     }
@@ -83,7 +85,9 @@ export default function LearnersPage() {
   // Fetch stats (for total learners count)
   useEffect(() => {
     const fetchStats = async () => {
-      if (!mounted || authLoading || !user || userType !== "admin") return
+      const isAdmin = userType === "admin"
+      const isInstructor = (userType as string) === "instructor"
+      if (!mounted || authLoading || !user || (!isAdmin && !isInstructor)) return
 
       try {
         setStatsLoading(true)
@@ -109,7 +113,9 @@ export default function LearnersPage() {
   // Fetch learners
   useEffect(() => {
     const fetchLearners = async () => {
-      if (!mounted || authLoading || !user || userType !== "admin") return
+      const isAdmin = userType === "admin"
+      const isInstructor = (userType as string) === "instructor"
+      if (!mounted || authLoading || !user || (!isAdmin && !isInstructor)) return
 
       try {
         setLoading(true)
