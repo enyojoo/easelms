@@ -66,8 +66,7 @@ export async function GET(
       enrollments (
         course_id,
         status,
-        progress,
-        created_at
+        progress
       )
     `)
     .eq("id", params.id)
