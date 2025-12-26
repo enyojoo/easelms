@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { extractVimeoId, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 
 interface VideoPreviewProps {
   videoUrl: string
@@ -36,8 +36,8 @@ export default function VideoPreview({ videoUrl, thumbnailUrl, vimeoVideoId }: V
         ) : (
           <>
             <div className="relative w-full h-full">
-              <Image
-                src={thumbnailUrl}
+              <SafeImage
+                src={thumbnailUrl || ""}
                 alt="Video thumbnail"
                 fill
                 className="object-cover"
