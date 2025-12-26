@@ -44,10 +44,6 @@ export async function GET(
     creator
   }
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
   return NextResponse.json({ course: data })
 }
 

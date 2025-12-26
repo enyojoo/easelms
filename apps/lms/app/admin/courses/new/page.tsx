@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect, Suspense, useCallback } from "react"
+import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { ArrowLeft } from "lucide-react"
 import CourseBasicInfo from "./components/CourseBasicInfo"
@@ -104,6 +105,7 @@ function NewCourseContent() {
   })
   
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
+  const [loading, setLoading] = useState(false)
   
   // Update last saved time when lastSaved changes
   useEffect(() => {
@@ -112,83 +114,79 @@ function NewCourseContent() {
     }
   }, [lastSaved])
 
-  // Load draft on mount (only if not editing)
+  // Load course data on mount
   useEffect(() => {
-    const loadDraftData = async () => {
-      if (!editCourseId) {
-        const draft = await loadDraft()
-        if (draft) {
-          setCourseData(draft)
+    const loadCourseData = async () => {
+      if (editCourseId) {
+        // Fetch course from API when editing
+        setLoading(true)
+        try {
+          const response = await fetch(`/api/courses/drafts?courseId=${editCourseId}`)
+          if (response.ok) {
+            const result = await response.json()
+            if (result.course) {
+              // Transform database format to course builder format
+              const course = result.course
+              setCourseData({
+                basicInfo: {
+                  title: course.title || "",
+                  requirements: course.requirements || "",
+                  description: course.description || "",
+                  whoIsThisFor: course.who_is_this_for || "",
+                  thumbnail: course.thumbnail || "",
+                  previewVideo: course.preview_video || "",
+                  price: course.price?.toString() || "",
+                },
+                lessons: (course.lessons || []).map((lesson: any) => ({
+                  id: lesson.id?.toString() || `lesson-${Date.now()}`,
+                  title: lesson.title || "",
+                  type: lesson.type || "text",
+                  content: lesson.content || {},
+                  resources: lesson.resources || [],
+                  settings: lesson.settings || {},
+                  quiz: lesson.quiz || null,
+                  estimatedDuration: lesson.estimated_duration || 0,
+                })),
+                settings: course.settings || {
+                  isPublished: course.is_published || false,
+                  requiresSequentialProgress: true,
+                  minimumQuizScore: 50,
+                  enrollment: {
+                    enrollmentMode: "free",
+                  },
+                  certificate: {
+                    certificateEnabled: false,
+                    certificateTemplate: "",
+                    certificateDescription: "",
+                    signatureImage: "",
+                    signatureTitle: "",
+                    additionalText: "",
+                    certificateType: "completion",
+                  },
+                  currency: "USD",
+                },
+              })
+            }
+          }
+        } catch (error) {
+          console.error("Error loading course:", error)
+        } finally {
+          setLoading(false)
         }
+      } else {
+        // Load draft from localStorage for new courses
+        const loadDraftData = async () => {
+          const draft = await loadDraft()
+          if (draft) {
+            setCourseData(draft)
+          }
+        }
+        loadDraftData()
       }
     }
-    loadDraftData()
+    loadCourseData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount
-
-  useEffect(() => {
-    if (editCourseId) {
-      const courseToEdit = modules.find((m) => m.id === Number.parseInt(editCourseId))
-      if (courseToEdit) {
-        setCourseData({
-          basicInfo: {
-            title: courseToEdit.title ?? "",
-            requirements: courseToEdit.requirements ?? "",
-            description: courseToEdit.description ?? "",
-            whoIsThisFor: courseToEdit.whoIsThisFor ?? "",
-            thumbnail: courseToEdit.image ?? "",
-            previewVideo: courseToEdit.previewVideo ?? "",
-            price: courseToEdit.price?.toString() ?? "",
-          },
-          lessons: courseToEdit.lessons.map((lesson) => ({
-            id: lesson.id ?? `lesson-${Date.now()}-${Math.random()}`,
-            title: lesson.title ?? "",
-            type: lesson.type ?? "video",
-            content: lesson.content ?? {},
-            resources: lesson.resources ?? [],
-            settings: {
-              isRequired: lesson.settings?.isRequired ?? true,
-              videoProgression: lesson.settings?.videoProgression ?? true,
-              allowSkip: lesson.settings?.allowSkip ?? false,
-              timeLimit: lesson.settings?.timeLimit ?? 0,
-            },
-            quiz: lesson.quiz ?? {
-              enabled: false,
-              questions: [],
-            },
-          })),
-          settings: {
-            ...courseData.settings,
-            ...(courseToEdit.settings && {
-              isPublished: courseToEdit.settings.isPublished ?? courseData.settings.isPublished,
-              requiresSequentialProgress: courseToEdit.settings.requiresSequentialProgress ?? courseData.settings.requiresSequentialProgress,
-              minimumQuizScore: courseToEdit.settings.minimumQuizScore ?? courseData.settings.minimumQuizScore,
-              enrollment: courseToEdit.settings.enrollment
-                ? {
-                    ...courseToEdit.settings.enrollment,
-                    enrollmentMode: (["free", "buy", "recurring"].includes(courseToEdit.settings.enrollment.enrollmentMode)
-                      ? courseToEdit.settings.enrollment.enrollmentMode
-                      : "free") as "free" | "buy" | "recurring",
-                  }
-                : courseData.settings.enrollment,
-              certificate: courseToEdit.settings.certificate
-                ? {
-                    certificateEnabled: courseToEdit.settings.certificate.certificateEnabled ?? courseData.settings.certificate.certificateEnabled,
-                    certificateTemplate: courseToEdit.settings.certificate.certificateTemplate ?? courseData.settings.certificate.certificateTemplate,
-                    certificateDescription: courseToEdit.settings.certificate.certificateDescription ?? courseData.settings.certificate.certificateDescription,
-                    signatureImage: courseToEdit.settings.certificate.signatureImage ?? courseData.settings.certificate.signatureImage,
-                    signatureTitle: courseToEdit.settings.certificate.signatureTitle ?? courseData.settings.certificate.signatureTitle,
-                    additionalText: courseToEdit.settings.certificate.additionalText ?? courseData.settings.certificate.additionalText,
-                    certificateType: courseToEdit.settings.certificate.certificateType ?? courseData.settings.certificate.certificateType,
-                  }
-                : courseData.settings.certificate,
-              currency: courseToEdit.settings.currency ?? courseData.settings.currency,
-            }),
-          },
-        })
-      }
-    }
-  }, [searchParams, courseData.settings])
+  }, [editCourseId]) // Only run when editCourseId changes
 
   const updateCourseData = useCallback((section: keyof typeof courseData, data: any) => {
     setCourseData((prev) => {
@@ -288,6 +286,32 @@ function NewCourseContent() {
   }
 
 
+  // Show skeleton while loading course data (only when editing)
+  if (loading && editCourseId) {
+    return (
+      <div className="pt-4 md:pt-8 pb-8">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-9 w-48" />
+          </div>
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        <Card className="p-6">
+          <Skeleton className="h-10 w-full mb-6" />
+          <div className="space-y-4">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="pt-4 md:pt-8 pb-8">
       <div className="flex justify-between items-center mb-8">
@@ -366,9 +390,34 @@ function NewCourseContent() {
   )
 }
 
+function CourseBuilderSkeleton() {
+  return (
+    <div className="pt-4 md:pt-8 pb-8">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-9 w-48" />
+        </div>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-24" />
+        </div>
+      </div>
+      <Card className="p-6">
+        <Skeleton className="h-10 w-full mb-6" />
+        <div className="space-y-4">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </Card>
+    </div>
+  )
+}
+
 export default function NewCoursePage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<CourseBuilderSkeleton />}>
       <NewCourseContent />
     </Suspense>
   )
