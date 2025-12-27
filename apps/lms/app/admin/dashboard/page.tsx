@@ -88,7 +88,9 @@ export default function InstructorDashboard() {
       ) : (
         <>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-primary">Hi, {firstName}!</h1>
+        <h1 className="text-3xl font-bold text-primary">
+          {dashboardUser?.name ? `Hi, ${firstName}!` : <span className="h-9 w-48 bg-muted animate-pulse rounded inline-block" />}
+        </h1>
       </div>
 
       <div className={`grid grid-cols-1 ${isInstructor ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6 mb-6`}>

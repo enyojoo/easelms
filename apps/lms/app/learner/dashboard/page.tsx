@@ -135,12 +135,13 @@ export default function LearnerDashboard() {
   // Get courses in progress (enrolled but not completed)
   const coursesInProgress = enrolledCourses.filter((course) => (course.progress ?? 0) < 100)
 
-  const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
-
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
   const hasAnyData = enrollmentsData || progressData || recommendedData || enrolledCourses.length > 0
   const showSkeleton = (authLoading || !dashboardUser) && !hasAnyData
+
+  // Only calculate firstName when user data is available to prevent flicker
+  const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 max-w-7xl mx-auto px-4 lg:px-6">
@@ -160,7 +161,9 @@ export default function LearnerDashboard() {
         <>
       <div className="flex justify-between items-center mb-4 md:mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-primary">Hi, {firstName} 👋🏻</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary">
+            {dashboardUser?.name ? `Hi, ${firstName} 👋🏻` : <span className="h-8 w-48 bg-muted animate-pulse rounded inline-block" />}
+          </h1>
         </div>
       </div>
 
