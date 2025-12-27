@@ -16,7 +16,7 @@ import { ArrowLeft } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useCourse, useEnrollments, useEnrollCourse } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 
 interface Course {
@@ -78,6 +78,9 @@ export default function CoursePage() {
   const { data: enrollmentsData } = useEnrollments()
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
+  
+  // Set up real-time subscription for course enrollment count
+  useRealtimeCourseEnrollments(id)
   
   const course = courseData?.course
 

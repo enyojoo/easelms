@@ -18,7 +18,7 @@ export function useRealtimeEnrollments(userId?: string) {
 
     const supabase = createClient()
     
-    // Subscribe to enrollments table changes
+    // Subscribe to enrollments table changes for this user
     const channel = supabase
       .channel("enrollments-changes")
       .on(
@@ -27,7 +27,7 @@ export function useRealtimeEnrollments(userId?: string) {
           event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "enrollments",
-          filter: userId ? `user_id=eq.${userId}` : undefined,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           console.log("Enrollment change detected:", payload)
@@ -35,6 +35,12 @@ export function useRealtimeEnrollments(userId?: string) {
           queryClient.invalidateQueries({ queryKey: ["enrollments"] })
           // Also invalidate courses to update enrollment status
           queryClient.invalidateQueries({ queryKey: ["courses"] })
+          // Invalidate the specific course cache if course_id is available
+          if (payload.new && (payload.new as any).course_id) {
+            queryClient.invalidateQueries({ queryKey: ["course", (payload.new as any).course_id] })
+          } else if (payload.old && (payload.old as any).course_id) {
+            queryClient.invalidateQueries({ queryKey: ["course", (payload.old as any).course_id] })
+          }
         }
       )
       .subscribe()
@@ -147,8 +153,9 @@ export function useRealtimeQuizResults(courseId?: string | number, userId?: stri
 }
 
 /**
- * Hook to set up real-time subscription for courses (admin only)
- * Useful for admin dashboard to see course updates in real-time
+ * Hook to set up real-time subscription for courses
+ * Listens to course changes and enrollment changes that affect course counts
+ * Useful for updating enrollment counts in real-time
  */
 export function useRealtimeCourses() {
   const queryClient = useQueryClient()
@@ -177,6 +184,24 @@ export function useRealtimeCourses() {
           }
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to INSERT, UPDATE, DELETE
+          schema: "public",
+          table: "enrollments",
+        },
+        (payload) => {
+          console.log("Enrollment change detected (affecting course counts):", payload)
+          // Invalidate all courses cache to update enrollment counts
+          queryClient.invalidateQueries({ queryKey: ["courses"] })
+          // Invalidate the specific course cache if course_id is available
+          const courseId = (payload.new as any)?.course_id || (payload.old as any)?.course_id
+          if (courseId) {
+            queryClient.invalidateQueries({ queryKey: ["course", courseId] })
+          }
+        }
+      )
       .subscribe()
 
     channelRef.current = channel
@@ -188,6 +213,51 @@ export function useRealtimeCourses() {
       }
     }
   }, [queryClient])
+}
+
+/**
+ * Hook to set up real-time subscription for course enrollment count
+ * Listens to enrollments for a specific course and updates the course cache
+ */
+export function useRealtimeCourseEnrollments(courseId?: string | number | null) {
+  const queryClient = useQueryClient()
+  const channelRef = useRef<RealtimeChannel | null>(null)
+
+  useEffect(() => {
+    if (!courseId) return
+
+    const supabase = createClient()
+    
+    // Subscribe to enrollments table changes for this specific course
+    const channel = supabase
+      .channel(`course-enrollments-${courseId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "enrollments",
+          filter: `course_id=eq.${courseId}`,
+        },
+        (payload) => {
+          console.log("Course enrollment change detected:", payload)
+          // Invalidate the specific course cache to refetch with updated enrollment count
+          queryClient.invalidateQueries({ queryKey: ["course", courseId] })
+          // Also invalidate all courses cache to update enrollment counts in lists
+          queryClient.invalidateQueries({ queryKey: ["courses"] })
+        }
+      )
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
+    }
+  }, [courseId, queryClient])
 }
 
 /**
