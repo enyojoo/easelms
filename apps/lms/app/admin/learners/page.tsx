@@ -240,11 +240,6 @@ export default function LearnersPage() {
     }
   }
 
-  const getCourseTitle = (courseId: number) => {
-    const course = courses.find((c) => c.id === courseId)
-    return course?.title || `Course ${courseId}`
-  }
-
   const getTotalEnrolled = () => {
     // Use stats from API (same as dashboard) for total learners count
     return stats?.totalLearners || 0
@@ -351,29 +346,28 @@ export default function LearnersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[30%] min-w-[200px]">Learner</TableHead>
-                  <TableHead className="w-[25%] min-w-[180px]">Email</TableHead>
-                  <TableHead className="w-[30%]">Enrolled Courses</TableHead>
-                  <TableHead className="w-[15%] min-w-[180px]">Actions</TableHead>
+                  <TableHead className="w-[35%] min-w-[200px]">Learner</TableHead>
+                  <TableHead className="w-[35%] min-w-[180px]">Email</TableHead>
+                  <TableHead className="w-[30%] min-w-[180px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {error ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-destructive">
+                    <TableCell colSpan={3} className="text-center py-8 text-destructive">
                       {error}
                     </TableCell>
                   </TableRow>
                 ) : filteredLearners.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                       No learners found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredLearners.map((learner) => (
                     <TableRow key={learner.id}>
-                      <TableCell className="w-[30%] min-w-[200px]">
+                      <TableCell className="w-[35%] min-w-[200px]">
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 flex-shrink-0">
                             <AvatarImage src={learner.profileImage} alt={learner.name} />
@@ -384,26 +378,13 @@ export default function LearnersPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="w-[25%] min-w-[180px]">
+                      <TableCell className="w-[35%] min-w-[180px]">
                         <div className="flex items-center gap-2 min-w-0">
                           <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           <span className="text-sm truncate">{learner.email}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="w-[30%]">
-                        <div className="flex flex-wrap gap-2">
-                          {learner.enrolledCourses.length > 0 ? (
-                            learner.enrolledCourses.map((courseId) => (
-                              <Badge key={courseId} variant="secondary" className="text-xs">
-                                {getCourseTitle(courseId)}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">No courses</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-[15%] min-w-[180px]">
+                      <TableCell className="w-[30%] min-w-[180px]">
                         <div className="flex gap-2 flex-wrap">
                           <Link href={`/admin/learners/${learner.id}`}>
                             <Button variant="outline" size="sm" className="whitespace-nowrap">

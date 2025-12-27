@@ -32,6 +32,7 @@ interface QuizProps {
   showResultsOnly?: boolean
   onRetry?: () => void
   initialScore?: number
+  previewMode?: boolean // If true, skip API calls (for admin preview)
 }
 
 export default function QuizComponent({
@@ -45,6 +46,7 @@ export default function QuizComponent({
   showResultsOnly = false,
   onRetry,
   initialScore,
+  previewMode = false,
 }: QuizProps) {
   // Shuffle questions if enabled (only once on initial load - never reshuffle)
   const shuffledQuestions = useMemo(() => {
@@ -115,6 +117,12 @@ export default function QuizComponent({
   }
 
   const submitQuizResults = async () => {
+    // Skip API call in preview mode
+    if (previewMode) {
+      console.log("Preview mode: Skipping quiz results API call")
+      return
+    }
+
     if (!courseId || !lessonId) {
       console.warn("Cannot submit quiz results: courseId or lessonId missing")
       return

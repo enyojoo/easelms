@@ -207,7 +207,7 @@ export default function InstructorDashboard() {
                   <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b last:border-0 last:pb-0">
                     <div className="flex-shrink-0 mt-1">
                       {activity.type === "signup" && <UserPlus className="h-4 w-4 text-orange-500" />}
-                      {activity.type === "enrollment" && <Users className="h-4 w-4 text-blue-500" />}
+                      {activity.type === "enrollment" && <BookOpen className="h-4 w-4 text-blue-500" />}
                       {activity.type === "completion" && <BookOpen className="h-4 w-4 text-green-500" />}
                       {activity.type === "payment" && <DollarSign className="h-4 w-4 text-purple-500" />}
                     </div>

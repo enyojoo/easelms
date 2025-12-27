@@ -13,16 +13,15 @@ import {
   Mail,
   BookOpen,
   Award,
-  TrendingUp,
   Calendar,
   DollarSign,
   ShoppingBag,
   XCircle,
-  Loader2,
 } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import Link from "next/link"
 import { toast } from "sonner"
+import { createCourseSlug } from "@/lib/slug"
 import AdminLearnerDetailSkeleton from "@/components/AdminLearnerDetailSkeleton"
 
 interface Learner {
@@ -42,8 +41,9 @@ interface Course {
   id: number
   title: string
   image?: string
-  lessons?: Array<{ id: number }>
+  lessons?: Array<{ id: number; title: string }>
   enrolledStudents?: number
+  calculatedProgress?: number
 }
 
 interface Purchase {
@@ -62,7 +62,7 @@ interface Purchase {
   cancelledAt?: string
 }
 
-export default function LearnerDetailsPage() {
+function LearnerDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
@@ -78,15 +78,14 @@ export default function LearnerDetailsPage() {
   }, [])
 
   useEffect(() => {
-    if (!authLoading && (!user || (userType !== "admin" && userType !== "instructor"))) {
+    if (!authLoading && (!user || userType !== "admin")) {
       router.push("/auth/admin/login")
     }
   }, [user, userType, authLoading, router])
 
-  // Fetch learner data
   useEffect(() => {
     const fetchLearner = async () => {
-      if (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor")) return
+      if (!mounted || authLoading || !user || userType !== "admin") return
 
       try {
         setLoading(true)
@@ -112,31 +111,71 @@ export default function LearnerDetailsPage() {
     fetchLearner()
   }, [params.id, mounted, authLoading, user, userType])
 
-  // Fetch courses data
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchCoursesAndProgress = async () => {
       if (!learner || learner.enrolledCourses.length === 0) return
 
       try {
         const courseIds = learner.enrolledCourses.join(",")
-        const response = await fetch(`/api/courses?ids=${courseIds}`)
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
+        const coursesResponse = await fetch(`/api/courses?ids=${courseIds}`)
+        if (!coursesResponse.ok) {
+          const errorData = await coursesResponse.json().catch(() => ({}))
           throw new Error(errorData.error || "Failed to fetch courses")
         }
 
-        const data = await response.json()
-        setCourses(data.courses || [])
+        const coursesData = await coursesResponse.json()
+        let coursesList = coursesData.courses || []
+
+        const progressResponse = await fetch(`/api/learners/${learner.id}/progress`)
+        let progressList: any[] = []
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json()
+          progressList = progressData.progress || []
+        }
+
+        const coursesWithProgress = await Promise.all(
+          coursesList.map(async (course: Course) => {
+            const courseDetailResponse = await fetch(`/api/courses/${course.id}`)
+            if (!courseDetailResponse.ok) {
+              console.warn(`Failed to fetch details for course ID: ${course.id}`)
+              return { ...course, calculatedProgress: 0 }
+            }
+
+            const courseDetailData = await courseDetailResponse.json()
+            const fullCourse = courseDetailData.course
+
+            if (!fullCourse || !Array.isArray(fullCourse.lessons)) {
+              console.warn(`Course ID ${course.id} has no lessons or invalid structure.`)
+              return { ...course, calculatedProgress: 0 }
+            }
+
+            const lessonsProgress = progressList.filter(
+              (p) => p.course_id === course.id && p.completed
+            )
+            const completedLessonCount = lessonsProgress.length
+            const totalLessons = fullCourse.lessons.length
+
+            const calculatedProgress = totalLessons > 0
+              ? Math.round((completedLessonCount / totalLessons) * 100)
+              : 0
+
+            return {
+              ...course,
+              lessons: fullCourse.lessons,
+              calculatedProgress: calculatedProgress,
+            }
+          })
+        )
+
+        setCourses(coursesWithProgress)
       } catch (err: any) {
-        console.error("Error fetching courses:", err)
-        // Don't show error toast for courses, just log it
+        console.error("Error fetching courses or progress:", err)
       }
     }
 
-    fetchCourses()
+    fetchCoursesAndProgress()
   }, [learner])
 
-  // Fetch purchases
   useEffect(() => {
     const fetchPurchases = async () => {
       if (!mounted || authLoading || !user || !params.id) return
@@ -145,7 +184,6 @@ export default function LearnerDetailsPage() {
         const response = await fetch(`/api/learners/${params.id}/purchases`)
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          // Don't throw error for purchases, just log it
           console.warn("Error fetching purchases:", errorData.error)
           return
         }
@@ -154,14 +192,13 @@ export default function LearnerDetailsPage() {
         setPurchases(data.purchases || [])
       } catch (err: any) {
         console.error("Error fetching purchases:", err)
-        // Don't show error toast for purchases, just log it
       }
     }
 
     fetchPurchases()
   }, [params.id, mounted, authLoading, user])
 
-  const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
+  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
 
   if (isLoading) {
     return <AdminLearnerDetailSkeleton />
@@ -200,11 +237,10 @@ export default function LearnerDetailsPage() {
     .map((courseId) => getCourse(courseId))
     .filter((course): course is Course => course !== undefined)
 
-  // Calculate average progress
-  const avgProgress = learner.enrolledCourses.length > 0
+  const avgProgress = enrolledCourses.length > 0
     ? Math.round(
-        (learner.enrolledCourses.reduce((sum, id) => sum + (learner.progress[id] || 0), 0) /
-          learner.enrolledCourses.length) *
+        (enrolledCourses.reduce((sum, course) => sum + (course.calculatedProgress || 0), 0) /
+          enrolledCourses.length) *
           10
       ) / 10
     : 0
@@ -220,7 +256,6 @@ export default function LearnerDetailsPage() {
         </Link>
       </div>
 
-      {/* Learner Profile Header */}
       <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
@@ -254,7 +289,6 @@ export default function LearnerDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -291,7 +325,6 @@ export default function LearnerDetailsPage() {
         </Card>
       </div>
 
-      {/* Tabs for Details */}
       <Tabs defaultValue="enrollments" className="space-y-4">
         <TabsList>
           <TabsTrigger value="enrollments">Enrollments</TabsTrigger>
@@ -308,22 +341,13 @@ export default function LearnerDetailsPage() {
               {enrolledCourses.length > 0 ? (
                 <div className="space-y-4">
                   {enrolledCourses.map((course) => {
-                    const progress = learner.progress[course.id] || 0
                     return (
                       <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
-                          <h3 className="font-semibold mb-1">{course.title}</h3>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>{course.lessons?.length || 0} lessons</span>
-                            <span>{course.enrolledStudents || 0} learners</span>
-                          </div>
+                          <h3 className="font-semibold">{course.title}</h3>
                         </div>
                         <div className="flex items-center gap-4">
-                          <div className="w-32">
-                            <Progress value={progress} className="h-2" />
-                            <p className="text-xs text-muted-foreground mt-1 text-center">{progress}%</p>
-                          </div>
-                          <Link href={`/admin/courses/${course.id}`}>
+                          <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`}>
                             <Button variant="outline" size="sm">
                               View Course
                             </Button>
@@ -350,7 +374,7 @@ export default function LearnerDetailsPage() {
                 <div className="space-y-4">
                   {learner.enrolledCourses.map((courseId) => {
                     const course = getCourse(courseId)
-                    const progress = learner.progress[courseId] || 0
+                    const progress = course?.calculatedProgress || 0
                     if (!course) return null
                     return (
                       <div key={courseId} className="space-y-2">
@@ -452,7 +476,7 @@ export default function LearnerDetailsPage() {
                             </div>
                             <div className="flex flex-col gap-2 md:items-end">
                               {course && (
-                                <Link href={`/admin/courses/${course.id}`}>
+                                <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`}>
                                   <Button variant="outline" size="sm">
                                     View Course
                                   </Button>
@@ -479,3 +503,4 @@ export default function LearnerDetailsPage() {
   )
 }
 
+export default LearnerDetailsPage

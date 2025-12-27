@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { extractIdFromSlug } from "@/lib/slug"
+import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -339,9 +339,9 @@ export default function InstructorCoursePreviewPage() {
               </div>
               <Button 
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11"
-                onClick={() => router.push(`/admin/courses/${course.id}/preview-learn`)}
+                onClick={() => router.push(`/admin/courses/${createCourseSlug(course.title, course.id)}/learn`)}
               >
-                Preview Course Content
+                View Course
               </Button>
               <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">

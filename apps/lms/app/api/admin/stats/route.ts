@@ -100,7 +100,7 @@ export async function GET() {
 
     // Get recent activity (last 5 items from user signups, enrollments, course completions, payments)
     // Use admin client to bypass RLS
-    const [recentSignups, enrollments, completions, recentPayments] = await Promise.all([
+    const [recentSignups, enrollmentsData, completionsData, recentPayments] = await Promise.all([
       adminClient
         .from("profiles")
         .select(`
@@ -117,11 +117,11 @@ export async function GET() {
         .from("enrollments")
         .select(`
           id,
-          created_at,
-          profiles:user_id (name),
-          courses:course_id (title)
+          enrolled_at,
+          user_id,
+          course_id
         `)
-        .order("created_at", { ascending: false })
+        .order("enrolled_at", { ascending: false })
         .limit(5),
 
       adminClient
@@ -129,28 +129,158 @@ export async function GET() {
         .select(`
           id,
           updated_at,
-          profiles:user_id (name),
-          courses:course_id (title)
+          user_id,
+          course_id
         `)
         .eq("status", "completed")
         .order("updated_at", { ascending: false })
         .limit(5),
 
-      adminClient
-        .from("payments")
-        .select(`
-          id,
-          created_at,
-          amount_usd,
-          profiles:user_id (name),
-          courses:course_id (title)
-        `)
-        .eq("status", "completed")
-        .order("created_at", { ascending: false })
-        .limit(5)
+      isAdmin
+        ? adminClient
+            .from("payments")
+            .select(`
+              id,
+              created_at,
+              amount_usd,
+              user_id,
+              course_id
+            `)
+            .eq("status", "completed")
+            .order("created_at", { ascending: false })
+            .limit(5)
+        : Promise.resolve({ data: [] })
     ])
 
+    // Check for errors in enrollments query
+    if (enrollmentsData.error) {
+      console.error("Error fetching enrollments:", enrollmentsData.error)
+    }
+
+    // Ensure we have valid enrollment data
+    const validEnrollmentsData = enrollmentsData.error ? { data: [] } : enrollmentsData
+
+    // Fetch user names and course titles for enrollments
+    const enrollmentUserIds = (validEnrollmentsData.data || []).map((e: any) => e.user_id).filter(Boolean)
+    const enrollmentCourseIds = (validEnrollmentsData.data || []).map((e: any) => e.course_id).filter(Boolean)
+    
+    console.log("Enrollment IDs - Users:", enrollmentUserIds.length, "Courses:", enrollmentCourseIds.length)
+    
+    const [enrollmentUsers, enrollmentCourses] = await Promise.all([
+      enrollmentUserIds.length > 0
+        ? adminClient
+            .from("profiles")
+            .select("id, name")
+            .in("id", enrollmentUserIds)
+        : Promise.resolve({ data: [] }),
+      enrollmentCourseIds.length > 0
+        ? adminClient
+            .from("courses")
+            .select("id, title")
+            .in("id", enrollmentCourseIds)
+        : Promise.resolve({ data: [] })
+    ])
+
+    // Check for errors in user/course queries
+    if (enrollmentUsers.error) {
+      console.error("Error fetching enrollment users:", enrollmentUsers.error)
+    }
+    if (enrollmentCourses.error) {
+      console.error("Error fetching enrollment courses:", enrollmentCourses.error)
+    }
+
+    // Create maps for quick lookup
+    const userMap = new Map((enrollmentUsers.data || []).map((u: any) => [u.id, u.name]))
+    const courseMap = new Map((enrollmentCourses.data || []).map((c: any) => [c.id, c.title]))
+
+    // Map enrollments with user and course names
+    const enrollments = {
+      data: (validEnrollmentsData.data || []).map((e: any) => ({
+        ...e,
+        profiles: { name: userMap.get(e.user_id) || "Unknown User" },
+        courses: { title: courseMap.get(e.course_id) || "Unknown Course" }
+      }))
+    }
+
+    console.log("Mapped enrollments:", enrollments.data.length, "records")
+
+    // Fetch user names and course titles for completions
+    const completionUserIds = completionsData.data?.map(e => e.user_id).filter(Boolean) || []
+    const completionCourseIds = completionsData.data?.map(e => e.course_id).filter(Boolean) || []
+    
+    const [completionUsers, completionCourses] = await Promise.all([
+      completionUserIds.length > 0
+        ? adminClient
+            .from("profiles")
+            .select("id, name")
+            .in("id", completionUserIds)
+        : Promise.resolve({ data: [] }),
+      completionCourseIds.length > 0
+        ? adminClient
+            .from("courses")
+            .select("id, title")
+            .in("id", completionCourseIds)
+        : Promise.resolve({ data: [] })
+    ])
+
+    // Create maps for completions
+    const completionUserMap = new Map(completionUsers.data?.map(u => [u.id, u.name]) || [])
+    const completionCourseMap = new Map(completionCourses.data?.map(c => [c.id, c.title]) || [])
+
+    // Map completions with user and course names
+    const completions = {
+      data: completionsData.data?.map(e => ({
+        ...e,
+        profiles: { name: completionUserMap.get(e.user_id) || "Unknown User" },
+        courses: { title: completionCourseMap.get(e.course_id) || "Unknown Course" }
+      })) || []
+    }
+
+    // Fetch user names and course titles for payments (only if admin)
+    let paymentsWithData = { data: [] as any[] }
+    if (isAdmin && recentPayments.data && recentPayments.data.length > 0) {
+      const paymentUserIds = recentPayments.data.map(p => p.user_id).filter(Boolean)
+      const paymentCourseIds = recentPayments.data.map(p => p.course_id).filter(Boolean)
+      
+      const [paymentUsers, paymentCourses] = await Promise.all([
+        paymentUserIds.length > 0
+          ? adminClient
+              .from("profiles")
+              .select("id, name")
+              .in("id", paymentUserIds)
+          : Promise.resolve({ data: [] }),
+        paymentCourseIds.length > 0
+          ? adminClient
+              .from("courses")
+              .select("id, title")
+              .in("id", paymentCourseIds)
+          : Promise.resolve({ data: [] })
+      ])
+
+      const paymentUserMap = new Map(paymentUsers.data?.map(u => [u.id, u.name]) || [])
+      const paymentCourseMap = new Map(paymentCourses.data?.map(c => [c.id, c.title]) || [])
+
+      paymentsWithData = {
+        data: recentPayments.data.map(p => ({
+          ...p,
+          profiles: { name: paymentUserMap.get(p.user_id) || "Unknown User" },
+          courses: { title: paymentCourseMap.get(p.course_id) || "Unknown Course" }
+        }))
+      }
+    }
+
     // Combine and sort recent activity
+    const enrollmentActivities = (enrollments.data || []).map((e: any) => ({
+      id: `enrollment-${e.id}`,
+      type: "enrollment" as const,
+      user: e.profiles?.name || "Unknown User",
+      course: e.courses?.title || "Unknown Course",
+      time: new Date(e.enrolled_at).toISOString(),
+      timestamp: new Date(e.enrolled_at).getTime()
+    }))
+
+    console.log("Enrollment activities created:", enrollmentActivities.length)
+
     const recentActivity = [
       ...(recentSignups.data?.map(u => ({
         id: `signup-${u.id}`,
@@ -160,15 +290,8 @@ export async function GET() {
         time: new Date(u.created_at).toISOString(),
         timestamp: new Date(u.created_at).getTime()
       })) || []),
-      ...(enrollments.data?.map(e => ({
-        id: `enrollment-${e.id}`,
-        type: "enrollment" as const,
-        user: e.profiles?.name || "Unknown User",
-        course: e.courses?.title || "Unknown Course",
-        time: new Date(e.created_at).toISOString(),
-        timestamp: new Date(e.created_at).getTime()
-      })) || []),
-      ...(completions.data?.map(e => ({
+      ...enrollmentActivities,
+      ...(completions.data?.map((e: any) => ({
         id: `completion-${e.id}`,
         type: "completion" as const,
         user: e.profiles?.name || "Unknown User",
@@ -177,7 +300,7 @@ export async function GET() {
         timestamp: new Date(e.updated_at).getTime()
       })) || []),
       // Only include payment activities for admins
-      ...(isAdmin ? (recentPayments.data?.map(p => ({
+      ...(isAdmin ? (paymentsWithData.data?.map((p: any) => ({
         id: `payment-${p.id}`,
         type: "payment" as const,
         user: p.profiles?.name || "Unknown User",
@@ -189,6 +312,8 @@ export async function GET() {
     ]
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 5)
+
+    console.log("Total recent activity items:", recentActivity.length, "Enrollments:", enrollmentActivities.length)
 
     return NextResponse.json({
       totalCourses: totalCourses || 0,

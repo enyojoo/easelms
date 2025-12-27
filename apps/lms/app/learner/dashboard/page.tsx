@@ -17,6 +17,8 @@ interface Course {
   title: string
   image?: string
   progress?: number
+  lessons?: Array<{ id: number; title: string; type?: string; settings?: any; }>
+  nextLessonIndex?: number
 }
 
 
@@ -49,7 +51,7 @@ export default function LearnerDashboard() {
         setCoursesLoading(true)
         setCoursesError(null)
 
-        // Fetch enrollments (includes course data)
+        // 1. Fetch all enrollments for the user
         const enrollmentsResponse = await fetch("/api/enrollments")
         if (!enrollmentsResponse.ok) {
           const errorData = await enrollmentsResponse.json().catch(() => ({}))
@@ -58,24 +60,78 @@ export default function LearnerDashboard() {
             statusText: enrollmentsResponse.statusText,
             error: errorData,
           })
-          // Don't throw - just use empty array so dashboard can still load
           setEnrolledCourses([])
-        } else {
-          const enrollmentsData = await enrollmentsResponse.json()
-          const enrollments = enrollmentsData.enrollments || []
+          return
+        }
+        const enrollmentsData = await enrollmentsResponse.json()
+        const enrollments = enrollmentsData.enrollments || []
 
-          // Map enrollments to courses with progress
-          const enrolledCoursesData = enrollments
-            .filter((e: any) => e.courses) // Only include enrollments with course data
-            .map((enrollment: any) => ({
-              id: enrollment.course_id,
-              title: enrollment.courses?.title || "Untitled Course",
-              progress: enrollment.progress || 0,
-            }))
-          setEnrolledCourses(enrolledCoursesData)
+        // 2. Fetch user's overall progress for all courses
+        const progressResponse = await fetch("/api/progress")
+        let progressList: any[] = []
+        if (progressResponse.ok) {
+          const data = await progressResponse.json()
+          progressList = data.progress || []
         }
 
-        // Fetch recommended courses
+        const enrolledCoursesWithProgress: Course[] = []
+
+        for (const enrollment of enrollments) {
+          const courseId = enrollment.course_id
+          if (!courseId) continue
+
+          // 3. Fetch full course details (including lessons) for each enrolled course
+          const courseDetailResponse = await fetch(`/api/courses/${courseId}`)
+          if (!courseDetailResponse.ok) {
+            console.warn(`Failed to fetch details for course ID: ${courseId}`)
+            continue
+          }
+          const courseDetailData = await courseDetailResponse.json()
+          const course = courseDetailData.course
+
+          if (!course || !Array.isArray(course.lessons)) {
+            console.warn(`Course ID ${courseId} has no lessons or invalid structure.`)
+            continue
+          }
+
+          // Calculate progress for this specific course
+          const lessonsProgress = progressList.filter(
+            (p) => p.course_id === courseId && p.completed
+          )
+          const completedLessonCount = lessonsProgress.length
+          const totalLessons = course.lessons.length
+
+          const calculatedProgress = totalLessons > 0
+            ? Math.round((completedLessonCount / totalLessons) * 100)
+            : 0
+
+          // Determine the next lesson to continue learning
+          let nextLessonIndex = 0
+          for (let i = 0; i < totalLessons; i++) {
+            const lesson = course.lessons[i]
+            const isLessonCompleted = lessonsProgress.some(p => p.lesson_id === lesson.id)
+            if (!isLessonCompleted) {
+              nextLessonIndex = i
+              break
+            } else if (i === totalLessons - 1) {
+              // If all lessons are completed, next lesson is the last one (or end of course)
+              nextLessonIndex = totalLessons - 1
+            }
+          }
+
+          enrolledCoursesWithProgress.push({
+            id: course.id,
+            title: course.title,
+            image: course.image || "/placeholder.svg",
+            progress: calculatedProgress,
+            lessons: course.lessons, // Store lessons to potentially pass to continue link
+            nextLessonIndex: nextLessonIndex,
+          })
+        }
+
+        setEnrolledCourses(enrolledCoursesWithProgress)
+
+        // Fetch recommended courses (existing logic)
         const recommendedResponse = await fetch("/api/courses?recommended=true")
         if (recommendedResponse.ok) {
           const recommendedData = await recommendedResponse.json()
@@ -87,8 +143,8 @@ export default function LearnerDashboard() {
           setRecommendedCourses(recommended)
         }
       } catch (error: any) {
-        console.error("Error fetching courses:", error)
-        setCoursesError(error.message || "Failed to load courses")
+        console.error("Error fetching courses or progress:", error)
+        setCoursesError(error.message || "Failed to load courses or progress")
       } finally {
         setCoursesLoading(false)
       }
@@ -178,7 +234,7 @@ export default function LearnerDashboard() {
                         <Progress value={course.progress || 0} className="flex-grow min-w-0" />
                         <span className="text-sm font-medium flex-shrink-0">{course.progress || 0}%</span>
                       </div>
-                      <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`}>
+                      <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${course.nextLessonIndex || 0}`}>
                         <Button variant="link" className="mt-1 md:mt-2 p-0 h-auto text-sm md:text-base">
                           Continue <ChevronRight className="ml-1 h-4 w-4" />
                         </Button>
