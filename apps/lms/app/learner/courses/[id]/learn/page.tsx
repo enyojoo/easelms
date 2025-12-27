@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import { useClientAuthState } from "@/utils/client-auth"
 import { Progress } from "@/components/ui/progress"
@@ -37,9 +37,11 @@ interface Course {
 export default function CourseLearningPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const slugOrId = params.id as string
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const { user, loading: authLoading, userType } = useClientAuthState()
+  const paymentSuccess = searchParams.get("payment") === "success"
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
@@ -146,16 +148,47 @@ export default function CourseLearningPage() {
   }, [authLoading, user, router])
 
   // Check enrollment and redirect if not enrolled
+  // Handle payment=success by invalidating cache and waiting for enrollment
   useEffect(() => {
-    if (!id || !enrollmentsData?.enrollments || !course) return
+    if (!id || !course) return
 
     const courseId = parseInt(id)
+
+    // If payment was successful, invalidate enrollments cache and wait for it to update
+    if (paymentSuccess) {
+      // Invalidate enrollments cache to force refetch
+      queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+      
+      // Refetch enrollments immediately
+      queryClient.refetchQueries({ queryKey: ["enrollments"] })
+      
+      // Wait a bit for the cache to update, then check enrollment
+      const checkEnrollment = setTimeout(() => {
+        // Check if enrollment is now available
+        const currentEnrollments = queryClient.getQueryData<{ enrollments: any[] }>(["enrollments"])
+        const enrollment = currentEnrollments?.enrollments?.find((e: any) => e.course_id === courseId)
+        
+        if (enrollment) {
+          // Enrollment found, remove query param
+          router.replace(`/learner/courses/${createCourseSlug(course.title, courseId)}/learn`)
+        }
+      }, 1000) // Wait 1 second for enrollment to be available
+
+      return () => clearTimeout(checkEnrollment)
+    }
+
+    // Normal enrollment check (only if we have enrollment data)
+    if (!enrollmentsData?.enrollments) return
+
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
     
     if (!enrollment) {
-      router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
+      // Only redirect if payment was not successful (to avoid redirect loop)
+      if (!paymentSuccess) {
+        router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
+      }
     }
-  }, [id, enrollmentsData, course, router])
+  }, [id, enrollmentsData, course, router, paymentSuccess, queryClient])
 
   // Save progress to API (debounced)
   const saveProgress = async (

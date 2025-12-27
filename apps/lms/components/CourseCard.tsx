@@ -13,6 +13,8 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
+import { useEnrollCourse } from "@/lib/react-query/hooks"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface CourseCardProps {
   course: Module
@@ -40,6 +42,8 @@ export default function CourseCard({
   const router = useRouter()
   const [isEnrolling, setIsEnrolling] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const enrollCourseMutation = useEnrollCourse()
+  const queryClient = useQueryClient()
   
   useEffect(() => {
     const authState = getClientAuthState()
@@ -61,13 +65,19 @@ export default function CourseCard({
     setIsEnrolling(true)
     try {
       if (enrollmentMode === "free") {
-        // Enroll directly for free courses
-        const success = await enrollInCourse(course.id, user)
-        if (success) {
+        // Enroll directly for free courses using React Query mutation
+        try {
+          await enrollCourseMutation.mutateAsync(course.id)
+          // Invalidate enrollments cache to ensure fresh data
+          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
           // Dispatch event to notify parent components
           window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
-          // Redirect to learn page
-          router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
+          // Small delay to ensure cache is updated before redirect
+          setTimeout(() => {
+            router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
+          }, 100)
+        } catch (error) {
+          console.error("Error enrolling in course:", error)
         }
       } else {
         // For paid/subscription, handle payment directly

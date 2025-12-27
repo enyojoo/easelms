@@ -16,7 +16,8 @@ import { ArrowLeft } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useCourse, useEnrollments } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useEnrollCourse } from "@/lib/react-query/hooks"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface Course {
   id: number
@@ -75,6 +76,8 @@ export default function CoursePage() {
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
+  const enrollCourseMutation = useEnrollCourse()
+  const queryClient = useQueryClient()
   
   const course = courseData?.course
 
@@ -219,12 +222,18 @@ export default function CoursePage() {
     setIsEnrolling(true)
     try {
       if (enrollmentMode === "free") {
-        // Enroll directly for free courses
-        const success = await enrollInCourse(Number.parseInt(id), user)
-        if (success) {
+        // Enroll directly for free courses using React Query mutation
+        try {
+          await enrollCourseMutation.mutateAsync(Number.parseInt(id))
+          // Invalidate enrollments cache to ensure fresh data
+          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
           setIsEnrolled(true)
-          // Redirect to learn page
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          // Small delay to ensure cache is updated before redirect
+          setTimeout(() => {
+            router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          }, 100)
+        } catch (error) {
+          console.error("Error enrolling in course:", error)
         }
       } else {
         // Handle payment/subscription for paid courses

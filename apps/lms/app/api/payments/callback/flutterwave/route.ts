@@ -82,8 +82,19 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
 
-      // Success! Redirect to courses page
-      return NextResponse.redirect(`${baseUrl}/learner/courses?success=payment_completed`)
+      // Fetch course title to create proper slug for redirect
+      const { data: course } = await supabase
+        .from("courses")
+        .select("title")
+        .eq("id", parseInt(courseId))
+        .single()
+
+      const courseTitle = course?.title || "Course"
+      const { createCourseSlug } = await import("@/lib/slug")
+      const courseSlug = createCourseSlug(courseTitle, parseInt(courseId))
+
+      // Success! Redirect to learn page with payment=success flag
+      return NextResponse.redirect(`${baseUrl}/learner/courses/${courseSlug}/learn?payment=success`)
     } else {
       // Verification failed or transaction not successful
       console.error("Transaction verification failed:", verification)
