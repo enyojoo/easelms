@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react"
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Copy } from "lucide-react"
 import { useState, useEffect } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -54,10 +54,18 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
 
   // Track the last question ID to auto-expand new questions
   const [lastQuestionId, setLastQuestionId] = useState<string | null>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
   // Auto-expand newly added questions and collapse others
   useEffect(() => {
-    if (questions.length > 0) {
+    if (!isInitialized && questions.length > 0) {
+      // On initial load, keep all questions collapsed
+      setIsInitialized(true)
+      setLastQuestionId(questions[questions.length - 1].id)
+      return
+    }
+
+    if (questions.length > 0 && isInitialized) {
       const lastQuestion = questions[questions.length - 1]
       // If this is a new question (different ID), expand it and collapse others
       if (lastQuestion.id !== lastQuestionId) {
@@ -65,7 +73,7 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
         setExpandedQuestions(new Set([lastQuestion.id]))
       }
     }
-  }, [questions, lastQuestionId])
+  }, [questions, lastQuestionId, isInitialized])
 
   const toggleQuiz = (enabled: boolean) => {
     onChange({ ...quiz, enabled })
@@ -103,6 +111,19 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
     onChange({ ...quiz, questions: updatedQuestions })
   }
 
+  const duplicateQuestion = (index: number) => {
+    const questionToDuplicate = questions[index]
+    const duplicatedQuestion = {
+      ...questionToDuplicate,
+      id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    }
+    const updatedQuestions = [...questions]
+    updatedQuestions.splice(index + 1, 0, duplicatedQuestion)
+    onChange({ ...quiz, questions: updatedQuestions })
+    // Expand the duplicated question
+    setExpandedQuestions(new Set([...expandedQuestions, duplicatedQuestion.id]))
+  }
+
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return
 
@@ -129,20 +150,14 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
       </div>
 
       {quiz.enabled && (
-        <Tabs defaultValue="builder" className="space-y-4">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="builder">Builder</TabsTrigger>
-              <TabsTrigger value="preview" disabled={questions.length === 0}>
-                Preview
-              </TabsTrigger>
-            </TabsList>
             <Badge variant="outline" className="text-sm">
               {questions.length} {questions.length === 1 ? "question" : "questions"}
             </Badge>
           </div>
 
-          <TabsContent value="builder" className="space-y-4">
+          <div className="space-y-4">
             <QuizSettings
               quiz={{
                 enabled: quiz.enabled,
@@ -151,6 +166,7 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                 shuffleAnswers: (quiz as any).shuffleAnswers,
                 showResultsImmediately: (quiz as any).showResultsImmediately,
                 allowMultipleAttempts: (quiz as any).allowMultipleAttempts,
+                maxAttempts: (quiz as any).maxAttempts,
                 showCorrectAnswers: (quiz as any).showCorrectAnswers,
               }}
               onChange={(updatedQuiz) => {
@@ -195,6 +211,22 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => duplicateQuestion(qIndex)}
+                                      title="Duplicate"
+                                    >
+                                      <Copy className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => removeQuestion(qIndex)}
+                                      title="Delete"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
                                     <CollapsibleTrigger asChild>
                                       <Button variant="ghost" size="icon">
                                         {expandedQuestions.has(question.id) ? (
@@ -204,13 +236,6 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                                         )}
                                       </Button>
                                     </CollapsibleTrigger>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => removeQuestion(qIndex)}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
                                   </div>
                                 </div>
                               </CardHeader>
@@ -243,31 +268,8 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                 }
               />
             </div>
-          </TabsContent>
-
-          <TabsContent value="preview" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quiz Preview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {questions.map((question, qIndex) => (
-                  <div key={question.id} className="space-y-3 p-4 border rounded-lg">
-                    <div className="flex items-start justify-between">
-                      <h3 className="font-semibold">Question {qIndex + 1}</h3>
-                      <Badge variant="secondary">{formatQuestionType(question.type)}</Badge>
-                    </div>
-                    <p className="text-sm font-medium">{question.text || "No question text"}</p>
-                    {/* Preview rendering would go here - simplified for now */}
-                    <p className="text-xs text-muted-foreground">
-                      Preview mode for {formatQuestionType(question.type)} questions - full implementation in next phase
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       )}
     </div>
   )

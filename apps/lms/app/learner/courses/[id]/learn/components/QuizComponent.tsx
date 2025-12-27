@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
-import { CheckCircle2, XCircle } from "lucide-react"
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 
 interface QuizQuestion {
   question: string
@@ -23,14 +23,30 @@ interface QuizProps {
     allowMultipleAttempts?: boolean
     showCorrectAnswers?: boolean
   }
-  onComplete: () => void
+  onComplete: (answers?: number[], shuffledQuestions?: QuizQuestion[], attemptCount?: number) => void
+  onContinue?: () => void
   minimumQuizScore?: number
   courseId?: string
   lessonId?: number
+  prefilledAnswers?: number[]
+  showResultsOnly?: boolean
+  onRetry?: () => void
+  initialScore?: number
 }
 
-export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50, courseId, lessonId }: QuizProps) {
-  // Shuffle questions if enabled (only once on mount)
+export default function QuizComponent({
+  quiz,
+  onComplete,
+  onContinue,
+  minimumQuizScore = 50,
+  courseId,
+  lessonId,
+  prefilledAnswers = [],
+  showResultsOnly = false,
+  onRetry,
+  initialScore,
+}: QuizProps) {
+  // Shuffle questions if enabled (only once on initial load - never reshuffle)
   const shuffledQuestions = useMemo(() => {
     if (!quiz.questions || quiz.questions.length === 0) return []
     
@@ -66,7 +82,7 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
     }
     
     return questions
-  }, [quiz.questions, quiz.shuffleQuestions, quiz.shuffleAnswers])
+  }, []) // Empty dependency array - shuffle only once on mount
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([])
@@ -75,13 +91,22 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
   const [originalAnswers, setOriginalAnswers] = useState<number[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [displayQuestions, setDisplayQuestions] = useState<QuizQuestion[]>([])
 
-  // Reset quiz when questions change
+  // Reset quiz when questions change or initialize with prefilled answers
   useEffect(() => {
     setCurrentQuestion(0)
-    setSelectedAnswers([])
-    setShowResults(false)
-  }, [shuffledQuestions])
+    if (showResultsOnly && prefilledAnswers.length > 0) {
+      setSelectedAnswers(prefilledAnswers)
+      setShowResults(true)
+      setOriginalAnswers(prefilledAnswers)
+      setDisplayQuestions([...shuffledQuestions]) // Store shuffled questions for display
+    } else {
+      setSelectedAnswers([])
+      setShowResults(false)
+      setDisplayQuestions([])
+    }
+  }, [shuffledQuestions, showResultsOnly, prefilledAnswers])
 
   const handleAnswerSelect = (answerIndex: number) => {
     const newSelectedAnswers = [...selectedAnswers]
@@ -144,8 +169,9 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
     if (currentQuestion < shuffledQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
-      // Store original answers before showing results
+      // Store original answers and shuffled questions before showing results
       setOriginalAnswers([...selectedAnswers])
+      setDisplayQuestions([...shuffledQuestions]) // Store the exact shuffled questions used
       
       // Submit quiz results to API
       await submitQuizResults()
@@ -154,6 +180,8 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
       if (quiz.showResultsImmediately) {
         setShowResults(true)
         setAttemptCount((prev) => prev + 1)
+        // Call onComplete with answers and shuffled questions after results are shown
+        onComplete(selectedAnswers, shuffledQuestions, attemptCount + 1)
       } else {
         // For non-immediate results, we still show them but could delay
         setShowResults(true)
@@ -178,6 +206,11 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
       return // Don't allow retry if multiple attempts are disabled
     }
     
+    // Clear old quiz data before retrying
+    if (onRetry) {
+      onRetry()
+    }
+    
     setCurrentQuestion(0)
     setSelectedAnswers([])
     setShowResults(false)
@@ -194,9 +227,9 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
 
   if (showResults) {
     const score = calculateScore()
-    const percentage = (score / shuffledQuestions.length) * 100
+    const percentage = showResultsOnly && initialScore !== undefined ? initialScore : (score / shuffledQuestions.length) * 100
     const passed = percentage >= minimumQuizScore
-    const canRetry = quiz.allowMultipleAttempts !== false // Default to true if not specified
+    const canRetry = (quiz.allowMultipleAttempts !== false) && (attemptCount < (quiz.maxAttempts || 1))
 
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
@@ -255,14 +288,22 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
           )}
         </div>
 
-        {/* Show correct answers if enabled */}
+        {/* Show answer review */}
         {quiz.showCorrectAnswers && (
           <Card className="p-6 space-y-4">
-            <h4 className="font-semibold text-lg">Review Your Answers</h4>
+            <div className="space-y-2">
+              <h4 className="font-semibold text-lg">Review Your Answers</h4>
+              {!passed && attemptCount < (quiz.maxAttempts || 3) && (
+                <p className="text-sm text-muted-foreground">
+                  Attempt {attemptCount} of {quiz.maxAttempts || 3}. Correct answers will be revealed after your final attempt.
+                </p>
+              )}
+            </div>
             <div className="space-y-4">
-              {shuffledQuestions.map((question, index) => {
+              {(displayQuestions.length > 0 ? displayQuestions : shuffledQuestions).map((question, index) => {
                 const userAnswer = originalAnswers[index]
                 const isCorrect = userAnswer === question.correctAnswer
+                const canSeeCorrectAnswer = passed || attemptCount >= (quiz.maxAttempts || 3)
                 
                 return (
                   <div key={index} className="space-y-2 p-4 border rounded-lg">
@@ -280,27 +321,33 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
                         const isUserAnswer = userAnswer === optIndex
                         const isCorrectAnswer = optIndex === question.correctAnswer
                         
+                        // Only highlight correct answer if user can see it
+                        const showCorrectAnswer = canSeeCorrectAnswer && isCorrectAnswer
+                        const showWrongAnswer = isUserAnswer && !isCorrect
+                        const showUserCorrectAnswer = isUserAnswer && isCorrect
+                        
                         return (
                           <div
                             key={optIndex}
                             className={`p-2 rounded text-sm ${
-                              isCorrectAnswer
+                              showCorrectAnswer || showUserCorrectAnswer
                                 ? "bg-green-100 dark:bg-green-900/30 border border-green-500"
-                                : isUserAnswer && !isCorrect
+                                : showWrongAnswer
                                 ? "bg-red-100 dark:bg-red-900/30 border border-red-500"
                                 : "bg-muted"
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              {isCorrectAnswer && (
+                              {(showCorrectAnswer || showUserCorrectAnswer) && (
                                 <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                               )}
-                              {isUserAnswer && !isCorrect && (
+                              {showWrongAnswer && (
                                 <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
                               )}
                               <span>{option}</span>
-                              {isCorrectAnswer && <span className="text-xs text-green-600 dark:text-green-400 ml-auto">Correct Answer</span>}
-                              {isUserAnswer && !isCorrect && <span className="text-xs text-red-600 dark:text-red-400 ml-auto">Your Answer</span>}
+                              {showUserCorrectAnswer && <span className="text-xs text-green-600 dark:text-green-400 ml-auto">Your Answer</span>}
+                              {showCorrectAnswer && !isUserAnswer && <span className="text-xs text-green-600 dark:text-green-400 ml-auto">Correct Answer</span>}
+                              {showWrongAnswer && <span className="text-xs text-red-600 dark:text-red-400 ml-auto">Your Answer</span>}
                             </div>
                           </div>
                         )
@@ -320,7 +367,10 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
             </Button>
           )}
           {passed && (
-            <Button onClick={onComplete} className="bg-primary hover:bg-primary/90">
+            <Button onClick={() => {
+              onComplete(originalAnswers)
+              onContinue?.()
+            }} className="bg-primary hover:bg-primary/90">
               Continue
             </Button>
           )}
@@ -342,7 +392,7 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
 
       <Card className="border-border bg-card p-4 space-y-4">
         <RadioGroup 
-          value={selectedAnswers[currentQuestion]?.toString()} 
+          value={selectedAnswers[currentQuestion] !== undefined ? selectedAnswers[currentQuestion].toString() : ""} 
           onValueChange={(value) => handleAnswerSelect(Number.parseInt(value))} 
           className="space-y-1"
         >
@@ -360,8 +410,21 @@ export default function QuizComponent({ quiz, onComplete, minimumQuizScore = 50,
         </RadioGroup>
       </Card>
 
-      <Button onClick={handleNextQuestion} disabled={selectedAnswers[currentQuestion] === undefined} className="w-full">
-        {currentQuestion === shuffledQuestions.length - 1 ? "Finish Quiz" : "Next Question"}
+      <Button 
+        onClick={handleNextQuestion} 
+        disabled={selectedAnswers[currentQuestion] === undefined || submitting} 
+        className="w-full"
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Submitting...
+          </>
+        ) : currentQuestion === shuffledQuestions.length - 1 ? (
+          "Finish Quiz"
+        ) : (
+          "Next Question"
+        )}
       </Button>
     </div>
   )

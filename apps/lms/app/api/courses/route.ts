@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       .from("courses")
       .select(`
         *,
-        lessons (id, estimated_duration)
+        lessons (id, content)
       `)
 
     // Only filter by is_published if not fetching all courses
@@ -90,12 +90,15 @@ export async function GET(request: Request) {
 
     let { data, error } = await query
 
-    // If error with lessons relation, try without it
+    // If error with lessons relation, try with a simpler lessons selection
     if (error) {
-      console.warn("Courses API: Error with lessons relation, trying without:", error.message)
+      console.warn("Courses API: Error with lessons relation, trying with simpler select:", error.message)
       let basicQuery = supabase
         .from("courses")
-        .select("*")
+        .select(`
+          *,
+          lessons (id, content)
+        `)
 
       // Only filter by is_published if not fetching all courses
       if (!allCourses) {
@@ -146,8 +149,10 @@ export async function GET(request: Request) {
       const lessons = Array.isArray(course.lessons) ? course.lessons : []
       
       // Calculate total duration from lessons
+      // Duration is stored in lesson.content.estimatedDuration
       const totalDurationMinutes = lessons.reduce((total: number, lesson: any) => {
-        return total + (lesson.estimated_duration || 0)
+        const estimatedDuration = lesson.content?.estimatedDuration || 0
+        return total + estimatedDuration
       }, 0)
       const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10 // Round to 1 decimal place
       
@@ -165,11 +170,18 @@ export async function GET(request: Request) {
       return {
         ...course,
         lessons: lessons, // Ensure lessons is always an array
-        settings: settings || {}, // Ensure settings exists
+        settings: {
+          ...(settings || {}),
+          enrollment: {
+            enrollmentMode: course.enrollment_mode || "free",
+            price: course.price || undefined,
+            recurringPrice: course.recurring_price || undefined,
+          },
+        }, // Ensure settings exists with enrollment data
         totalDurationMinutes: totalDurationMinutes,
         totalHours: totalHours,
         // Map database fields to expected structure
-        image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+        image: course.image || course.thumbnail || "/placeholder.svg",
         description: course.description || "",
         price: course.price || 0,
       }

@@ -23,6 +23,7 @@ import {
 import { useClientAuthState } from "@/utils/client-auth"
 import Link from "next/link"
 import { toast } from "sonner"
+import AdminLearnerDetailSkeleton from "@/components/AdminLearnerDetailSkeleton"
 
 interface Learner {
   id: string
@@ -163,13 +164,7 @@ export default function LearnerDetailsPage() {
   const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
 
   if (isLoading) {
-    return (
-      <div className="pt-4 md:pt-8">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </div>
-    )
+    return <AdminLearnerDetailSkeleton />
   }
 
   if (error || !learner) {

@@ -29,10 +29,10 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
   }
 
   return (
-    <Card className="border">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+    <Card className="border w-full">
+      <CardHeader className="pb-3 overflow-hidden">
+        <div className="flex items-center justify-between gap-2 w-full overflow-hidden">
+          <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
             {resource.type === "document" ? (
               <FileUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             ) : (
@@ -40,9 +40,6 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{resource.title || "Untitled Resource"}</p>
-              {resource.url && (
-                <p className="text-xs text-muted-foreground truncate">{resource.url}</p>
-              )}
             </div>
             <Badge variant="secondary" className="text-xs flex-shrink-0">
               {resource.type}
@@ -53,11 +50,11 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={onDelete} title="Delete">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button variant="ghost" size="icon" onClick={onDelete} title="Delete" className="h-9 w-9">
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
+            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} className="h-9 w-9">
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
           </div>
@@ -65,9 +62,9 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
       </CardHeader>
 
       <Collapsible open={isExpanded}>
-        <CollapsibleContent>
-          <CardContent className="space-y-4 pt-0">
-            <div className="space-y-2">
+        <CollapsibleContent className="overflow-hidden">
+          <CardContent className="space-y-4 pt-0 w-full overflow-hidden">
+            <div className="space-y-2 w-full overflow-hidden">
               <Label>Resource Title</Label>
               <Input
                 value={resource.title}
@@ -79,28 +76,33 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
             {resource.type === "link" ? (
               <div className="space-y-2">
                 <Label>URL</Label>
-                <div className="flex gap-2 w-full">
-                  <div className="flex-1 min-w-0">
-                    <Input
-                      value={resource.url}
-                      onChange={(e) => onUpdate({ url: e.target.value })}
-                      placeholder="https://example.com"
-                      type="url"
-                      className="w-full"
-                      style={{ 
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap'
-                      }}
-                    />
-                  </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%', minWidth: 0 }}>
+                  <input
+                    value={resource.url}
+                    onChange={(e) => onUpdate({ url: e.target.value })}
+                    placeholder="https://example.com"
+                    type="url"
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      height: '40px',
+                      padding: '8px 12px',
+                      border: '1px solid hsl(var(--input))',
+                      borderRadius: '6px',
+                      backgroundColor: 'hsl(var(--background))',
+                      fontSize: '14px',
+                      fontFamily: 'inherit',
+                      boxSizing: 'border-box',
+                      width: '100%'
+                    }}
+                  />
                   {resource.url && (
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => window.open(resource.url, "_blank")}
                       title="Open in new tab"
-                      className="flex-shrink-0"
+                      style={{ flexShrink: 0 }}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
@@ -108,31 +110,33 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
                 </div>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 w-full overflow-hidden">
                 <Label>File</Label>
-                <FileUpload
-                  type="document"
-                  bucket="course-documents"
-                  accept="application/pdf,.doc,.docx,.txt,.zip,image/*"
-                  maxSize={50 * 1024 * 1024}
-                  multiple={false}
-                  additionalPath={lessonId ? `lesson-${lessonId}` : undefined}
-                  initialValue={resource.url || undefined}
-                  onUploadComplete={(files, urls) => {
-                    if (urls.length > 0) {
+                <div className="w-full overflow-hidden">
+                  <FileUpload
+                    type="document"
+                    bucket="course-documents"
+                    accept="application/pdf,.doc,.docx,.txt,.zip,image/*"
+                    maxSize={50 * 1024 * 1024}
+                    multiple={false}
+                    additionalPath={lessonId ? `lesson-${lessonId}` : undefined}
+                    initialValue={resource.url || undefined}
+                    onUploadComplete={(files, urls) => {
+                      if (urls.length > 0) {
+                        onUpdate({
+                          url: urls[0],
+                          fileSize: files[0]?.size,
+                        })
+                      }
+                    }}
+                    onRemove={() => {
                       onUpdate({
-                        url: urls[0],
-                        fileSize: files[0]?.size,
+                        url: "",
+                        fileSize: undefined,
                       })
-                    }
-                  }}
-                  onRemove={() => {
-                    onUpdate({
-                      url: "",
-                      fileSize: undefined,
-                    })
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
             )}
           </CardContent>

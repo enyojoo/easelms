@@ -150,7 +150,7 @@ export default function CourseCard({
           </div>
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />
-            <span>4 hours</span>
+            <span>{(course as any).totalHours || 0} hours</span>
           </div>
           {course.enrolledStudents !== undefined && (
             <div className="flex items-center">

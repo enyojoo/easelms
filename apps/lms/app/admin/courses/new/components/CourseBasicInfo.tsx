@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle2, AlertCircle } from "lucide-react"
 import VideoPreview from "@/components/VideoPreview"
-import { extractVimeoId, isVimeoUrl } from "@/lib/vimeo/utils"
+import { extractVimeoId, isVimeoUrl, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import FileUpload from "@/components/FileUpload"
 
@@ -24,10 +24,9 @@ interface CourseBasicInfoProps {
     price: string
   }
   onUpdate: (data: any) => void
-  availableCourses?: Array<{ id: number; title: string }>
 }
 
-export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] }: CourseBasicInfoProps) {
+export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps) {
   // Initialize state from data prop (for draft restoration)
   const [thumbnail, setThumbnail] = useState(() => data.thumbnail || "")
   const [previewVideoInput, setPreviewVideoInput] = useState(() => data.previewVideo || "")
@@ -156,18 +155,6 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="requirements">Requirements</Label>
-        <Textarea
-          id="requirements"
-          name="requirements"
-          value={data.requirements || ""}
-          onChange={handleInputChange}
-          placeholder="Enter course requirements"
-          rows={4}
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="description">Course Description</Label>
         <Textarea
           id="description"
@@ -176,6 +163,18 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
           onChange={handleInputChange}
           placeholder="Enter course description"
           rows={6}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="requirements">Requirements</Label>
+        <Textarea
+          id="requirements"
+          name="requirements"
+          value={data.requirements || ""}
+          onChange={handleInputChange}
+          placeholder="Enter course requirements"
+          rows={4}
         />
       </div>
 
@@ -215,9 +214,16 @@ export default function CourseBasicInfo({ data, onUpdate, availableCourses = [] 
 
         <div className="space-y-2">
           <Label>Course Preview Video (Vimeo)</Label>
-          {previewVideoInput && vimeoId && (
+          {vimeoId && (
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border mb-2">
-              <VideoPreview videoUrl={previewVideoInput} thumbnailUrl={thumbnail} vimeoVideoId={vimeoId} />
+              <iframe
+                src={getVimeoEmbedUrl(vimeoId, { autoplay: false, controls: true })}
+                className="w-full h-full"
+                frameBorder="0"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                title="Course preview video"
+              />
             </div>
           )}
           <div className="space-y-2">

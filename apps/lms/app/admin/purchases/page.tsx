@@ -12,6 +12,7 @@ import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import AdminPurchasesSkeleton from "@/components/AdminPurchasesSkeleton"
 
 interface Purchase {
   id: string
@@ -99,9 +100,7 @@ export default function AdminPurchasesPage() {
   return (
     <div className="pt-4 md:pt-8">
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <AdminPurchasesSkeleton />
       ) : (
         <>
           <div className="flex justify-between items-center mb-6">
@@ -163,11 +162,7 @@ export default function AdminPurchasesPage() {
                     {filteredPurchases.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          {loading ? (
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                          ) : (
-                            "No purchases found"
-                          )}
+                          No purchases found
                         </TableCell>
                       </TableRow>
                     ) : (

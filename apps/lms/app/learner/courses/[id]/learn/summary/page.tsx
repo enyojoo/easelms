@@ -17,6 +17,7 @@ interface Course {
   lessons: Array<{
     id: number
     title: string
+    estimated_duration?: number
   }>
 }
 
@@ -200,7 +201,14 @@ export default function CourseCompletionPage() {
   }
 
   const overallScore = calculateOverallScore()
-  const totalTimeSpent = "4 hours" // Mock data
+  
+  // Calculate total time from course lessons
+  const totalDurationMinutes = course.lessons?.reduce((total, lesson) => {
+    return total + (lesson.estimated_duration || 0)
+  }, 0) || 0
+  const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10
+  const totalTimeSpent = totalHours > 0 ? `${totalHours} hour${totalHours !== 1 ? "s" : ""}` : "Less than 1 hour"
+  
   const completionDate = new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",

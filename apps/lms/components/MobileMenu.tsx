@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -33,7 +33,13 @@ interface MobileMenuProps {
 
 export default function MobileMenu({ userType, user }: MobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
+
+  // Only render interactive elements after hydration to prevent mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const menuItems = {
     user: [
@@ -84,6 +90,26 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
   const currentMenu = menuItems[userType] || menuItems.admin
   const currentSidebar = sidebarItems[userType] || sidebarItems.admin
   const isLoading = !user
+
+  // Don't render Sheet until after hydration to avoid ID mismatch
+  if (!mounted) {
+    return (
+      <header className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md h-16 px-4 flex items-center justify-between md:px-6 border-b border-border">
+        <Button variant="ghost" size="icon" className="lg:hidden bg-transparent">
+          {!user ? (
+            <Skeleton className="w-10 h-10 rounded-full" />
+          ) : (
+            <Avatar className="w-10 h-10 overflow-hidden">
+              <AvatarImage src={user.profileImage} alt={user.name} className="object-cover" />
+              <AvatarFallback>{(user.name || "U").charAt(0)}</AvatarFallback>
+            </Avatar>
+          )}
+        </Button>
+        <Logo />
+        <div className="w-10" />
+      </header>
+    )
+  }
 
   return (
     <>

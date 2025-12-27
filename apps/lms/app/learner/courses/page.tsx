@@ -74,7 +74,7 @@ export default function CoursesPage() {
           settings: course.settings || {},
           price: course.price || 0,
           description: course.description || "",
-          image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+          image: course.image || course.thumbnail || "/placeholder.svg",
         }))
         
         setCourses(processedCourses)
@@ -108,15 +108,17 @@ export default function CoursesPage() {
   const completedCourseIds = enrollments
     .filter((e: any) => e.status === "completed")
     .map((e: any) => e.course_id)
-  
-  const enrolledCourses = courses.filter((course) => enrolledCourseIds.includes(course.id))
-  const completedCourses = courses.filter((course) => completedCourseIds.includes(course.id))
-  const availableCourses = courses.filter(
-    (course) => !enrolledCourseIds.includes(course.id) && !completedCourseIds.includes(course.id),
-  )
 
   const filterCourses = (coursesList: Course[]) => {
     let filtered = coursesList.filter((course) => course.title.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    // Debug: Log enrolled course IDs and courses
+    if (typeof window !== "undefined") {
+      console.log("=== FILTER COURSES DEBUG ===")
+      console.log("Enrolled course IDs:", enrolledCourseIds)
+      console.log("Courses passed in:", coursesList.map(c => ({ id: c.id, title: c.title })))
+      console.log("Filtered (search only):", filtered.map(c => ({ id: c.id, title: c.title })))
+    }
 
     // Sorting
     if (sortBy === "price-low") {
@@ -186,24 +188,16 @@ export default function CoursesPage() {
 
         <TabsContent value="all" className="mt-4 md:mt-6">
           {coursesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <CourseCardSkeleton key={i} />
               ))}
             </div>
           ) : coursesError ? (
             <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
-          ) : filterCourses([
-            ...enrolledCourses,
-            ...availableCourses,
-            ...completedCourses,
-          ]).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filterCourses([
-                ...enrolledCourses,
-                ...availableCourses,
-                ...completedCourses,
-              ]).map((course) => (
+          ) : filterCourses(courses).length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+              {filterCourses(courses).map((course) => (
                 <CourseCard
                   key={course.id}
                   course={course}
@@ -228,72 +222,76 @@ export default function CoursesPage() {
 
         <TabsContent value="enrolled" className="mt-4 md:mt-6">
           {coursesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (
                 <CourseCardSkeleton key={i} />
               ))}
             </div>
           ) : coursesError ? (
             <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
-          ) : filterCourses(enrolledCourses).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filterCourses(enrolledCourses).map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  status="enrolled"
-                  enrolledCourseIds={enrolledCourseIds}
-                  completedCourseIds={completedCourseIds}
-                  userProgress={userProgress}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No enrolled courses</h3>
-              <p className="text-sm text-muted-foreground">
-                {searchTerm
-                  ? "No enrolled courses match your search. Try adjusting your search terms."
-                  : "You haven't enrolled in any courses yet. Browse available courses to get started."}
-              </p>
-            </div>
-          )}
+          ) : (() => {
+            const enrolledCourses = filterCourses(courses.filter(c => enrolledCourseIds.includes(c.id)))
+            return enrolledCourses.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {enrolledCourses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    enrolledCourseIds={enrolledCourseIds}
+                    completedCourseIds={completedCourseIds}
+                    userProgress={userProgress}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No enrolled courses</h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchTerm
+                    ? "No enrolled courses match your search. Try adjusting your search terms."
+                    : "You haven't enrolled in any courses yet. Browse available courses to get started."}
+                </p>
+              </div>
+            )
+          })()}
         </TabsContent>
 
         <TabsContent value="completed" className="mt-4 md:mt-6">
           {coursesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (
                 <CourseCardSkeleton key={i} />
               ))}
             </div>
           ) : coursesError ? (
             <p className="text-muted-foreground text-sm md:text-base text-center py-8 text-destructive">{coursesError}</p>
-          ) : filterCourses(completedCourses).length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filterCourses(completedCourses).map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  status="completed"
-                  enrolledCourseIds={enrolledCourseIds}
-                  completedCourseIds={completedCourseIds}
-                  userProgress={userProgress}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No completed courses</h3>
-              <p className="text-sm text-muted-foreground">
-                {searchTerm
-                  ? "No completed courses match your search. Try adjusting your search terms."
-                  : "You haven't completed any courses yet. Continue learning to complete your enrolled courses."}
-              </p>
-            </div>
-          )}
+          ) : (() => {
+            const completedCourses = filterCourses(courses.filter(c => completedCourseIds.includes(c.id)))
+            return completedCourses.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+                {completedCourses.map((course) => (
+                  <CourseCard
+                    key={course.id}
+                    course={course}
+                    enrolledCourseIds={enrolledCourseIds}
+                    completedCourseIds={completedCourseIds}
+                    userProgress={userProgress}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No completed courses</h3>
+                <p className="text-sm text-muted-foreground">
+                  {searchTerm
+                    ? "No completed courses match your search. Try adjusting your search terms."
+                    : "You haven't completed any courses yet. Continue learning to complete your enrolled courses."}
+                </p>
+              </div>
+            )
+          })()}
         </TabsContent>
       </Tabs>
         </>

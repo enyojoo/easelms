@@ -33,7 +33,7 @@ export default function SafeImage({
   // Use blurred placeholder by default, or custom placeholder if provided
   const defaultPlaceholder = useBlurPlaceholder 
     ? getBlurredPlaceholder(width || 400, height || 300)
-    : placeholder || "/placeholder.svg?height=200&width=300"
+    : placeholder || getBlurredPlaceholder(width || 400, height || 300)
   
   const [imgSrc, setImgSrc] = useState(src || defaultPlaceholder)
   const [hasError, setHasError] = useState(false)

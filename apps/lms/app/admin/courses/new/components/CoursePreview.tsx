@@ -25,7 +25,7 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
     <div className="space-y-6">
       <div className="aspect-video relative rounded-lg overflow-hidden">
         <SafeImage
-          src={courseData.basicInfo.thumbnail || "/placeholder.svg?height=200&width=300"}
+          src={courseData.basicInfo.thumbnail || "/placeholder.svg"}
           alt={courseData.basicInfo.title || "Course thumbnail"}
           fill
           className="object-cover"
@@ -36,19 +36,6 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
         <h2 className="text-2xl font-bold">{courseData.basicInfo.title || "Untitled Course"}</h2>
       </div>
 
-      {courseData.basicInfo.requirements && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Requirements</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground whitespace-pre-wrap">
-              {courseData.basicInfo.requirements}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {courseData.basicInfo.description && (
         <Card>
           <CardHeader>
@@ -57,6 +44,19 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
           <CardContent>
             <p className="text-muted-foreground whitespace-pre-wrap">
               {courseData.basicInfo.description}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {courseData.basicInfo.requirements && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Requirements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground whitespace-pre-wrap">
+              {courseData.basicInfo.requirements}
             </p>
           </CardContent>
         </Card>

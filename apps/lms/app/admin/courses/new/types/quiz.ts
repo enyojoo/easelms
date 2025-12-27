@@ -58,6 +58,7 @@ export interface Quiz {
   shuffleAnswers?: boolean
   showResultsImmediately?: boolean
   allowMultipleAttempts?: boolean
+  maxAttempts?: number
   showCorrectAnswers?: boolean
 }
 

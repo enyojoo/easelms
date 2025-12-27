@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
+import { createCourseSlug } from "@/lib/slug"
 import { cancelSubscription, type Purchase } from "@/utils/enrollment"
 import type { User } from "@/data/users"
 import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
@@ -166,7 +167,7 @@ export default function PurchaseHistoryPage() {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 border-t">
                           {course && (
-                            <Link href={`/learner/courses/${course.id}`} className="flex-1 sm:flex-initial">
+                            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}`} className="flex-1 sm:flex-initial">
                               <Button variant="outline" size="sm" className="w-full sm:w-auto min-h-[44px]">
                                 View Course
                               </Button>

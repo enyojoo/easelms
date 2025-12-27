@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Quiz } from "../types/quiz"
 
@@ -34,23 +35,12 @@ export default function QuizSettings({ quiz, onChange }: QuizSettingsProps) {
 
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>Shuffle Answers</Label>
-            <p className="text-sm text-muted-foreground">Randomize answer option order for multiple choice questions</p>
+            <Label>Show Correct Answers</Label>
+            <p className="text-sm text-muted-foreground">Reveal correct answers after quiz completion</p>
           </div>
           <Switch
-            checked={quiz.shuffleAnswers || false}
-            onCheckedChange={(checked) => updateSetting("shuffleAnswers", checked)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label>Show Results Immediately</Label>
-            <p className="text-sm text-muted-foreground">Show score and feedback right after submission</p>
-          </div>
-          <Switch
-            checked={quiz.showResultsImmediately || false}
-            onCheckedChange={(checked) => updateSetting("showResultsImmediately", checked)}
+            checked={quiz.showCorrectAnswers || false}
+            onCheckedChange={(checked) => updateSetting("showCorrectAnswers", checked)}
           />
         </div>
 
@@ -65,16 +55,24 @@ export default function QuizSettings({ quiz, onChange }: QuizSettingsProps) {
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label>Show Correct Answers</Label>
-            <p className="text-sm text-muted-foreground">Display correct answers after quiz completion</p>
+        {quiz.allowMultipleAttempts && (
+          <div className="space-y-2 pl-4 border-l-2 border-primary">
+            <Label htmlFor="max-attempts">Maximum Number of Attempts</Label>
+            <Input
+              id="max-attempts"
+              type="number"
+              min="1"
+              max="100"
+              value={quiz.maxAttempts ?? 3}
+              onChange={(e) => {
+                const value = e.target.value ? parseInt(e.target.value) : 3
+                updateSetting("maxAttempts", value)
+              }}
+              placeholder="3"
+            />
+            <p className="text-xs text-muted-foreground">How many times students can attempt this quiz</p>
           </div>
-          <Switch
-            checked={quiz.showCorrectAnswers || false}
-            onCheckedChange={(checked) => updateSetting("showCorrectAnswers", checked)}
-          />
-        </div>
+        )}
       </CardContent>
     </Card>
   )

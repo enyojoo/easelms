@@ -15,8 +15,6 @@ export interface Lesson {
   settings?: {
     isRequired?: boolean
     videoProgression?: boolean
-    allowSkip?: boolean
-    timeLimit?: number
   }
 }
 

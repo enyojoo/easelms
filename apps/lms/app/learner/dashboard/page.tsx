@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Award, BookOpen, ChevronRight, Clock } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
+import { createCourseSlug } from "@/lib/slug"
 import type { User } from "@/data/users"
 import DashboardSkeleton from "@/components/DashboardSkeleton"
 
@@ -81,7 +82,7 @@ export default function LearnerDashboard() {
           const recommended = (recommendedData.courses || []).slice(0, 4).map((course: any) => ({
             id: course.id,
             title: course.title,
-            image: course.image || "/placeholder.svg?height=200&width=300",
+            image: course.image || "/placeholder.svg",
           }))
           setRecommendedCourses(recommended)
         }
@@ -177,7 +178,7 @@ export default function LearnerDashboard() {
                         <Progress value={course.progress || 0} className="flex-grow min-w-0" />
                         <span className="text-sm font-medium flex-shrink-0">{course.progress || 0}%</span>
                       </div>
-                      <Link href={`/learner/courses/${course.id}/learn`}>
+                      <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`}>
                         <Button variant="link" className="mt-1 md:mt-2 p-0 h-auto text-sm md:text-base">
                           Continue <ChevronRight className="ml-1 h-4 w-4" />
                         </Button>
@@ -215,13 +216,13 @@ export default function LearnerDashboard() {
                   {recommendedCourses.map((course, index) => (
                     <Link 
                       key={course.id} 
-                      href={`/learner/courses/${course.id}`} 
+                      href={`/learner/courses/${createCourseSlug(course.title, course.id)}`} 
                       className={`flex min-w-0 ${index >= 2 ? 'hidden sm:flex' : ''}`}
                     >
                       <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full min-w-0">
                         <div className="relative w-full h-32 sm:h-24 md:h-32">
                           <Image
-                            src={course.image || "/placeholder.svg?height=200&width=300"}
+                            src={course.image || "/placeholder.svg"}
                             alt={course.title}
                             fill
                             className="object-cover"

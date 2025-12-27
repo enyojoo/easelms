@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { createCourseSlug } from "@/lib/slug"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -48,7 +49,9 @@ export default function CourseCard({
   // Check enrollment status using utility function
   const isEnrolled = isEnrolledInCourse(course.id, user) || enrolledCourseIds.includes(course.id)
   const isCompleted = completedCourseIds.includes(course.id)
-  const actualStatus = status || (isCompleted ? "completed" : isEnrolled ? "enrolled" : "available")
+  // Priority: completed > enrolled > available
+  // Only use passed status if it's specifically set to something other than "available"
+  const actualStatus = (status && status !== "available") ? status : (isCompleted ? "completed" : isEnrolled ? "enrolled" : "available")
   const courseProgress = progress !== undefined ? progress : (userProgress[course.id] || 0)
   
   const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
@@ -64,7 +67,7 @@ export default function CourseCard({
           // Dispatch event to notify parent components
           window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
           // Redirect to learn page
-          router.push(`/learner/courses/${course.id}/learn`)
+          router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
         }
       } else {
         // For paid/subscription, handle payment directly
@@ -82,7 +85,7 @@ export default function CourseCard({
           // Dispatch event to notify parent components
           window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
           // Redirect to learn page after successful payment
-          router.push(`/learner/courses/${course.id}/learn`)
+          router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
         }
       }
     } catch (error) {
@@ -95,7 +98,7 @@ export default function CourseCard({
   const getCTAButtons = () => {
     const previewButton = (
       <Button variant="outline" asChild className="flex-1">
-        <Link href={`/learner/courses/${course.id}`}>
+        <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}`}>
           <Eye className="w-4 h-4 mr-2" />
           Preview
         </Link>
@@ -107,7 +110,7 @@ export default function CourseCard({
         <>
           {previewButton}
           <Button variant="outline" asChild className="flex-1">
-            <Link href={`/learner/courses/${course.id}/learn/summary`}>View Summary</Link>
+            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn/summary`}>View Summary</Link>
           </Button>
         </>
       )
@@ -117,7 +120,7 @@ export default function CourseCard({
         <>
           {previewButton}
           <Button asChild className="flex-1">
-            <Link href={`/learner/courses/${course.id}/learn`}>
+            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`}>
               <Play className="w-4 h-4 mr-2" />
               Continue
             </Link>
@@ -167,16 +170,17 @@ export default function CourseCard({
     }
   }
 
-  const imageSrc = courseImage || course.image || "/placeholder.svg?height=200&width=300"
+  const imageSrc = courseImage || course.image || "/placeholder.svg"
 
   // Determine the main link URL based on course status
   const getMainLink = () => {
+    const slug = createCourseSlug(course.title, course.id)
     if (actualStatus === "enrolled") {
-      return `/learner/courses/${course.id}/learn`
+      return `/learner/courses/${slug}/learn`
     } else if (actualStatus === "completed") {
-      return `/learner/courses/${course.id}/learn/summary`
+      return `/learner/courses/${slug}/learn/summary`
     } else {
-      return `/learner/courses/${course.id}`
+      return `/learner/courses/${slug}`
     }
   }
 
@@ -245,7 +249,7 @@ export default function CourseCard({
           </div>
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />
-            <span>4 hours</span>
+            <span>{(course as any).totalHours || 0} hours</span>
           </div>
           <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />

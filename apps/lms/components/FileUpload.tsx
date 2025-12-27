@@ -354,12 +354,12 @@ export default function FileUpload({
   const showDropzone = !hasFiles && !uploading
 
   return (
-    <div className={className}>
+    <div className={`w-full max-w-full overflow-hidden ${className || ""}`}>
       {/* Show drag & drop area only when no files */}
       {showDropzone && (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors w-full max-w-full ${
             isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
           }`}
         >
@@ -386,23 +386,23 @@ export default function FileUpload({
 
       {/* Show file cards when files are selected or uploaded */}
       {hasFiles && (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full max-w-full">
           {/* Show files from File objects */}
           {files.map((file, index) => (
             <Card
               key={index}
-              className="relative overflow-hidden"
+              className="relative overflow-hidden w-full"
             >
               <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
                     {getFileIcon(file)}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium truncate">{file.name}</p>
                       <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {uploading && (
                       <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
                     )}
@@ -427,18 +427,18 @@ export default function FileUpload({
 
           {/* Show restored uploaded state when initialValue is provided but no files */}
           {uploadedUrls.length > 0 && files.length === 0 && (
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden w-full">
               <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <File className="h-5 w-5" />
-                    <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+                    <File className="h-5 w-5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       <p className="text-sm font-medium truncate">
                         {getFileName(uploadedUrls[0])}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {uploading && (
                       <Loader2 className="h-5 w-5 text-primary animate-spin flex-shrink-0" />
                     )}

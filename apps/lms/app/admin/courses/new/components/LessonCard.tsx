@@ -38,8 +38,6 @@ interface Lesson {
   settings: {
     isRequired: boolean
     videoProgression: boolean
-    allowSkip: boolean
-    timeLimit: number
   }
   quiz: {
     enabled: boolean
@@ -101,7 +99,7 @@ export default function LessonCard({
 
 
   return (
-    <Card className={`border-2 ${isExpanded ? "border-primary" : ""}`}>
+    <Card className={`border-2 ${isExpanded ? "border-primary" : ""} w-full overflow-hidden`}>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           {dragHandleProps && (
@@ -158,8 +156,8 @@ export default function LessonCard({
       </CardHeader>
 
       <Collapsible open={isExpanded}>
-        <CollapsibleContent>
-          <CardContent className="space-y-6 pt-0">
+        <CollapsibleContent className="w-full overflow-hidden">
+          <CardContent className="space-y-6 pt-0 w-full overflow-hidden">
             {/* Basic Info */}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -292,37 +290,6 @@ export default function LessonCard({
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Allow Skip</Label>
-                      <p className="text-sm text-muted-foreground">Allow students to skip this lesson</p>
-                    </div>
-                    <Switch
-                      checked={localLesson.settings.allowSkip}
-                      onCheckedChange={(checked) =>
-                        updateLesson({
-                          settings: { ...localLesson.settings, allowSkip: checked },
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Time Limit (minutes)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={localLesson.settings.timeLimit}
-                      onChange={(e) =>
-                        updateLesson({
-                          settings: {
-                            ...localLesson.settings,
-                            timeLimit: Number.parseInt(e.target.value) || 0,
-                          },
-                        })
-                      }
-                    />
-                  </div>
                 </div>
               </CollapsibleContent>
             </Collapsible>

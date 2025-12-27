@@ -1,41 +1,161 @@
 "use client"
 
-import { useState } from "react"
-import { notFound, useParams } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { extractIdFromSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { PlayCircle, FileText, Award, Clock, Globe, Link } from "lucide-react"
+import { PlayCircle, FileText, Award, Clock, Globe } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
-import { modules } from "@/data/courses"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { BrainCircuit } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { BrainCircuit, Link as LinkIcon } from "lucide-react"
 import { ArrowLeft, Edit } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
+import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
+import { useClientAuthState } from "@/utils/client-auth"
+import { extractVimeoId } from "@/lib/vimeo/utils"
+
+interface Course {
+  id: number
+  title: string
+  description: string
+  thumbnail?: string
+  image?: string
+  preview_video?: string
+  who_is_this_for?: string
+  requirements?: string
+  price?: number
+  settings?: {
+    enrollment?: {
+      enrollmentMode?: "open" | "free" | "buy" | "recurring" | "closed"
+      price?: number
+      recurringPrice?: number
+    }
+    certificate?: any
+  }
+  lessons?: Array<{
+    id: number
+    title: string
+    type?: string
+    content?: any
+    resources?: Array<{
+      title: string
+      type: string
+      url?: string
+    }>
+    quiz_questions?: Array<any>
+    estimated_duration?: number
+  }>
+  creator?: {
+    id: string
+    name: string
+    email: string
+    profile_image?: string
+    bio?: string
+    user_type?: string
+  }
+}
 
 export default function InstructorCoursePreviewPage() {
   const params = useParams()
-  const id = params.id as string
-  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
-  const module = modules.find((m) => m.id === Number.parseInt(id))
+  const slugOrId = params.id as string
+  const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const router = useRouter()
+  const { user, loading: authLoading, userType } = useClientAuthState()
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [course, setCourse] = useState<Course | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
-  if (!module) {
-    notFound()
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!authLoading && (!user || (userType !== "admin" && userType !== "instructor"))) {
+      router.push("/auth/admin/login")
+    }
+  }, [user, userType, authLoading, router])
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!mounted || !id || authLoading || !user || (userType !== "admin" && userType !== "instructor")) return
+
+      try {
+        setLoading(true)
+        setError(null)
+
+        const fetchUrl = `/api/courses/${id}`
+        console.log("Fetching course from URL:", fetchUrl)
+        const response = await fetch(fetchUrl)
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("API Error Response:", {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText,
+          })
+          if (response.status === 404) {
+            setError("Course not found")
+            setLoading(false)
+            return
+          }
+          throw new Error(`Failed to fetch course: ${response.status} ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        setCourse(data.course)
+      } catch (err: any) {
+        console.error("Error fetching course:", err)
+        setError(err.message || "Failed to load course")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourse()
+  }, [id, mounted, authLoading, user, userType, router])
+
+  const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
+
+  if (isLoading) {
+    return <CourseDetailSkeleton />
   }
 
-  // Instructor information
-  const instructor = {
-    name: "Dr Ifeoma Eze",
-    bio: "",
-    profileImage: "https://www.pastorifeomaeze.com/wp-content/uploads/2020/01/Ifeoma-Eze.jpeg",
+  if (error || !course) {
+    return (
+      <div className="pt-4 md:pt-8">
+        <div className="text-center py-8">
+          <p className="text-destructive mb-4">{error || "Course not found"}</p>
+          <Button variant="outline" onClick={() => router.push("/admin/courses")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Courses
+          </Button>
+        </div>
+      </div>
+    )
   }
 
-  // Get actual enrollment mode from course settings
-  const enrollmentMode = module.settings?.enrollment?.enrollmentMode || "free"
-  const coursePrice = module.settings?.enrollment?.price || module.price || 0
-  const recurringPrice = module.settings?.enrollment?.recurringPrice
+  // Get enrollment mode and pricing
+  const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
+  const coursePrice = course.settings?.enrollment?.price || course.price || 0
+  const recurringPrice = course.settings?.enrollment?.recurringPrice
+
+  // Get total duration from course data (calculated by API)
+  const lessons = course.lessons || []
+  const totalHours = course.totalHours || 0
+  const totalDurationMinutes = course.totalDurationMinutes || 0
+
+  // Count total resources
+  const totalResources = lessons.reduce((total, lesson) => {
+    return total + (lesson.resources?.length || 0)
+  }, 0)
+
+  // Extract Vimeo ID for video preview
+  const vimeoId = course.preview_video ? extractVimeoId(course.preview_video) : null
+  const videoUrl = course.preview_video || ""
 
   const getAccessDetails = () => {
     switch (enrollmentMode) {
@@ -68,6 +188,19 @@ export default function InstructorCoursePreviewPage() {
 
   const { price, buttonText, access } = getAccessDetails()
 
+  // Instructor information from creator
+  const instructor = course.creator
+    ? {
+        name: course.creator.name || "Instructor",
+        bio: course.creator.bio || "",
+        profileImage: course.creator.profile_image || "",
+      }
+    : {
+        name: "Instructor",
+        bio: "",
+        profileImage: "",
+      }
+
   return (
     <div className="pt-4 md:pt-8">
       <div className="flex items-center justify-between mb-4">
@@ -75,9 +208,9 @@ export default function InstructorCoursePreviewPage() {
           <Button variant="ghost" size="sm" onClick={() => router.push("/admin/courses")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold text-primary">{module.title}</h1>
+          <h1 className="text-3xl font-bold text-primary">{course.title}</h1>
         </div>
-        <Button onClick={() => router.push(`/admin/courses/new?edit=${module.id}`)} className="flex items-center">
+        <Button onClick={() => router.push(`/admin/courses/new?edit=${course.id}`)} className="flex items-center">
           <Edit className="w-4 h-4 mr-2" />
           Edit Course
         </Button>
@@ -89,12 +222,12 @@ export default function InstructorCoursePreviewPage() {
           <Card className="mb-4">
             <CardContent className="p-6">
               <h2 className="text-2xl font-bold mb-4 text-primary">Course Overview</h2>
-              <p className="text-muted-foreground mb-4 leading-relaxed">{module.description}</p>
+              <p className="text-muted-foreground mb-4 leading-relaxed whitespace-pre-wrap">{course.description}</p>
               <div className="flex items-center gap-4 pt-4 border-t">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{module.lessons.length} lessons</span>
+                  <span>{lessons.length} lessons</span>
                   <span>•</span>
-                  <span>4 hours</span>
+                  <span>{totalHours} hours</span>
                 </div>
               </div>
             </CardContent>
@@ -103,88 +236,76 @@ export default function InstructorCoursePreviewPage() {
           <Card className="mb-4">
             <CardContent className="p-6">
               <h2 className="text-2xl font-bold mb-4 text-primary">Course Content</h2>
-              <div className="bg-muted p-4 rounded-lg mb-4">
-                <p className="font-semibold">{module.lessons.length} lessons • 4 hours total length</p>
-              </div>
               <Accordion type="single" collapsible className="w-full">
-                {module.lessons.map((lesson, index) => (
-                  <AccordionItem value={`item-${index}`} key={index}>
-                    <AccordionTrigger>
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center">
-                          <PlayCircle className="w-5 h-5 mr-2 text-primary" />
-                          <span className="font-medium">{lesson.title}</span>
-                        </div>
-                        {/* Time removed */}
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-2">
-                        {/* Quiz section */}
-                        <div className="flex items-center justify-between py-2 pl-7">
-                          <div className="flex items-center">
-                            <BrainCircuit className="w-4 h-4 mr-2 text-primary" />
-                            <span className="text-sm">Quiz {index + 1}</span>
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {lesson.quiz?.questions.length || 4} questions
-                          </span>
-                        </div>
+                {lessons.map((lesson, index) => {
+                  const quizQuestions = lesson.quiz_questions || []
+                  const resources = lesson.resources || []
 
-                        {/* Resources */}
-                        {lesson.resources?.map((resource, rIndex) => (
-                          <div key={rIndex} className="flex items-center justify-between py-2 pl-7">
-                            <div className="flex items-center">
-                              {resource.type === "document" ? (
-                                <FileText className="w-4 h-4 mr-2 text-primary" />
-                              ) : (
-                                <Link className="w-4 h-4 mr-2 text-primary" />
-                              )}
-                              <span className="text-sm">{resource.title}</span>
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {resource.type === "document" ? "File" : "Link"}
-                            </span>
+                  return (
+                    <AccordionItem value={`item-${lesson.id || index}`} key={lesson.id || index}>
+                      <AccordionTrigger>
+                        <div className="flex items-center justify-between w-full">
+                          <div className="flex items-center">
+                            <PlayCircle className="w-5 h-5 mr-2 text-primary" />
+                            <span className="font-medium">{lesson.title}</span>
                           </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2">
+                          {/* Quiz section */}
+                          {quizQuestions.length > 0 && (
+                            <div className="flex items-center justify-between py-2 pl-7">
+                              <div className="flex items-center">
+                                <BrainCircuit className="w-4 h-4 mr-2 text-primary" />
+                                <span className="text-sm">Quiz {index + 1}</span>
+                              </div>
+                              <span className="text-sm text-muted-foreground">{quizQuestions.length} questions</span>
+                            </div>
+                          )}
+
+                          {/* Resources */}
+                          {resources.map((resource, rIndex) => (
+                            <div key={rIndex} className="flex items-center justify-between py-2 pl-7">
+                              <div className="flex items-center">
+                                {resource.type === "document" ? (
+                                  <FileText className="w-4 h-4 mr-2 text-primary" />
+                                ) : (
+                                  <LinkIcon className="w-4 h-4 mr-2 text-primary" />
+                                )}
+                                <span className="text-sm">{resource.title}</span>
+                              </div>
+                              <span className="text-sm text-muted-foreground">
+                                {resource.type === "document" ? "File" : "Link"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
               </Accordion>
             </CardContent>
           </Card>
 
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Who this course is for:</h2>
-              {module.whoIsThisFor ? (
-                <p className="text-muted-foreground leading-relaxed">{module.whoIsThisFor}</p>
-              ) : (
-                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                  <li>Individuals seeking personal and spiritual growth</li>
-                  <li>Those looking to discover their purpose and calling</li>
-                  <li>Anyone desiring to deepen their relationship with God</li>
-                  <li>People ready to transform their lives and impact others</li>
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          {course.who_is_this_for && (
+            <Card className="mb-4">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold mb-4 text-primary">Who this course is for:</h2>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{course.who_is_this_for}</p>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="mb-4">
-            <CardContent className="p-6">
-              <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
-              {module.requirements ? (
-                <p className="text-muted-foreground leading-relaxed">{module.requirements}</p>
-              ) : (
-                <ul className="list-disc pl-5 text-muted-foreground space-y-2">
-                  <li>Open heart and willingness to learn</li>
-                  <li>Desire for personal and spiritual growth</li>
-                  <li>Commitment to complete the course materials</li>
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          {course.requirements && (
+            <Card className="mb-4">
+              <CardContent className="p-6">
+                <h2 className="text-2xl font-bold mb-4 text-primary">Requirements</h2>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{course.requirements}</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Instructor Profile Card */}
           <InstructorCard
@@ -203,8 +324,8 @@ export default function InstructorCoursePreviewPage() {
                 onClick={() => setIsVideoModalOpen(true)}
               >
                 <SafeImage
-                  src={module.image}
-                  alt={module.title}
+                  src={course.thumbnail || course.image || "/placeholder.svg"}
+                  alt={course.title}
                   fill
                   className="object-cover"
                 />
@@ -216,27 +337,30 @@ export default function InstructorCoursePreviewPage() {
                 <span className="text-2xl font-bold text-primary">{price}</span>
                 {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
               </div>
-              <Button className="w-full mb-4" disabled>
-                {buttonText}
+              <Button 
+                className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11"
+                onClick={() => router.push(`/admin/courses/${course.id}/preview-learn`)}
+              >
+                Preview Course Content
               </Button>
               <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">
-                <div className="flex items-center">
-                  <Clock className="w-5 h-5 mr-2 text-primary" />
-                  <span>4 hours of on-demand video</span>
-                </div>
-                <div className="flex items-center">
-                  <FileText className="w-5 h-5 mr-2 text-primary" />
-                  <span>8 downloadable resources</span>
-                </div>
+                {totalResources > 0 && (
+                  <div className="flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-primary" />
+                    <span>{totalResources} downloadable resources</span>
+                  </div>
+                )}
                 <div className="flex items-center">
                   <Globe className="w-5 h-5 mr-2 text-primary" />
                   <span>{access}</span>
                 </div>
-                <div className="flex items-center">
-                  <Award className="w-5 h-5 mr-2 text-primary" />
-                  <span>Certificate of completion</span>
-                </div>
+                {course.settings?.certificate && (
+                  <div className="flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-primary" />
+                    <span>Certificate of completion</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -246,8 +370,9 @@ export default function InstructorCoursePreviewPage() {
       <VideoModal
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
-        videoUrl="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        title={module.title}
+        videoUrl={videoUrl}
+        vimeoVideoId={vimeoId || undefined}
+        title={course.title}
       />
     </div>
   )

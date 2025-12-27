@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
+import { createCourseSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
@@ -42,6 +43,7 @@ interface Course {
       recurringPrice?: number
     }
   }
+  _localStorageCourseId?: any // For tracking localStorage draft matching
 }
 
 export default function ManageCoursesPage() {
@@ -76,16 +78,30 @@ export default function ManageCoursesPage() {
     
     try {
       const drafts: Course[] = []
-      // Check for draft with key "course-draft-new"
-      const draftKey = "course-draft-new"
-      const draftJson = localStorage.getItem(draftKey)
       
-      if (draftJson) {
+      // Check all localStorage keys that start with "course-draft-"
+      const allKeys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith("course-draft-")) {
+          allKeys.push(key)
+        }
+      }
+      
+      // Process each draft key
+      allKeys.forEach((draftKey) => {
+        const draftJson = localStorage.getItem(draftKey)
+        if (!draftJson) return
+        
         try {
           const draft = JSON.parse(draftJson)
           const draftData = draft.data
           
-          if (draftData && draftData.basicInfo && (draftData.basicInfo.title || Object.keys(draftData).length > 0)) {
+          // Only show drafts that have meaningful content (at least a title or some actual data)
+          const hasTitle = draftData?.basicInfo?.title && draftData.basicInfo.title.trim() !== ""
+          const hasContent = draftData?.lessons?.length > 0 || draftData?.basicInfo?.description || draftData?.basicInfo?.requirements
+          
+          if (draftData && draftData.basicInfo && (hasTitle || hasContent)) {
             // Extract description HTML to plain text for preview
             let descriptionText = ""
             if (draftData.basicInfo.description) {
@@ -125,12 +141,18 @@ export default function ManageCoursesPage() {
             
             // Ensure thumbnail is valid - use placeholder if empty or invalid
             const thumbnail = draftData.basicInfo.thumbnail
-            const validThumbnail = thumbnail && thumbnail.trim() !== "" && thumbnail !== "/placeholder.svg?height=200&width=300"
+            const validThumbnail = thumbnail && thumbnail.trim() !== "" && thumbnail !== "/placeholder.svg"
               ? thumbnail
-              : "/placeholder.svg?height=200&width=300"
+              : "/placeholder.svg"
+            
+            // Extract courseId from key (e.g., "course-draft-123" -> 123, "course-draft-new" -> -1)
+            const courseIdFromKey = draftKey.replace("course-draft-", "")
+            const draftId = courseIdFromKey === "new" ? -1 : parseInt(courseIdFromKey) || -1
+            // Store the actual courseId from the draft data or key for matching
+            const actualCourseId = draft.courseId || (courseIdFromKey === "new" ? null : parseInt(courseIdFromKey))
             
             drafts.push({
-              id: -1, // Use negative ID to indicate draft
+              id: draftId, // Use negative ID for "new" drafts, actual ID for saved drafts
               title: draftData.basicInfo.title || "Untitled Course",
               description: descriptionText || "No description",
               image: validThumbnail,
@@ -142,12 +164,14 @@ export default function ManageCoursesPage() {
                 isPublished: false, // Drafts are never published
                 ...(draftData.settings || {}),
               },
+              // Store the actual courseId for duplicate detection
+              _localStorageCourseId: actualCourseId,
             })
           }
         } catch (e) {
           console.error("Error parsing draft:", e)
         }
-      }
+      })
       
       return drafts
     } catch (err) {
@@ -158,8 +182,38 @@ export default function ManageCoursesPage() {
 
   useEffect(() => {
     if (!mounted) return
-    setDraftCourses(loadDrafts())
+    const drafts = loadDrafts()
+    setDraftCourses(drafts)
   }, [mounted, loadDrafts])
+
+  // Clean up orphaned localStorage entries (drafts with positive IDs that don't exist in Supabase)
+  // This runs after courses are loaded
+  useEffect(() => {
+    if (!mounted || courses.length === 0) return
+    
+    const allCourseIds = new Set(courses.map(c => c.id))
+    const keysToRemove: string[] = []
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith("course-draft-")) {
+        const courseIdFromKey = key.replace("course-draft-", "")
+        if (courseIdFromKey !== "new") {
+          const courseId = parseInt(courseIdFromKey)
+          if (!isNaN(courseId) && courseId > 0 && !allCourseIds.has(courseId)) {
+            // This is an orphaned draft - remove it
+            keysToRemove.push(key)
+          }
+        }
+      }
+    }
+    
+    if (keysToRemove.length > 0) {
+      keysToRemove.forEach(key => localStorage.removeItem(key))
+      // Reload drafts after cleanup
+      setDraftCourses(loadDrafts())
+    }
+  }, [mounted, courses, loadDrafts])
 
   // Refresh drafts when page becomes visible (user returns from course builder)
   useEffect(() => {
@@ -231,7 +285,7 @@ export default function ManageCoursesPage() {
             id: course.id,
             title: course.title || "",
             description: course.description || "",
-            image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+            image: course.image || course.thumbnail || "/placeholder.svg",
             lessons: lessons,
             price: course.price || 0,
             totalDurationMinutes: totalDurationMinutes,
@@ -295,7 +349,7 @@ export default function ManageCoursesPage() {
                   id: course.id,
                   title: course.title || "",
                   description: course.description || "",
-                  image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+                  image: course.image || course.thumbnail || "/placeholder.svg",
                   lessons: lessons,
                   price: course.price || 0,
                   totalDurationMinutes: totalDurationMinutes,
@@ -382,7 +436,7 @@ export default function ManageCoursesPage() {
             id: course.id,
             title: course.title || "",
             description: course.description || "",
-            image: course.image || course.thumbnail || "/placeholder.svg?height=200&width=300",
+            image: course.image || course.thumbnail || "/placeholder.svg",
             lessons: lessons,
             price: course.price || 0,
             totalDurationMinutes: totalDurationMinutes,
@@ -400,16 +454,75 @@ export default function ManageCoursesPage() {
     }
   }
 
-  // Combine regular courses and draft courses
-  const allCourses = [...draftCourses, ...courses]
+  // Separate courses into published and drafts
+  // Drafts from Supabase have is_published = false
+  const supabaseDrafts = courses.filter(course => !course.settings?.isPublished)
+  const publishedCourses = courses.filter(course => course.settings?.isPublished)
+  
+  // Filter localStorage drafts:
+  // 1. Only show drafts with negative IDs (true "new" drafts that haven't been saved to Supabase)
+  // 2. Exclude any localStorage drafts that have a corresponding Supabase entry (by courseId)
+  // 3. Clean up localStorage entries that exist in Supabase
+  const localStorageDrafts = draftCourses.filter(localDraft => {
+    // Get the actual courseId from localStorage metadata
+    const localCourseId = (localDraft as any)._localStorageCourseId
+    
+    // If this localStorage draft has a real courseId, check if it exists in Supabase
+    if (localCourseId && localCourseId !== "new" && typeof localCourseId === "number" && localCourseId > 0) {
+      // This is a draft with a real courseId - check if it exists in Supabase
+      const existsInSupabase = supabaseDrafts.some(supabaseDraft => supabaseDraft.id === localCourseId) ||
+                                publishedCourses.some(publishedCourse => publishedCourse.id === localCourseId)
+      if (existsInSupabase) {
+        // Remove from localStorage since it exists in Supabase
+        const storageKey = `course-draft-${localCourseId}`
+        localStorage.removeItem(storageKey)
+        return false
+      }
+    }
+    
+    // Also check by ID if the draft has a positive ID
+    if (localDraft.id > 0) {
+      const existsInSupabase = supabaseDrafts.some(supabaseDraft => supabaseDraft.id === localDraft.id) ||
+                                publishedCourses.some(publishedCourse => publishedCourse.id === localDraft.id)
+      if (existsInSupabase) {
+        // Remove from localStorage since it exists in Supabase
+        const storageKey = `course-draft-${localDraft.id}`
+        localStorage.removeItem(storageKey)
+        return false
+      }
+      // Don't show localStorage drafts with positive IDs - they should be in Supabase
+      // If they're not in Supabase, they're orphaned and should be cleaned up
+      return false
+    }
+    
+    // Show only "new" drafts (negative IDs) that don't have a matching Supabase entry by title
+    // (unless the title is "Untitled Course" which might match multiple drafts)
+    if (localDraft.id < 0) {
+      return !supabaseDrafts.some(supabaseDraft => 
+        localDraft.title === supabaseDraft.title && 
+        localDraft.title !== "Untitled Course"
+      )
+    }
+    
+    // Don't show any other drafts
+    return false
+  })
+  
+  // Combine all courses: published first, then Supabase drafts, then localStorage drafts
+  // Remove duplicates (if a course exists in both Supabase and localStorage, prefer Supabase version)
+  const allCourses = [
+    ...publishedCourses,
+    ...supabaseDrafts,
+    ...localStorageDrafts
+  ]
   
   const filteredCourses = allCourses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const isDraft = course.id < 0 // Draft courses have negative IDs
+    const isDraft = course.id < 0 || !course.settings?.isPublished // Draft courses have negative IDs or is_published = false
     const matchesStatus = 
       statusFilter === "all" || 
-      (statusFilter === "published" && course.settings?.isPublished && !isDraft) || 
-      (statusFilter === "draft" && (!course.settings?.isPublished || isDraft))
+      (statusFilter === "published" && course.settings?.isPublished && course.id > 0) || 
+      (statusFilter === "draft" && (!course.settings?.isPublished || course.id < 0))
     const enrollmentPrice = course.settings?.enrollment?.price || course.price || 0
     const matchesPrice =
       priceFilter === "all" ||
@@ -419,14 +532,15 @@ export default function ManageCoursesPage() {
   })
 
   const renderCourseCard = (course: Course) => {
-    const isDraft = course.id < 0
+    // Draft courses: negative IDs (localStorage) or is_published = false (Supabase)
+    const isDraft = course.id < 0 || !course.settings?.isPublished
     
     return (
     <Card key={course.id} className="flex flex-col h-full">
       <CardHeader className="p-4 sm:p-6">
         <div className="aspect-video relative rounded-md overflow-hidden mb-3 sm:mb-4">
           <SafeImage
-            src={course.image && course.image.trim() !== "" ? course.image : "/placeholder.svg?height=200&width=300"}
+            src={course.image && course.image.trim() !== "" ? course.image : "/placeholder.svg"}
             alt={course.title}
             fill
             className="object-cover"
@@ -443,7 +557,7 @@ export default function ManageCoursesPage() {
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-3 sm:mt-4">
           <div className="flex items-center">
             <BookOpen className="w-4 h-4 mr-1" />
-            <span>{course.lessons.length} lessons</span>
+            <span>{Array.isArray(course.lessons) ? course.lessons.length : 0} lessons</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-1" />
@@ -454,7 +568,8 @@ export default function ManageCoursesPage() {
                   return `${course.totalHours} ${course.totalHours === 1 ? 'hour' : 'hours'}`
                 }
                 // Calculate from lessons if available
-                const totalMinutes = course.lessons.reduce((total: number, lesson: any) => {
+                const lessons = Array.isArray(course.lessons) ? course.lessons : []
+                const totalMinutes = lessons.reduce((total: number, lesson: any) => {
                   return total + (lesson.estimatedDuration || 0)
                 }, 0)
                 if (totalMinutes > 0) {
@@ -495,7 +610,7 @@ export default function ManageCoursesPage() {
       </CardContent>
       <CardFooter className="flex flex-row gap-2 p-4 sm:p-6 pt-0">
         {!isDraft && (
-        <Link href={`/admin/courses/preview/${course.id}`} className="flex-1">
+        <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`} className="flex-1">
           <Button 
             variant="outline" 
             className="flex items-center justify-center w-full h-8 text-xs"
@@ -506,7 +621,7 @@ export default function ManageCoursesPage() {
           </Button>
         </Link>
         )}
-        <Link href={isDraft ? "/admin/courses/new" : `/admin/courses/new?edit=${course.id}`} className="flex-1">
+        <Link href={isDraft && course.id < 0 ? "/admin/courses/new" : `/admin/courses/new?edit=${course.id}`} className="flex-1">
           <Button 
             variant="outline" 
             className="flex items-center justify-center w-full h-8 text-xs"
@@ -527,14 +642,54 @@ export default function ManageCoursesPage() {
           <Trash2 className="h-3.5 w-3.5" /> 
         </Button>
         )}
-        {isDraft && (
+        {isDraft && course.id > 0 && (
+          <Button
+            variant="destructive"
+            className="flex items-center justify-center flex-1 h-8 text-xs"
+            size="sm"
+            onClick={() => handleDeleteClick(course.id)}
+            title="Delete"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> 
+          </Button>
+        )}
+        {isDraft && course.id < 0 && (
           <Button
             variant="destructive"
             className="flex items-center justify-center flex-1 h-8 text-xs"
             size="sm"
             onClick={() => {
+              // Remove all "new" drafts from localStorage
               localStorage.removeItem("course-draft-new")
-              setDraftCourses([])
+              // Also check for any other localStorage drafts that might match
+              const keysToRemove: string[] = []
+              for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i)
+                if (key && key.startsWith("course-draft-")) {
+                  const courseIdFromKey = key.replace("course-draft-", "")
+                  if (courseIdFromKey === "new") {
+                    keysToRemove.push(key)
+                  } else {
+                    // Check if this draft matches the one we're deleting
+                    try {
+                      const draftJson = localStorage.getItem(key)
+                      if (draftJson) {
+                        const draft = JSON.parse(draftJson)
+                        const draftData = draft.data
+                        if (draftData?.basicInfo?.title === course.title) {
+                          keysToRemove.push(key)
+                        }
+                      }
+                    } catch (e) {
+                      // Ignore parse errors
+                    }
+                  }
+                }
+              }
+              keysToRemove.forEach(key => localStorage.removeItem(key))
+              // Refresh the drafts list
+              const updatedDrafts = loadDrafts()
+              setDraftCourses(updatedDrafts)
               toast.success("Draft deleted")
             }}
             title="Delete Draft"

@@ -8,6 +8,7 @@ interface UseAutoSaveOptions<T> {
   interval?: number
   supabaseSyncInterval?: number // Interval for Supabase sync (default: 30 seconds)
   onSave?: (data: T) => void | Promise<void>
+  onCourseIdChange?: (courseId: string | number) => void // Callback when courseId changes
 }
 
 export function useAutoSave<T>({
@@ -17,6 +18,7 @@ export function useAutoSave<T>({
   interval = 10000, // 10 seconds - localStorage save interval
   supabaseSyncInterval = 30000, // 30 seconds - Supabase sync interval
   onSave,
+  onCourseIdChange,
 }: UseAutoSaveOptions<T>) {
   const lastSavedRef = useRef<Date | null>(null)
   const lastSupabaseSyncRef = useRef<Date | null>(null)
@@ -33,7 +35,33 @@ export function useAutoSave<T>({
 
   // Update courseId ref when it changes
   useEffect(() => {
+    const previousCourseId = currentCourseIdRef.current
     currentCourseIdRef.current = courseId
+    
+    // If courseId changed from "new" to an actual ID, migrate localStorage
+    if (previousCourseId === "new" && courseId !== "new" && courseId !== previousCourseId) {
+      try {
+        // Get the old draft data
+        const oldDraftKey = `course-draft-${previousCourseId}`
+        const oldDraftJson = localStorage.getItem(oldDraftKey)
+        
+        if (oldDraftJson) {
+          const oldDraft = JSON.parse(oldDraftJson)
+          // Save to new key
+          const newDraftKey = `course-draft-${courseId}`
+          const newDraftData = {
+            ...oldDraft,
+            courseId: courseId,
+            savedAt: new Date().toISOString(),
+          }
+          localStorage.setItem(newDraftKey, JSON.stringify(newDraftData))
+          // Remove old key
+          localStorage.removeItem(oldDraftKey)
+        }
+      } catch (error) {
+        console.error("Failed to migrate localStorage draft:", error)
+      }
+    }
   }, [courseId])
 
   // Save to localStorage (fast, immediate)
@@ -54,9 +82,28 @@ export function useAutoSave<T>({
     []
   )
 
+  // Validate if course data has minimum required fields for Supabase save
+  const isValidForSupabaseSave = useCallback((dataToSave: T): boolean => {
+    // Type guard to check if data has basicInfo structure
+    const courseData = dataToSave as any
+    if (!courseData || !courseData.basicInfo) {
+      return false
+    }
+    
+    // For auto-save to Supabase, require at least a course title (same as "Save to Draft" requirement)
+    const title = courseData.basicInfo?.title || ""
+    return title.trim() !== ""
+  }, [])
+
   // Sync to Supabase (persistent, periodic)
   const syncToSupabase = useCallback(
     async (dataToSave: T) => {
+      // Only save to Supabase if course has at least a title (same validation as "Save to Draft")
+      if (!isValidForSupabaseSave(dataToSave)) {
+        console.log("Skipping Supabase sync: Course title is required")
+        return
+      }
+
       try {
         const response = await fetch("/api/courses/drafts", {
           method: "POST",
@@ -81,6 +128,10 @@ export function useAutoSave<T>({
         // Update courseId if it was "new" and we got a real ID back
         if (currentCourseIdRef.current === "new" && result.courseId) {
           currentCourseIdRef.current = result.courseId
+          // Notify parent component of courseId change
+          if (onCourseIdChange) {
+            onCourseIdChange(result.courseId)
+          }
         }
 
         return result
@@ -89,22 +140,18 @@ export function useAutoSave<T>({
         // Don't throw - localStorage backup is still available
       }
     },
-    []
+    [isValidForSupabaseSave]
   )
 
-  // Combined save: localStorage immediately, Supabase periodically
+  // Combined save: localStorage immediately, Supabase only when explicitly forced
   const saveToStorage = useCallback(
     async (dataToSave: T, forceSupabaseSync = false) => {
       // Always save to localStorage first (fast)
       saveToLocalStorage(dataToSave)
 
-      // Sync to Supabase if forced or if enough time has passed
-      const now = new Date()
-      const timeSinceLastSync = lastSupabaseSyncRef.current
-        ? now.getTime() - lastSupabaseSyncRef.current.getTime()
-        : Infinity
-
-      if (forceSupabaseSync || timeSinceLastSync >= supabaseSyncInterval) {
+      // Only sync to Supabase if explicitly forced (via Save to Draft or Publish button)
+      // Do NOT sync automatically during auto-save to prevent duplicates
+      if (forceSupabaseSync) {
         await syncToSupabase(dataToSave)
       }
 
@@ -113,7 +160,7 @@ export function useAutoSave<T>({
         await onSave(dataToSave)
       }
     },
-    [saveToLocalStorage, syncToSupabase, supabaseSyncInterval, onSave]
+    [saveToLocalStorage, syncToSupabase, onSave]
   )
 
   const debouncedSave = useCallback(
@@ -175,43 +222,58 @@ export function useAutoSave<T>({
 
   // Transform database course format to course builder format
   const transformDbToCourseData = useCallback((dbCourse: any): any => {
+    // Transform flat database columns back to nested settings object
     return {
       basicInfo: {
         title: dbCourse.title || "",
         requirements: dbCourse.requirements || "",
         description: dbCourse.description || "",
         whoIsThisFor: dbCourse.who_is_this_for || "",
-        thumbnail: dbCourse.thumbnail || "",
+        thumbnail: dbCourse.image || "", // Schema uses 'image', map back to 'thumbnail'
         previewVideo: dbCourse.preview_video || "",
         price: dbCourse.price?.toString() || "",
       },
-      lessons: (dbCourse.lessons || []).map((lesson: any) => ({
-        id: lesson.id?.toString() || `lesson-${Date.now()}`,
-        title: lesson.title || "",
-        type: lesson.type || "text",
-        content: lesson.content || {},
-        resources: lesson.resources || [],
-        settings: lesson.settings || {},
-        quiz: lesson.quiz || null,
-        estimatedDuration: lesson.estimated_duration || 0,
-      })),
-      settings: dbCourse.settings || {
+      lessons: (dbCourse.lessons || []).map((lesson: any) => {
+        const content = lesson.content || {}
+        const settings = {
+          isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
+          videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
+        }
+
+        return {
+          id: lesson.id?.toString() || `lesson-${Date.now()}`,
+          title: lesson.title || "",
+          type: lesson.type || "text",
+          content: {
+            ...content,
+            // Remove resources, quiz, estimatedDuration from content as they're separate
+          },
+          resources: content.resources || [],
+          settings: settings,
+          quiz: content.quiz || null,
+          estimatedDuration: content.estimatedDuration || 0,
+        }
+      }),
+      settings: {
         isPublished: dbCourse.is_published || false,
-        requiresSequentialProgress: true,
-        minimumQuizScore: 50,
+        requiresSequentialProgress: dbCourse.requires_sequential_progress !== undefined ? dbCourse.requires_sequential_progress : true,
+        minimumQuizScore: dbCourse.minimum_quiz_score !== undefined ? dbCourse.minimum_quiz_score : 50,
         enrollment: {
-          enrollmentMode: "free",
+          enrollmentMode: dbCourse.enrollment_mode || "free",
+          price: dbCourse.price !== undefined ? dbCourse.price : undefined,
+          recurringPrice: dbCourse.recurring_price !== undefined ? dbCourse.recurring_price : undefined,
         },
         certificate: {
-          certificateEnabled: false,
-          certificateTemplate: "",
-          certificateDescription: "",
-          signatureImage: "",
-          signatureTitle: "",
-          additionalText: "",
-          certificateType: "completion",
+          certificateEnabled: dbCourse.certificate_enabled || false,
+          certificateTemplate: dbCourse.certificate_template || "",
+          certificateTitle: dbCourse.certificate_title || "",
+          certificateDescription: dbCourse.certificate_description || "",
+          signatureImage: dbCourse.signature_image || "",
+          signatureTitle: dbCourse.signature_title || "",
+          additionalText: dbCourse.additional_text || "",
+          certificateType: dbCourse.certificate_type || "completion",
         },
-        currency: "USD",
+        currency: dbCourse.currency || "USD",
       },
     }
   }, [])

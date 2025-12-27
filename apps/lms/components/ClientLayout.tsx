@@ -10,6 +10,7 @@ import { getClientAuthState, useClientAuthState } from "../utils/client-auth"
 import { ThemeProvider } from "./ThemeProvider"
 import { PageTransition } from "./PageTransition"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
+import { Toaster } from "@/components/ui/sonner"
 
 export default function ClientLayout({
   children,
@@ -276,6 +277,7 @@ export default function ClientLayout({
       ) : (
         <PageTransition>{children}</PageTransition>
       )}
+      <Toaster />
     </ThemeProvider>
   )
 }

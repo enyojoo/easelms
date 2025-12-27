@@ -40,16 +40,38 @@ export async function POST(request: Request) {
     }
 
     // Transform course data to match database schema
+    // The schema uses flat columns, not a nested settings object
+    const settings = courseData.settings || {}
+    const enrollment = settings.enrollment || {}
+    const certificate = settings.certificate || {}
+    
+    // Determine price - use enrollment price if available, otherwise basicInfo price
+    const priceValue = enrollment.price !== undefined 
+      ? enrollment.price 
+      : (courseData.basicInfo?.price ? parseFloat(courseData.basicInfo.price) : null)
+    
     const dbCourseData = {
       title: courseData.basicInfo?.title || "",
       description: courseData.basicInfo?.description || "",
-      requirements: courseData.basicInfo?.requirements || "",
-      who_is_this_for: courseData.basicInfo?.whoIsThisFor || "",
-      thumbnail: courseData.basicInfo?.thumbnail || null,
+      requirements: courseData.basicInfo?.requirements || null,
+      who_is_this_for: courseData.basicInfo?.whoIsThisFor || null,
+      image: courseData.basicInfo?.thumbnail || null, // Schema uses 'image', not 'thumbnail'
       preview_video: courseData.basicInfo?.previewVideo || null,
-      price: courseData.basicInfo?.price ? parseFloat(courseData.basicInfo.price) : null,
-      settings: courseData.settings || {},
-      is_published: isPublished,
+      price: priceValue,
+      currency: settings.currency || "USD",
+      is_published: isPublished || settings.isPublished || false,
+      requires_sequential_progress: settings.requiresSequentialProgress !== undefined ? settings.requiresSequentialProgress : false,
+      minimum_quiz_score: settings.minimumQuizScore !== undefined ? settings.minimumQuizScore : null,
+      enrollment_mode: enrollment.enrollmentMode || "free",
+      recurring_price: enrollment.recurringPrice !== undefined ? enrollment.recurringPrice : null,
+      certificate_enabled: certificate.certificateEnabled || false,
+      certificate_template: certificate.certificateTemplate || null,
+      certificate_title: certificate.certificateTitle || null,
+      certificate_description: certificate.certificateDescription || null,
+      signature_image: certificate.signatureImage || null,
+      signature_title: certificate.signatureTitle || null,
+      additional_text: certificate.additionalText || null,
+      certificate_type: certificate.certificateType || null,
       created_by: user.id,
       updated_at: new Date().toISOString(),
     }
@@ -102,18 +124,29 @@ export async function POST(request: Request) {
         .delete()
         .eq("course_id", result.id)
 
-      // Insert new lessons
-      const lessonsToInsert = courseData.lessons.map((lesson: any, index: number) => ({
-        course_id: result.id,
-        title: lesson.title || "",
-        type: lesson.type || "text",
-        content: lesson.content || {},
-        resources: lesson.resources || [],
-        settings: lesson.settings || {},
-        quiz: lesson.quiz || null,
-        estimated_duration: lesson.estimatedDuration || 0,
-        order_index: index,
-      }))
+      // Insert new lessons - map to match database schema
+      const lessonsToInsert = courseData.lessons.map((lesson: any, index: number) => {
+        // Store resources, quiz, and estimatedDuration in content JSONB
+        const lessonContent = {
+          ...(lesson.content || {}),
+          resources: lesson.resources || [],
+          quiz: lesson.quiz || null,
+          estimatedDuration: lesson.estimatedDuration || 0,
+        }
+
+        // Extract settings fields to match schema
+        const settings = lesson.settings || {}
+        
+        return {
+          course_id: result.id,
+          title: lesson.title || "",
+          type: lesson.type || "text",
+          content: lessonContent,
+          order_index: index,
+          is_required: settings.isRequired !== undefined ? settings.isRequired : true,
+          video_progression: settings.videoProgression !== undefined ? settings.videoProgression : false,
+        }
+      })
 
       if (lessonsToInsert.length > 0) {
         const { error: lessonsError } = await dbClient
@@ -123,6 +156,8 @@ export async function POST(request: Request) {
         if (lessonsError) {
           console.error("Error saving lessons:", lessonsError)
           // Don't fail the request, just log the error
+        } else {
+          console.log(`Successfully saved ${lessonsToInsert.length} lessons for course ${result.id}`)
         }
       }
     }
@@ -150,8 +185,19 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin or instructor
-    const { data: profile } = await supabase
+    // Use service role client to bypass RLS for admin operations
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      console.warn("Service role key not available, using regular client:", serviceError.message)
+      serviceClient = null
+    }
+
+    // Check if user is admin or instructor (use service client to bypass RLS)
+    const clientToUse = serviceClient || supabase
+    const { data: profile } = await clientToUse
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
@@ -168,26 +214,50 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Course ID is required" }, { status: 400 })
     }
 
-    const { data, error } = await supabase
+    // Use service client for database operations to bypass RLS
+    const dbClient = serviceClient || supabase
+    const { data, error } = await dbClient
       .from("courses")
       .select(`
         *,
-        lessons (
-          *,
-          resources (*),
-          quiz_questions (*)
-        )
+        lessons (*)
       `)
       .eq("id", courseId)
-      .eq("created_by", user.id)
+      .eq("created_by", user.id) // Ensure user owns the course
       .single()
 
     if (error) {
+      console.error("Error fetching course draft:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     if (!data) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
+    }
+
+    // Transform lessons from database schema to frontend format
+    if (data.lessons && Array.isArray(data.lessons)) {
+      data.lessons = data.lessons.map((lesson: any) => {
+        const content = lesson.content || {}
+        const settings = {
+          isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
+          videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
+        }
+
+        return {
+          id: lesson.id?.toString() || `lesson-${Date.now()}`,
+          title: lesson.title || "",
+          type: lesson.type || "text",
+          content: {
+            ...content,
+            // Remove resources, quiz, estimatedDuration from content as they're separate
+          },
+          resources: content.resources || [],
+          settings: settings,
+          quiz: content.quiz || null,
+          estimatedDuration: content.estimatedDuration || 0,
+        }
+      })
     }
 
     return NextResponse.json({ course: data })

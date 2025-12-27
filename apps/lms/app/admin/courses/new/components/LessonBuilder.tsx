@@ -31,8 +31,6 @@ export interface Lesson {
   settings: {
     isRequired: boolean
     videoProgression: boolean
-    allowSkip: boolean
-    timeLimit: number
   }
   quiz: {
     enabled: boolean
@@ -66,8 +64,6 @@ export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50
       settings: {
         isRequired: true,
         videoProgression: true,
-        allowSkip: false,
-        timeLimit: 0,
       },
       quiz: {
         enabled: false,

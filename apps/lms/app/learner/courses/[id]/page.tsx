@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { notFound, useParams } from "next/navigation"
+import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,13 +16,16 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
-import { getClientAuthState } from "@/utils/client-auth"
+import { useClientAuthState } from "@/utils/client-auth"
 
 interface Course {
   id: number
   title: string
   description: string
   image: string
+  preview_video?: string
+  totalHours?: number
+  totalDurationMinutes?: number
   settings?: {
     enrollment?: {
       enrollmentMode?: "open" | "free" | "buy" | "recurring" | "closed"
@@ -57,27 +61,37 @@ interface Course {
 
 export default function CoursePage() {
   const params = useParams()
-  const id = params.id as string
+  const slugOrId = params.id as string
+  const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const router = useRouter()
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [isEnrolling, setIsEnrolling] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [isEnrolled, setIsEnrolled] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(false)
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  // Track mount state to prevent flash of content
+  // Get user auth state (including enrollment data)
+  const { user: authUser, loading: authLoading } = useClientAuthState()
+
+  // Track mount state and user updates
   useEffect(() => {
     setMounted(true)
-    const authState = getClientAuthState()
-    setUser(authState.user)
   }, [])
 
   useEffect(() => {
+    if (authUser) {
+      setUser(authUser)
+    }
+  }, [authUser])
+
+  // Fetch course data
+  useEffect(() => {
     const fetchCourseData = async () => {
-      if (!id) return
+      if (!id || !mounted) return
 
       try {
         setLoading(true)
@@ -94,17 +108,6 @@ export default function CoursePage() {
         }
         const courseData = await courseResponse.json()
         setCourse(courseData.course)
-
-        // Check enrollment status
-        if (user) {
-          const enrollmentsResponse = await fetch("/api/enrollments")
-          if (enrollmentsResponse.ok) {
-            const enrollmentsData = await enrollmentsResponse.json()
-            const enrollments = enrollmentsData.enrollments || []
-            const enrollment = enrollments.find((e: any) => e.course_id === parseInt(id))
-            setIsEnrolled(!!enrollment)
-          }
-        }
       } catch (err: any) {
         console.error("Error fetching course:", err)
         setError(err.message || "Failed to load course")
@@ -114,10 +117,22 @@ export default function CoursePage() {
     }
 
     fetchCourseData()
-  }, [id, user])
+  }, [id, mounted])
 
-  // Show skeleton until mounted and data is loaded
-  if (!mounted || loading) {
+  // Check enrollment status from user object
+  useEffect(() => {
+    if (!id || !user || !mounted) return
+
+    const courseId = parseInt(id)
+    const isUserEnrolled = user.enrolledCourses?.includes(courseId) || false
+    const isUserCompleted = user.completedCourses?.includes(courseId) || false
+
+    setIsEnrolled(isUserEnrolled)
+    setIsCompleted(isUserCompleted)
+  }, [id, user, mounted])
+
+  // Show skeleton until mounted, data is loaded, and enrollment status is determined
+  if (!mounted || loading || !user) {
     return <CourseDetailSkeleton />
   }
 
@@ -131,6 +146,21 @@ export default function CoursePage() {
       </div>
     )
   }
+
+  // Calculate total resources from lessons
+  const totalResources = (course.lessons || []).reduce((total, lesson) => {
+    return total + (lesson.resources?.length || 0)
+  }, 0)
+
+  // Extract Vimeo ID from preview video if present
+  const extractVimeoId = (url?: string) => {
+    if (!url) return null
+    const match = url.match(/(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/)
+    return match ? match[1] : null
+  }
+
+  const vimeoId = extractVimeoId(course.preview_video)
+  const videoUrl = course.preview_video || ""
 
   // Instructor information - use course creator's profile
   const instructor = course.creator ? {
@@ -153,6 +183,14 @@ export default function CoursePage() {
   const recurringPrice = course.settings?.enrollment?.recurringPrice
 
   const getAccessDetails = () => {
+    if (isCompleted) {
+      return {
+        price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
+        buttonText: "View Summary",
+        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full lifetime access",
+      }
+    }
+
     if (isEnrolled) {
       return {
         price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
@@ -192,9 +230,15 @@ export default function CoursePage() {
   const { price, buttonText, access } = getAccessDetails()
 
   const handleEnrollOrStart = async () => {
+    if (isCompleted) {
+      // Course is completed, go to summary page
+      router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn/summary`)
+      return
+    }
+
     if (isEnrolled) {
       // Already enrolled, go to learn page
-      router.push(`/learner/courses/${id}/learn`)
+      router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
       return
     }
 
@@ -206,7 +250,7 @@ export default function CoursePage() {
         if (success) {
           setIsEnrolled(true)
           // Redirect to learn page
-          router.push(`/learner/courses/${id}/learn`)
+          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
         }
       } else {
         // Handle payment/subscription for paid courses
@@ -221,7 +265,7 @@ export default function CoursePage() {
         if (success) {
           setIsEnrolled(true)
           // Redirect to learn page after successful payment
-          router.push(`/learner/courses/${id}/learn`)
+          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
         }
       }
     } catch (error) {
@@ -232,6 +276,14 @@ export default function CoursePage() {
   }
 
   const getCourseBadge = () => {
+    if (isCompleted) {
+      return (
+        <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+          Completed
+        </Badge>
+      )
+    }
+
     if (isEnrolled) {
       return (
         <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
@@ -305,24 +357,24 @@ export default function CoursePage() {
             >
               {isEnrolling ? "Processing..." : buttonText}
             </Button>
-            <p className="text-left lg:text-center text-xs md:text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
             <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
-              <div className="flex items-center">
-                <Clock className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm">4 hours of on-demand video</span>
-              </div>
-              <div className="flex items-center">
-                <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm">8 downloadable resources</span>
-              </div>
+              {totalResources > 0 && (
+                <div className="flex items-center">
+                  <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                  <span className="text-xs md:text-sm">{totalResources} downloadable resources</span>
+                </div>
+              )}
               <div className="flex items-center">
                 <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
                 <span className="text-xs md:text-sm break-words">{access}</span>
               </div>
-              <div className="flex items-center">
-                <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm">Certificate of completion</span>
-              </div>
+              {course.settings?.certificate?.certificateEnabled && (
+                <div className="flex items-center">
+                  <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                  <span className="text-xs md:text-sm">Certificate of completion</span>
+                </div>
+              )}
               <div className="flex items-center">
                 <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
                 <span className="text-xs md:text-sm">{course.enrolledStudents || 0} learners enrolled</span>
@@ -343,7 +395,7 @@ export default function CoursePage() {
                 <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
                   <span>{course.lessons?.length || 0} lessons</span>
                   <span>•</span>
-                  <span>4 hours</span>
+                  <span>{course.totalHours || 0} hours</span>
                   <span>•</span>
                   <span>{course.enrolledStudents || 0} students</span>
                 </div>
@@ -456,8 +508,8 @@ export default function CoursePage() {
                 onClick={() => setIsVideoModalOpen(true)}
               >
                 <Image
-                  src={module.image}
-                  alt={module.title}
+                  src={course?.image || "/placeholder.svg"}
+                  alt={course?.title || "Course"}
                   fill
                   className="object-cover"
                 />
@@ -479,27 +531,27 @@ export default function CoursePage() {
               >
                 {isEnrolling ? "Processing..." : buttonText}
               </Button>
-              <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+              <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">
-                <div className="flex items-center">
-                  <Clock className="w-5 h-5 mr-2 text-primary" />
-                  <span>4 hours of on-demand video</span>
-                </div>
-                <div className="flex items-center">
-                  <FileText className="w-5 h-5 mr-2 text-primary" />
-                  <span>8 downloadable resources</span>
-                </div>
+                {totalResources > 0 && (
+                  <div className="flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-primary" />
+                    <span>{totalResources} downloadable resources</span>
+                  </div>
+                )}
                 <div className="flex items-center">
                   <Globe className="w-5 h-5 mr-2 text-primary" />
                   <span>{access}</span>
                 </div>
-                <div className="flex items-center">
-                  <Award className="w-5 h-5 mr-2 text-primary" />
-                  <span>Certificate of completion</span>
-                </div>
+                {course.settings?.certificate?.certificateEnabled && (
+                  <div className="flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-primary" />
+                    <span>Certificate of completion</span>
+                  </div>
+                )}
                 <div className="flex items-center">
                   <Users className="w-5 h-5 mr-2 text-primary" />
-                  <span>{module.enrolledStudents || 0} learners enrolled</span>
+                  <span>{course?.enrolledStudents || 0} learners enrolled</span>
                 </div>
               </div>
             </CardContent>
@@ -510,7 +562,8 @@ export default function CoursePage() {
       <VideoModal
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
-        videoUrl="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        videoUrl={videoUrl}
+        vimeoVideoId={vimeoId || undefined}
         title={course.title}
       />
     </div>

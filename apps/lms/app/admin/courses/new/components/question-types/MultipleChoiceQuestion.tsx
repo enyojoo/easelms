@@ -105,7 +105,6 @@ export default function MultipleChoiceQuestion({ question, onChange, onDelete }:
                       placeholder={`Option ${index + 1}`}
                       className="flex-grow"
                     />
-                    {question.correctOption === index && <CheckCircle2 className="w-4 h-4 text-primary" />}
                     {question.options.length > 2 && (
                       <Button
                         variant="ghost"
