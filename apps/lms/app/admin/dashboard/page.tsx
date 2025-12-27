@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Users, BookOpen, DollarSign, Activity, UserPlus } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useAdminStats, useRealtimeAdminStats } from "@/lib/react-query/hooks"
+import { useAdminStats, useRealtimeAdminStats, useProfile } from "@/lib/react-query/hooks"
 import type { User } from "@/data/users"
 import Link from "next/link"
 import AdminDashboardSkeleton from "@/components/AdminDashboardSkeleton"
@@ -55,7 +55,7 @@ function formatRelativeTime(isoString: string): string {
 
 export default function InstructorDashboard() {
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [dashboardUser, setDashboardUser] = useState<User | null>(null)
+  const { data: profileData } = useProfile() // Get cached profile data
   const [mounted, setMounted] = useState(false)
   
   // Check if user is instructor (instructors should not see revenue)
@@ -67,11 +67,8 @@ export default function InstructorDashboard() {
   // Set up real-time subscription for admin stats
   useRealtimeAdminStats()
 
-  useEffect(() => {
-    if (!authLoading && user) {
-      setDashboardUser(user as User)
-    }
-  }, [user, authLoading])
+  // Use profile data from React Query cache (instant, no fetching)
+  const dashboardUser = profileData?.profile || (user ? { name: user.name, email: user.email, profileImage: user.profileImage } : null)
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)

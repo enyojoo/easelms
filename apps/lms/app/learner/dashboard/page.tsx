@@ -10,7 +10,7 @@ import { Award, BookOpen, ChevronRight, Clock } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import { createCourseSlug } from "@/lib/slug"
 import type { User } from "@/data/users"
-import { useEnrollments, useProgress, useCourses, useRealtimeEnrollments, useRealtimeProgress } from "@/lib/react-query/hooks"
+import { useEnrollments, useProgress, useCourses, useRealtimeEnrollments, useRealtimeProgress, useProfile } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -24,23 +24,20 @@ interface Course {
 
 export default function LearnerDashboard() {
   const { user, loading: authLoading } = useClientAuthState()
-  const [dashboardUser, setDashboardUser] = useState<User | null>(null)
-
+  
   // Use React Query hooks for base data fetching - use same cached data as courses page
   const { data: coursesData } = useCourses() // Get all courses (cached, same as courses page)
   const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
   const { data: progressData, isPending: progressPending } = useProgress(null) // Fetch all progress
   const { data: recommendedData, isPending: recommendedPending } = useCourses({ recommended: true })
+  const { data: profileData } = useProfile() // Get cached profile data
   
   // Set up real-time subscriptions
   useRealtimeEnrollments(user?.id)
   useRealtimeProgress(undefined, user?.id)
 
-  useEffect(() => {
-    if (!authLoading && user) {
-      setDashboardUser(user as User)
-    }
-  }, [user, authLoading])
+  // Use profile data from React Query cache (instant, no fetching)
+  const dashboardUser = profileData?.profile || (user ? { name: user.name, email: user.email, profileImage: user.profileImage } : null)
 
   // Process recommended courses
   const recommendedCourses = useMemo(() => {
