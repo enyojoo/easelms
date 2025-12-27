@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
-import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
 import VideoModal from "@/components/VideoModal"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit } from "lucide-react"
@@ -17,6 +16,7 @@ import { ArrowLeft } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
+import { useCourse, useEnrollments } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -66,85 +66,57 @@ export default function CoursePage() {
   const router = useRouter()
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [isEnrolling, setIsEnrolling] = useState(false)
-  const [user, setUser] = useState<any>(null)
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
-  const [course, setCourse] = useState<Course | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
 
-  // Get user auth state (including enrollment data)
-  const { user: authUser, loading: authLoading } = useClientAuthState()
+  // Get user auth state
+  const { user, loading: authLoading } = useClientAuthState()
+  
+  // Use React Query hooks for data fetching
+  const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
+  const { data: enrollmentsData } = useEnrollments()
+  
+  const course = courseData?.course
 
-  // Track mount state and user updates
+  // Check enrollment status from enrollments data
   useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (authUser) {
-      setUser(authUser)
-    }
-  }, [authUser])
-
-  // Fetch course data
-  useEffect(() => {
-    const fetchCourseData = async () => {
-      if (!id || !mounted) return
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        // Fetch course data
-        const courseResponse = await fetch(`/api/courses/${id}`)
-        if (!courseResponse.ok) {
-          if (courseResponse.status === 404) {
-            notFound()
-            return
-          }
-          throw new Error("Failed to fetch course")
-        }
-        const courseData = await courseResponse.json()
-        setCourse(courseData.course)
-      } catch (err: any) {
-        console.error("Error fetching course:", err)
-        setError(err.message || "Failed to load course")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCourseData()
-  }, [id, mounted])
-
-  // Check enrollment status from user object
-  useEffect(() => {
-    if (!id || !user || !mounted) return
+    if (!id || !enrollmentsData?.enrollments) return
 
     const courseId = parseInt(id)
-    const isUserEnrolled = user.enrolledCourses?.includes(courseId) || false
-    const isUserCompleted = user.completedCourses?.includes(courseId) || false
+    const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
+    
+    if (enrollment) {
+      setIsEnrolled(true)
+      setIsCompleted(enrollment.status === "completed")
+    } else {
+      setIsEnrolled(false)
+      setIsCompleted(false)
+    }
+  }, [id, enrollmentsData])
 
-    setIsEnrolled(isUserEnrolled)
-    setIsCompleted(isUserCompleted)
-  }, [id, user, mounted])
+  // Get enrollment count from course data (total enrollments for the course)
+  const enrollmentCount = course?.enrolledStudents || 0
 
-  // Show skeleton until mounted, data is loaded, and enrollment status is determined
-  if (!mounted || loading || !user) {
-    return <CourseDetailSkeleton />
-  }
-
-  if (error || !course) {
+  // Wait for course to load - no skeleton, just show error if needed
+  if (courseError || (!coursePending && !course)) {
+    // Check if it's a 404 error
+    const is404 = courseError instanceof Error && courseError.message.includes("404")
+    if (is404 || (!coursePending && !course)) {
+      notFound()
+    }
     return (
       <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
-          <p className="text-destructive">{error || "Course not found"}</p>
+          <p className="text-destructive">{courseError instanceof Error ? courseError.message : "Course not found"}</p>
           <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
         </div>
       </div>
     )
+  }
+
+  // Don't render until course is loaded
+  if (!course) {
+    return null
   }
 
   // Calculate total resources from lessons
@@ -241,6 +213,8 @@ export default function CoursePage() {
       router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
       return
     }
+
+    if (!user) return
 
     setIsEnrolling(true)
     try {
@@ -396,8 +370,6 @@ export default function CoursePage() {
                   <span>{course.lessons?.length || 0} lessons</span>
                   <span>•</span>
                   <span>{course.totalHours || 0} hours</span>
-                  <span>•</span>
-                  <span>{course.enrolledStudents || 0} students</span>
                 </div>
               </div>
             </CardContent>
@@ -551,7 +523,7 @@ export default function CoursePage() {
                 )}
                 <div className="flex items-center">
                   <Users className="w-5 h-5 mr-2 text-primary" />
-                  <span>{course?.enrolledStudents || 0} learners enrolled</span>
+                  <span>{enrollmentCount} learners enrolled</span>
                 </div>
               </div>
             </CardContent>

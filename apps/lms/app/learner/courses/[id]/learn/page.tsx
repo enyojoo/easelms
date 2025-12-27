@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import { useClientAuthState } from "@/utils/client-auth"
@@ -8,11 +8,12 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle } from "lucide-react"
-import CourseLearningSkeleton from "@/components/CourseLearningSkeleton"
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProgress, useRealtimeQuizResults, useSaveProgress } from "@/lib/react-query/hooks"
+import { useQueryClient } from "@tanstack/react-query"
 
 interface Course {
   id: number
@@ -39,205 +40,122 @@ export default function CourseLearningPage() {
   const slugOrId = params.id as string
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [course, setCourse] = useState<Course | null>(null)
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
-  const [progress, setProgress] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
-  const [completedLessons, setCompletedLessons] = useState<number[]>([])
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
   const [lessonStartTime, setLessonStartTime] = useState<number | null>(null)
   const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
   const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
-  const [completedQuizzes, setCompletedQuizzes] = useState<{ [lessonId: number]: boolean }>({})
-  const [quizScores, setQuizScores] = useState<{ [lessonId: number]: number }>({})
-  const [quizAnswers, setQuizAnswers] = useState<{ [lessonId: number]: number[] }>({})
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const quizDataLoadedRef = useRef<boolean>(false)
 
-  // Load quiz completion status from Supabase (only once per course)
-  useEffect(() => {
-        const loadQuizData = async () => {
-          if (!mounted || !course || !id || quizDataLoadedRef.current) return
+  // Use React Query hooks for data fetching
+  const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
+  const { data: enrollmentsData } = useEnrollments()
+  const { data: progressData } = useProgress(id)
+  const { data: quizResultsData } = useQuizResults(id)
+  const saveProgressMutation = useSaveProgress()
+  const queryClient = useQueryClient()
+  
+  // Set up real-time subscriptions for progress and quiz results
+  useRealtimeProgress(id, user?.id)
+  useRealtimeQuizResults(id, user?.id)
 
-          try {
-            // Fetch quiz results (answers)
-            const quizResultsResponse = await fetch(`/api/courses/${id}/quiz-results`)
-            let quizResultsData: any = { results: [] }
-            if (quizResultsResponse.ok) {
-              quizResultsData = await quizResultsResponse.json()
-            }
+  const course = courseData?.course
 
-            // Fetch lesson progress (including quiz scores)
-            const progressResponse = await fetch(`/api/progress?courseId=${id}`)
-            let progressData: any = { progress: [] }
-            if (progressResponse.ok) {
-              progressData = await progressResponse.json()
-            }
+  // Calculate progress from React Query data (matching learn page logic)
+  const { completedLessons, progress } = useMemo(() => {
+    if (!course || !progressData?.progress) {
+      return { completedLessons: [], progress: 0 }
+    }
 
-            const completedQuizzesMap: { [lessonId: number]: boolean } = {}
-            const answersMap: { [lessonId: number]: number[] } = {}
-            const scoresMap: { [lessonId: number]: number } = {}
+    const progressList = progressData.progress
+    const completed: number[] = []
+    const videoProg: { [key: number]: number } = {}
 
-            // Process quiz results (answers)
-            const resultsByLesson: { [lessonId: number]: any[] } = {}
-            quizResultsData.results.forEach((result: any) => {
-              const lessonId = result.lesson_id
-              if (!resultsByLesson[lessonId]) {
-                resultsByLesson[lessonId] = []
-              }
-              resultsByLesson[lessonId].push(result)
-            })
-
-            Object.entries(resultsByLesson).forEach(([lessonId, results]: [string, any]) => {
-              const lessonIdNum = parseInt(lessonId)
-              completedQuizzesMap[lessonIdNum] = true
-              answersMap[lessonIdNum] = results.map((r: any) => {
-                const answer = r.user_answer
-                return typeof answer === 'string' ? parseInt(answer) : answer
-              }).filter((a: any) => a !== null && !isNaN(a))
-            })
-
-            // Process progress data (scores)
-            progressData.progress.forEach((p: any) => {
-              if (p.lesson_id && p.quiz_score !== null && p.quiz_score !== undefined) {
-                scoresMap[p.lesson_id] = p.quiz_score
-              }
-            })
-
-            setCompletedQuizzes(completedQuizzesMap)
-            setQuizAnswers(answersMap)
-            setQuizScores(scoresMap)
-            quizDataLoadedRef.current = true
-
-            console.log("Loaded quiz data from Supabase:", { completedQuizzesMap, answersMap, scoresMap, rawQuizResults: quizResultsData.results, rawProgress: progressData.progress })
-          } catch (e) {
-            console.warn("Could not load quiz data from Supabase:", e)
-          }
+    progressList.forEach((p: any) => {
+      if (p.completed) {
+        const lessonIndex = course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
+        if (lessonIndex >= 0) {
+          completed.push(lessonIndex)
         }
+      }
+      if (p.video_progress !== undefined && p.video_progress !== null) {
+        const lessonIndex = course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
+        if (lessonIndex >= 0) {
+          videoProg[lessonIndex] = p.video_progress
+        }
+      }
+    })
 
+    // Update video progress state
+    if (Object.keys(videoProg).length > 0) {
+      setVideoProgress((prev) => ({ ...prev, ...videoProg }))
+    }
 
-    loadQuizData()
-  }, [mounted, course, id])
+    const progressPercent = course.lessons ? (completed.length / course.lessons.length) * 100 : 0
+    const allCompleted = course.lessons ? completed.length === course.lessons.length : false
+    setAllLessonsCompleted(allCompleted)
 
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+    return { completedLessons: completed, progress: progressPercent }
+  }, [course, progressData])
+
+  // Process quiz data from React Query
+  const { completedQuizzes, quizScores, quizAnswers } = useMemo(() => {
+    const completedQuizzesMap: { [lessonId: number]: boolean } = {}
+    const answersMap: { [lessonId: number]: number[] } = {}
+    const scoresMap: { [lessonId: number]: number } = {}
+
+    if (!quizResultsData?.results || !progressData?.progress) {
+      return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
+    }
+
+    // Process quiz results (answers)
+    const resultsByLesson: { [lessonId: number]: any[] } = {}
+    quizResultsData.results.forEach((result: any) => {
+      const lessonId = result.lesson_id
+      if (!resultsByLesson[lessonId]) {
+        resultsByLesson[lessonId] = []
+      }
+      resultsByLesson[lessonId].push(result)
+    })
+
+    Object.entries(resultsByLesson).forEach(([lessonId, results]: [string, any]) => {
+      const lessonIdNum = parseInt(lessonId)
+      completedQuizzesMap[lessonIdNum] = true
+      answersMap[lessonIdNum] = results.map((r: any) => {
+        const answer = r.user_answer
+        return typeof answer === 'string' ? parseInt(answer) : answer
+      }).filter((a: any) => a !== null && !isNaN(a))
+    })
+
+    // Process progress data (scores)
+    progressData.progress.forEach((p: any) => {
+      if (p.lesson_id && p.quiz_score !== null && p.quiz_score !== undefined) {
+        scoresMap[p.lesson_id] = p.quiz_score
+      }
+    })
+
+    return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
+  }, [quizResultsData, progressData])
 
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
-      console.log("Learn page: User not authenticated, redirecting to login")
       router.push("/auth/learner/login")
     }
   }, [authLoading, user, router])
 
-  // Fetch course data and check enrollment
+  // Check enrollment and redirect if not enrolled
   useEffect(() => {
-    const fetchCourseData = async () => {
-      // Don't fetch until auth is loaded and user is available
-      if (authLoading || !user) {
-        console.log("Learn page: Auth still loading or no user")
-        return
-      }
+    if (!id || !enrollmentsData?.enrollments || !course) return
 
-      if (!id || !mounted) {
-        console.log("Learn page: No course ID or not mounted")
-        return
-      }
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        // Fetch course data
-        console.log("Learn page: Fetching course data for ID:", id)
-        const courseResponse = await fetch(`/api/courses/${id}`)
-        if (!courseResponse.ok) {
-          console.error("Learn page: Course fetch failed", { status: courseResponse.status })
-          if (courseResponse.status === 404) {
-            router.push("/learner/courses")
-            return
-          }
-          throw new Error("Failed to fetch course")
-        }
-        const courseData = await courseResponse.json()
-        console.log("Learn page: Course loaded:", courseData.course.title)
-        console.log("Learn page: First lesson data:", courseData.course.lessons?.[0])
-        setCourse(courseData.course)
-
-        // Check enrollment
-        console.log("Learn page: Checking enrollment for course", id)
-        const enrollmentsResponse = await fetch("/api/enrollments")
-        if (enrollmentsResponse.ok) {
-          const enrollmentsData = await enrollmentsResponse.json()
-          console.log("Learn page: Enrollments fetched:", enrollmentsData)
-          const enrollments = enrollmentsData.enrollments || []
-          const enrollment = enrollments.find((e: any) => e.course_id === parseInt(id))
-          console.log("Learn page: Enrollment check result:", { found: !!enrollment, courseId: parseInt(id) })
-          if (!enrollment) {
-            console.log("Learn page: User not enrolled, redirecting to course page")
-            router.push(`/learner/courses/${createCourseSlug(courseData.course.title, parseInt(id))}`)
-            return
-          }
-        } else {
-          console.error("Learn page: Enrollments fetch failed", { status: enrollmentsResponse.status })
-          router.push(`/learner/courses/${createCourseSlug(courseData.course.title, parseInt(id))}`)
-          return
-        }
-
-        // Fetch progress
-        console.log("Learn page: Fetching progress for course", id)
-        const progressResponse = await fetch(`/api/progress?courseId=${id}`)
-        if (progressResponse.ok) {
-          const progressData = await progressResponse.json()
-          const progressList = progressData.progress || []
-          console.log("Learn page: Progress data fetched:", progressList)
-          
-          // Map progress to completed lessons and video progress
-          const completed: number[] = []
-          const videoProg: { [key: number]: number } = {}
-          
-          progressList.forEach((p: any) => {
-            if (p.completed) {
-              const lessonIndex = courseData.course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
-              if (lessonIndex >= 0) {
-                completed.push(lessonIndex)
-              }
-            }
-            if (p.video_progress !== undefined && p.video_progress !== null) {
-              const lessonIndex = courseData.course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
-              if (lessonIndex >= 0) {
-                videoProg[lessonIndex] = p.video_progress
-              }
-            }
-          })
-          
-          setCompletedLessons(completed)
-          setVideoProgress(videoProg)
-          
-          if (courseData.course.lessons) {
-            const progressPercent = (completed.length / courseData.course.lessons.length) * 100
-            setProgress(progressPercent)
-            setAllLessonsCompleted(completed.length === courseData.course.lessons.length)
-            console.log("Learn page: Progress calculated:", { progressPercent, completed: completed.length, total: courseData.course.lessons.length })
-          }
-        } else {
-          console.warn("Learn page: Progress fetch failed or returned empty, continuing with default state")
-        }
-      } catch (err: any) {
-        console.error("Learn page: Error fetching course data:", err)
-        setError(err.message || "Failed to load course")
-      } finally {
-        setLoading(false)
-      }
+    const courseId = parseInt(id)
+    const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
+    
+    if (!enrollment) {
+      router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
     }
-
-    fetchCourseData()
-  }, [id, mounted, authLoading, user, router])
+  }, [id, enrollmentsData, course, router])
 
   // Save progress to API (debounced)
   const saveProgress = async (
@@ -257,25 +175,16 @@ export default function CourseLearningPage() {
     // Debounce progress saves
     progressSaveTimeoutRef.current = setTimeout(async () => {
       try {
-        const lesson = course.lessons[currentLessonIndex]
-        if (!lesson) return
-
         const progressPayload: any = {
           course_id: parseInt(id),
-          lesson_id: lesson.id,
+          lesson_id: lessonId,
           completed: completed,
-          completed_at: completed ? new Date().toISOString() : null, // Set timestamp only if completed
-          quiz_score: quizPassed && scorePercentage !== undefined ? Math.round(scorePercentage) : null, // Only save score if quiz passed, rounded to integer
-          quiz_attempts: quizAttempts !== undefined ? quizAttempts : null, // Include quiz attempts
+          completed_at: completed ? new Date().toISOString() : null,
+          quiz_score: quizPassed && scorePercentage !== undefined ? Math.round(scorePercentage) : null,
+          quiz_attempts: quizAttempts !== undefined ? quizAttempts : null,
         }
 
-        await fetch("/api/progress", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(progressPayload),
-        })
+        await saveProgressMutation.mutateAsync(progressPayload)
       } catch (error) {
         console.error("Error saving progress:", error)
       }
@@ -316,7 +225,7 @@ export default function CourseLearningPage() {
     if (!course || completedLessons.includes(currentLessonIndex)) {
       const currentLesson = course.lessons[currentLessonIndex]
       if (currentLesson?.quiz_questions && currentLesson.quiz_questions.length > 0) {
-        setActiveTab("quiz")
+      setActiveTab("quiz")
       } else if (currentLesson?.resources && currentLesson.resources.length > 0) {
         setActiveTab("resources")
       } else if (currentLessonIndex < course.lessons.length - 1) {
@@ -336,21 +245,13 @@ export default function CourseLearningPage() {
     const lesson = course.lessons[currentLessonIndex]
     if (!lesson) return
 
-    const newCompletedLessons = [...completedLessons, currentLessonIndex]
-    setCompletedLessons(newCompletedLessons)
-    const newProgress = (newCompletedLessons.length / course.lessons.length) * 100
-    setProgress(newProgress)
-    if (newCompletedLessons.length === course.lessons.length) {
-      setAllLessonsCompleted(true)
-    }
-
-    // Save progress to API
+    // Save progress to API - progress will update automatically from React Query cache
     await saveProgress(lesson.id, true)
     
     // Auto-advance to quiz if present, otherwise to resources, or next lesson
     const currentLesson = course.lessons[currentLessonIndex]
     if (currentLesson?.quiz_questions && currentLesson.quiz_questions.length > 0) {
-      setActiveTab("quiz")
+    setActiveTab("quiz")
     } else if (currentLesson?.resources && currentLesson.resources.length > 0) {
       setActiveTab("resources")
     } else if (currentLessonIndex < course.lessons.length - 1) {
@@ -367,17 +268,9 @@ export default function CourseLearningPage() {
   }
 
   const clearQuizData = (lessonId: number) => {
-    // Clear quiz data for a specific lesson to prevent flickering when retaking
-    setCompletedQuizzes((prev) => {
-      const updated = { ...prev }
-      delete updated[lessonId]
-      return updated
-    })
-    setQuizAnswers((prev) => {
-      const updated = { ...prev }
-      delete updated[lessonId]
-      return updated
-    })
+    // Invalidate quiz results cache to refetch fresh data when retaking
+    // This will cause the quiz data to be recalculated from React Query
+    queryClient.invalidateQueries({ queryKey: ["quizResults", id] })
   }
 
   const handleVideoProgressUpdate = async (progressPercentage: number) => {
@@ -387,7 +280,7 @@ export default function CourseLearningPage() {
     }))
   }
 
-  const handleQuizComplete = async (answers?: number[], shuffledQuestions?: any[], attemptCount?: number) => {
+  const handleQuizComplete = async (answers?: number[], questions?: any[], attemptCount?: number) => {
     if (!course || !id) return
 
     const lesson = course.lessons[currentLessonIndex]
@@ -397,13 +290,13 @@ export default function CourseLearningPage() {
     let quizPassed = false
     let scorePercentage = 0
     
-    if (answers && answers.length > 0 && shuffledQuestions && shuffledQuestions.length > 0) {
+    if (answers && answers.length > 0 && questions && questions.length > 0) {
       let correctCount = 0
       
-      // Count correct answers using the shuffled questions (which match the order of answers)
+      // Count correct answers using the questions (which match the order of answers)
       console.log("Score calculation - Answers and questions:")
       for (let i = 0; i < answers.length; i++) {
-        const question = shuffledQuestions[i]
+        const question = questions[i]
         const userAnswer = answers[i]
         const isCorrect = question && userAnswer === question.correctAnswer
         
@@ -417,119 +310,44 @@ export default function CourseLearningPage() {
       scorePercentage = (correctCount / answers.length) * 100
       const minimumScore = course?.settings?.minimumQuizScore || 50
       quizPassed = scorePercentage >= minimumScore
-      
-      // Set quiz score
-      setQuizScores((prev) => ({
-        ...prev,
-        [lesson.id]: scorePercentage,
-      }))
 
       console.log(`Quiz score: ${scorePercentage.toFixed(0)}% (${correctCount}/${answers.length}), Minimum: ${minimumScore}%, Passed: ${quizPassed}`)
     } else {
-      console.warn("Cannot calculate score - missing answers or shuffledQuestions", { answers, shuffledQuestions })
+      console.warn("Cannot calculate score - missing answers or questions", { answers, questions })
     }
 
-    // Mark quiz as completed and store answers
-    const updatedCompletedQuizzes = {
-      ...completedQuizzes,
-      [lesson.id]: true,
-    }
-    
-    const updatedAnswers = answers ? {
-      ...quizAnswers,
-      [lesson.id]: answers,
-    } : quizAnswers
+    // Quiz results are saved by QuizComponent via API
+    // Invalidate React Query cache to refetch updated quiz results
+    queryClient.invalidateQueries({ queryKey: ["quizResults", id] })
 
-    setCompletedQuizzes(updatedCompletedQuizzes)
-    setQuizAnswers(updatedAnswers)
-    
-    // Save to Supabase
+    // Always save progress immediately (no debounce for quiz completion)
+    // This ensures quiz results and progress are saved to the database
     try {
-      if (answers && answers.length > 0) {
-        const response = await fetch(`/api/courses/${id}/quiz-results`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            lessonId: lesson.id,
-            answers: answers.map((answer, index) => {
-              const question = currentLesson.quiz_questions?.[index]
-              return {
-                questionId: question?.id || `q-${index}`,
-                userAnswer: answer,
-              }
-            }),
-          }),
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          console.log("Quiz results saved to Supabase:", data)
-          
-          // Reset the loaded ref so we reload fresh data from Supabase
-          quizDataLoadedRef.current = false
-          
-          // Reload quiz data from Supabase to show updated results
-          const reloadResponse = await fetch(`/api/courses/${id}/quiz-results`)
-          if (reloadResponse.ok) {
-            const reloadedData = await reloadResponse.json()
-            if (reloadedData.results && Array.isArray(reloadedData.results)) {
-              // Parse Supabase results and organize by lesson
-              const completedQuizzesMap: { [lessonId: number]: boolean } = {}
-              const answersMap: { [lessonId: number]: number[] } = {}
-
-              // Group results by lesson
-              const resultsByLesson: { [lessonId: number]: any[] } = {}
-              reloadedData.results.forEach((result: any) => {
-                const lessonId = result.lesson_id
-                if (!resultsByLesson[lessonId]) {
-                  resultsByLesson[lessonId] = []
-                }
-                resultsByLesson[lessonId].push(result)
-              })
-
-              // Convert to answers array format
-              Object.entries(resultsByLesson).forEach(([lessonId, results]: [string, any]) => {
-                const lessonIdNum = parseInt(lessonId)
-                completedQuizzesMap[lessonIdNum] = true
-                answersMap[lessonIdNum] = results.map((r: any) => {
-                  const answer = r.user_answer
-                  return typeof answer === 'string' ? parseInt(answer) : answer
-                }).filter((a: any) => a !== null && !isNaN(a))
-              })
-
-              setCompletedQuizzes(completedQuizzesMap)
-              setQuizAnswers(answersMap)
-              quizDataLoadedRef.current = true
-              
-              console.log("Reloaded quiz data from Supabase after submission")
-            }
-          }
-        } else {
-          const errorData = await response.json().catch(() => ({}))
-          console.warn("Quiz results save warning:", errorData.error || "Could not save to Supabase")
-        }
+      const progressPayload: any = {
+        course_id: parseInt(id),
+        lesson_id: lesson.id,
+        completed: quizPassed, // Only mark as completed if quiz passed
+        completed_at: quizPassed ? new Date().toISOString() : null,
+        quiz_score: scorePercentage !== undefined ? Math.round(scorePercentage) : null,
+        quiz_attempts: attemptCount !== undefined ? attemptCount : null,
       }
-    } catch (e) {
-      console.error("Failed to save quiz completion to Supabase:", e)
+
+      console.log("📤 Saving quiz progress to database:", progressPayload)
+      // Save immediately (no debounce) for quiz completion
+      await saveProgressMutation.mutateAsync(progressPayload)
+      console.log("✅ Quiz progress saved successfully")
+      
+      // Invalidate caches to update UI
+      queryClient.invalidateQueries({ queryKey: ["progress", id] })
+      queryClient.invalidateQueries({ queryKey: ["quizResults", id] })
+    } catch (error) {
+      console.error("❌ Error saving quiz progress:", error)
     }
 
     // Mark lesson as completed ONLY if quiz was passed
-    console.log(`Checking lesson completion: quizPassed=${quizPassed}, currentLessonIndex=${currentLessonIndex}, completedLessons=${completedLessons}`)
+    console.log(`Checking lesson completion: quizPassed=${quizPassed}, currentLessonIndex=${currentLessonIndex}`)
     
     if (quizPassed && !completedLessons.includes(currentLessonIndex)) {
-      const newCompletedLessons = [...completedLessons, currentLessonIndex]
-      setCompletedLessons(newCompletedLessons)
-      const newProgress = (newCompletedLessons.length / course.lessons.length) * 100
-      setProgress(newProgress)
-      if (newCompletedLessons.length === course.lessons.length) {
-        setAllLessonsCompleted(true)
-      }
-
-      // Save progress to API
-      await saveProgress(lesson.id, true, quizPassed, scorePercentage, attemptCount)
-      
       console.log("✅ Lesson marked as completed in course content", { lessonId: lesson.id, currentLessonIndex })
     } else if (!quizPassed) {
       console.log("❌ Quiz not passed - lesson will not be marked as completed")
@@ -551,17 +369,17 @@ export default function CourseLearningPage() {
       setActiveTab("resources")
     } else if (currentLessonIndex < course.lessons.length - 1) {
       // Go to next lesson
-      const nextIndex = currentLessonIndex + 1
-      if (!canAccessLesson(nextIndex)) {
-        alert("You must complete all required previous lessons before accessing this lesson.")
-        return
-      }
-      setCurrentLessonIndex(nextIndex)
-      setActiveTab("video")
-      setTimeLimitExceeded(false)
-    } else {
+        const nextIndex = currentLessonIndex + 1
+        if (!canAccessLesson(nextIndex)) {
+          alert("You must complete all required previous lessons before accessing this lesson.")
+          return
+        }
+        setCurrentLessonIndex(nextIndex)
+        setActiveTab("video")
+        setTimeLimitExceeded(false)
+      } else {
       // All lessons completed, go to summary
-      router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+        router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
     }
   }
 
@@ -642,20 +460,25 @@ export default function CourseLearningPage() {
     }
   }
 
-  // Show skeleton until mounted, auth is loaded, and course data is loaded
-  if (!mounted || authLoading || loading) {
-    return <CourseLearningSkeleton />
-  }
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  const hasData = !!course
+  const showSkeleton = (authLoading || !user || coursePending) && !hasData
 
-  if (error || !course) {
+  // Show error if course not found
+  if (courseError || (!coursePending && !course)) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
-          <p className="text-destructive">{error || "Course not found"}</p>
+          <p className="text-destructive">{courseError?.message || "Course not found"}</p>
           <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
         </div>
       </div>
     )
+  }
+
+  // Don't render until course is loaded
+  if (!course || showSkeleton) {
+    return null
   }
 
   const currentLesson = course.lessons[currentLessonIndex]
@@ -697,8 +520,8 @@ export default function CourseLearningPage() {
               <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
                 <TabsTrigger
                   value="video"
-                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                  >
+                  className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
+                >
                     Lesson
                 </TabsTrigger>
                 {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
@@ -766,54 +589,52 @@ export default function CourseLearningPage() {
                   <ScrollArea className="w-full h-full flex-1 min-h-0">
                     <div className="p-3 sm:p-4 md:p-6">
                       <QuizComponent
-                          quiz={{
-                            questions: currentLesson.quiz_questions.map((q: any) => {
-                              // Map API quiz question structure to component format
-                              let options: string[] = []
-                              let correctAnswer = 0
+                      quiz={{
+                        questions: currentLesson.quiz_questions.map((q: any) => {
+                          // Map API quiz question structure to component format
+                          let options: string[] = []
+                          let correctAnswer = 0
 
-                              if (q.type === "multiple_choice") {
-                                options = Array.isArray(q.options) ? q.options : (q.options_json ? JSON.parse(q.options_json) : [])
-                                correctAnswer = typeof q.correct_answer === "number" ? q.correct_answer : 0
-                              } else if (q.type === "fill_blank" || q.type === "fill-blank") {
-                                options = Array.isArray(q.correct_answers) ? q.correct_answers : []
-                                correctAnswer = 0
-                              } else if (q.type === "short_answer" || q.type === "short-answer") {
-                                options = Array.isArray(q.correct_keywords) ? q.correct_keywords : []
-                                correctAnswer = 0
-                              } else if (q.type === "essay") {
-                                options = []
-                                correctAnswer = -1
-                              } else {
-                                // Default fallback
-                                options = Array.isArray(q.options) ? q.options : []
-                                correctAnswer = typeof q.correct_answer === "number" ? q.correct_answer : 0
-                              }
+                          if (q.type === "multiple_choice") {
+                            options = Array.isArray(q.options) ? q.options : (q.options_json ? JSON.parse(q.options_json) : [])
+                            correctAnswer = typeof q.correct_answer === "number" ? q.correct_answer : 0
+                          } else if (q.type === "fill_blank" || q.type === "fill-blank") {
+                            options = Array.isArray(q.correct_answers) ? q.correct_answers : []
+                            correctAnswer = 0
+                          } else if (q.type === "short_answer" || q.type === "short-answer") {
+                            options = Array.isArray(q.correct_keywords) ? q.correct_keywords : []
+                            correctAnswer = 0
+                          } else if (q.type === "essay") {
+                            options = []
+                            correctAnswer = -1
+                          } else {
+                            // Default fallback
+                            options = Array.isArray(q.options) ? q.options : []
+                            correctAnswer = typeof q.correct_answer === "number" ? q.correct_answer : 0
+                          }
 
-                              return {
-                                question: q.question || q.text || "",
-                                options: options,
-                                correctAnswer: correctAnswer,
-                                id: q.id?.toString() || "",
-                              }
-                            }),
-                            shuffleQuestions: currentLesson.quiz?.shuffleQuestions || false,
-                            shuffleAnswers: false,
+                          return {
+                            question: q.question || q.text || "",
+                            options: options,
+                            correctAnswer: correctAnswer,
+                            id: q.id?.toString() || "",
+                          }
+                        }),
                             showResultsImmediately: currentLesson.quiz?.showCorrectAnswers || true,
                             allowMultipleAttempts: currentLesson.quiz?.allowMultipleAttempts || true,
                             showCorrectAnswers: currentLesson.quiz?.showCorrectAnswers || true,
                             maxAttempts: currentLesson.quiz?.maxAttempts || 3,
-                          }}
-                          onComplete={handleQuizComplete}
+                      }}
+                      onComplete={handleQuizComplete}
                           onContinue={handleContinueFromQuiz}
                           onRetry={() => clearQuizData(currentLesson.id)}
-                          minimumQuizScore={course?.settings?.minimumQuizScore || course?.settings?.certificate?.minimumQuizScore || 50}
-                          courseId={id}
-                          lessonId={currentLesson.id}
+                      minimumQuizScore={course?.settings?.minimumQuizScore || course?.settings?.certificate?.minimumQuizScore || 50}
+                      courseId={id}
+                      lessonId={currentLesson.id}
                           showResultsOnly={completedQuizzes[currentLesson.id]}
                           prefilledAnswers={quizAnswers[currentLesson.id] || []}
                           initialScore={quizScores[currentLesson.id]}
-                        />
+                    />
                     </div>
                   </ScrollArea>
                 </TabsContent>
@@ -935,9 +756,9 @@ export default function CourseLearningPage() {
                           <BookOpen className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
-                            {index + 1}. {lesson.title}
-                          </span>
+                            <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
+                              {index + 1}. {lesson.title}
+                            </span>
                         </div>
                       </div>
                     </button>

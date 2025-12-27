@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,79 +9,99 @@ import { ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { createCourseSlug } from "@/lib/slug"
-import { cancelSubscription, type Purchase } from "@/utils/enrollment"
-import type { User } from "@/data/users"
+import { cancelSubscription } from "@/utils/enrollment"
 import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
+import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchases"
+import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
+import { useQueryClient, useQuery } from "@tanstack/react-query"
 
 export default function PurchaseHistoryPage() {
   const router = useRouter()
-  const { user: authUser, loading: authLoading, userType } = useClientAuthState()
-  const [user, setUser] = useState<User | null>(null)
-  const [purchases, setPurchases] = useState<Purchase[]>([])
-  const [loading, setLoading] = useState(true)
-  const [enrolledCourses, setEnrolledCourses] = useState<any[]>([])
-  const [mounted, setMounted] = useState(false)
+  const { user, loading: authLoading, userType } = useClientAuthState()
+  const queryClient = useQueryClient()
+  
+  // Fetch purchases, enrollments, and courses using React Query
+  const { data: purchasesData, isPending: purchasesPending } = usePurchases()
+  const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
+  
+  // Get enrolled course IDs (sorted for stable query key)
+  const enrolledIds = enrollmentsData?.enrollments
+    ?.map((e) => e.course_id)
+    .filter(Boolean)
+    .sort((a, b) => a - b) || []
+  
+  const enrolledIdsKey = enrolledIds.join(',')
+  
+  // Fetch courses for enrolled IDs using a separate query
+  const { data: coursesData, isPending: coursesPending } = useQuery({
+    queryKey: ["courses", "enrolled", enrolledIdsKey],
+    queryFn: async () => {
+      if (enrolledIds.length === 0) {
+        return { courses: [] }
+      }
+      const response = await fetch(`/api/courses?ids=${enrolledIdsKey}`)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || "Failed to fetch courses")
+      }
+      return response.json()
+    },
+    enabled: enrolledIds.length > 0,
+    staleTime: 10 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
+  })
 
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
+  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading) {
-      if (!authUser || userType !== "user") {
+      if (!user || userType !== "user") {
         router.push("/auth/learner/login")
-        return
       }
-      setUser(authUser as User)
-      loadPurchaseData()
     }
-  }, [authLoading, authUser, userType, router])
+  }, [authLoading, user, userType, router])
 
-  const loadPurchaseData = async () => {
-    if (!authUser) return
-
-    try {
-      setLoading(true)
-
-      // Load purchases
-      const purchasesResponse = await fetch("/api/purchases")
-      if (purchasesResponse.ok) {
-        const purchasesData = await purchasesResponse.json()
-        setPurchases(purchasesData.purchases || [])
-      } else {
-        console.warn("Failed to fetch purchases:", purchasesResponse.status)
-        setPurchases([])
-      }
-
-      // Load enrolled courses to match with purchases
-      const enrollmentsResponse = await fetch("/api/enrollments")
-      if (enrollmentsResponse.ok) {
-        const enrollmentsData = await enrollmentsResponse.json()
-        const enrollments = enrollmentsData.enrollments || []
-        const enrolledIds = enrollments.map((e: any) => e.course_id).filter(Boolean)
-
-        if (enrolledIds.length > 0) {
-          const coursesResponse = await fetch(`/api/courses?ids=${enrolledIds.join(',')}`)
-          if (coursesResponse.ok) {
-            const coursesData = await coursesResponse.json()
-            setEnrolledCourses(coursesData.courses || [])
+  // Pre-fetch data when user is authenticated
+  useEffect(() => {
+    if (!authLoading && user && userType === "user") {
+      // Pre-fetch purchases
+      queryClient.prefetchQuery({
+        queryKey: ["purchases"],
+        queryFn: async () => {
+          const response = await fetch("/api/purchases")
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || "Failed to fetch purchases")
           }
-        }
-      }
-    } catch (error) {
-      console.error("Error loading purchase data:", error)
-    } finally {
-      setLoading(false)
+          return response.json()
+        },
+      })
+      
+      // Pre-fetch enrollments
+      queryClient.prefetchQuery({
+        queryKey: ["enrollments"],
+        queryFn: async () => {
+          const response = await fetch("/api/enrollments")
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || "Failed to fetch enrollments")
+          }
+          return response.json()
+        },
+      })
     }
-  }
+  }, [authLoading, user, userType, queryClient])
 
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || loading || !user
+  const purchases: Purchase[] = purchasesData?.purchases || []
+  const enrolledCourses = coursesData?.courses || []
+  
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasAnyData = purchasesData || enrollmentsData || coursesData
+  const showSkeleton = (authLoading || !user || userType !== "user") && !hasAnyData
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-      {isLoading ? (
+      {showSkeleton ? (
         <PurchaseHistorySkeleton />
       ) : (
         <>
@@ -180,13 +200,8 @@ export default function PurchaseHistoryPage() {
                               onClick={() => {
                                 if (window.confirm("Are you sure you want to cancel this subscription? You will be redirected to support to complete the cancellation.")) {
                                   cancelSubscription(purchase.id)
-                                  setPurchases((prev) =>
-                                    prev.map((p) =>
-                                      p.id === purchase.id
-                                        ? { ...p, status: "cancelled" as const, cancelledAt: new Date().toISOString() }
-                                        : p
-                                    )
-                                  )
+                                  // Invalidate purchases cache to refetch updated data
+                                  queryClient.invalidateQueries({ queryKey: ["purchases"] })
                                   router.push("/learner/support")
                                 }
                               }}

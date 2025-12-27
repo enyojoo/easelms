@@ -138,17 +138,17 @@ export async function GET() {
 
       isAdmin
         ? adminClient
-            .from("payments")
-            .select(`
-              id,
-              created_at,
-              amount_usd,
+        .from("payments")
+        .select(`
+          id,
+          created_at,
+          amount_usd,
               user_id,
               course_id
-            `)
-            .eq("status", "completed")
-            .order("created_at", { ascending: false })
-            .limit(5)
+        `)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(5)
         : Promise.resolve({ data: [] })
     ])
 

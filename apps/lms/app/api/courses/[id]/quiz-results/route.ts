@@ -20,7 +20,7 @@ export async function GET(
 
   // Use service role to bypass RLS and get quiz results
   const serviceSupabase = createServiceRoleClient()
-  
+
   // Get quiz results for this user and course
   const { data: quizResults, error } = await serviceSupabase
     .from("quiz_results")
@@ -130,39 +130,60 @@ export async function POST(
     // Extract quiz questions from content
     const quizQuestions = content?.quiz?.questions || []
     console.log("Extracted quiz questions - Count:", quizQuestions.length)
+    console.log("Received answers:", answers)
+    console.log("Question IDs in quiz:", quizQuestions.map((q: any) => ({ id: q.id, type: typeof q.id })))
 
     // Process and save each answer
     const resultsToInsert = []
     let correctCount = 0
 
-    for (const answer of answers) {
-      const question = quizQuestions.find((q: any) => q.id === answer.questionId)
+    for (let i = 0; i < answers.length; i++) {
+      const answer = answers[i]
+      let question = null
+      
+      // Try multiple matching strategies
+      // 1. Match by exact ID (string or number)
+      question = quizQuestions.find((q: any) => {
+        return q.id === answer.questionId || 
+               String(q.id) === String(answer.questionId) ||
+               q.id?.toString() === answer.questionId?.toString()
+      })
+      
+      // 2. If not found, try by index (fallback)
+      if (!question && i < quizQuestions.length) {
+        console.log(`Question ID ${answer.questionId} not found, using index ${i} as fallback`)
+        question = quizQuestions[i]
+      }
+      
       if (!question) {
-        console.log("Question not found for id:", answer.questionId)
+        console.error(`Question not found for answer ${i}:`, answer, "Available questions:", quizQuestions.length)
         continue
       }
 
       // Determine if answer is correct based on question type
       let isCorrect = false
-      const qType = question.type || "multiple-choice"
+      const qType = question.type || "multiple-choice" || "multiple_choice"
       
-      if (qType === "multiple-choice") {
-        // For multiple choice, compare with correctOption index
-        isCorrect = question.correctOption === answer.userAnswer
-      } else if (qType === "true-false") {
-        isCorrect = question.correctOption === answer.userAnswer
-      } else if (qType === "fill-blank") {
+      if (qType === "multiple-choice" || qType === "multiple_choice") {
+        // For multiple choice, compare with correctOption or correct_answer
+        const correctAnswer = question.correctOption !== undefined ? question.correctOption : question.correct_answer
+        isCorrect = correctAnswer === answer.userAnswer
+        console.log(`Question ${i} (multiple-choice): correctAnswer=${correctAnswer}, userAnswer=${answer.userAnswer}, isCorrect=${isCorrect}`)
+      } else if (qType === "true-false" || qType === "true_false") {
+        const correctAnswer = question.correctOption !== undefined ? question.correctOption : question.correct_answer
+        isCorrect = correctAnswer === answer.userAnswer
+      } else if (qType === "fill-blank" || qType === "fill_blank") {
         const correctAnswers = Array.isArray(question.correctAnswers)
           ? question.correctAnswers
-          : [question.correctAnswers]
+          : (question.correct_answers ? (Array.isArray(question.correct_answers) ? question.correct_answers : [question.correct_answers]) : [])
         isCorrect = correctAnswers.some(
           (ca: any) => ca.toString().toLowerCase() === answer.userAnswer?.toString().toLowerCase()
         )
-      } else if (qType === "short-answer") {
+      } else if (qType === "short-answer" || qType === "short_answer") {
         // For short answer, check if user answer contains keywords
         const correctKeywords = Array.isArray(question.correctKeywords)
           ? question.correctKeywords
-          : [question.correctKeywords]
+          : (question.correct_keywords ? (Array.isArray(question.correct_keywords) ? question.correct_keywords : [question.correct_keywords]) : [])
         const userAnswerLower = answer.userAnswer?.toString().toLowerCase() || ""
         isCorrect = correctKeywords.some((keyword: any) =>
           userAnswerLower.includes(keyword.toString().toLowerCase())

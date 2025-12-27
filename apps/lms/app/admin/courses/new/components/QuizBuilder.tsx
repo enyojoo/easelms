@@ -162,8 +162,6 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
               quiz={{
                 enabled: quiz.enabled,
                 questions: questions,
-                shuffleQuestions: (quiz as any).shuffleQuestions,
-                shuffleAnswers: (quiz as any).shuffleAnswers,
                 showResultsImmediately: (quiz as any).showResultsImmediately,
                 allowMultipleAttempts: (quiz as any).allowMultipleAttempts,
                 maxAttempts: (quiz as any).maxAttempts,

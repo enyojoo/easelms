@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import CourseCard from "@/components/CourseCard"
 import CourseCardSkeleton from "@/components/CourseCardSkeleton"
 import CoursesPageSkeleton from "@/components/CoursesPageSkeleton"
+import { useCourses, useEnrollments, useRealtimeEnrollments } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -26,18 +27,33 @@ export default function CoursesPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
   const [dashboardUser, setDashboardUser] = useState<User | null>(null)
-  const [courses, setCourses] = useState<Course[]>([])
-  const [enrollments, setEnrollments] = useState<any[]>([])
-  const [coursesLoading, setCoursesLoading] = useState(true)
-  const [coursesError, setCoursesError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("relevance")
-  const [mounted, setMounted] = useState(false)
 
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Use React Query hooks for data fetching
+  const { data: coursesData, isPending: coursesPending, error: coursesError } = useCourses()
+  const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
+  
+  // Set up real-time subscription for enrollments
+  useRealtimeEnrollments(user?.id)
+
+  // Process courses data
+  const courses = useMemo(() => {
+    if (!coursesData?.courses) return []
+    return coursesData.courses.map((course: any) => ({
+      ...course,
+      lessons: Array.isArray(course.lessons) ? course.lessons : [],
+      settings: course.settings || {},
+      price: course.price || 0,
+      description: course.description || "",
+      image: course.image || course.thumbnail || "/placeholder.svg",
+    }))
+  }, [coursesData])
+
+  // Process enrollments data
+  const enrollments = useMemo(() => {
+    return enrollmentsData?.enrollments || []
+  }, [enrollmentsData])
 
   useEffect(() => {
     if (!authLoading) {
@@ -49,59 +65,10 @@ export default function CoursesPage() {
     }
   }, [user, userType, authLoading, router])
 
-  // Fetch courses and enrollments
-  useEffect(() => {
-    const fetchData = async () => {
-      if (authLoading || !dashboardUser) return
-
-      try {
-        setCoursesLoading(true)
-        setCoursesError(null)
-
-        // Fetch all courses
-        const coursesResponse = await fetch("/api/courses")
-        if (!coursesResponse.ok) {
-          const errorData = await coursesResponse.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch courses")
-        }
-        const coursesData = await coursesResponse.json()
-        const fetchedCourses = coursesData.courses || []
-        
-        // Ensure courses have required fields for CourseCard
-        const processedCourses = fetchedCourses.map((course: any) => ({
-          ...course,
-          lessons: Array.isArray(course.lessons) ? course.lessons : [],
-          settings: course.settings || {},
-          price: course.price || 0,
-          description: course.description || "",
-          image: course.image || course.thumbnail || "/placeholder.svg",
-        }))
-        
-        setCourses(processedCourses)
-
-        // Fetch enrollments
-        const enrollmentsResponse = await fetch("/api/enrollments")
-        if (enrollmentsResponse.ok) {
-          const enrollmentsData = await enrollmentsResponse.json()
-          setEnrollments(enrollmentsData.enrollments || [])
-        } else {
-          // Don't throw - just use empty array
-          console.warn("Failed to fetch enrollments:", enrollmentsResponse.status)
-          setEnrollments([])
-        }
-      } catch (error: any) {
-        console.error("Error fetching data:", error)
-        setCoursesError(error.message || "Failed to load courses")
-      } finally {
-        setCoursesLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [authLoading, dashboardUser])
-
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || authLoading || !dashboardUser
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasAnyData = coursesData || enrollmentsData
+  const showSkeleton = (authLoading || !dashboardUser) && !hasAnyData
 
   // Get enrolled and completed course IDs from enrollments
   const enrolledCourseIds = enrollments.map((e: any) => e.course_id)
@@ -140,9 +107,22 @@ export default function CoursesPage() {
     userProgress[enrollment.course_id] = enrollment.progress || 0
   })
 
+  // Handle error state
+  if (coursesError && !coursesPending) {
+    return (
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+        <div className="text-center py-12">
+          <p className="text-destructive mb-4">
+            {coursesError instanceof Error ? coursesError.message : "Failed to load courses"}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-      {isLoading ? (
+      {showSkeleton ? (
         <CoursesPageSkeleton />
       ) : (
         <>
@@ -187,7 +167,7 @@ export default function CoursesPage() {
         </TabsList>
 
         <TabsContent value="all" className="mt-4 md:mt-6">
-          {coursesLoading ? (
+          {coursesPending ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <CourseCardSkeleton key={i} />
@@ -221,7 +201,7 @@ export default function CoursesPage() {
         </TabsContent>
 
         <TabsContent value="enrolled" className="mt-4 md:mt-6">
-          {coursesLoading ? (
+          {coursesPending ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (
                 <CourseCardSkeleton key={i} />
@@ -258,7 +238,7 @@ export default function CoursesPage() {
         </TabsContent>
 
         <TabsContent value="completed" className="mt-4 md:mt-6">
-          {coursesLoading ? (
+          {coursesPending ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (
                 <CourseCardSkeleton key={i} />

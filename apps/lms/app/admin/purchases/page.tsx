@@ -95,11 +95,14 @@ export default function AdminPurchasesPage() {
     return matchesSearch && matchesStatus
   })
 
-  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = purchases.length > 0
+  const showSkeleton = (!mounted || authLoading || !user || userType !== "admin" || loading) && !hasData
 
   return (
     <div className="pt-4 md:pt-8">
-      {isLoading ? (
+      {showSkeleton ? (
         <AdminPurchasesSkeleton />
       ) : (
         <>

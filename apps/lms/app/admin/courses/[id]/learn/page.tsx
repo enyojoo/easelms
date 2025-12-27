@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, Eye } from "lucide-react"
-import CourseLearningSkeleton from "@/components/CourseLearningSkeleton"
 import VideoPlayer from "@/app/learner/courses/[id]/learn/components/VideoPlayer"
 import QuizComponent from "@/app/learner/courses/[id]/learn/components/QuizComponent"
 import ResourcesPanel from "@/app/learner/courses/[id]/learn/components/ResourcesPanel"
@@ -93,6 +92,21 @@ export default function AdminCourseLearningPage() {
           throw new Error("Failed to fetch course")
         }
         const courseData = await courseResponse.json()
+        
+        // Deduplicate lessons by ID to prevent showing duplicates
+        if (courseData.course?.lessons && Array.isArray(courseData.course.lessons)) {
+          const seenIds = new Set<number>()
+          const uniqueLessons = courseData.course.lessons.filter((lesson: any) => {
+            const lessonId = lesson.id
+            if (seenIds.has(lessonId)) {
+              return false
+            }
+            seenIds.add(lessonId)
+            return true
+          })
+          courseData.course.lessons = uniqueLessons
+        }
+        
         setCourse(courseData.course)
       } catch (err: any) {
         console.error("Error fetching course:", err)
@@ -366,12 +380,8 @@ export default function AdminCourseLearningPage() {
     }
   }
 
-  // Show skeleton until mounted, auth is loaded, and course data is loaded
-  if (!mounted || authLoading || loading) {
-    return <CourseLearningSkeleton />
-  }
-
-  if (error || !course) {
+  // Wait for course to load - no skeleton, just show error if needed
+  if (error || (!loading && !course)) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -380,6 +390,11 @@ export default function AdminCourseLearningPage() {
         </div>
       </div>
     )
+  }
+
+  // Don't render until course is loaded
+  if (!course) {
+    return null
   }
 
   const currentLesson = course.lessons[currentLessonIndex]
@@ -520,8 +535,6 @@ export default function AdminCourseLearningPage() {
                                 id: q.id?.toString() || "",
                               }
                             }),
-                            shuffleQuestions: currentLesson.quiz?.shuffleQuestions || false,
-                            shuffleAnswers: false,
                             showResultsImmediately: currentLesson.quiz?.showCorrectAnswers || true,
                             allowMultipleAttempts: currentLesson.quiz?.allowMultipleAttempts || true,
                             showCorrectAnswers: currentLesson.quiz?.showCorrectAnswers || true,

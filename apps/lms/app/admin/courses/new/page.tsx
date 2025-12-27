@@ -177,14 +177,12 @@ function NewCourseContent() {
                     quiz: content.quiz ? {
                       enabled: content.quiz.enabled ?? false,
                       questions: content.quiz.questions || [],
-                      shuffleQuestions: content.quiz.shuffleQuestions ?? false,
                       showCorrectAnswers: content.quiz.showCorrectAnswers ?? false,
                       allowMultipleAttempts: content.quiz.allowMultipleAttempts ?? false,
                       maxAttempts: content.quiz.maxAttempts ?? 3,
                     } : {
                       enabled: false,
                       questions: [],
-                      shuffleQuestions: false,
                       showCorrectAnswers: false,
                       allowMultipleAttempts: false,
                       maxAttempts: 3,

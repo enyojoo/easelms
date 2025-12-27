@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,64 +20,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface TeamMember {
-  id: string
-  name: string
-  email: string
-  user_type: "admin" | "instructor"
-}
+import { useTeamMembers, useCreateTeamMember, useDeleteUser, type TeamMember } from "@/lib/react-query/hooks/useUsers"
 
 export default function TeamManagement() {
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [newMember, setNewMember] = useState<{ name: string; email: string; password: string; role: "admin" | "instructor" }>({
     name: "",
     email: "",
     password: "",
     role: "admin",
   })
-  const [loading, setLoading] = useState(true)
-  const [adding, setAdding] = useState(false)
-  const [removing, setRemoving] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchTeamMembers = async () => {
-      // Wait for authentication to complete and verify admin
-      if (authLoading || !user || userType !== "admin") return
+  const { data: teamData, isPending: loading, error: queryError } = useTeamMembers()
+  const createMemberMutation = useCreateTeamMember()
+  const deleteUserMutation = useDeleteUser()
 
-      try {
-        setLoading(true)
-        setError(null)
+  // Don't render if not authenticated or not admin
+  if (authLoading || !user || userType !== "admin") {
+    return null
+  }
 
-        const response = await fetch("/api/users?userType=admin")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch team members")
-        }
+  const teamMembers: TeamMember[] = (teamData?.users || []).map((user: any) => ({
+    id: user.id,
+    name: user.name || "",
+    email: user.email || "",
+    user_type: user.user_type || "admin",
+  }))
 
-        const data = await response.json()
-        const processedMembers = (data.users || []).map((user: any) => ({
-          id: user.id,
-          name: user.name || "",
-          email: user.email || "",
-          user_type: user.user_type || "admin",
-        }))
-        setTeamMembers(processedMembers)
-      } catch (err: any) {
-        console.error("Error fetching team members:", err)
-        setError(err.message || "Failed to load team members")
-        toast.error(err.message || "Failed to load team members")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchTeamMembers()
-  }, [authLoading, user, userType])
+  const error = queryError ? (queryError as Error).message : null
+  
+  // Show loading spinner only if we have no data at all
+  const showLoading = loading && !teamData
 
   const handleAddMember = async () => {
     if (!newMember.name || !newMember.email || !newMember.password) {
@@ -86,37 +61,17 @@ export default function TeamManagement() {
     }
 
     try {
-      setAdding(true)
-      setError(null)
-
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: newMember.name,
-          email: newMember.email,
-          password: newMember.password,
-          userType: newMember.role,
-        }),
+      await createMemberMutation.mutateAsync({
+        name: newMember.name,
+        email: newMember.email,
+        password: newMember.password,
+        userType: newMember.role,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to create team member")
-      }
-
-      const data = await response.json()
-      setTeamMembers([...teamMembers, data.user])
       setNewMember({ name: "", email: "", password: "", role: "admin" as "admin" | "instructor" })
       toast.success("Team member added successfully")
     } catch (err: any) {
       console.error("Error adding team member:", err)
-      setError(err.message || "Failed to add team member")
       toast.error(err.message || "Failed to add team member")
-    } finally {
-      setAdding(false)
     }
   }
 
@@ -129,25 +84,13 @@ export default function TeamManagement() {
     if (!memberToDelete) return
 
     try {
-      setRemoving(memberToDelete)
-      const response = await fetch(`/api/users/${memberToDelete}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to remove team member")
-      }
-
-      setTeamMembers(teamMembers.filter((member) => member.id !== memberToDelete))
+      await deleteUserMutation.mutateAsync(memberToDelete)
       toast.success("Team member removed successfully")
       setDeleteDialogOpen(false)
       setMemberToDelete(null)
     } catch (err: any) {
       console.error("Error removing team member:", err)
       toast.error(err.message || "Failed to remove team member")
-    } finally {
-      setRemoving(null)
     }
   }
 
@@ -171,7 +114,7 @@ export default function TeamManagement() {
                 value={newMember.name}
                 onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
                 placeholder="Enter name"
-                disabled={adding}
+                disabled={createMemberMutation.isPending}
               />
             </div>
             <div>
@@ -182,7 +125,7 @@ export default function TeamManagement() {
                 value={newMember.email}
                 onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
                 placeholder="Enter email"
-                disabled={adding}
+                disabled={createMemberMutation.isPending}
               />
             </div>
             <div>
@@ -193,7 +136,7 @@ export default function TeamManagement() {
                 value={newMember.password}
                 onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
                 placeholder="Enter password"
-                disabled={adding}
+                disabled={createMemberMutation.isPending}
               />
             </div>
             <div>
@@ -201,7 +144,7 @@ export default function TeamManagement() {
               <Select
                 value={newMember.role}
                 onValueChange={(value: "admin" | "instructor") => setNewMember({ ...newMember, role: value })}
-                disabled={adding}
+                disabled={createMemberMutation.isPending}
               >
                 <SelectTrigger id="role">
                   <SelectValue placeholder="Select role" />
@@ -213,8 +156,8 @@ export default function TeamManagement() {
               </Select>
             </div>
           </div>
-          <Button onClick={handleAddMember} disabled={adding}>
-            {adding ? (
+          <Button onClick={handleAddMember} disabled={createMemberMutation.isPending}>
+            {createMemberMutation.isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Adding...
@@ -227,7 +170,7 @@ export default function TeamManagement() {
           </Button>
         </div>
         <div className="mt-6">
-          {loading ? (
+          {showLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
@@ -259,9 +202,9 @@ export default function TeamManagement() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveClick(member.id)}
-                          disabled={removing === member.id}
+                          disabled={deleteUserMutation.isPending && memberToDelete === member.id}
                         >
-                          {removing === member.id ? (
+                          {deleteUserMutation.isPending && memberToDelete === member.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                       <Trash2 className="h-4 w-4" />
@@ -285,13 +228,13 @@ export default function TeamManagement() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={removing !== null}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleteUserMutation.isPending}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleRemoveConfirm}
-                disabled={removing !== null}
+                disabled={deleteUserMutation.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {removing ? (
+                {deleteUserMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Removing...

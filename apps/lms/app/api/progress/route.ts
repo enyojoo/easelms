@@ -49,14 +49,45 @@ export async function POST(request: Request) {
   // Use service role client for upsert to bypass RLS policies
   const serviceSupabase = createServiceRoleClient()
 
-  const { data, error } = await serviceSupabase
+  // Check if progress record already exists
+  const { data: existingProgress } = await serviceSupabase
     .from("progress")
-    .upsert({
-      ...progressData,
-      user_id: user.id,
-    })
-    .select()
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("lesson_id", progressData.lesson_id)
     .single()
+
+  let data, error
+
+  if (existingProgress) {
+    // Update existing record
+    const { data: updatedData, error: updateError } = await serviceSupabase
+      .from("progress")
+      .update({
+        ...progressData,
+        user_id: user.id,
+      })
+      .eq("user_id", user.id)
+      .eq("lesson_id", progressData.lesson_id)
+      .select()
+      .single()
+    
+    data = updatedData
+    error = updateError
+  } else {
+    // Insert new record
+    const { data: insertedData, error: insertError } = await serviceSupabase
+      .from("progress")
+      .insert({
+        ...progressData,
+        user_id: user.id,
+      })
+      .select()
+      .single()
+    
+    data = insertedData
+    error = insertError
+  }
 
   if (error) {
     console.error("Progress API POST: Supabase error", error)

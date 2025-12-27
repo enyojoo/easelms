@@ -184,8 +184,10 @@ export default function CourseCompletionPage() {
     }
   }
 
-  // Show skeleton until mounted and data is loaded
-  if (!mounted || loading) {
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = !!course
+  if ((!mounted || loading) && !hasData) {
     return <CourseSummarySkeleton />
   }
 

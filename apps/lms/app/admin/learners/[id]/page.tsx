@@ -198,9 +198,11 @@ function LearnerDetailsPage() {
     fetchPurchases()
   }, [params.id, mounted, authLoading, user])
 
-  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  const hasData = !!learner
+  const showSkeleton = (!mounted || authLoading || !user || userType !== "admin" || loading) && !hasData
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <AdminLearnerDetailSkeleton />
   }
 

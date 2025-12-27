@@ -24,17 +24,6 @@ export default function QuizSettings({ quiz, onChange }: QuizSettingsProps) {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
-            <Label>Shuffle Questions</Label>
-            <p className="text-sm text-muted-foreground">Randomize question order for each student</p>
-          </div>
-          <Switch
-            checked={quiz.shuffleQuestions || false}
-            onCheckedChange={(checked) => updateSetting("shuffleQuestions", checked)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
             <Label>Show Correct Answers</Label>
             <p className="text-sm text-muted-foreground">Reveal correct answers after quiz completion</p>
           </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -17,13 +17,12 @@ interface QuizQuestion {
 interface QuizProps {
   quiz: {
     questions: QuizQuestion[]
-    shuffleQuestions?: boolean
-    shuffleAnswers?: boolean
     showResultsImmediately?: boolean
     allowMultipleAttempts?: boolean
     showCorrectAnswers?: boolean
+    maxAttempts?: number
   }
-  onComplete: (answers?: number[], shuffledQuestions?: QuizQuestion[], attemptCount?: number) => void
+  onComplete: (answers?: number[], questions?: QuizQuestion[], attemptCount?: number) => void
   onContinue?: () => void
   minimumQuizScore?: number
   courseId?: string
@@ -48,43 +47,10 @@ export default function QuizComponent({
   initialScore,
   previewMode = false,
 }: QuizProps) {
-  // Shuffle questions if enabled (only once on initial load - never reshuffle)
-  const shuffledQuestions = useMemo(() => {
-    if (!quiz.questions || quiz.questions.length === 0) return []
-    
-    let questions = [...quiz.questions]
-    
-    // Shuffle questions if enabled
-    if (quiz.shuffleQuestions) {
-      questions = questions.sort(() => Math.random() - 0.5)
-    }
-    
-    // Shuffle answers for each question if enabled
-    if (quiz.shuffleAnswers) {
-      questions = questions.map((q) => {
-        const options = [...q.options]
-        const correctIndex = q.correctAnswer
-        
-        // Create array of indices and shuffle them
-        const indices = options.map((_, i) => i)
-        const shuffledIndices = indices.sort(() => Math.random() - 0.5)
-        
-        // Find new position of correct answer
-        const newCorrectIndex = shuffledIndices.indexOf(correctIndex)
-        
-        // Shuffle options
-        const shuffledOptions = shuffledIndices.map((i) => options[i])
-        
-        return {
-          ...q,
-          options: shuffledOptions,
-          correctAnswer: newCorrectIndex,
-        }
-      })
-    }
-    
-    return questions
-  }, []) // Empty dependency array - shuffle only once on mount
+  // Use questions in original order (no shuffling)
+  const questions = useMemo(() => {
+    return quiz.questions || []
+  }, [quiz.questions])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([])
@@ -93,22 +59,41 @@ export default function QuizComponent({
   const [originalAnswers, setOriginalAnswers] = useState<number[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const [displayQuestions, setDisplayQuestions] = useState<QuizQuestion[]>([])
+  const quizCompletedRef = useRef(false) // Track if quiz has been completed
+
+  // Answers are already in original order (no mapping needed)
+  const mappedAnswersForReview = useMemo(() => {
+    if (!showResultsOnly || prefilledAnswers.length === 0) return []
+    return prefilledAnswers
+  }, [showResultsOnly, prefilledAnswers])
 
   // Reset quiz when questions change or initialize with prefilled answers
+  // Don't reset if quiz has been completed
   useEffect(() => {
+    // Don't reset if quiz has been completed
+    if (quizCompletedRef.current) return
+    
     setCurrentQuestion(0)
-    if (showResultsOnly && prefilledAnswers.length > 0) {
-      setSelectedAnswers(prefilledAnswers)
-      setShowResults(true)
-      setOriginalAnswers(prefilledAnswers)
-      setDisplayQuestions([...shuffledQuestions]) // Store shuffled questions for display
+    // If quiz was already completed (showResultsOnly is true), show results screen
+    if (showResultsOnly) {
+      // Mark as completed to prevent reset
+      quizCompletedRef.current = true
+      
+      if (prefilledAnswers.length > 0) {
+        setSelectedAnswers(mappedAnswersForReview)
+        setShowResults(true)
+        setOriginalAnswers(mappedAnswersForReview)
+      } else {
+        // Even if no prefilled answers, show results if quiz was completed
+        setShowResults(true)
+        setSelectedAnswers([])
+        setOriginalAnswers([])
+      }
     } else {
       setSelectedAnswers([])
       setShowResults(false)
-      setDisplayQuestions([])
     }
-  }, [shuffledQuestions, showResultsOnly, prefilledAnswers])
+  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview])
 
   const handleAnswerSelect = (answerIndex: number) => {
     const newSelectedAnswers = [...selectedAnswers]
@@ -133,19 +118,21 @@ export default function QuizComponent({
       setSubmissionError(null)
 
       // Prepare answers array with question IDs
-      // Map shuffled questions back to original question IDs
-      const answers = shuffledQuestions.map((question, shuffledIndex) => {
-        // Find the original question index in the original quiz.questions array
-        const originalIndex = quiz.questions.findIndex(
-          (q) => q.id === question.id || (q.question === question.question && q.options?.join(",") === question.options?.join(","))
-        )
-        const originalQuestion = originalIndex >= 0 ? quiz.questions[originalIndex] : question
+      // Use question.id if available, otherwise use index as fallback
+      const answers = questions.map((question, index) => {
+        // question.id might be a string or number, ensure we send it as-is
+        // The API will match by ID, so we need to send the actual question ID
+        const questionId = question.id 
+          ? (typeof question.id === 'string' ? question.id : String(question.id))
+          : String(index)
         
         return {
-          questionId: originalQuestion.id ? parseInt(originalQuestion.id) : shuffledIndex,
-          userAnswer: selectedAnswers[shuffledIndex] ?? null,
+          questionId: questionId,
+          userAnswer: selectedAnswers[index] ?? null,
         }
       })
+      
+      console.log("Submitting quiz answers:", { lessonId, answers, questionsCount: questions.length })
 
       const response = await fetch(`/api/courses/${courseId}/quiz-results`, {
         method: "POST",
@@ -174,33 +161,31 @@ export default function QuizComponent({
   }
 
   const handleNextQuestion = async () => {
-    if (currentQuestion < shuffledQuestions.length - 1) {
+    if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
-      // Store original answers and shuffled questions before showing results
+      // Mark quiz as completed to prevent reset
+      quizCompletedRef.current = true
+      
+      // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
-      setDisplayQuestions([...shuffledQuestions]) // Store the exact shuffled questions used
       
       // Submit quiz results to API
       await submitQuizResults()
       
-      // Show results immediately if enabled, otherwise wait
-      if (quiz.showResultsImmediately) {
-        setShowResults(true)
-        setAttemptCount((prev) => prev + 1)
-        // Call onComplete with answers and shuffled questions after results are shown
-        onComplete(selectedAnswers, shuffledQuestions, attemptCount + 1)
-      } else {
-        // For non-immediate results, we still show them but could delay
-        setShowResults(true)
-        setAttemptCount((prev) => prev + 1)
-      }
+      // Always show results screen after quiz completion
+      setShowResults(true)
+      setAttemptCount((prev) => prev + 1)
+      
+      // Call onComplete to save progress and mark lesson as completed
+      // This must be called to save to progress table and complete the lesson
+      onComplete(selectedAnswers, questions, attemptCount + 1)
     }
   }
 
   const calculateScore = () => {
     let score = 0
-    shuffledQuestions.forEach((question, index) => {
+    questions.forEach((question, index) => {
       if (selectedAnswers[index] === question.correctAnswer) {
         score++
       }
@@ -214,6 +199,16 @@ export default function QuizComponent({
       return // Don't allow retry if multiple attempts are disabled
     }
     
+    // Check if max attempts limit has been reached
+    const maxAttempts = quiz.maxAttempts || 3
+    if (attemptCount >= maxAttempts) {
+      console.log(`Max attempts (${maxAttempts}) reached. Cannot retry.`)
+      return // Don't allow retry if max attempts reached
+    }
+    
+    // Reset completion flag for retry
+    quizCompletedRef.current = false
+    
     // Clear old quiz data before retrying
     if (onRetry) {
       onRetry()
@@ -222,10 +217,9 @@ export default function QuizComponent({
     setCurrentQuestion(0)
     setSelectedAnswers([])
     setShowResults(false)
-    // Note: Questions will be reshuffled on next render due to useMemo
   }
 
-  if (!quiz?.questions || shuffledQuestions.length === 0) {
+  if (!quiz?.questions || questions.length === 0) {
     return (
       <div className="text-center p-8">
         <p className="text-muted-foreground">No quiz available for this lesson.</p>
@@ -234,10 +228,17 @@ export default function QuizComponent({
   }
 
   if (showResults) {
-    const score = calculateScore()
-    const percentage = showResultsOnly && initialScore !== undefined ? initialScore : (score / shuffledQuestions.length) * 100
+    // If showing results for a previously completed quiz, use initialScore if available
+    // Otherwise calculate from current answers
+    const score = showResultsOnly && initialScore !== undefined 
+      ? Math.round((initialScore / 100) * questions.length)
+      : calculateScore()
+    const percentage = showResultsOnly && initialScore !== undefined 
+      ? initialScore 
+      : (score / questions.length) * 100
     const passed = percentage >= minimumQuizScore
-    const canRetry = (quiz.allowMultipleAttempts !== false) && (attemptCount < (quiz.maxAttempts || 1))
+    const maxAttempts = quiz.maxAttempts || 3
+    const canRetry = (quiz.allowMultipleAttempts !== false) && (attemptCount < maxAttempts)
 
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
@@ -277,7 +278,7 @@ export default function QuizComponent({
           </div>
           <p className="text-xl">
             You scored <span className="font-bold">{score}</span> out of{" "}
-            <span className="font-bold">{shuffledQuestions.length}</span>
+            <span className="font-bold">{questions.length}</span>
           </p>
           {passed ? (
             <p className="text-green-500 font-semibold">Congratulations! You passed the quiz.</p>
@@ -300,18 +301,26 @@ export default function QuizComponent({
         {quiz.showCorrectAnswers && (
           <Card className="p-6 space-y-4">
             <div className="space-y-2">
-              <h4 className="font-semibold text-lg">Review Your Answers</h4>
-              {!passed && attemptCount < (quiz.maxAttempts || 3) && (
+            <h4 className="font-semibold text-lg">Review Your Answers</h4>
+              {!passed && attemptCount < maxAttempts && (
                 <p className="text-sm text-muted-foreground">
-                  Attempt {attemptCount} of {quiz.maxAttempts || 3}. Correct answers will be revealed after your final attempt.
+                  Attempt {attemptCount} of {maxAttempts}. Correct answers will be revealed after your final attempt.
                 </p>
               )}
             </div>
             <div className="space-y-4">
-              {(displayQuestions.length > 0 ? displayQuestions : shuffledQuestions).map((question, index) => {
-                const userAnswer = originalAnswers[index]
-                const isCorrect = userAnswer === question.correctAnswer
-                const canSeeCorrectAnswer = passed || attemptCount >= (quiz.maxAttempts || 3)
+              {/* Questions always in original order */}
+              {questions.map((question, index) => {
+                // Get user answer for this question
+                const userAnswer = showResultsOnly 
+                  ? mappedAnswersForReview[index] 
+                  : originalAnswers[index]
+                
+                // Use question's correct answer
+                const correctAnswerIndex = question.correctAnswer
+                
+                const isCorrect = userAnswer === correctAnswerIndex
+                const canSeeCorrectAnswer = passed || attemptCount >= maxAttempts
                 
                 return (
                   <div key={index} className="space-y-2 p-4 border rounded-lg">
@@ -327,7 +336,7 @@ export default function QuizComponent({
                     <div className="space-y-1">
                       {question.options.map((option, optIndex) => {
                         const isUserAnswer = userAnswer === optIndex
-                        const isCorrectAnswer = optIndex === question.correctAnswer
+                        const isCorrectAnswer = optIndex === correctAnswerIndex
                         
                         // Only highlight correct answer if user can see it
                         const showCorrectAnswer = canSeeCorrectAnswer && isCorrectAnswer
@@ -376,7 +385,7 @@ export default function QuizComponent({
           )}
           {passed && (
             <Button onClick={() => {
-              onComplete(originalAnswers)
+              // Continue button only navigates - no actions
               onContinue?.()
             }} className="bg-primary hover:bg-primary/90">
               Continue
@@ -387,13 +396,13 @@ export default function QuizComponent({
     )
   }
 
-  const question = shuffledQuestions[currentQuestion]
+  const question = questions[currentQuestion]
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="space-y-2">
         <h3 className="text-xl font-semibold">
-          Question {currentQuestion + 1} of {shuffledQuestions.length}
+          Question {currentQuestion + 1} of {questions.length}
         </h3>
         <p className="text-lg">{question.question}</p>
       </div>
@@ -428,7 +437,7 @@ export default function QuizComponent({
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Submitting...
           </>
-        ) : currentQuestion === shuffledQuestions.length - 1 ? (
+        ) : currentQuestion === questions.length - 1 ? (
           "Finish Quiz"
         ) : (
           "Next Question"

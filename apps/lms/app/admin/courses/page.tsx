@@ -377,8 +377,10 @@ export default function ManageCoursesPage() {
     }
   }, [mounted, user, userType])
 
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = courses.length > 0 || draftCourses.length > 0
+  const isLoading = (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading) && !hasData
 
   const handleDeleteClick = (courseId: number) => {
     setCourseToDelete(courseId)

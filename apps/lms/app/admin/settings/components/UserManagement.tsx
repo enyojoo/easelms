@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,62 +19,35 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface PlatformUser {
-  id: string
-  name: string
-  email: string
-  enrolledCoursesCount: number
-  completedCoursesCount: number
-  created_at: string
-}
+import { usePlatformUsers, useDeleteUser, type PlatformUser } from "@/lib/react-query/hooks/useUsers"
 
 export default function UserManagement() {
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [users, setUsers] = useState<PlatformUser[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  
+  const { data: usersData, isPending: loading, error: queryError } = usePlatformUsers()
+  const deleteUserMutation = useDeleteUser()
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      // Wait for authentication to complete and verify admin
-      if (authLoading || !user || userType !== "admin") return
+  // Don't render if not authenticated or not admin
+  if (authLoading || !user || userType !== "admin") {
+    return null
+  }
 
-      try {
-        setLoading(true)
-        setError(null)
+  const users: PlatformUser[] = (usersData?.users || []).map((user: any) => ({
+    id: user.id,
+    name: user.name || "",
+    email: user.email || "",
+    enrolledCoursesCount: user.enrolledCoursesCount || 0,
+    completedCoursesCount: user.completedCoursesCount || 0,
+    created_at: user.created_at || new Date().toISOString(),
+  }))
 
-        const response = await fetch("/api/users?userType=user")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch users")
-        }
-
-        const data = await response.json()
-        const processedUsers = (data.users || []).map((user: any) => ({
-          id: user.id,
-          name: user.name || "",
-          email: user.email || "",
-          enrolledCoursesCount: user.enrolledCoursesCount || 0,
-          completedCoursesCount: user.completedCoursesCount || 0,
-          created_at: user.created_at || new Date().toISOString(),
-        }))
-        setUsers(processedUsers)
-      } catch (err: any) {
-        console.error("Error fetching users:", err)
-        setError(err.message || "Failed to load users")
-        toast.error(err.message || "Failed to load users")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchUsers()
-  }, [authLoading, user, userType])
+  const error = queryError ? (queryError as Error).message : null
+  
+  // Show loading spinner only if we have no data at all
+  const showLoading = loading && !usersData
 
   // Note: Suspend/Activate functionality requires a status field in the profiles table
   // For now, this is commented out until the database schema supports it
@@ -120,25 +93,13 @@ export default function UserManagement() {
     if (!userToDelete) return
 
     try {
-      setDeleting(true)
-      const response = await fetch(`/api/users/${userToDelete}`, {
-        method: "DELETE",
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to delete user")
-      }
-
-      setUsers(users.filter((user) => user.id !== userToDelete))
+      await deleteUserMutation.mutateAsync(userToDelete)
       toast.success("User deleted successfully")
       setDeleteDialogOpen(false)
       setUserToDelete(null)
     } catch (err: any) {
       console.error("Error deleting user:", err)
       toast.error(err.message || "Failed to delete user")
-    } finally {
-      setDeleting(false)
     }
   }
 
@@ -173,7 +134,7 @@ export default function UserManagement() {
           </div>
         </div>
         <div className="mt-6">
-          {loading ? (
+          {showLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
@@ -232,13 +193,13 @@ export default function UserManagement() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={deleteUserMutation.isPending}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteConfirm}
-                disabled={deleting}
+                disabled={deleteUserMutation.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {deleting ? (
+                {deleteUserMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Deleting...

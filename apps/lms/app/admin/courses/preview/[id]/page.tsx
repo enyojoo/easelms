@@ -118,9 +118,12 @@ export default function InstructorCoursePreviewPage() {
     fetchCourse()
   }, [id, mounted, authLoading, user, userType, router])
 
-  const isLoading = !mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = !!course
+  const showSkeleton = (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading) && !hasData
 
-  if (isLoading) {
+  if (showSkeleton) {
     return <CourseDetailSkeleton />
   }
 

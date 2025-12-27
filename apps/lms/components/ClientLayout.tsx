@@ -11,6 +11,7 @@ import { ThemeProvider } from "./ThemeProvider"
 import { PageTransition } from "./PageTransition"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { Toaster } from "@/components/ui/sonner"
+import { QueryProvider } from "@/lib/react-query/QueryProvider"
 
 export default function ClientLayout({
   children,
@@ -251,6 +252,7 @@ export default function ClientLayout({
       : "user"
 
   return (
+    <QueryProvider>
     <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
       {shouldShowLayout ? (
         <div className="flex flex-col h-screen">
@@ -260,7 +262,7 @@ export default function ClientLayout({
           <div className="hidden lg:flex h-screen">
             <LeftSidebar userType={derivedUserType} />
             <div className="flex flex-col flex-grow lg:ml-64">
-              <Header isLoggedIn={isLoggedIn} userType={derivedUserType} user={user} />
+              <Header isLoggedIn={isLoggedIn} userType={derivedUserType === "instructor" ? "admin" : derivedUserType} user={user} />
               <div className="flex-grow lg:pt-16 pb-8">
                 <main className="container-fluid">
                   {children}
@@ -279,5 +281,6 @@ export default function ClientLayout({
       )}
       <Toaster />
     </ThemeProvider>
+    </QueryProvider>
   )
 }

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -16,7 +16,6 @@ import {
   UserCog,
   Globe,
   DollarSign,
-  Loader2,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TeamManagement from "./components/TeamManagement"
@@ -24,6 +23,7 @@ import UserManagement from "./components/UserManagement"
 import { US } from "country-flag-icons/react/3x2"
 import AdminSettingsSkeleton from "@/components/AdminSettingsSkeleton"
 import { toast } from "sonner"
+import { useQueryClient } from "@tanstack/react-query"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -37,7 +37,7 @@ const NigeriaFlag = () => (
 export default function SettingsPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [mounted, setMounted] = useState(false)
+  const queryClient = useQueryClient()
   const [settings, setSettings] = useState({
     emailNotifications: true,
     courseEnrollmentNotifications: true,
@@ -47,14 +47,9 @@ export default function SettingsPage() {
     defaultCurrency: "USD",
   })
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
-
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const initialSettingsRef = useRef<typeof settings | null>(null)
 
   useEffect(() => {
     if (!authLoading) {
@@ -65,10 +60,40 @@ export default function SettingsPage() {
     }
   }, [user, userType, authLoading, router])
 
+  // Pre-fetch users and team data when user is authenticated
+  useEffect(() => {
+    if (authLoading || !user || userType !== "admin") return
+    
+    // Pre-fetch users and team members in the background
+    queryClient.prefetchQuery({
+      queryKey: ["platformUsers"],
+      queryFn: async () => {
+        const response = await fetch("/api/users?userType=user")
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch users")
+        }
+        return response.json()
+      },
+    })
+    
+    queryClient.prefetchQuery({
+      queryKey: ["teamMembers"],
+      queryFn: async () => {
+        const response = await fetch("/api/users?userType=admin")
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to fetch team members")
+        }
+        return response.json()
+      },
+    })
+  }, [authLoading, user, userType, queryClient])
+
   // Fetch platform settings
   useEffect(() => {
     const fetchSettings = async () => {
-      if (!mounted || authLoading || !user || userType !== "admin") return
+      if (authLoading || !user || userType !== "admin") return
 
       try {
         setLoading(true)
@@ -84,14 +109,16 @@ export default function SettingsPage() {
         const platformSettings = data.platformSettings
 
         if (platformSettings) {
-          setSettings({
+          const loadedSettings = {
             defaultCurrency: platformSettings.default_currency || "USD",
             courseEnrollmentNotifications: platformSettings.course_enrollment_notifications ?? true,
             courseCompletionNotifications: platformSettings.course_completion_notifications ?? true,
             platformAnnouncements: platformSettings.platform_announcements ?? true,
             userEmailNotifications: platformSettings.user_email_notifications ?? true,
             emailNotifications: true, // Keep for compatibility
-          })
+          }
+          setSettings(loadedSettings)
+          initialSettingsRef.current = loadedSettings // Store initial settings for comparison
         }
         setInitialLoadComplete(true)
       } catch (err: any) {
@@ -104,21 +131,34 @@ export default function SettingsPage() {
     }
 
     fetchSettings()
-  }, [mounted, authLoading, user, userType])
+  }, [authLoading, user, userType])
 
   const handleSwitchChange = (name: string) => (checked: boolean) => {
     setSettings((prev) => ({ ...prev, [name]: checked }))
   }
 
-  // Auto-save settings with debouncing
+  // Auto-save settings with debouncing (only when user actually changes settings)
   useEffect(() => {
-    // Don't auto-save on initial load
-    if (!initialLoadComplete || !user || userType !== "admin") return
+    // Don't auto-save on initial load or if settings haven't changed
+    if (!initialLoadComplete || !user || userType !== "admin" || !initialSettingsRef.current) return
+
+    const initialSettings = initialSettingsRef.current
+
+    // Check if settings have actually changed from initial values
+    const hasChanged = 
+      settings.defaultCurrency !== initialSettings.defaultCurrency ||
+      settings.courseEnrollmentNotifications !== initialSettings.courseEnrollmentNotifications ||
+      settings.courseCompletionNotifications !== initialSettings.courseCompletionNotifications ||
+      settings.platformAnnouncements !== initialSettings.platformAnnouncements ||
+      settings.userEmailNotifications !== initialSettings.userEmailNotifications
+
+    // Only save if settings have actually changed
+    if (!hasChanged) return
 
     // Debounce: wait 1 second after user stops changing settings
     const timeoutId = setTimeout(async () => {
       try {
-        setSaving(true)
+        // Save silently - no loading state, no spinners
         setError(null)
 
         const platformSettings = {
@@ -144,26 +184,31 @@ export default function SettingsPage() {
           throw new Error(errorData.error || "Failed to save settings")
         }
 
-        // Show subtle success notification (not too intrusive for auto-save)
-        toast.success("Settings saved", { duration: 2000 })
+        // Update initial settings to current values after successful save
+        initialSettingsRef.current = {
+          ...settings,
+        }
+
+        // Save silently - no toast notifications
       } catch (err: any) {
         console.error("Error saving settings:", err)
         setError(err.message || "Failed to save settings")
+        // Only show error toast, not success toast
         toast.error(err.message || "Failed to save settings")
-      } finally {
-        setSaving(false)
       }
     }, 1000) // 1 second debounce
 
     return () => clearTimeout(timeoutId)
   }, [settings, initialLoadComplete, user, userType])
 
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = initialLoadComplete && initialSettingsRef.current
+  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
 
   return (
     <div className="pt-4 md:pt-8">
-      {isLoading ? (
+      {showSkeleton ? (
         <AdminSettingsSkeleton />
       ) : (
         <>
@@ -209,7 +254,6 @@ export default function SettingsPage() {
                         <Select
                           value={settings.defaultCurrency}
                           onValueChange={(value) => setSettings((prev) => ({ ...prev, defaultCurrency: value }))}
-                          disabled={saving}
                         >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select default currency" />
@@ -229,9 +273,6 @@ export default function SettingsPage() {
                           </SelectItem>
                         </SelectContent>
                         </Select>
-                        {saving && (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         This currency will be used as the default for courses sold on the platform. Course creators can override this for individual courses.
@@ -256,11 +297,7 @@ export default function SettingsPage() {
                             id="course-enrollment-notifications"
                             checked={settings.courseEnrollmentNotifications}
                             onCheckedChange={handleSwitchChange("courseEnrollmentNotifications")}
-                            disabled={saving}
                           />
-                          {saving && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
                         </div>
                       </div>
 
@@ -276,11 +313,7 @@ export default function SettingsPage() {
                             id="course-completion-notifications"
                             checked={settings.courseCompletionNotifications}
                             onCheckedChange={handleSwitchChange("courseCompletionNotifications")}
-                            disabled={saving}
                           />
-                          {saving && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
                         </div>
                       </div>
 
@@ -296,11 +329,7 @@ export default function SettingsPage() {
                             id="platform-announcements"
                             checked={settings.platformAnnouncements}
                             onCheckedChange={handleSwitchChange("platformAnnouncements")}
-                            disabled={saving}
                           />
-                          {saving && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
                         </div>
                       </div>
 
@@ -316,11 +345,7 @@ export default function SettingsPage() {
                             id="user-email-notifications"
                             checked={settings.userEmailNotifications}
                             onCheckedChange={handleSwitchChange("userEmailNotifications")}
-                            disabled={saving}
                           />
-                          {saving && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
                         </div>
                       </div>
                     </div>

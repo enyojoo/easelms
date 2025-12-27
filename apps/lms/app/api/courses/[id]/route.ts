@@ -103,7 +103,18 @@ export async function GET(
     }
 
     // Process course to ensure proper structure
-    const lessons = Array.isArray(course.lessons) ? course.lessons : []
+    let lessons = Array.isArray(course.lessons) ? course.lessons : []
+    
+    // Deduplicate lessons by ID (in case Supabase returns duplicates)
+    const seenLessonIds = new Set<number>()
+    lessons = lessons.filter((lesson: any) => {
+      const lessonId = lesson.id
+      if (seenLessonIds.has(lessonId)) {
+        return false
+      }
+      seenLessonIds.add(lessonId)
+      return true
+    })
     
     console.log("Course API: Processing lessons", {
       courseId: numericId,
@@ -130,6 +141,16 @@ export async function GET(
           user_type: creatorProfile.user_type || "instructor",
         }
       : null
+
+    // Get enrollment count for this course
+    const { count: enrollmentCount, error: enrollmentCountError } = await supabase
+      .from("enrollments")
+      .select("*", { count: "exact", head: true })
+      .eq("course_id", numericId)
+
+    if (enrollmentCountError) {
+      console.warn("Course API: Error fetching enrollment count:", enrollmentCountError)
+    }
 
     const processedCourse = {
       ...course,
@@ -161,7 +182,6 @@ export async function GET(
           quizSettings = {
             enabled: content.quiz.enabled || false,
             maxAttempts: content.quiz.maxAttempts || 1,
-            shuffleQuestions: content.quiz.shuffleQuestions || false,
             showCorrectAnswers: content.quiz.showCorrectAnswers || false,
             allowMultipleAttempts: content.quiz.allowMultipleAttempts || false,
           }
@@ -209,8 +229,8 @@ export async function GET(
         const { quiz, resources: contentResources, ...contentRest } = content
         
         const processedLesson = {
-          id: lesson.id,
-          title: lesson.title,
+        id: lesson.id,
+        title: lesson.title,
           type: lesson.type || contentRest.type,
           settings: {
             isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
@@ -236,6 +256,7 @@ export async function GET(
       }),
       totalDurationMinutes,
       totalHours,
+      enrolledStudents: enrollmentCount || 0, // Total enrollment count
       // Transform enrollment settings from database columns to nested structure
       settings: {
         enrollment: {

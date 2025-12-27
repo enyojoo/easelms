@@ -253,12 +253,14 @@ export default function LearnersPage() {
     return learners.reduce((sum, learner) => sum + learner.completedCourses.length, 0)
   }
 
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || authLoading || !user || userType !== "admin" || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = learners.length > 0 || stats
+  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
 
   return (
     <div className="pt-4 md:pt-8">
-      {isLoading ? (
+      {showSkeleton ? (
         <AdminLearnersSkeleton />
       ) : (
         <>

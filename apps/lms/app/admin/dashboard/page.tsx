@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Users, BookOpen, DollarSign, Activity, UserPlus } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
+import { useAdminStats, useRealtimeAdminStats } from "@/lib/react-query/hooks"
 import type { User } from "@/data/users"
 import Link from "next/link"
 import AdminDashboardSkeleton from "@/components/AdminDashboardSkeleton"
@@ -55,18 +56,16 @@ function formatRelativeTime(isoString: string): string {
 export default function InstructorDashboard() {
   const { user, loading: authLoading, userType } = useClientAuthState()
   const [dashboardUser, setDashboardUser] = useState<User | null>(null)
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [statsLoading, setStatsLoading] = useState(true)
-  const [statsError, setStatsError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   
   // Check if user is instructor (instructors should not see revenue)
   const isInstructor = userType === "instructor"
 
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Use React Query hooks for data fetching
+  const { data: stats, isPending: statsPending, error: statsError } = useAdminStats()
+  
+  // Set up real-time subscription for admin stats
+  useRealtimeAdminStats()
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -74,43 +73,17 @@ export default function InstructorDashboard() {
     }
   }, [user, authLoading])
 
-  // Fetch dashboard stats
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setStatsLoading(true)
-        setStatsError(null)
-        const response = await fetch("/api/admin/stats")
-        
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || "Failed to fetch stats")
-        }
-
-        const data = await response.json()
-        setStats(data)
-      } catch (error: any) {
-        console.error("Error fetching dashboard stats:", error)
-        setStatsError(error.message || "Failed to load dashboard stats")
-      } finally {
-        setStatsLoading(false)
-      }
-    }
-
-    if (!authLoading && dashboardUser) {
-      fetchStats()
-    }
-  }, [authLoading, dashboardUser])
-
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || authLoading || !dashboardUser
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = !!stats
+  const showSkeleton = (authLoading || !dashboardUser) && !hasData
 
   // Extract first name from full name
   const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
 
   return (
     <div className="pt-4 md:pt-8 h-[calc(100vh-8rem)] flex flex-col">
-      {isLoading ? (
+      {showSkeleton ? (
         <AdminDashboardSkeleton />
       ) : (
         <>
@@ -127,16 +100,12 @@ export default function InstructorDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {statsLoading ? (
-                <Skeleton className="h-10 w-24" />
-              ) : statsError ? (
+              {statsError ? (
                 <p className="text-sm text-destructive">Error loading revenue</p>
               ) : (
-                <>
                   <p className="text-3xl font-bold">
                     ${stats?.totalRevenue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
                   </p>
-                </>
               )}
             </CardContent>
           </Card>
@@ -148,9 +117,7 @@ export default function InstructorDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-10 w-24" />
-            ) : statsError ? (
+            {statsError ? (
               <p className="text-sm text-destructive">Error loading learners</p>
             ) : (
               <p className="text-3xl font-bold">{stats?.totalLearners?.toLocaleString() || "0"}</p>
@@ -164,9 +131,7 @@ export default function InstructorDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {statsLoading ? (
-              <Skeleton className="h-10 w-24" />
-            ) : statsError ? (
+            {statsError ? (
               <p className="text-sm text-destructive">Error loading courses</p>
             ) : (
               <p className="text-3xl font-bold">{stats?.totalCourses?.toLocaleString() || "0"}</p>
@@ -184,20 +149,7 @@ export default function InstructorDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 min-h-0 overflow-hidden">
-            {statsLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-start space-x-3 pb-4 border-b">
-                    <Skeleton className="h-4 w-4 rounded-full mt-1" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : statsError ? (
+            {statsError ? (
               <div className="flex items-center justify-center h-full">
                 <p className="text-sm text-destructive">{statsError}</p>
               </div>

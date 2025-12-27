@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Award, Upload, Bell, Shield, Globe, ChevronLeft, ChevronRight } from "lucide-react"
+import { Award, Upload, Bell, Shield, Globe, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import ProfileSkeleton from "@/components/ProfileSkeleton"
 import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -20,6 +20,7 @@ import CertificatePreview from "@/components/CertificatePreview"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { US } from "country-flag-icons/react/3x2"
+import { useProfile, useUpdateProfile } from "@/lib/react-query/hooks"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -31,7 +32,6 @@ const NigeriaFlag = () => (
 export default function LearnerProfilePage() {
   const router = useRouter()
   const { user: authUser, loading: authLoading, userType } = useClientAuthState()
-  const [user, setUser] = useState<User | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [certificates, setCertificates] = useState<any[]>([])
   const [showLeftArrow, setShowLeftArrow] = useState(false)
@@ -42,14 +42,6 @@ export default function LearnerProfilePage() {
     email: "",
     bio: "",
   })
-  const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [settings, setSettings] = useState({
@@ -58,16 +50,69 @@ export default function LearnerProfilePage() {
   const [newPassword, setNewPassword] = useState("")
   const [selectedCurrency, setSelectedCurrency] = useState("USD")
 
+  // Use React Query hooks for data fetching
+  const { data: profileData, isPending: profilePending } = useProfile()
+  const updateProfileMutation = useUpdateProfile()
+
+  const profile = profileData?.profile
+
   useEffect(() => {
     if (!authLoading) {
       if (!authUser || userType !== "user") {
         router.push("/auth/learner/login")
         return
       }
-      setUser(authUser as User)
-      loadProfileData()
     }
   }, [authLoading, authUser, userType, router])
+
+  // Update form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        bio: profile.bio || "",
+      })
+      setSelectedCurrency(profile.currency || "USD")
+      setImageError(false)
+    }
+  }, [profile])
+
+  // Load certificates and settings
+  useEffect(() => {
+    const loadAdditionalData = async () => {
+      if (!authUser) return
+
+      try {
+        // Fetch user settings
+        const settingsResponse = await fetch("/api/settings")
+        if (settingsResponse.ok) {
+          const settingsData = await settingsResponse.json()
+          if (settingsData.userSettings) {
+            setSettings({
+              emailNotifications: settingsData.userSettings.email_notifications ?? true,
+            })
+            setSelectedCurrency(settingsData.userSettings.currency || profile?.currency || "USD")
+          }
+        }
+
+        // Load certificates
+        const certificatesResponse = await fetch("/api/certificates")
+        if (certificatesResponse.ok) {
+          const certificatesData = await certificatesResponse.json()
+          setCertificates(certificatesData.certificates || [])
+        } else {
+          setCertificates([])
+        }
+      } catch (error) {
+        console.error("Error loading additional data:", error)
+      }
+    }
+
+    if (authUser) {
+      loadAdditionalData()
+    }
+  }, [authUser, profile])
 
   // Check scroll position for tabs arrows
   useEffect(() => {
@@ -99,73 +144,6 @@ export default function LearnerProfilePage() {
     }
   }, [])
 
-  const loadProfileData = async () => {
-    if (!authUser) return
-
-    try {
-      setLoading(true)
-
-      // Fetch user settings
-      const settingsResponse = await fetch("/api/settings")
-      if (settingsResponse.ok) {
-        const settingsData = await settingsResponse.json()
-        if (settingsData.userSettings) {
-          setSettings({
-            emailNotifications: settingsData.userSettings.email_notifications ?? true,
-          })
-          setSelectedCurrency(settingsData.userSettings.currency || user?.currency || "USD")
-        }
-      }
-
-      // Load profile data
-      const profileResponse = await fetch("/api/profile")
-      const profileData = await profileResponse.json()
-
-      if (profileResponse.ok) {
-        const profile = profileData.profile
-        setFormData({
-          name: profile.name || "",
-          email: profile.email || "",
-          bio: profile.bio || "",
-        })
-
-        // Set user data for display
-        setUser({
-          id: profile.id,
-          name: profile.name || "",
-          email: profile.email || "",
-          userType: "user",
-          enrolledCourses: [],
-          progress: {},
-          completedCourses: [],
-          profileImage: profile.profile_image || "",
-          currency: profile.currency || "USD",
-          bio: profile.bio || "",
-        })
-        // Set currency from profile
-        setSelectedCurrency(profile.currency || "USD")
-        // Reset image error when profile loads
-        setImageError(false)
-      }
-
-      // Load certificates
-      const certificatesResponse = await fetch("/api/certificates")
-      if (certificatesResponse.ok) {
-        const certificatesData = await certificatesResponse.json()
-        setCertificates(certificatesData.certificates || [])
-      } else {
-        // If certificates fail, set empty array
-        console.warn("Failed to fetch certificates:", certificatesResponse.status)
-        setCertificates([])
-      }
-
-
-    } catch (error) {
-      console.error("Error loading profile data:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -177,33 +155,15 @@ export default function LearnerProfilePage() {
     e.preventDefault()
 
     try {
-      setSaving(true)
-
-      const response = await fetch("/api/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          bio: formData.bio,
-        }),
+      await updateProfileMutation.mutateAsync({
+        name: formData.name,
+        bio: formData.bio,
       })
-
-      if (response.ok) {
-        setIsEditing(false)
-        // Reload profile data to reflect changes
-        await loadProfileData()
-        
-        // Dispatch event to refresh header
-        window.dispatchEvent(new CustomEvent("profileUpdated"))
-      } else {
-        console.error("Failed to update profile")
-      }
+      setIsEditing(false)
+      // Dispatch event to refresh header
+      window.dispatchEvent(new CustomEvent("profileUpdated"))
     } catch (error) {
       console.error("Error updating profile:", error)
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -257,8 +217,8 @@ export default function LearnerProfilePage() {
       if (updateResponse.ok) {
         // Reset image error state when new image is uploaded
         setImageError(false)
-        // Reload profile data to show new image
-        await loadProfileData()
+        // Invalidate profile cache to refresh
+        updateProfileMutation.mutate({ profile_image: data.url })
         
         // Dispatch event to refresh header
         window.dispatchEvent(new CustomEvent("profileUpdated"))
@@ -276,12 +236,14 @@ export default function LearnerProfilePage() {
     }
   }
 
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || loading || !user
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  const hasData = !!profile
+  const showSkeleton = (authLoading || !authUser || userType !== "user" || profilePending) && !hasData
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-      {isLoading ? (
+      {showSkeleton ? (
         <ProfileSkeleton />
       ) : (
         <>
@@ -392,8 +354,8 @@ export default function LearnerProfilePage() {
                 </div>
                 {isEditing ? (
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 pt-2">
-                    <Button type="submit" className="w-full sm:w-auto min-h-[44px]" disabled={saving}>
-                      {saving ? (
+                    <Button type="submit" className="w-full sm:w-auto min-h-[44px]" disabled={updateProfileMutation.isPending}>
+                      {updateProfileMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Saving...
@@ -426,10 +388,10 @@ export default function LearnerProfilePage() {
                   <Loader2 className="h-8 w-8 animate-spin text-white" />
                 </div>
               )}
-              {user.profileImage && user.profileImage.trim() !== "" && !imageError ? (
+              {profile?.profile_image && profile.profile_image.trim() !== "" && !imageError ? (
                 <Image
-                  src={user.profileImage}
-                  alt={user.name || "Profile"}
+                  src={profile.profile_image}
+                  alt={profile.name || "Profile"}
                   width={150}
                   height={150}
                   className="object-cover w-full h-full"
@@ -439,7 +401,7 @@ export default function LearnerProfilePage() {
                 />
               ) : (
                 <div className="flex items-center justify-center w-full h-full bg-primary text-primary-foreground text-4xl sm:text-5xl font-semibold">
-                  {(user.name && user.name.trim() ? user.name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()) || "U"}
+                  {(profile?.name && profile.name.trim() ? profile.name.charAt(0).toUpperCase() : profile?.email?.charAt(0).toUpperCase()) || "U"}
                 </div>
               )}
             </div>
@@ -483,7 +445,7 @@ export default function LearnerProfilePage() {
                     <CertificatePreview
                       key={cert.id}
                       courseTitle={cert.courseTitle}
-                      learnerName={user.name || "Student"}
+                      learnerName={profile?.name || "Student"}
                       completionDate={new Date(cert.issuedAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "long",
