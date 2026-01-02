@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createCourseSlug } from "@/lib/slug"
@@ -235,7 +235,7 @@ export default function CourseCard({
       <CardHeader className="p-6">
         <Link href={mainLink} className="block">
           <div className="aspect-video relative rounded-md overflow-hidden mb-4 cursor-pointer hover:opacity-90 transition-opacity">
-            <Image
+            <SafeImage
               src={imageSrc}
               alt={course.title}
               fill

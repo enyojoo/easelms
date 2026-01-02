@@ -154,6 +154,7 @@ export async function GET(
 
     const processedCourse = {
       ...course,
+      image: course.image || course.thumbnail || null, // Explicitly ensure image field is included
       creator,
       lessons: lessons.map((lesson: any) => {
         // Parse lesson content if it's a JSON string

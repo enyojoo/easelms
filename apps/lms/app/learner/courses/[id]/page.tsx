@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { notFound, useParams } from "next/navigation"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
-import Image from "next/image"
+import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -319,7 +319,7 @@ export default function CoursePage() {
               className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
               onClick={() => setIsVideoModalOpen(true)}
             >
-              <Image
+              <SafeImage
                 src={course.image || "/placeholder.svg?height=400&width=600"}
                 alt={course.title}
                 fill
@@ -497,7 +497,7 @@ export default function CoursePage() {
                 className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
                 onClick={() => setIsVideoModalOpen(true)}
               >
-                <Image
+                <SafeImage
                   src={course?.image || "/placeholder.svg"}
                   alt={course?.title || "Course"}
                   fill
