@@ -215,10 +215,10 @@ export default function ModernVideoPlayer({
   }
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full", className)}>
+    <div ref={containerRef} className={cn("w-full h-full flex items-center justify-center", className)}>
       <VideoPlayer
-        className="overflow-hidden border w-full h-full"
-        style={{ width: '100%', height: '100%' }}
+        className="overflow-hidden border w-full h-full flex items-center justify-center"
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
       <VideoPlayerContent
         ref={videoRef}
@@ -229,6 +229,8 @@ export default function ModernVideoPlayer({
         src={src.trim()}
         poster={poster}
         autoPlay={autoplay}
+        className="w-full h-full object-cover"
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         onLoadedMetadata={(e) => {
           const video = e.currentTarget
           if (onReady) {
