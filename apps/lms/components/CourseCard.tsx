@@ -13,8 +13,9 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
-import { useEnrollCourse } from "@/lib/react-query/hooks"
+import { useEnrollCourse, useProgress } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
+import { useMemo } from "react"
 
 interface CourseCardProps {
   course: Module
@@ -44,6 +45,7 @@ export default function CourseCard({
   const [user, setUser] = useState<any>(null)
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
+  const { data: progressData } = useProgress(course.id)
   
   useEffect(() => {
     const authState = getClientAuthState()
@@ -59,6 +61,36 @@ export default function CourseCard({
   const courseProgress = progress !== undefined ? progress : (userProgress[course.id] || 0)
   
   const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
+
+  // Calculate first incomplete lesson index
+  const firstIncompleteLessonIndex = useMemo(() => {
+    if (!course.lessons || !progressData?.progress || actualStatus !== "enrolled") {
+      return 0
+    }
+
+    const progressList = progressData.progress
+    const completedLessonIds = new Set<number>()
+    
+    // Get all completed lesson IDs
+    progressList.forEach((p: any) => {
+      if (p.completed && p.lesson_id) {
+        const lessonId = typeof p.lesson_id === 'string' ? parseInt(p.lesson_id, 10) : p.lesson_id
+        completedLessonIds.add(lessonId)
+      }
+    })
+
+    // Find first incomplete lesson
+    for (let i = 0; i < course.lessons.length; i++) {
+      const lesson = course.lessons[i]
+      const lessonId = typeof lesson.id === 'string' ? parseInt(lesson.id, 10) : lesson.id
+      if (!completedLessonIds.has(lessonId)) {
+        return i
+      }
+    }
+
+    // All lessons completed, return last lesson index
+    return course.lessons.length > 0 ? course.lessons.length - 1 : 0
+  }, [course.lessons, progressData, actualStatus])
 
   const handleEnroll = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -126,11 +158,12 @@ export default function CourseCard({
       )
     } else if (actualStatus === "enrolled") {
       // When enrolled, always show "Continue" regardless of course type
+      // Navigate to first incomplete lesson
       return (
         <>
           {previewButton}
           <Button asChild className="flex-1">
-            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`}>
+            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${firstIncompleteLessonIndex}`}>
               <Play className="w-4 h-4 mr-2" />
               Continue
             </Link>

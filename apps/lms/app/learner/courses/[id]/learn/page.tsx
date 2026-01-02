@@ -42,6 +42,7 @@ export default function CourseLearningPage() {
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const { user, loading: authLoading, userType } = useClientAuthState()
   const paymentSuccess = searchParams.get("payment") === "success"
+  const lessonIndexParam = searchParams.get("lessonIndex")
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
@@ -100,6 +101,34 @@ export default function CourseLearningPage() {
 
     return { completedLessons: completed, progress: progressPercent }
   }, [course, progressData])
+
+  // Set initial lesson index from query parameter or find first incomplete lesson
+  useEffect(() => {
+    if (!course || !progressData?.progress) return
+
+    // If lessonIndex is provided in query params, use it
+    if (lessonIndexParam !== null) {
+      const index = parseInt(lessonIndexParam, 10)
+      if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
+        setCurrentLessonIndex(index)
+        return
+      }
+    }
+
+    // Otherwise, find the first incomplete lesson
+    if (completedLessons.length > 0 && course.lessons) {
+      for (let i = 0; i < course.lessons.length; i++) {
+        if (!completedLessons.includes(i)) {
+          setCurrentLessonIndex(i)
+          return
+        }
+      }
+      // All lessons completed, go to last lesson
+      if (course.lessons.length > 0) {
+        setCurrentLessonIndex(course.lessons.length - 1)
+      }
+    }
+  }, [course, progressData, completedLessons, lessonIndexParam])
 
   // Process quiz data from React Query
   const { completedQuizzes, quizScores, quizAnswers } = useMemo(() => {

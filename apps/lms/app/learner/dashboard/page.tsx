@@ -204,7 +204,7 @@ export default function LearnerDashboard() {
                         <Progress value={typeof course.progress === 'number' ? course.progress : 0} className="flex-grow min-w-0" />
                         <span className="text-sm font-medium flex-shrink-0">{typeof course.progress === 'number' ? course.progress : 0}%</span>
                       </div>
-                      <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${course.nextLessonIndex || 0}`}>
+                      <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${course.nextLessonIndex ?? 0}`}>
                         <Button variant="link" className="mt-1 md:mt-2 p-0 h-auto text-sm md:text-base">
                           Continue <ChevronRight className="ml-1 h-4 w-4" />
                         </Button>
