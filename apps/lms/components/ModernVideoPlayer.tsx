@@ -88,7 +88,7 @@ export default function ModernVideoPlayer({
             video.src = source.src
             return playerProxy
           }
-          return { src: video.src, type: video.type }
+          return { src: video.src, type: "" }
         },
         load: () => {
           video.load()
@@ -118,14 +118,25 @@ export default function ModernVideoPlayer({
     const container = containerRef.current
     if (!video || !autoplay || !container) return
 
+    // Detect mobile device - only use user agent, not screen size
+    // This ensures consistent behavior when resizing browser window
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    
+    // Lower threshold for mobile to start playing faster
+    const visibilityThreshold = isMobile ? 0.1 : 0.5
+
     // Check if element is visible using Intersection Observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+          if (entry.isIntersecting && entry.intersectionRatio > visibilityThreshold) {
             // Video is visible, try to play
             const attemptPlay = () => {
               if (video.paused && autoplay) {
+                // On mobile, try muted first for better autoplay support
+                if (isMobile && !video.muted) {
+                  video.muted = true
+                }
                 video.play().catch((error) => {
                   // Silently handle autoplay errors (browser policies)
                   if (error.name !== 'NotAllowedError') {
@@ -148,8 +159,8 @@ export default function ModernVideoPlayer({
         })
       },
       {
-        threshold: 0.5, // At least 50% visible
-        rootMargin: '0px',
+        threshold: visibilityThreshold,
+        rootMargin: isMobile ? '50px' : '0px', // Larger margin on mobile for faster trigger
       }
     )
 
@@ -165,6 +176,10 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
+          // On mobile, try muted first for better autoplay support
+          if (isMobile && !video.muted) {
+            video.muted = true
+          }
           video.play().catch((error) => {
             // Silently handle autoplay errors (browser policies)
             if (error.name !== 'NotAllowedError') {
@@ -193,6 +208,10 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
+          // On mobile, try muted first for better autoplay support
+          if (isMobile && !video.muted) {
+            video.muted = true
+          }
           attemptPlay()
         }
       }
@@ -205,6 +224,10 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
+          // On mobile, try muted first for better autoplay support
+          if (isMobile && !video.muted) {
+            video.muted = true
+          }
           attemptPlay()
         }
       }
@@ -217,6 +240,10 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
+          // On mobile, try muted first for better autoplay support
+          if (isMobile && !video.muted) {
+            video.muted = true
+          }
           attemptPlay()
         }
       }
@@ -405,7 +432,7 @@ export default function ModernVideoPlayer({
                   video.src = source.src
                   return playerProxy
                 }
-                return { src: video.src, type: video.type }
+                return { src: video.src, type: "" }
               },
               load: () => {
                 video.load()

@@ -29,7 +29,6 @@ interface Course {
     quiz_questions?: Array<any>
     // Content fields (spread from lesson.content)
     url?: string
-    vimeoVideoId?: string
     html?: string
     text?: string
     estimatedDuration?: number
@@ -148,11 +147,6 @@ export default function CourseLearningPage() {
       }
     })
     
-    // Also pause Vimeo iframes
-    const allIframes = document.querySelectorAll('iframe[src*="vimeo"]')
-    allIframes.forEach((iframe) => {
-      iframe.contentWindow?.postMessage({ method: "pause" }, "*")
-    })
   }, [currentLessonIndex])
 
   // Ensure video continues playing when screen resolution changes
@@ -638,7 +632,7 @@ export default function CourseLearningPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y">
+    <div className="fixed inset-0 lg:left-64 lg:top-16 lg:right-0 lg:bottom-0 flex flex-col overflow-hidden bg-background z-50 lg:z-40 touch-pan-y">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur">
         <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
@@ -680,7 +674,7 @@ export default function CourseLearningPage() {
                           const isCompleted = completedLessons.includes(index)
                           const isCurrent = index === currentLessonIndex
                           const canAccess = canAccessLesson(index)
-                          const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                          const isVideoLesson = (lesson as any).url
                           const isTextLesson = (lesson as any).html || (lesson as any).text
                           const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
 
@@ -766,9 +760,9 @@ export default function CourseLearningPage() {
               </TabsList>
 
               <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {((currentLesson as any).url || (currentLesson as any).vimeoVideoId) ? (
+                {(currentLesson as any).url ? (
                   <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                    <div className="w-full h-full max-w-full max-h-full">
+                    <div className="w-full h-full flex items-center justify-center">
                       <VideoPlayer
                         key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
                         lessonTitle={currentLesson.title}
@@ -776,7 +770,6 @@ export default function CourseLearningPage() {
                         autoPlay={true}
                         isActive={activeTab === "video"}
                         videoUrl={(currentLesson as any).url}
-                        vimeoVideoId={(currentLesson as any).vimeoVideoId}
                         courseId={id}
                         lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
                         videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}

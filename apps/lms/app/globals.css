@@ -214,7 +214,7 @@ body {
 /* Mobile-only styles */
 @media (max-width: 639px) {
   html {
-    font-size: 14px;
+    font-size: 16px; /* Keep at 16px to prevent zoom on input focus */
   }
 
   /* Reduce spacing between elements */
@@ -226,6 +226,19 @@ body {
   /* Adjust padding for main content area */
   main {
     padding: 1rem 0.5rem;
+  }
+
+  /* Ensure all form inputs have at least 16px font-size on mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevent zoom on iOS Safari */
   }
 }
 
