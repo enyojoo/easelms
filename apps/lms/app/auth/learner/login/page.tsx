@@ -98,7 +98,7 @@ export default function UserLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="min-h-[44px]"
+                  className="min-h-[44px] text-sm sm:text-base"
                 />
               </div>
               <div className="space-y-2">
@@ -115,7 +115,7 @@ export default function UserLoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pr-10 min-h-[44px]"
+                    className="pr-10 min-h-[44px] text-sm sm:text-base"
                   />
                   <Button
                     type="button"

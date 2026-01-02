@@ -228,7 +228,7 @@ body {
     padding: 1rem 0.5rem;
   }
 
-  /* Ensure all form inputs have at least 16px font-size on mobile */
+  /* Prevent zoom on input focus - ensure all form inputs have at least 16px font-size */
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -340,6 +340,23 @@ media-control-bar {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+/* Video player frame sizing on mobile/tablet - should fit, not fill */
+@media (max-width: 1023px) {
+  /* Ensure video fits within its container on mobile/tablet */
+  video {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    object-fit: contain !important;
+  }
+
+  /* Video container should maintain aspect ratio */
+  [class*="video"] {
+    aspect-ratio: 16/9;
+    max-width: 100%;
+    max-height: 100%;
+  }
 }
 
 /* Ensure video player fills fullscreen on mobile */

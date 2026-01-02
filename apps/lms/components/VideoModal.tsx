@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { extractVimeoId, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import VideoPreviewPlayer from "@/components/VideoPreviewPlayer"
 
 interface VideoModalProps {
@@ -9,12 +10,16 @@ interface VideoModalProps {
   onClose: () => void
   videoUrl: string
   title: string
+  vimeoVideoId?: string
 }
 
-export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoModalProps) {
+export default function VideoModal({ isOpen, onClose, videoUrl, title, vimeoVideoId }: VideoModalProps) {
+  const vimeoId = vimeoVideoId || (videoUrl ? extractVimeoId(videoUrl) : null)
+  const isVimeoVideo = !!vimeoId
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[800px] w-[95vw] sm:w-full p-0 sm:rounded-t-lg sm:rounded-b-none overflow-hidden [&>button]:rounded-t-lg">
+      <DialogContent className="sm:max-w-[800px] p-0 sm:rounded-t-lg sm:rounded-b-none overflow-hidden [&>button]:rounded-t-lg">
         <div className="p-4 border-b">
           <div>
             <div className="text-sm font-medium text-muted-foreground">Course Preview</div>
@@ -22,8 +27,17 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoMo
           </div>
         </div>
 
-        <div className="relative bg-black w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
-          {videoUrl ? (
+        <div className="relative bg-black w-full overflow-hidden" style={{ aspectRatio: '16/9', minHeight: '400px' }}>
+          {isVimeoVideo && vimeoId ? (
+            <iframe
+              src={getVimeoEmbedUrl(vimeoId, { autoplay: isOpen, controls: true, responsive: true })}
+              className="w-full h-full absolute inset-0"
+              frameBorder="0"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title={title}
+            />
+          ) : videoUrl ? (
             <div className="w-full h-full absolute inset-0">
               <VideoPreviewPlayer
                 key={videoUrl}

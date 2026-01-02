@@ -128,7 +128,7 @@ export default function UserSignUpPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    className="min-h-[44px]"
+                    className="min-h-[44px] text-sm sm:text-base"
                   />
                 </div>
                 <div className="space-y-2">
@@ -140,7 +140,7 @@ export default function UserSignUpPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    className="min-h-[44px]"
+                    className="min-h-[44px] text-sm sm:text-base"
                   />
                 </div>
               </div>
@@ -153,7 +153,7 @@ export default function UserSignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="min-h-[44px]"
+                  className="min-h-[44px] text-sm sm:text-base"
                 />
               </div>
               <div className="space-y-2">
@@ -166,7 +166,7 @@ export default function UserSignUpPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="pr-10 min-h-[44px]"
+                    className="pr-10 min-h-[44px] text-sm sm:text-base"
                   />
                   <Button
                     type="button"
@@ -194,7 +194,7 @@ export default function UserSignUpPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="pr-10 min-h-[44px]"
+                    className="pr-10 min-h-[44px] text-sm sm:text-base"
                   />
                   <Button
                     type="button"

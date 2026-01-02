@@ -8,14 +8,15 @@ import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, FileText, List } from "lucide-react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProgress, useRealtimeQuizResults, useSaveProgress } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
 
 interface Course {
   id: number
@@ -29,6 +30,7 @@ interface Course {
     quiz_questions?: Array<any>
     // Content fields (spread from lesson.content)
     url?: string
+    vimeoVideoId?: string
     html?: string
     text?: string
     estimatedDuration?: number
@@ -47,11 +49,11 @@ export default function CourseLearningPage() {
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [lessonStartTime, setLessonStartTime] = useState<number | null>(null)
   const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
   const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
@@ -147,28 +149,12 @@ export default function CourseLearningPage() {
       }
     })
     
+    // Also pause Vimeo iframes
+    const allIframes = document.querySelectorAll('iframe[src*="vimeo"]')
+    allIframes.forEach((iframe) => {
+      iframe.contentWindow?.postMessage({ method: "pause" }, "*")
+    })
   }, [currentLessonIndex])
-
-  // Ensure video continues playing when screen resolution changes
-  useEffect(() => {
-    const handleResize = () => {
-      // Don't pause video on resize - let it continue playing
-      // The Intersection Observer will handle visibility changes
-      const video = document.querySelector('video')
-      if (video && !video.paused && activeTab === "video") {
-        // Video is playing and we're on video tab - ensure it stays playing
-        // Only pause if it's actually out of view (handled by Intersection Observer)
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('orientationchange', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      window.removeEventListener('orientationchange', handleResize)
-    }
-  }, [activeTab])
 
   // Process quiz data from React Query
   const { completedQuizzes, quizScores, quizAnswers } = useMemo(() => {
@@ -287,10 +273,6 @@ export default function CourseLearningPage() {
         }
 
         await saveProgressMutation.mutateAsync(progressPayload)
-        // Ensure cache is invalidated and refetched to sync across devices
-        queryClient.invalidateQueries({ queryKey: ["progress", id] })
-        queryClient.invalidateQueries({ queryKey: ["progress", "all"] })
-        queryClient.refetchQueries({ queryKey: ["progress", id] })
       } catch (error) {
         console.error("Error saving progress:", error)
       }
@@ -632,7 +614,7 @@ export default function CourseLearningPage() {
   }
 
   return (
-    <div className="fixed inset-0 lg:left-64 lg:top-16 lg:right-0 lg:bottom-0 flex flex-col overflow-hidden bg-background z-50 lg:z-40 touch-pan-y">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur">
         <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
@@ -640,98 +622,23 @@ export default function CourseLearningPage() {
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0 h-8 sm:h-9 md:h-10">
               <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
-            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate flex-1 min-w-0">Course: {course.title}</h1>
-            <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="flex-shrink-0 h-8 sm:h-9 md:h-10">
-                  <List className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[90vw] sm:w-[400px] p-0 overflow-hidden">
-                <SheetHeader className="p-4 border-b text-left">
-                  <SheetTitle className="text-left">Course Progress</SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col h-[calc(100vh-73px)] overflow-hidden">
-                  <div className="p-4 border-b flex-shrink-0">
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Overall Progress</span>
-                        <span className="font-semibold">{Math.round(progress)}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                      <p className="text-sm text-muted-foreground">
-                        {completedLessons.length} of {course.lessons.length} lessons completed
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <div className="p-4">
-                      <h3 className="text-base font-semibold mb-3">Course Content</h3>
-                    </div>
-                    <ScrollArea className="flex-1 h-full px-4">
-                      <div className="space-y-2 pb-4">
-                        {course.lessons.map((lesson: any, index: number) => {
-                          const isCompleted = completedLessons.includes(index)
-                          const isCurrent = index === currentLessonIndex
-                          const canAccess = canAccessLesson(index)
-                          const isVideoLesson = (lesson as any).url
-                          const isTextLesson = (lesson as any).html || (lesson as any).text
-                          const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
-
-                          return (
-                            <button
-                              key={index}
-                              onClick={() => {
-                                if (!canAccess) {
-                                  toast({
-                                    title: "Lesson Locked",
-                                    description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-                                    variant: "destructive",
-                                  })
-                                  return
-                                }
-                                setCurrentLessonIndex(index)
-                                setActiveTab("video")
-                                setTimeLimitExceeded(false)
-                                setIsSheetOpen(false)
-                              }}
-                              disabled={!canAccess}
-                              className={`w-full text-left p-3 rounded-lg flex items-center justify-between transition-colors text-sm border min-h-[48px] ${
-                                !canAccess
-                                  ? "opacity-50 cursor-not-allowed bg-muted border-border"
-                                  : isCurrent
-                                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                                    : isCompleted
-                                      ? "bg-muted/50 border-green-200 dark:border-green-800"
-                                      : "hover:bg-accent hover:text-accent-foreground border-border"
-                              }`}
-                            >
-                              <div className="flex items-center flex-1 min-w-0">
-                                {isCompleted ? (
-                                  <CheckCircle2 className="mr-3 h-4 w-4 flex-shrink-0 text-green-500" />
-                                ) : (
-                                  <LessonIcon className={`mr-3 h-4 w-4 flex-shrink-0 ${isCurrent ? "" : "text-muted-foreground"}`} />
-                                )}
-                                <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
-                                  {index + 1}. {lesson.title}
-                                </span>
-                              </div>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate flex-1">Course: {course.title}</h1>
+            {/* List icon for mobile/tablet - opens course progress and content sheet */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsSheetOpen(true)} 
+              className="flex-shrink-0 h-8 sm:h-9 md:h-10 lg:hidden"
+            >
+              <List className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Full width on all screens */}
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+      {/* Main Content - Scrollable container on mobile, fixed on desktop */}
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
+        <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none min-h-0">
           <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
               <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
@@ -760,9 +667,9 @@ export default function CourseLearningPage() {
               </TabsList>
 
               <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {(currentLesson as any).url ? (
+                {((currentLesson as any).url || (currentLesson as any).vimeoVideoId) ? (
                   <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full max-w-full max-h-full lg:max-w-full lg:max-h-full">
                       <VideoPlayer
                         key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
                         lessonTitle={currentLesson.title}
@@ -770,6 +677,7 @@ export default function CourseLearningPage() {
                         autoPlay={true}
                         isActive={activeTab === "video"}
                         videoUrl={(currentLesson as any).url}
+                        vimeoVideoId={(currentLesson as any).vimeoVideoId}
                         courseId={id}
                         lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
                         videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
@@ -872,12 +780,12 @@ export default function CourseLearningPage() {
 
             {/* Footer - Fixed */}
             <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-background">
-              <div className="flex items-center justify-between gap-2 sm:gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={handlePreviousLesson}
                   disabled={currentLessonIndex === 0}
-                  className="flex-1 text-foreground bg-background hover:bg-primary/10 hover:text-primary h-10 sm:h-12 text-xs sm:text-sm md:text-base"
+                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm"
                   size="sm"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Previous
@@ -893,7 +801,7 @@ export default function CourseLearningPage() {
                     activeTab === "resources" &&
                     currentLessonIndex === course.lessons.length - 1
                   }
-                  className={`flex-1 text-foreground h-10 sm:h-12 text-xs sm:text-sm md:text-base ${
+                  className={`text-foreground w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm ${
                     allLessonsCompleted
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
@@ -914,7 +822,164 @@ export default function CourseLearningPage() {
             </div>
           </div>
         </div>
+
+        {/* Sidebar - Hidden on mobile/tablet, shown on desktop (lg+) */}
+        <div className="hidden lg:flex flex-shrink-0 w-full lg:w-[30%] border-t lg:border-t-0 lg:border-l border-border bg-card order-2 lg:order-none flex flex-col min-h-0 lg:h-full">
+          <div className="flex-1 flex flex-col min-h-0 p-3 sm:p-4 md:p-5">
+            <div className="mb-3 sm:mb-4 flex-shrink-0">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2 sm:mb-2.5">Course Progress</h3>
+              <div className="space-y-2 sm:space-y-2.5">
+                <div className="flex items-center justify-between text-xs sm:text-sm">
+                  <span className="text-muted-foreground">Overall Progress</span>
+                  <span className="font-semibold">{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} className="h-1.5 sm:h-2 md:h-2.5" />
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {completedLessons.length} of {course.lessons.length} lessons completed
+                </p>
+              </div>
+            </div>
+            <div className="border-t pt-3 sm:pt-4 flex-1 flex flex-col min-h-0">
+              <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2.5 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
+              <ScrollArea className="flex-1 min-h-0 w-full">
+                <div className="space-y-1.5 sm:space-y-2 md:space-y-2.5 pr-2 sm:pr-3">
+                {course.lessons.map((lesson: any, index: number) => {
+                  const isCompleted = completedLessons.includes(index)
+                  const isCurrent = index === currentLessonIndex
+                  const canAccess = canAccessLesson(index)
+                  const isRequired = lesson?.settings?.isRequired ?? false
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        if (!canAccess) {
+                          toast({
+              title: "Lesson Locked",
+              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+              variant: "destructive",
+            })
+                          return
+                        }
+                        setCurrentLessonIndex(index)
+                        setActiveTab("video")
+                        setTimeLimitExceeded(false)
+                      }}
+                      disabled={!canAccess}
+                      className={`w-full text-left p-2 sm:p-2.5 md:p-3 rounded-md sm:rounded-lg flex items-center justify-between transition-colors text-xs sm:text-sm border min-h-[44px] sm:min-h-[48px] ${
+                        !canAccess
+                          ? "opacity-50 cursor-not-allowed bg-muted border-border"
+                          : isCurrent
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : isCompleted
+                              ? "bg-muted/50 border-green-200 dark:border-green-800"
+                              : "hover:bg-accent hover:text-accent-foreground border-border"
+                      }`}
+                    >
+                      <div className="flex items-center flex-1 min-w-0">
+                        {isCompleted ? (
+                          <CheckCircle2 className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-green-500" />
+                        ) : (() => {
+                          const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                          const isTextLesson = (lesson as any).html || (lesson as any).text
+                          const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
+                          return <LessonIcon className={`mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 ${isCurrent ? "" : "text-muted-foreground"}`} />
+                        })()}
+                        <div className="flex-1 min-w-0">
+                            <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
+                              {index + 1}. {lesson.title}
+                            </span>
+                        </div>
+                      </div>
+                    </button>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Mobile/Tablet Sheet - Course Progress and Content */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle>Course Progress</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col h-[calc(100vh-73px)]">
+            <div className="p-4 border-b flex-shrink-0">
+              <h3 className="text-sm font-semibold mb-2">Overall Progress</h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Progress</span>
+                  <span className="font-semibold">{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+                <p className="text-sm text-muted-foreground">
+                  {completedLessons.length} of {course.lessons.length} lessons completed
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <h3 className="text-sm font-semibold mb-3 px-4 pt-4">Course Content</h3>
+              <ScrollArea className="h-[calc(100vh-200px)] px-4">
+                <div className="space-y-2 pb-4">
+                  {course.lessons.map((lesson: any, index: number) => {
+                    const isCompleted = completedLessons.includes(index)
+                    const isCurrent = index === currentLessonIndex
+                    const canAccess = canAccessLesson(index)
+                    const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                    const isTextLesson = (lesson as any).html || (lesson as any).text
+                    const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : BookOpen
+
+                    return (
+                      <Button
+                        key={lesson.id || index}
+                        variant={isCurrent ? "secondary" : "ghost"}
+                        className={cn(
+                          "w-full justify-start h-auto py-2 px-3 text-left",
+                          isCompleted && "text-muted-foreground",
+                          !canAccess && "opacity-60 cursor-not-allowed"
+                        )}
+                        onClick={() => {
+                          if (!canAccess) {
+                            toast({
+                              title: "Lesson Locked",
+                              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+                              variant: "destructive",
+                            })
+                            return
+                          }
+                          setCurrentLessonIndex(index)
+                          setActiveTab("video")
+                          setTimeLimitExceeded(false)
+                          setIsSheetOpen(false)
+                        }}
+                        disabled={!canAccess}
+                      >
+                        <div className="flex items-center flex-1 min-w-0">
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
+                          ) : (
+                            <LessonIcon className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-medium truncate flex-1">{lesson.title}</span>
+                        </div>
+                        {lesson.estimatedDuration && (
+                          <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
+                            {Math.round(lesson.estimatedDuration / 60)} min
+                          </span>
+                        )}
+                      </Button>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

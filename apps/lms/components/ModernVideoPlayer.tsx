@@ -88,7 +88,7 @@ export default function ModernVideoPlayer({
             video.src = source.src
             return playerProxy
           }
-          return { src: video.src, type: "" }
+          return { src: video.src, type: video.getAttribute('type') || '' }
         },
         load: () => {
           video.load()
@@ -118,25 +118,14 @@ export default function ModernVideoPlayer({
     const container = containerRef.current
     if (!video || !autoplay || !container) return
 
-    // Detect mobile device - only use user agent, not screen size
-    // This ensures consistent behavior when resizing browser window
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-    
-    // Lower threshold for mobile to start playing faster
-    const visibilityThreshold = isMobile ? 0.1 : 0.5
-
     // Check if element is visible using Intersection Observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > visibilityThreshold) {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
             // Video is visible, try to play
             const attemptPlay = () => {
               if (video.paused && autoplay) {
-                // On mobile, try muted first for better autoplay support
-                if (isMobile && !video.muted) {
-                  video.muted = true
-                }
                 video.play().catch((error) => {
                   // Silently handle autoplay errors (browser policies)
                   if (error.name !== 'NotAllowedError') {
@@ -159,8 +148,8 @@ export default function ModernVideoPlayer({
         })
       },
       {
-        threshold: visibilityThreshold,
-        rootMargin: isMobile ? '50px' : '0px', // Larger margin on mobile for faster trigger
+        threshold: 0.5, // At least 50% visible
+        rootMargin: '0px',
       }
     )
 
@@ -176,10 +165,6 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
-          // On mobile, try muted first for better autoplay support
-          if (isMobile && !video.muted) {
-            video.muted = true
-          }
           video.play().catch((error) => {
             // Silently handle autoplay errors (browser policies)
             if (error.name !== 'NotAllowedError') {
@@ -208,10 +193,6 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
-          // On mobile, try muted first for better autoplay support
-          if (isMobile && !video.muted) {
-            video.muted = true
-          }
           attemptPlay()
         }
       }
@@ -224,10 +205,6 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
-          // On mobile, try muted first for better autoplay support
-          if (isMobile && !video.muted) {
-            video.muted = true
-          }
           attemptPlay()
         }
       }
@@ -240,10 +217,6 @@ export default function ModernVideoPlayer({
                         rect.right <= (window.innerWidth || document.documentElement.clientWidth)
         
         if (isInView) {
-          // On mobile, try muted first for better autoplay support
-          if (isMobile && !video.muted) {
-            video.muted = true
-          }
           attemptPlay()
         }
       }
@@ -253,8 +226,34 @@ export default function ModernVideoPlayer({
     video.addEventListener("loadeddata", handleLoadedData)
     video.addEventListener("loadedmetadata", handleLoadedMetadata)
 
+    // Handle window resize/orientation change - continue playing if video was playing
+    const handleResize = () => {
+      if (video && !video.paused && autoplay) {
+        // Video was playing, check if still in view
+        const rect = container.getBoundingClientRect()
+        const isInView = rect.top >= 0 && rect.left >= 0 && 
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        if (!isInView) {
+          video.pause()
+        } else if (video.paused && autoplay) {
+          // Try to resume if it was paused due to resize
+          video.play().catch((error) => {
+            if (error.name !== 'NotAllowedError') {
+              console.error("Error resuming video after resize:", error)
+            }
+          })
+        }
+      }
+    }
+
+    window.addEventListener("resize", handleResize)
+    window.addEventListener("orientationchange", handleResize)
+
     return () => {
       observer.disconnect()
+      window.removeEventListener("resize", handleResize)
+      window.removeEventListener("orientationchange", handleResize)
       video.removeEventListener("canplay", handleCanPlay)
       video.removeEventListener("loadeddata", handleLoadedData)
       video.removeEventListener("loadedmetadata", handleLoadedMetadata)
@@ -374,6 +373,12 @@ export default function ModernVideoPlayer({
     <div 
       ref={containerRef} 
       className={cn("w-full h-full flex items-center justify-center", className)}
+      style={{
+        // On mobile/tablet, ensure video fits within frame, not fills entire screen
+        maxWidth: '100%',
+        maxHeight: '100%',
+        aspectRatio: '16/9',
+      }}
     >
       <VideoPlayer
         className={cn(
@@ -385,7 +390,10 @@ export default function ModernVideoPlayer({
           height: '100%', 
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: 'center'
+          justifyContent: 'center',
+          // On mobile, maintain aspect ratio
+          maxWidth: '100%',
+          maxHeight: '100%',
         }}
       >
       <VideoPlayerContent
@@ -432,7 +440,7 @@ export default function ModernVideoPlayer({
                   video.src = source.src
                   return playerProxy
                 }
-                return { src: video.src, type: "" }
+                return { src: video.src, type: video.getAttribute('type') || '' }
               },
               load: () => {
                 video.load()
@@ -470,13 +478,12 @@ export default function ModernVideoPlayer({
       {controls && (
         <VideoPlayerControlBar>
           <VideoPlayerPlayButton />
+          <VideoPlayerSeekBackwardButton />
+          <VideoPlayerSeekForwardButton />
           <VideoPlayerTimeRange />
           <VideoPlayerTimeDisplay showDuration />
-          {/* Hide volume controls on mobile */}
-          <div className="hidden sm:flex items-center">
-            <VideoPlayerMuteButton />
-            <VideoPlayerVolumeRange />
-          </div>
+          <VideoPlayerMuteButton />
+          <VideoPlayerVolumeRange />
           <Button
             variant="ghost"
             size="icon"
