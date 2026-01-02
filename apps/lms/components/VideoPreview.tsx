@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Play } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { extractVimeoId, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import SafeImage from "@/components/SafeImage"
+import ModernVideoPlayer from "@/components/ModernVideoPlayer"
+import { Button } from "@/components/ui/button"
+import { Play } from "lucide-react"
 
 interface VideoPreviewProps {
   videoUrl: string
@@ -58,28 +59,15 @@ export default function VideoPreview({ videoUrl, thumbnailUrl, vimeoVideoId }: V
     )
   }
 
-  // Fallback to HTML5 video for non-Vimeo videos
+  // Use ModernVideoPlayer for non-Vimeo videos
   return (
-    <div className="relative">
-      <video
-        id="coursePreview"
-        className="w-full rounded-lg shadow-lg"
+    <div className="relative w-full aspect-video overflow-hidden shadow-lg">
+      <ModernVideoPlayer
+        src={videoUrl}
         poster={thumbnailUrl}
-        onEnded={() => setIsPlaying(false)}
-      >
-        <source src={videoUrl} type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
-      {!isPlaying && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-          <Button
-            onClick={togglePlay}
-            className="bg-primary/80 hover:bg-primary text-primary-foreground rounded-full p-2"
-          >
-            <Play className="h-6 w-6" />
-          </Button>
-        </div>
-      )}
+        controls={true}
+        autoplay={false}
+      />
     </div>
   )
 }

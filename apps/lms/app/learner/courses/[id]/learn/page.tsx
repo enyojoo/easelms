@@ -7,7 +7,7 @@ import { useClientAuthState } from "@/utils/client-auth"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, FileText } from "lucide-react"
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
@@ -255,40 +255,33 @@ export default function CourseLearningPage() {
 
 
   const handleLessonComplete = async () => {
-    if (!course || completedLessons.includes(currentLessonIndex)) {
-      const currentLesson = course.lessons[currentLessonIndex]
-      if (currentLesson?.quiz_questions && currentLesson.quiz_questions.length > 0) {
-      setActiveTab("quiz")
-      } else if (currentLesson?.resources && currentLesson.resources.length > 0) {
-        setActiveTab("resources")
-      } else if (currentLessonIndex < course.lessons.length - 1) {
-        // If no quiz or resources, go to next lesson
-        const nextIndex = currentLessonIndex + 1
-        if (canAccessLesson(nextIndex)) {
-          setCurrentLessonIndex(nextIndex)
-          setActiveTab("video")
-        }
-      } else {
-        // All lessons completed, go to summary
-        router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
-      }
-      return
-    }
+    if (!course) return
 
     const lesson = course.lessons[currentLessonIndex]
     if (!lesson) return
 
-    // Save progress to API - progress will update automatically from React Query cache
-    await saveProgress(lesson.id, true)
+    // Check if lesson has a quiz
+    const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
     
-    // Auto-advance to quiz if present, otherwise to resources, or next lesson
-    const currentLesson = course.lessons[currentLessonIndex]
-    if (currentLesson?.quiz_questions && currentLesson.quiz_questions.length > 0) {
-    setActiveTab("quiz")
-    } else if (currentLesson?.resources && currentLesson.resources.length > 0) {
+    // If there's a quiz, don't mark as completed - just navigate to quiz
+    // Lesson will only be marked as completed when quiz is passed (in handleQuizComplete)
+    if (hasQuiz) {
+      setActiveTab("quiz")
+      return
+    }
+
+    // Only mark as completed if there's no quiz
+    // If already completed, just navigate
+    if (!completedLessons.includes(currentLessonIndex)) {
+      // Save progress to API - progress will update automatically from React Query cache
+      await saveProgress(lesson.id, true)
+    }
+    
+    // Auto-advance to resources or next lesson
+    if (lesson.resources && lesson.resources.length > 0) {
       setActiveTab("resources")
     } else if (currentLessonIndex < course.lessons.length - 1) {
-      // If no quiz or resources, go to next lesson
+      // If no resources, go to next lesson
       const nextIndex = currentLessonIndex + 1
       if (canAccessLesson(nextIndex)) {
         setCurrentLessonIndex(nextIndex)
@@ -582,7 +575,7 @@ export default function CourseLearningPage() {
                       <VideoPlayer
                         lessonTitle={currentLesson.title}
                         onComplete={handleLessonComplete}
-                        autoPlay={false}
+                        autoPlay={true}
                         isActive={true}
                         videoUrl={(currentLesson as any).url}
                         vimeoVideoId={(currentLesson as any).vimeoVideoId}
@@ -783,11 +776,12 @@ export default function CourseLearningPage() {
                       <div className="flex items-center flex-1 min-w-0">
                         {isCompleted ? (
                           <CheckCircle2 className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-green-500" />
-                        ) : isCurrent ? (
-                          <PlayCircle className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0" />
-                        ) : (
-                          <BookOpen className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
-                        )}
+                        ) : (() => {
+                          const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                          const isTextLesson = (lesson as any).html || (lesson as any).text
+                          const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
+                          return <LessonIcon className={`mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 ${isCurrent ? "" : "text-muted-foreground"}`} />
+                        })()}
                         <div className="flex-1 min-w-0">
                             <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
                               {index + 1}. {lesson.title}

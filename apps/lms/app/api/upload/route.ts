@@ -1,7 +1,5 @@
-import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
-import { uploadFile } from "@/lib/supabase/storage"
-import { getStoragePath, getBucketForType, isValidFileType, getMaxFileSize } from "@/lib/supabase/storage-helpers"
-import type { StorageBucket } from "@/lib/supabase/storage"
+import { createClient } from "@/lib/supabase/server"
+import { uploadFileToS3, getS3StoragePath, getPublicUrl, isValidVideoFile, isValidImageFile, isValidDocumentFile, getMaxVideoSize, getMaxImageSize, getMaxDocumentSize } from "@/lib/aws/s3"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
@@ -12,19 +10,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Use service role client to bypass RLS for storage operations
-  let serviceClient
-  try {
-    serviceClient = createServiceRoleClient()
-  } catch (serviceError: any) {
-    console.warn("Service role key not available, using regular client:", serviceError.message)
-    serviceClient = null
-  }
-
   const formData = await request.formData()
   const file = formData.get("file") as File
-  const fileType = (formData.get("type") as string) || "document" // thumbnail, document, avatar, certificate
-  const bucketName = (formData.get("bucket") as string) || undefined
+  const fileType = (formData.get("type") as string) || "document" // video, thumbnail, document, avatar, certificate
   const additionalPath = (formData.get("additionalPath") as string) || undefined
 
   if (!file) {
@@ -32,86 +20,82 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Determine bucket
-    const bucket: StorageBucket = bucketName
-      ? (bucketName as StorageBucket)
-      : getBucketForType(fileType as "thumbnail" | "document" | "avatar" | "certificate")
+    // Determine file type and validate
+    let s3Type: "video" | "thumbnail" | "document" | "avatar" | "certificate"
+    let maxSize: number
+    let isValid: boolean
 
-    // Check if bucket exists, create if it doesn't (using service client)
-    const clientToUse = serviceClient || supabase
-    const { data: buckets, error: listError } = await clientToUse.storage.listBuckets()
-    
-    if (listError) {
-      console.warn("Error listing buckets:", listError)
+    // Auto-detect file type if not explicitly set
+    if (fileType === "video" || file.type.startsWith("video/")) {
+      s3Type = "video"
+      maxSize = getMaxVideoSize()
+      isValid = isValidVideoFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid video file type. Supported formats: MP4, WebM, OGG" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "thumbnail" || fileType === "avatar" || file.type.startsWith("image/")) {
+      s3Type = fileType === "avatar" ? "avatar" : "thumbnail"
+      maxSize = getMaxImageSize()
+      isValid = isValidImageFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid image file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "certificate") {
+      s3Type = "certificate"
+      maxSize = getMaxDocumentSize()
+      isValid = isValidDocumentFile(file) || isValidImageFile(file) // Certificates can be PDF or image
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid certificate file type. Supported formats: PDF, PNG, JPG, JPEG" },
+          { status: 400 }
+        )
+      }
     } else {
-      const bucketExists = buckets?.some((b) => b.name === bucket)
-      if (!bucketExists) {
-        // Try to create bucket (this might fail if user doesn't have permission, but we'll try)
-        const { error: createError } = await clientToUse.storage.createBucket(bucket, {
-          public: true,
-          fileSizeLimit: getMaxFileSize(bucket),
-        })
-        if (createError) {
-          console.warn(`Bucket ${bucket} does not exist and could not be created:`, createError.message)
-          // Continue anyway - bucket might exist but not be listed due to permissions
-        }
+      // Default to document
+      s3Type = "document"
+      maxSize = getMaxDocumentSize()
+      isValid = isValidDocumentFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid document file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP" },
+          { status: 400 }
+        )
       }
     }
 
-    // Validate file type
-    if (!isValidFileType(file, bucket)) {
-      return NextResponse.json(
-        { error: `Invalid file type for ${bucket} bucket` },
-        { status: 400 }
-      )
-    }
-
     // Validate file size
-    const maxSize = getMaxFileSize(bucket)
     if (file.size > maxSize) {
+      const maxSizeMB = maxSize / 1024 / 1024
+      const maxSizeGB = maxSize / 1024 / 1024 / 1024
+      const sizeLabel = maxSizeGB >= 1 ? `${maxSizeGB}GB` : `${maxSizeMB}MB`
       return NextResponse.json(
-        { error: `File size exceeds maximum allowed size of ${maxSize / 1024 / 1024}MB` },
+        { error: `File size exceeds maximum allowed size of ${sizeLabel}` },
         { status: 400 }
       )
     }
 
-    // Generate storage path
-    const path = getStoragePath(
-      fileType as "thumbnail" | "document" | "avatar" | "certificate",
+    // Generate S3 storage path
+    const s3Path = getS3StoragePath(
+      s3Type,
       user.id,
       file.name,
       additionalPath
     )
 
-    // Upload file using service client to bypass RLS
+    // Upload to S3
     const fileBuffer = Buffer.from(await file.arrayBuffer())
-    const uploadClient = serviceClient || supabase
-    
-    const { data: uploadData, error: uploadError } = await uploadClient.storage
-      .from(bucket)
-      .upload(path, fileBuffer, {
-        contentType: file.type,
-        upsert: false,
-      })
-
-    if (uploadError) {
-      // If upload fails with RLS error, provide helpful message
-      if (uploadError.message?.includes("row-level security") || uploadError.message?.includes("RLS")) {
-        throw new Error(`Storage access denied. Please ensure the ${bucket} bucket exists and has proper permissions.`)
-      }
-      if (uploadError.message?.includes("Bucket not found") || uploadError.message?.includes("does not exist")) {
-        throw new Error(`Bucket "${bucket}" not found. Please create the bucket in Supabase Storage first.`)
-      }
-      throw uploadError
-    }
-
-    // Get public URL
-    const { data: { publicUrl } } = uploadClient.storage.from(bucket).getPublicUrl(uploadData.path)
+    const { key, url } = await uploadFileToS3(fileBuffer, s3Path, file.type)
 
     return NextResponse.json({
-      url: publicUrl,
-      path: uploadData.path,
-      bucket,
+      url,
+      path: key,
+      bucket: "s3",
     })
   } catch (error: any) {
     console.error("Upload error:", error)

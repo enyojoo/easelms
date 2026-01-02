@@ -118,14 +118,20 @@ export async function POST(request: Request) {
 
     // Save lessons if provided
     if (courseData.lessons && Array.isArray(courseData.lessons) && result.id) {
-      // Delete existing lessons for this course
-      await dbClient
+      // Get existing lessons from database to track which ones to delete
+      const { data: existingLessons } = await dbClient
         .from("lessons")
-        .delete()
+        .select("id")
         .eq("course_id", result.id)
 
-      // Insert new lessons - map to match database schema
-      const lessonsToInsert = courseData.lessons.map((lesson: any, index: number) => {
+      const existingLessonIds = new Set((existingLessons || []).map((l: any) => l.id?.toString()))
+
+      // Separate lessons into updates and inserts
+      const lessonsToUpdate: any[] = []
+      const lessonsToInsert: any[] = []
+      const currentLessonIds = new Set<string>()
+
+      courseData.lessons.forEach((lesson: any, index: number) => {
         // Store resources, quiz, and estimatedDuration in content JSONB
         const lessonContent = {
           ...(lesson.content || {}),
@@ -137,7 +143,7 @@ export async function POST(request: Request) {
         // Extract settings fields to match schema
         const settings = lesson.settings || {}
         
-        return {
+        const lessonData = {
           course_id: result.id,
           title: lesson.title || "",
           type: lesson.type || "text",
@@ -146,18 +152,69 @@ export async function POST(request: Request) {
           is_required: settings.isRequired !== undefined ? settings.isRequired : true,
           video_progression: settings.videoProgression !== undefined ? settings.videoProgression : false,
         }
+
+        // Check if lesson has a real database ID (numeric, not temporary like "lesson-123456-abc")
+        const lessonId = lesson.id?.toString()
+        // Real database IDs are numeric strings, temporary IDs start with "lesson-" and contain non-numeric characters
+        const isRealDatabaseId = lessonId && 
+          !lessonId.startsWith("lesson-") && 
+          !isNaN(Number(lessonId)) && 
+          Number(lessonId) > 0
+
+        if (isRealDatabaseId && existingLessonIds.has(lessonId)) {
+          // Update existing lesson
+          lessonsToUpdate.push({
+            id: Number(lessonId),
+            ...lessonData,
+          })
+          currentLessonIds.add(lessonId)
+        } else {
+          // Insert new lesson
+          lessonsToInsert.push(lessonData)
+        }
       })
 
+      // Update existing lessons
+      if (lessonsToUpdate.length > 0) {
+        for (const lessonUpdate of lessonsToUpdate) {
+          const { id, ...updateData } = lessonUpdate
+          const { error: updateError } = await dbClient
+            .from("lessons")
+            .update(updateData)
+            .eq("id", id)
+
+          if (updateError) {
+            console.error(`Error updating lesson ${id}:`, updateError)
+          }
+        }
+        console.log(`Successfully updated ${lessonsToUpdate.length} lessons for course ${result.id}`)
+      }
+
+      // Insert new lessons
       if (lessonsToInsert.length > 0) {
-        const { error: lessonsError } = await dbClient
+        const { error: insertError } = await dbClient
           .from("lessons")
           .insert(lessonsToInsert)
 
-        if (lessonsError) {
-          console.error("Error saving lessons:", lessonsError)
-          // Don't fail the request, just log the error
+        if (insertError) {
+          console.error("Error inserting new lessons:", insertError)
         } else {
-          console.log(`Successfully saved ${lessonsToInsert.length} lessons for course ${result.id}`)
+          console.log(`Successfully inserted ${lessonsToInsert.length} new lessons for course ${result.id}`)
+        }
+      }
+
+      // Delete lessons that exist in database but not in current lessons array
+      const lessonsToDelete = Array.from(existingLessonIds).filter(id => !currentLessonIds.has(id))
+      if (lessonsToDelete.length > 0) {
+        const { error: deleteError } = await dbClient
+          .from("lessons")
+          .delete()
+          .in("id", lessonsToDelete.map(id => Number(id)))
+
+        if (deleteError) {
+          console.error("Error deleting removed lessons:", deleteError)
+        } else {
+          console.log(`Successfully deleted ${lessonsToDelete.length} removed lessons for course ${result.id}`)
         }
       }
     }

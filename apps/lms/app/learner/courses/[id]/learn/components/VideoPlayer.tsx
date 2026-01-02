@@ -1,10 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Maximize, Minimize } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
 import { extractVimeoId, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
+import ModernVideoPlayer from "@/components/ModernVideoPlayer"
 
 interface VideoPlayerProps {
   lessonTitle: string
@@ -110,11 +108,6 @@ export default function VideoPlayer({
             onProgressUpdate(progressData.progressPercentage)
           }
 
-          // Auto-complete if watched 80% or more
-          if (progressData.progressPercentage >= 80 && !completedRef.current) {
-            completedRef.current = true
-            onComplete()
-          }
         } catch (error) {
           console.error("Error saving video progress:", error)
         }
@@ -382,69 +375,84 @@ export default function VideoPlayer({
           allowFullScreen
           title={lessonTitle}
         />
-      ) : (
-        <video
-          ref={videoRef}
-          className={`w-full h-full ${isFullscreen ? "object-contain" : "object-cover"}`}
-          src={videoUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"}
+      ) : videoUrl ? (
+        <ModernVideoPlayer
+          src={videoUrl}
+          controls={true}
+          autoplay={autoPlay && isActive}
+          onReady={(player) => {
+            // Set up progress tracking with video player
+            if (videoProgression && progressStorageKey) {
+              const handleTimeUpdate = () => {
+                const current = typeof player.currentTime === 'function' ? player.currentTime() : player.currentTime
+                const dur = typeof player.duration === 'function' ? player.duration() : player.duration
+                if (current > 0 && dur > 0) {
+                  setCurrentTime(current)
+                  setDuration(dur)
+                  
+                  // Save progress
+                  try {
+                    localStorage.setItem(
+                      progressStorageKey,
+                      JSON.stringify({ currentTime: current, duration: dur })
+                    )
+                  } catch (error) {
+                    console.error("Error saving video progress:", error)
+                  }
+                  
+                  // Call progress update callback
+                  if (onProgressUpdate && dur > 0) {
+                    onProgressUpdate((current / dur) * 100)
+                  }
+                }
+              }
+              
+              // Use the proxy's on method or addEventListener directly
+              if (typeof player.on === 'function') {
+                player.on("timeupdate", handleTimeUpdate)
+              } else if (player.el && player.el()) {
+                player.el().addEventListener("timeupdate", handleTimeUpdate)
+              }
+              
+              // Load saved progress
+              try {
+                const savedProgress = localStorage.getItem(progressStorageKey)
+                if (savedProgress) {
+                  const { currentTime: savedTime, duration: savedDuration } = JSON.parse(savedProgress)
+                  if (savedTime > 5 && savedTime < savedDuration) {
+                    if (typeof player.currentTime === 'function') {
+                      player.currentTime(savedTime)
+                    } else {
+                      player.currentTime = savedTime
+                    }
+                    setCurrentTime(savedTime)
+                  }
+                }
+              } catch (error) {
+                console.error("Error loading video progress:", error)
+              }
+            }
+          }}
+          onPlay={() => {
+            setIsPlaying(true)
+          }}
+          onPause={() => {
+            setIsPlaying(false)
+          }}
+          onEnded={() => {
+            setIsPlaying(false)
+            if (!completedRef.current) {
+              completedRef.current = true
+              onComplete()
+            }
+          }}
+          onTimeUpdate={(current, dur) => {
+            setCurrentTime(current)
+            setDuration(dur)
+          }}
+          className="w-full h-full"
         />
-      )}
-      {showControls && !isVimeoVideo && ( // Vimeo has its own controls, only show custom controls for HTML5 video
-        <div className="absolute inset-0 flex items-end">
-          <div className="w-full bg-gradient-to-t from-black/80 to-transparent p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Slider
-                value={[currentTime]}
-                max={duration || 100}
-                step={1}
-                onValueChange={handleSeek}
-                className="w-full mr-4"
-              />
-              <span className="text-white text-sm whitespace-nowrap ml-2">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleSkipBack}
-                  className="text-white hover:bg-white/20"
-                >
-                  <SkipBack className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={togglePlay} className="text-white hover:bg-white/20">
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={handleSkipForward}
-                  className="text-white hover:bg-white/20"
-                >
-                  <SkipForward className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button size="icon" variant="ghost" onClick={toggleMute} className="text-white hover:bg-white/20">
-                  {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                </Button>
-                <Slider
-                  value={[isMuted ? 0 : volume]}
-                  max={1}
-                  step={0.1}
-                  onValueChange={handleVolumeChange}
-                  className="w-24"
-                />
-                <Button size="icon" variant="ghost" onClick={toggleFullscreen} className="text-white hover:bg-white/20">
-                  {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -391,12 +391,17 @@ export default function CoursePage() {
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
               <Accordion type="single" collapsible className="w-full">
-                {(course.lessons || []).map((lesson, index) => (
-                  <AccordionItem value={`item-${index}`} key={lesson.id || index} className="border-b">
+                {(course.lessons || []).map((lesson, index) => {
+                  const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                  const isTextLesson = (lesson as any).html || (lesson as any).text
+                  const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
+                  
+                  return (
+                    <AccordionItem value={`item-${index}`} key={lesson.id || index} className="border-b">
                     <AccordionTrigger className="py-3 md:py-4">
                       <div className="flex items-start justify-between w-full text-left">
                         <div className="flex items-start flex-1 min-w-0 pr-2">
-                          <PlayCircle className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                          <LessonIcon className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
                           <span className="font-medium text-sm md:text-base text-left break-words">{lesson.title}</span>
                         </div>
                       </div>

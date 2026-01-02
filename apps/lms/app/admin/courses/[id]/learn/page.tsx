@@ -7,7 +7,7 @@ import { useClientAuthState } from "@/utils/client-auth"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, Eye } from "lucide-react"
+import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, Eye, FileText } from "lucide-react"
 import VideoPlayer from "@/app/learner/courses/[id]/learn/components/VideoPlayer"
 import QuizComponent from "@/app/learner/courses/[id]/learn/components/QuizComponent"
 import ResourcesPanel from "@/app/learner/courses/[id]/learn/components/ResourcesPanel"
@@ -464,7 +464,7 @@ export default function AdminCourseLearningPage() {
                       <VideoPlayer
                         lessonTitle={currentLesson.title}
                         onComplete={handleLessonComplete}
-                        autoPlay={false}
+                        autoPlay={true}
                         isActive={true}
                         videoUrl={(currentLesson as any).url}
                         vimeoVideoId={(currentLesson as any).vimeoVideoId}
@@ -664,11 +664,12 @@ export default function AdminCourseLearningPage() {
                       <div className="flex items-center flex-1 min-w-0">
                         {isCompleted ? (
                           <CheckCircle2 className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-green-500" />
-                        ) : isCurrent ? (
-                          <PlayCircle className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0" />
-                        ) : (
-                          <BookOpen className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
-                        )}
+                        ) : (() => {
+                          const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId || (lesson as any).content?.url || (lesson as any).content?.vimeoVideoId
+                          const isTextLesson = (lesson as any).html || (lesson as any).text || (lesson as any).content?.html || (lesson as any).content?.text
+                          const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
+                          return <LessonIcon className={`mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 ${isCurrent ? "" : "text-muted-foreground"}`} />
+                        })()}
                         <div className="flex-1 min-w-0">
                           <span className={`text-left break-words ${isCurrent ? "font-semibold" : ""}`}>
                             {index + 1}. {lesson.title}

@@ -50,26 +50,56 @@ export default function FileUpload({
         setUploadedUrls(urls)
         setUploaded(true)
         // Restore metadata for deletion if needed
-        if (urls.length > 0 && bucket) {
-          // Try to extract path from URL for deletion
+        if (urls.length > 0) {
           const url = urls[0]
-          try {
-            const urlParts = url.split(`/${bucket}/`)
-            if (urlParts.length > 1) {
-              const path = urlParts[1]
-              setUploadMetadata([{ url, bucket, path }])
-            } else {
-              // Try alternative URL format
-              const match = url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/)
-              if (match) {
-                setUploadMetadata([{ url, bucket, path: match[1] }])
-              } else {
-                setUploadMetadata([{ url, bucket, path: "" }])
+          // Check if it's an S3 URL
+          const isS3Url = url.includes("s3.amazonaws.com") || url.includes("cloudfront.net") || url.includes("amazonaws.com")
+          
+          if (isS3Url) {
+            // Extract S3 key from URL
+            let s3Key = ""
+            try {
+              if (url.includes("s3.amazonaws.com")) {
+                const urlParts = url.split(".s3.")
+                if (urlParts.length > 1) {
+                  s3Key = urlParts[1].split("/").slice(1).join("/").split("?")[0] // Remove query params
+                }
+              } else if (url.includes("cloudfront.net")) {
+                const urlObj = new URL(url)
+                s3Key = urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+              } else if (url.includes("amazonaws.com")) {
+                const match = url.match(/amazonaws\.com\/(.+)$/)
+                if (match) {
+                  s3Key = match[1].split("?")[0] // Remove query params
+                }
               }
+            } catch {
+              // If extraction fails, that's okay - deletion API will try to extract it
             }
-          } catch {
-            // If we can't extract path, that's okay - deletion might still work with URL
-            setUploadMetadata([{ url, bucket, path: "" }])
+            setUploadMetadata([{ url, bucket: "s3", path: s3Key }])
+          } else if (bucket) {
+            // Supabase Storage URL
+            try {
+              const urlParts = url.split(`/${bucket}/`)
+              if (urlParts.length > 1) {
+                const path = urlParts[1]
+                setUploadMetadata([{ url, bucket, path }])
+              } else {
+                // Try alternative URL format
+                const match = url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/)
+                if (match) {
+                  setUploadMetadata([{ url, bucket, path: match[1] }])
+                } else {
+                  setUploadMetadata([{ url, bucket, path: "" }])
+                }
+              }
+            } catch {
+              // If we can't extract path, that's okay - deletion might still work with URL
+              setUploadMetadata([{ url, bucket, path: "" }])
+            }
+          } else {
+            // No bucket info, try to infer from URL
+            setUploadMetadata([{ url, bucket: bucket || "course-documents", path: "" }])
           }
         }
       }
@@ -158,10 +188,14 @@ export default function FileUpload({
 
             const data = await response.json()
             urls.push(data.url)
+            
+            // For S3 files, extract the key from the path
+            // The API returns path as the S3 key when bucket is "s3"
+            const isS3File = data.bucket === "s3"
             metadata.push({
               url: data.url,
-              bucket: data.bucket,
-              path: data.path,
+              bucket: isS3File ? "s3" : data.bucket,
+              path: data.path, // This is the S3 key for S3 files
             })
 
             // Update progress
@@ -255,11 +289,11 @@ export default function FileUpload({
   }
 
   const removeFile = async (index?: number) => {
-    // Delete file from Supabase Storage if it was uploaded
+    // Delete file from S3 or Supabase Storage if it was uploaded
     if (index !== undefined && uploadMetadata[index]) {
       const meta = uploadMetadata[index]
       try {
-        await fetch("/api/upload/delete", {
+        const response = await fetch("/api/upload/delete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -268,6 +302,10 @@ export default function FileUpload({
             path: meta.path,
           }),
         })
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          console.error("Failed to delete file from storage:", errorData.error || "Unknown error")
+        }
       } catch (err) {
         console.error("Failed to delete file from storage:", err)
         // Continue with removal even if delete fails
@@ -277,7 +315,7 @@ export default function FileUpload({
       setUploadMetadata((prev) => prev.filter((_, i) => i !== index))
     } else if (index === undefined) {
       // Remove all files (including initialValue)
-      // Delete all uploaded files from Supabase
+      // Delete all uploaded files from S3 or Supabase
       if (uploadMetadata.length > 0) {
         await Promise.all(
           uploadMetadata.map((meta) =>
@@ -289,26 +327,44 @@ export default function FileUpload({
                 bucket: meta.bucket,
                 path: meta.path,
               }),
-            }).catch((err) => {
-              console.error("Failed to delete file from storage:", err)
             })
+              .then((response) => {
+                if (!response.ok) {
+                  return response.json().then((errorData) => {
+                    console.error("Failed to delete file from storage:", errorData.error || "Unknown error")
+                  })
+                }
+              })
+              .catch((err) => {
+                console.error("Failed to delete file from storage:", err)
+              })
           )
         )
       }
       // Also try to delete initialValue if it exists
       if (uploadedUrls.length > 0 && files.length === 0) {
-        // This is an initialValue file, try to extract bucket from URL
+        // This is an initialValue file
         const url = uploadedUrls[0]
-        const bucketName = bucket || (type === "thumbnail" ? "course-thumbnails" : "course-documents")
+        // Check if it's an S3 URL
+        const isS3Url = url.includes("s3.amazonaws.com") || url.includes("cloudfront.net") || url.includes("amazonaws.com")
+        
+        // Try to get metadata for this URL
+        const existingMeta = uploadMetadata.find((m) => m.url === url)
+        
         try {
-          await fetch("/api/upload/delete", {
+          const response = await fetch("/api/upload/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               url,
-              bucket: bucketName,
+              bucket: existingMeta?.bucket || (isS3Url ? "s3" : (bucket || (type === "thumbnail" ? "course-thumbnails" : "course-documents"))),
+              path: existingMeta?.path,
             }),
           })
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            console.error("Failed to delete initialValue file from storage:", errorData.error || "Unknown error")
+          }
         } catch (err) {
           console.error("Failed to delete initialValue file from storage:", err)
         }

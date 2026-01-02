@@ -243,13 +243,16 @@ export default function InstructorCoursePreviewPage() {
                 {lessons.map((lesson, index) => {
                   const quizQuestions = lesson.quiz_questions || []
                   const resources = lesson.resources || []
+                  const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId || (lesson as any).content?.url || (lesson as any).content?.vimeoVideoId
+                  const isTextLesson = (lesson as any).html || (lesson as any).text || (lesson as any).content?.html || (lesson as any).content?.text
+                  const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
 
                   return (
                     <AccordionItem value={`item-${lesson.id || index}`} key={lesson.id || index}>
                       <AccordionTrigger>
                         <div className="flex items-center justify-between w-full">
                           <div className="flex items-center">
-                            <PlayCircle className="w-5 h-5 mr-2 text-primary" />
+                            <LessonIcon className="w-5 h-5 mr-2 text-primary" />
                             <span className="font-medium">{lesson.title}</span>
                           </div>
                         </div>

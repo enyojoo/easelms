@@ -12,6 +12,7 @@ import VideoPreview from "@/components/VideoPreview"
 import { extractVimeoId, isVimeoUrl, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import FileUpload from "@/components/FileUpload"
+import VideoPreviewPlayer from "@/components/VideoPreviewPlayer"
 
 interface CourseBasicInfoProps {
   data: {
@@ -30,6 +31,7 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
   // Initialize state from data prop (for draft restoration)
   const [thumbnail, setThumbnail] = useState(() => data.thumbnail || "")
   const [previewVideoInput, setPreviewVideoInput] = useState(() => data.previewVideo || "")
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string>("") // Track uploaded video URL immediately
   const [vimeoId, setVimeoId] = useState<string | null>(() => {
     // Extract vimeoId immediately on mount if video exists
     if (data.previewVideo) {
@@ -63,6 +65,13 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
     const videoValue = data.previewVideo || ""
     if (videoValue !== previewVideoInput) {
       setPreviewVideoInput(videoValue)
+    }
+    
+    // Sync uploaded video URL if data.previewVideo is set and not a Vimeo URL
+    if (videoValue && !videoValue.includes("vimeo.com")) {
+      setUploadedVideoUrl(videoValue)
+    } else if (!videoValue) {
+      setUploadedVideoUrl("")
     }
     
     // Extract vimeoId if video exists
@@ -209,12 +218,41 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
             onUploadComplete={handleThumbnailUpload}
             onRemove={handleThumbnailRemove}
           />
-          <p className="text-sm text-muted-foreground">Recommended resolution: 1280x720 px. Max size: 5MB</p>
+          <p className="text-xs text-muted-foreground">Recommended resolution: 1280x720 px. Max size: 5MB</p>
         </div>
 
         <div className="space-y-2">
-          <Label>Course Preview Video (Vimeo)</Label>
-          {vimeoId && (
+          <Label>Course Preview Video</Label>
+          {(() => {
+            const videoUrl = uploadedVideoUrl || data.previewVideo || previewVideoInput
+            const hasVideo = videoUrl && videoUrl.trim() && !videoUrl.includes("vimeo.com")
+            
+            // Debug logging
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Course Preview Video Debug:', {
+                uploadedVideoUrl,
+                previewVideo: data.previewVideo,
+                previewVideoInput,
+                videoUrl,
+                hasVideo
+              })
+            }
+            
+            if (hasVideo) {
+              return (
+                <div className="relative w-full aspect-video overflow-hidden border border-border mb-2">
+                  <VideoPreviewPlayer
+                    key={videoUrl}
+                    src={videoUrl}
+                    showControlsOnHover={true}
+                  />
+                </div>
+              )
+            }
+            return null
+          })()}
+          {/* Show Vimeo preview if it's a Vimeo URL (backward compatibility) */}
+          {vimeoId && data.previewVideo?.includes("vimeo.com") && (
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-border mb-2">
               <iframe
                 src={getVimeoEmbedUrl(vimeoId, { autoplay: false, controls: true })}
@@ -226,25 +264,36 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
               />
             </div>
           )}
-          <div className="space-y-2">
-            <Input
-              type="url"
-              value={previewVideoInput}
-              onChange={(e) => setPreviewVideoInput(e.target.value)}
-              placeholder="Enter Vimeo URL (e.g., https://vimeo.com/123456789) or video ID"
-            />
-            {previewVideoInput && !isValidVideo && (
-              <Alert variant="destructive" className="py-2">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-xs">
-                  Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
-                </AlertDescription>
-              </Alert>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Recommended length: 2-5 minutes.
-            </p>
-          </div>
+          <FileUpload
+            type="video"
+            accept="video/mp4,video/webm,video/ogg"
+            maxSize={2 * 1024 * 1024 * 1024} // 2GB
+            multiple={false}
+            initialValue={data.previewVideo && !data.previewVideo.includes("vimeo.com") ? data.previewVideo : undefined}
+            onUploadComplete={(files, urls) => {
+              if (urls && urls.length > 0 && urls[0]) {
+                const videoUrl = urls[0].trim()
+                if (videoUrl) {
+                  // Set uploaded URL immediately for preview (before parent update)
+                  setUploadedVideoUrl(videoUrl)
+                  // Also update local state to ensure immediate re-render
+                  setPreviewVideoInput(videoUrl)
+                  // Update parent state
+                  const newData = { ...data, previewVideo: videoUrl, vimeoVideoId: undefined }
+                  onUpdate(newData)
+                }
+              }
+            }}
+            onRemove={() => {
+              setUploadedVideoUrl("")
+              const newData = { ...data, previewVideo: "", vimeoVideoId: undefined }
+              onUpdate(newData)
+              setPreviewVideoInput("")
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Recommended length: 2-5 minutes, MP4 format.
+          </p>
         </div>
       </div>
     </div>

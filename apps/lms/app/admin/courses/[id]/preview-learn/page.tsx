@@ -150,7 +150,22 @@ export default function AdminCoursePreviewLearningPage() {
               <div className="space-y-4 md:space-y-6">
                 {/* Video/Content Player */}
                 <div className="bg-black rounded-lg overflow-hidden">
-                  <VideoPlayer lesson={currentLesson} courseId={course.id} />
+                  {((currentLesson as any)?.content?.url || (currentLesson as any)?.content?.vimeoVideoId) ? (
+                    <div className="relative w-full overflow-hidden" style={{ paddingTop: "56.25%" }}>
+                      <div className="absolute inset-0">
+                        <VideoPlayer
+                          lessonTitle={currentLesson.title}
+                          onComplete={() => {}}
+                          autoPlay={true}
+                          isActive={true}
+                          videoUrl={(currentLesson as any)?.content?.url}
+                          vimeoVideoId={(currentLesson as any)?.content?.vimeoVideoId}
+                          courseId={course.id.toString()}
+                          lessonId={currentLesson.id?.toString()}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Lesson Title and Navigation */}

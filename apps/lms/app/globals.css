@@ -261,3 +261,47 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* Video.js Custom Theme Styles */
+.video-player-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.video-player-wrapper .video-js,
+.video-player-wrapper .video-js video {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.video-player-wrapper .video-js {
+  width: 100%;
+  height: 100%;
+}
+
+.video-player-wrapper .video-js .vjs-tech {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Media Chrome Video Player Styles */
+media-controller {
+  --media-control-background: linear-gradient(to top, hsl(var(--background) / 0.95) 0%, hsl(var(--background) / 0.7) 100%);
+  --media-control-bar-background: linear-gradient(to top, hsl(var(--background) / 0.95) 0%, hsl(var(--background) / 0.7) 100%);
+  --media-control-bar-color: hsl(var(--foreground));
+  --media-primary-color: hsl(var(--primary));
+  --media-secondary-color: hsl(var(--background));
+  --media-text-color: hsl(var(--foreground));
+  --media-range-bar-color: hsl(var(--primary));
+  --media-range-fill-color: hsl(var(--primary));
+  --media-range-track-background: hsl(var(--border));
+  --media-control-hover-background: hsl(var(--accent));
+}
+
+media-control-bar {
+  background: linear-gradient(to top, hsl(var(--background) / 0.95) 0%, hsl(var(--background) / 0.7) 100%) !important;
+  backdrop-filter: blur(8px);
+  border-top: 1px solid hsl(var(--border) / 0.2);
+  color: hsl(var(--foreground)) !important;
+}

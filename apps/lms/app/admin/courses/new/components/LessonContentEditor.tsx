@@ -1,11 +1,9 @@
 "use client"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
-import { extractVimeoId, isVimeoUrl, getVimeoEmbedUrl } from "@/lib/vimeo/utils"
 import { useState, useEffect } from "react"
 import RichTextEditor from "./RichTextEditor"
+import FileUpload from "@/components/FileUpload"
+import VideoPreviewPlayer from "@/components/VideoPreviewPlayer"
 
 interface LessonContentEditorProps {
   type: "video" | "text"
@@ -14,77 +12,55 @@ interface LessonContentEditorProps {
 }
 
 export default function LessonContentEditor({ type, content, onChange }: LessonContentEditorProps) {
-  const [videoInput, setVideoInput] = useState(content.url || content.vimeoVideoId || "")
-  const [vimeoId, setVimeoId] = useState<string | null>(null)
-  const [isValid, setIsValid] = useState(true)
-
+  // Sync content.url with FileUpload component
   useEffect(() => {
-    if (videoInput) {
-      const extractedId = extractVimeoId(videoInput)
-      if (extractedId) {
-        setVimeoId(extractedId)
-        setIsValid(true)
-        onChange({
-          ...content,
-          url: videoInput,
-          vimeoVideoId: extractedId,
-        })
-      } else if (isVimeoUrl(videoInput)) {
-        setIsValid(false)
-        setVimeoId(null)
-      } else {
-        // Not a Vimeo URL, store as regular URL
-        setVimeoId(null)
-        setIsValid(true)
-        onChange({
-          ...content,
-          url: videoInput,
-          vimeoVideoId: undefined,
-        })
-      }
-    } else {
-      setVimeoId(null)
-      setIsValid(true)
+    // If content.url exists but is empty, clear it
+    if (content.url === "") {
       onChange({
         ...content,
-        url: "",
+        url: undefined,
         vimeoVideoId: undefined,
       })
     }
-  }, [videoInput])
+  }, [content.url])
 
   if (type === "video") {
     return (
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="videoUrl">Vimeo Video URL or ID</Label>
-          <Input
-            id="videoUrl"
-            placeholder="Enter Vimeo URL (e.g., https://vimeo.com/123456789) or video ID"
-            value={videoInput}
-            onChange={(e) => setVideoInput(e.target.value)}
+          <Label>Upload Video File</Label>
+          <FileUpload
+            type="video"
+            accept="video/mp4,video/webm,video/ogg"
+            maxSize={2 * 1024 * 1024 * 1024} // 2GB
+            multiple={false}
+            initialValue={content.url ? [content.url] : undefined}
+            onUploadComplete={(files, urls) => {
+              if (urls.length > 0) {
+                onChange({
+                  ...content,
+                  url: urls[0],
+                  vimeoVideoId: undefined, // Clear Vimeo ID when using S3
+                })
+              }
+            }}
+            onRemove={() => {
+              onChange({
+                ...content,
+                url: "",
+                vimeoVideoId: undefined,
+              })
+            }}
           />
-          {videoInput && !isValid && (
-            <Alert variant="destructive" className="py-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                Invalid Vimeo URL format. Please enter a valid Vimeo URL or video ID.
-              </AlertDescription>
-            </Alert>
-          )}
         </div>
 
-        {vimeoId && (
+        {content.url && !content.url.includes("vimeo.com") && (
           <div className="space-y-2">
             <Label>Video Preview</Label>
-            <div className="relative w-full aspect-video rounded-lg overflow-hidden border">
-              <iframe
-                src={getVimeoEmbedUrl(vimeoId, { autoplay: false, controls: true })}
-                className="w-full h-full"
-                frameBorder="0"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-                title="Video preview"
+            <div className="relative w-full aspect-video overflow-hidden border">
+              <VideoPreviewPlayer
+                src={content.url}
+                showControlsOnHover={true}
               />
             </div>
           </div>
