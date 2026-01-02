@@ -584,8 +584,8 @@ export default function CourseLearningPage() {
 
               <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
                 {((currentLesson as any).url || (currentLesson as any).vimeoVideoId) ? (
-                  <div className="relative w-full overflow-hidden" style={{ paddingTop: "56.25%" }}> {/* 16:9 Aspect Ratio */}
-                    <div className="absolute inset-0">
+                  <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
+                    <div className="w-full h-full max-w-full max-h-full">
                       <VideoPlayer
                         lessonTitle={currentLesson.title}
                         onComplete={handleLessonComplete}
