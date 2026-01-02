@@ -238,43 +238,84 @@ export default function ModernVideoPlayer({
     }
   }, [autoplay])
 
-  // Handle fullscreen changes
+  // Handle fullscreen changes and orientation changes
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
+      const isFullscreenNow = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isFullscreenNow)
+      
+      // Update video styling when fullscreen changes
+      const video = videoRef.current
+      const container = containerRef.current
+      if (video && container) {
+        if (isFullscreenNow) {
+          // In fullscreen, ensure video fills the viewport properly
+          // The CSS will handle the styling, but we ensure the video element is properly sized
+          video.style.objectFit = 'contain' // Use contain in fullscreen to show full video without cropping
+        } else {
+          // Reset to normal styling
+          video.style.objectFit = ''
+        }
+      }
+    }
+
+    const handleOrientationChange = () => {
+      // Re-check fullscreen state on orientation change
+      setTimeout(() => {
+        handleFullscreenChange()
+      }, 100)
     }
 
     document.addEventListener("fullscreenchange", handleFullscreenChange)
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
     document.addEventListener("mozfullscreenchange", handleFullscreenChange)
     document.addEventListener("MSFullscreenChange", handleFullscreenChange)
+    window.addEventListener("orientationchange", handleOrientationChange)
+    window.addEventListener("resize", handleFullscreenChange)
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange)
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
       document.removeEventListener("mozfullscreenchange", handleFullscreenChange)
       document.removeEventListener("MSFullscreenChange", handleFullscreenChange)
+      window.removeEventListener("orientationchange", handleOrientationChange)
+      window.removeEventListener("resize", handleFullscreenChange)
     }
   }, [])
 
   const toggleFullscreen = async () => {
     const container = containerRef.current
+    const video = videoRef.current
     if (!container) return
 
     try {
-      if (!document.fullscreenElement) {
-        // Enter fullscreen
-        if (container.requestFullscreen) {
-          await container.requestFullscreen()
-        } else if ((container as any).webkitRequestFullscreen) {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+
+      if (!isCurrentlyFullscreen) {
+        // Enter fullscreen - request on video element for better mobile support
+        const elementToFullscreen = video || container
+        
+        if (elementToFullscreen.requestFullscreen) {
+          await elementToFullscreen.requestFullscreen()
+        } else if ((elementToFullscreen as any).webkitRequestFullscreen) {
           // Safari
-          await (container as any).webkitRequestFullscreen()
-        } else if ((container as any).mozRequestFullScreen) {
+          await (elementToFullscreen as any).webkitRequestFullscreen()
+        } else if ((elementToFullscreen as any).mozRequestFullScreen) {
           // Firefox
-          await (container as any).mozRequestFullScreen()
-        } else if ((container as any).msRequestFullscreen) {
+          await (elementToFullscreen as any).mozRequestFullScreen()
+        } else if ((elementToFullscreen as any).msRequestFullscreen) {
           // IE/Edge
-          await (container as any).msRequestFullscreen()
+          await (elementToFullscreen as any).msRequestFullscreen()
         }
       } else {
         // Exit fullscreen
@@ -303,10 +344,22 @@ export default function ModernVideoPlayer({
   }
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full flex items-center justify-center", className)}>
+    <div 
+      ref={containerRef} 
+      className={cn("w-full h-full flex items-center justify-center", className)}
+    >
       <VideoPlayer
-        className="overflow-hidden border w-full h-full flex items-center justify-center"
-        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        className={cn(
+          "overflow-hidden border w-full h-full flex items-center justify-center",
+          isFullscreen && "border-0"
+        )}
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center'
+        }}
       >
       <VideoPlayerContent
         ref={videoRef}
@@ -317,8 +370,12 @@ export default function ModernVideoPlayer({
         src={src.trim()}
         poster={poster}
         autoPlay={autoplay}
-        className="w-full h-full object-cover"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        className="w-full h-full"
+        style={{ 
+          width: '100%', 
+          height: '100%', 
+          objectFit: isFullscreen ? 'contain' : 'cover' // Use contain in fullscreen to show full video
+        }}
         onLoadedMetadata={(e) => {
           const video = e.currentTarget
           if (onReady) {
@@ -386,12 +443,13 @@ export default function ModernVideoPlayer({
       {controls && (
         <VideoPlayerControlBar>
           <VideoPlayerPlayButton />
-          <VideoPlayerSeekBackwardButton />
-          <VideoPlayerSeekForwardButton />
           <VideoPlayerTimeRange />
           <VideoPlayerTimeDisplay showDuration />
-          <VideoPlayerMuteButton />
-          <VideoPlayerVolumeRange />
+          {/* Hide volume controls on mobile */}
+          <div className="hidden sm:flex items-center">
+            <VideoPlayerMuteButton />
+            <VideoPlayerVolumeRange />
+          </div>
           <Button
             variant="ghost"
             size="icon"

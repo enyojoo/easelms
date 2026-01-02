@@ -27,7 +27,9 @@ export function useEnrollments() {
       }
       return response.json()
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - enrollments don't change frequently
+    staleTime: 0, // Always consider data stale - fetch fresh data on mount
+    refetchOnMount: true, // Always refetch on mount to ensure fresh data across devices
+    refetchOnWindowFocus: true, // Refetch when window regains focus
     placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
   })
 }

@@ -305,3 +305,50 @@ media-control-bar {
   border-top: 1px solid hsl(var(--border) / 0.2);
   color: hsl(var(--foreground)) !important;
 }
+
+/* Fullscreen video styles for mobile */
+:fullscreen video,
+:-webkit-full-screen video,
+:-moz-full-screen video,
+:-ms-fullscreen video {
+  width: 100vw !important;
+  height: 100vh !important;
+  object-fit: contain !important;
+  background-color: #000;
+}
+
+:fullscreen,
+:-webkit-full-screen,
+:-moz-full-screen,
+:-ms-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: #000;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Ensure video player fills fullscreen on mobile */
+@media (max-width: 768px) {
+  :fullscreen video,
+  :-webkit-full-screen video,
+  :-moz-full-screen video,
+  :-ms-fullscreen video {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    object-fit: contain !important;
+  }
+  
+  :fullscreen media-controller,
+  :-webkit-full-screen media-controller,
+  :-moz-full-screen media-controller,
+  :-ms-fullscreen media-controller {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+  }
+}

@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, PlayCircle, List, FileText } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Progress } from "@/components/ui/progress"
 import CourseLearningSkeleton from "@/components/CourseLearningSkeleton"
 import VideoPlayer from "@/app/learner/courses/[id]/learn/components/VideoPlayer"
 import QuizComponent from "@/app/learner/courses/[id]/learn/components/QuizComponent"
@@ -39,6 +41,7 @@ export default function AdminCoursePreviewLearningPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -141,11 +144,62 @@ export default function AdminCoursePreviewLearningPage() {
               Lesson {currentLessonIndex + 1} of {totalLessons} • Admin Preview
             </p>
           </div>
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="lg:hidden flex-shrink-0">
+                <List className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[90vw] sm:w-[400px] p-0 overflow-hidden">
+              <SheetHeader className="p-4 border-b text-left">
+                <SheetTitle className="text-left">Course Lessons</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col h-[calc(100vh-73px)] overflow-hidden">
+                <ScrollArea className="flex-1 h-full px-4 py-4">
+                  <div className="space-y-2 pb-4">
+                    {course.lessons?.map((lesson, index) => {
+                      const isVideoLesson = (lesson as any)?.content?.url || (lesson as any)?.content?.vimeoVideoId
+                      const isTextLesson = (lesson as any)?.content?.html || (lesson as any)?.content?.text
+                      const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
+                      
+                      return (
+                        <button
+                          key={lesson.id || index}
+                          onClick={() => {
+                            setCurrentLessonIndex(index)
+                            setActiveTab("video")
+                            setIsSheetOpen(false)
+                          }}
+                          className={`w-full text-left p-3 rounded-lg transition-colors text-sm border min-h-[48px] ${
+                            currentLessonIndex === index
+                              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                              : "bg-muted hover:bg-muted/80 border-border"
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <LessonIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="font-medium truncate break-words">{lesson.title}</p>
+                              {lesson.estimated_duration && (
+                                <p className="text-xs mt-1 opacity-80">
+                                  {Math.round(lesson.estimated_duration / 60)}m
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 order-1">
             {currentLesson && (
               <div className="space-y-4 md:space-y-6">
                 {/* Video/Content Player */}
@@ -257,8 +311,8 @@ export default function AdminCoursePreviewLearningPage() {
             )}
           </div>
 
-          {/* Sidebar - Course Outline */}
-          <div className="lg:col-span-1">
+          {/* Sidebar - Course Outline - Hidden on mobile, shown on desktop */}
+          <div className="lg:col-span-1 hidden lg:block order-2">
             <div className="bg-card rounded-lg border p-4 sticky top-24 max-h-[calc(100vh-120px)] overflow-auto">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <BookOpen className="w-4 h-4" />
@@ -266,32 +320,38 @@ export default function AdminCoursePreviewLearningPage() {
               </h3>
               <ScrollArea className="h-auto">
                 <div className="space-y-2">
-                  {course.lessons?.map((lesson, index) => (
-                    <button
-                      key={lesson.id || index}
-                      onClick={() => {
-                        setCurrentLessonIndex(index)
-                        setActiveTab("video")
-                      }}
-                      className={`w-full text-left p-3 rounded-lg transition-colors text-sm ${
-                        currentLessonIndex === index
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted hover:bg-muted/80 text-muted-foreground"
-                      }`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <PlayCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0 flex-1 text-left">
-                          <p className="font-medium truncate break-words">{lesson.title}</p>
-                          {lesson.estimated_duration && (
-                            <p className="text-xs mt-1 opacity-80">
-                              {Math.round(lesson.estimated_duration / 60)}m
-                            </p>
-                          )}
+                  {course.lessons?.map((lesson, index) => {
+                    const isVideoLesson = (lesson as any)?.content?.url || (lesson as any)?.content?.vimeoVideoId
+                    const isTextLesson = (lesson as any)?.content?.html || (lesson as any)?.content?.text
+                    const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
+                    
+                    return (
+                      <button
+                        key={lesson.id || index}
+                        onClick={() => {
+                          setCurrentLessonIndex(index)
+                          setActiveTab("video")
+                        }}
+                        className={`w-full text-left p-3 rounded-lg transition-colors text-sm ${
+                          currentLessonIndex === index
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <LessonIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0 flex-1 text-left">
+                            <p className="font-medium truncate break-words">{lesson.title}</p>
+                            {lesson.estimated_duration && (
+                              <p className="text-xs mt-1 opacity-80">
+                                {Math.round(lesson.estimated_duration / 60)}m
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    )
+                  })}
                 </div>
               </ScrollArea>
             </div>
