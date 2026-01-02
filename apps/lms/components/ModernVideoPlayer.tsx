@@ -98,6 +98,58 @@ export default function ModernVideoPlayer({
     }
   }, [onReady])
 
+  // Aggressive autoplay handling - try to play immediately when autoplay is enabled
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !autoplay) return
+
+    const attemptPlay = () => {
+      if (video.paused && autoplay) {
+        video.play().catch((error) => {
+          // Silently handle autoplay errors (browser policies)
+          if (error.name !== 'NotAllowedError') {
+            console.error("Error autoplaying video (immediate):", error)
+          }
+        })
+      }
+    }
+
+    // Try immediately
+    attemptPlay()
+
+    // Also try after a microtask to ensure DOM is ready
+    Promise.resolve().then(() => {
+      attemptPlay()
+    })
+
+    // Try when video becomes ready
+    const handleCanPlay = () => {
+      if (autoplay && video.paused) {
+        attemptPlay()
+      }
+    }
+    const handleLoadedData = () => {
+      if (autoplay && video.paused) {
+        attemptPlay()
+      }
+    }
+    const handleLoadedMetadata = () => {
+      if (autoplay && video.paused) {
+        attemptPlay()
+      }
+    }
+
+    video.addEventListener("canplay", handleCanPlay)
+    video.addEventListener("loadeddata", handleLoadedData)
+    video.addEventListener("loadedmetadata", handleLoadedMetadata)
+
+    return () => {
+      video.removeEventListener("canplay", handleCanPlay)
+      video.removeEventListener("loadeddata", handleLoadedData)
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata)
+    }
+  }, [autoplay])
+
   // Handle fullscreen changes
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -172,7 +224,7 @@ export default function ModernVideoPlayer({
         ref={videoRef}
         crossOrigin="anonymous"
         muted={false}
-        preload="metadata"
+        preload="auto"
         slot="media"
         src={src.trim()}
         poster={poster}
