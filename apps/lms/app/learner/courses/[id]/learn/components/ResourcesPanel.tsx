@@ -1,6 +1,9 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Link, Download } from "lucide-react"
+import { useState } from "react"
 
 interface ResourcesPanelProps {
   resources: {
@@ -11,6 +14,66 @@ interface ResourcesPanelProps {
 }
 
 export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
+  const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null)
+
+  const handleDownload = async (resource: { type: string; title: string; url: string }, index: number) => {
+    if (resource.type === "link") {
+      // For links, just open in new tab
+      window.open(resource.url, "_blank", "noopener,noreferrer")
+      return
+    }
+
+    // For documents, force download
+    setDownloadingIndex(index)
+    try {
+      const response = await fetch(resource.url)
+      if (!response.ok) {
+        throw new Error("Failed to fetch file")
+      }
+
+      const blob = await response.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      
+      // Get file extension from URL or content type
+      const contentType = response.headers.get("content-type") || ""
+      let extension = ""
+      if (contentType.includes("pdf")) {
+        extension = ".pdf"
+      } else if (contentType.includes("word")) {
+        extension = ".docx"
+      } else if (contentType.includes("excel") || contentType.includes("spreadsheet")) {
+        extension = ".xlsx"
+      } else if (contentType.includes("zip")) {
+        extension = ".zip"
+      } else {
+        // Try to get extension from URL
+        const urlPath = new URL(resource.url).pathname
+        const match = urlPath.match(/\.([a-z0-9]+)$/i)
+        if (match) {
+          extension = "." + match[1]
+        }
+      }
+
+      const filename = resource.title + (extension && !resource.title.toLowerCase().endsWith(extension.toLowerCase()) ? extension : "")
+      
+      // Create temporary anchor element and trigger download
+      const a = document.createElement("a")
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      
+      // Clean up blob URL
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (error) {
+      console.error("Error downloading file:", error)
+      alert("Failed to download file. Please try again.")
+    } finally {
+      setDownloadingIndex(null)
+    }
+  }
+
   if (!resources || resources.length === 0) {
     return (
           <p className="text-center text-muted-foreground py-8">No resources available for this lesson.</p>
@@ -29,19 +92,20 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
                 )}
                 <span className="truncate">{resource.title}</span>
               </span>
-          <a 
-            href={resource.url} 
-            {...(resource.type === "link" ? { target: "_blank", rel: "noopener noreferrer" } : { download: resource.title || "download"})}
+          <button
+            onClick={() => handleDownload(resource, index)}
+            disabled={downloadingIndex === index}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-full sm:w-auto mt-2 sm:mt-0"
           >
                   {resource.type === "document" ? (
                     <>
-                      <Download className="mr-2 h-4 w-4" /> Download
+                      <Download className="mr-2 h-4 w-4" /> 
+                      {downloadingIndex === index ? "Downloading..." : "Download"}
                     </>
                   ) : (
                     <>Open</>
                   )}
-                </a>
+                </button>
             </li>
           ))}
         </ul>
