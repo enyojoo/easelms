@@ -398,49 +398,50 @@ export default function CoursePage() {
                   
                   return (
                     <AccordionItem value={`item-${index}`} key={lesson.id || index} className="border-b">
-                    <AccordionTrigger className="py-3 md:py-4">
-                      <div className="flex items-start justify-between w-full text-left">
-                        <div className="flex items-start flex-1 min-w-0 pr-2">
-                          <LessonIcon className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="font-medium text-sm md:text-base text-left break-words">{lesson.title}</span>
+                      <AccordionTrigger className="py-3 md:py-4">
+                        <div className="flex items-start justify-between w-full text-left">
+                          <div className="flex items-start flex-1 min-w-0 pr-2">
+                            <LessonIcon className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                            <span className="font-medium text-sm md:text-base text-left break-words">{lesson.title}</span>
+                          </div>
                         </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-3 md:pt-3 md:pb-4">
-                      <div className="space-y-2 md:space-y-3">
-                        {/* Quiz section */}
-                        {lesson.quiz_questions && lesson.quiz_questions.length > 0 && (
-                          <div className="flex items-center justify-between py-2 pl-6 md:pl-7">
-                            <div className="flex items-center min-w-0 flex-1">
-                              <BrainCircuit className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                              <span className="text-xs md:text-sm truncate">Quiz {index + 1}</span>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2 pb-3 md:pt-3 md:pb-4">
+                        <div className="space-y-2 md:space-y-3">
+                          {/* Quiz section */}
+                          {lesson.quiz_questions && lesson.quiz_questions.length > 0 && (
+                            <div className="flex items-center justify-between py-2 pl-6 md:pl-7">
+                              <div className="flex items-center min-w-0 flex-1">
+                                <BrainCircuit className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                <span className="text-xs md:text-sm truncate">Quiz {index + 1}</span>
+                              </div>
+                              <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
+                                {lesson.quiz_questions.length} questions
+                              </span>
                             </div>
-                            <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
-                              {lesson.quiz_questions.length} questions
-                            </span>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Resources */}
-                        {lesson.resources?.map((resource, rIndex) => (
-                          <div key={rIndex} className="flex items-center justify-between py-2 pl-6 md:pl-7">
-                            <div className="flex items-center min-w-0 flex-1">
-                              {resource.type === "document" ? (
-                                <FileText className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                              ) : (
-                                <Link className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                              )}
-                              <span className="text-xs md:text-sm truncate">{resource.title}</span>
+                          {/* Resources */}
+                          {lesson.resources?.map((resource, rIndex) => (
+                            <div key={rIndex} className="flex items-center justify-between py-2 pl-6 md:pl-7">
+                              <div className="flex items-center min-w-0 flex-1">
+                                {resource.type === "document" ? (
+                                  <FileText className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                ) : (
+                                  <Link className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                )}
+                                <span className="text-xs md:text-sm truncate">{resource.title}</span>
+                              </div>
+                              <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
+                                {resource.type === "document" ? "File" : "Link"}
+                              </span>
                             </div>
-                            <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
-                              {resource.type === "document" ? "File" : "Link"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
               </Accordion>
             </CardContent>
           </Card>
