@@ -14,6 +14,7 @@ import ResourcesPanel from "./components/ResourcesPanel"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProgress, useRealtimeQuizResults, useSaveProgress } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "@/components/ui/use-toast"
 
 interface Course {
   id: number
@@ -444,7 +445,11 @@ export default function CourseLearningPage() {
       // Go to next lesson
         const nextIndex = currentLessonIndex + 1
         if (!canAccessLesson(nextIndex)) {
-          alert("You must complete all required previous lessons before accessing this lesson.")
+          toast({
+            title: "Lesson Locked",
+            description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+            variant: "destructive",
+          })
           return
         }
         setCurrentLessonIndex(nextIndex)
@@ -471,7 +476,11 @@ export default function CourseLearningPage() {
         if (currentLessonIndex < course.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
-            alert("You must complete all required previous lessons before accessing this lesson.")
+            toast({
+              title: "Lesson Locked",
+              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+              variant: "destructive",
+            })
             return
           }
           setCurrentLessonIndex(nextIndex)
@@ -491,7 +500,11 @@ export default function CourseLearningPage() {
         if (currentLessonIndex < course.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
-            alert("You must complete all required previous lessons before accessing this lesson.")
+            toast({
+              title: "Lesson Locked",
+              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+              variant: "destructive",
+            })
             return
           }
           setCurrentLessonIndex(nextIndex)
@@ -506,7 +519,11 @@ export default function CourseLearningPage() {
         const nextIndex = currentLessonIndex + 1
         // Check if can access next lesson
         if (!canAccessLesson(nextIndex)) {
-          alert("You must complete all required previous lessons before accessing this lesson.")
+          toast({
+            title: "Lesson Locked",
+            description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+            variant: "destructive",
+          })
           return
         }
         setCurrentLessonIndex(nextIndex)
@@ -524,7 +541,11 @@ export default function CourseLearningPage() {
       const prevIndex = currentLessonIndex - 1
       // Check if can access previous lesson
       if (!canAccessLesson(prevIndex)) {
-        alert("You must complete all required previous lessons before accessing this lesson.")
+        toast({
+          title: "Lesson Locked",
+          description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+          variant: "destructive",
+        })
         return
       }
       setCurrentLessonIndex(prevIndex)
@@ -802,7 +823,11 @@ export default function CourseLearningPage() {
                       key={index}
                       onClick={() => {
                         if (!canAccess) {
-                          alert("You must complete all required previous lessons before accessing this lesson.")
+                          toast({
+              title: "Lesson Locked",
+              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+              variant: "destructive",
+            })
                           return
                         }
                         setCurrentLessonIndex(index)
