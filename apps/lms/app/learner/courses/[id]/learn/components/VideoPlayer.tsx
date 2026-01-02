@@ -194,27 +194,77 @@ export default function VideoPlayer({
     if (isVimeoVideo) return
 
     const video = videoRef.current
-    if (video) {
+    const container = containerRef.current
+    if (video && container) {
       video.addEventListener("timeupdate", handleTimeUpdate)
       video.addEventListener("loadedmetadata", handleLoadedMetadata)
       video.addEventListener("ended", handleVideoComplete)
 
+      // Check if video is actually visible before playing
+      const checkVisibility = () => {
+        const rect = container.getBoundingClientRect()
+        const isInView = rect.top >= 0 && rect.left >= 0 && 
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        return isInView
+      }
+
       if (isActive) {
-        if (autoPlay || isPlaying) {
+        // Only play if video is visible
+        if (checkVisibility() && (autoPlay || isPlaying)) {
           video.play().catch((error) => {
             console.error("Video play was prevented:", error)
             setIsPlaying(false)
           })
+        } else if (!checkVisibility()) {
+          // Video not visible, pause it
+          video.pause()
+          setIsPlaying(false)
         }
       } else {
+        // Not active, pause video
         video.pause()
         setIsPlaying(false)
       }
 
+      // Set up intersection observer to pause when not visible
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting || entry.intersectionRatio < 0.5) {
+              // Video is not visible, pause it
+              if (video && !video.paused) {
+                video.pause()
+                setIsPlaying(false)
+              }
+            } else if (entry.isIntersecting && isActive && (autoPlay || isPlaying)) {
+              // Video is visible and active, try to play
+              if (video && video.paused) {
+                video.play().catch((error) => {
+                  console.error("Video play was prevented:", error)
+                  setIsPlaying(false)
+                })
+              }
+            }
+          })
+        },
+        {
+          threshold: 0.5,
+          rootMargin: '0px',
+        }
+      )
+
+      observer.observe(container)
+
       return () => {
+        observer.disconnect()
         video.removeEventListener("timeupdate", handleTimeUpdate)
         video.removeEventListener("loadedmetadata", handleLoadedMetadata)
         video.removeEventListener("ended", handleVideoComplete)
+        // Pause video on cleanup
+        if (video && !video.paused) {
+          video.pause()
+        }
       }
     }
   }, [autoPlay, lessonTitle, isActive, isPlaying, isVimeoVideo])
@@ -380,6 +430,7 @@ export default function VideoPlayer({
           src={videoUrl}
           controls={true}
           autoplay={autoPlay && isActive}
+          key={`${lessonId}-${currentLessonIndex}`}
           onReady={(player) => {
             // Set up progress tracking with video player
             if (videoProgression && progressStorageKey) {

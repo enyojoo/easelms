@@ -111,6 +111,8 @@ export default function CourseLearningPage() {
       const index = parseInt(lessonIndexParam, 10)
       if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
         setCurrentLessonIndex(index)
+        // Reset active tab to video when changing lesson
+        setActiveTab("video")
         return
       }
     }
@@ -120,12 +122,14 @@ export default function CourseLearningPage() {
       for (let i = 0; i < course.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
           setCurrentLessonIndex(i)
+          setActiveTab("video")
           return
         }
       }
       // All lessons completed, go to last lesson
       if (course.lessons.length > 0) {
         setCurrentLessonIndex(course.lessons.length - 1)
+        setActiveTab("video")
       }
     }
   }, [course, progressData, completedLessons, lessonIndexParam])

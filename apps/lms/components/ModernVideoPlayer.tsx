@@ -99,18 +99,66 @@ export default function ModernVideoPlayer({
   }, [onReady])
 
   // Aggressive autoplay handling - try to play immediately when autoplay is enabled
+  // But only if the video element is actually visible in the viewport
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !autoplay) return
+    const container = containerRef.current
+    if (!video || !autoplay || !container) return
 
-    const attemptPlay = () => {
-      if (video.paused && autoplay) {
-        video.play().catch((error) => {
-          // Silently handle autoplay errors (browser policies)
-          if (error.name !== 'NotAllowedError') {
-            console.error("Error autoplaying video (immediate):", error)
+    // Check if element is visible using Intersection Observer
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+            // Video is visible, try to play
+            const attemptPlay = () => {
+              if (video.paused && autoplay) {
+                video.play().catch((error) => {
+                  // Silently handle autoplay errors (browser policies)
+                  if (error.name !== 'NotAllowedError') {
+                    console.error("Error autoplaying video (immediate):", error)
+                  }
+                })
+              }
+            }
+            attemptPlay()
+            // Also try after a microtask to ensure DOM is ready
+            Promise.resolve().then(() => {
+              attemptPlay()
+            })
+          } else {
+            // Video is not visible, pause it
+            if (!video.paused) {
+              video.pause()
+            }
           }
         })
+      },
+      {
+        threshold: 0.5, // At least 50% visible
+        rootMargin: '0px',
+      }
+    )
+
+    observer.observe(container)
+
+    // Fallback: try to play immediately if container is already in view
+    const attemptPlay = () => {
+      if (video.paused && autoplay) {
+        // Check if container is in viewport
+        const rect = container.getBoundingClientRect()
+        const isInView = rect.top >= 0 && rect.left >= 0 && 
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        
+        if (isInView) {
+          video.play().catch((error) => {
+            // Silently handle autoplay errors (browser policies)
+            if (error.name !== 'NotAllowedError') {
+              console.error("Error autoplaying video (immediate):", error)
+            }
+          })
+        }
       }
     }
 
@@ -125,17 +173,39 @@ export default function ModernVideoPlayer({
     // Try when video becomes ready
     const handleCanPlay = () => {
       if (autoplay && video.paused) {
-        attemptPlay()
+        // Check if still in view before playing
+        const rect = container.getBoundingClientRect()
+        const isInView = rect.top >= 0 && rect.left >= 0 && 
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        
+        if (isInView) {
+          attemptPlay()
+        }
       }
     }
     const handleLoadedData = () => {
       if (autoplay && video.paused) {
-        attemptPlay()
+        const rect = container.getBoundingClientRect()
+        const isInView = rect.top >= 0 && rect.left >= 0 && 
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        
+        if (isInView) {
+          attemptPlay()
+        }
       }
     }
     const handleLoadedMetadata = () => {
       if (autoplay && video.paused) {
-        attemptPlay()
+        const rect = container.getBoundingClientRect()
+        const isInView = rect.top >= 0 && rect.left >= 0 && 
+                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        
+        if (isInView) {
+          attemptPlay()
+        }
       }
     }
 
@@ -144,9 +214,14 @@ export default function ModernVideoPlayer({
     video.addEventListener("loadedmetadata", handleLoadedMetadata)
 
     return () => {
+      observer.disconnect()
       video.removeEventListener("canplay", handleCanPlay)
       video.removeEventListener("loadeddata", handleLoadedData)
       video.removeEventListener("loadedmetadata", handleLoadedMetadata)
+      // Pause video when component unmounts or autoplay changes
+      if (video && !video.paused) {
+        video.pause()
+      }
     }
   }, [autoplay])
 
