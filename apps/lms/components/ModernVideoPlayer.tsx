@@ -46,6 +46,19 @@ export default function ModernVideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Cleanup: Pause and reset video when src changes or component unmounts
+  useEffect(() => {
+    return () => {
+      const video = videoRef.current
+      if (video) {
+        video.pause()
+        video.currentTime = 0
+        video.src = "" // Clear video source to stop loading
+        video.load() // Reset video element
+      }
+    }
+  }, [src]) // Re-run when src changes
+
   useEffect(() => {
     const video = videoRef.current
     if (video && onReady) {

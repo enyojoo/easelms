@@ -135,6 +135,24 @@ export default function CourseLearningPage() {
     }
   }, [course, progressData, completedLessons, lessonIndexParam])
 
+  // Cleanup: Pause all videos when lesson index changes
+  useEffect(() => {
+    // Pause all video elements on the page when lesson changes
+    const allVideos = document.querySelectorAll('video')
+    allVideos.forEach((video) => {
+      if (!video.paused) {
+        video.pause()
+        video.currentTime = 0
+      }
+    })
+    
+    // Also pause Vimeo iframes
+    const allIframes = document.querySelectorAll('iframe[src*="vimeo"]')
+    allIframes.forEach((iframe) => {
+      iframe.contentWindow?.postMessage({ method: "pause" }, "*")
+    })
+  }, [currentLessonIndex])
+
   // Process quiz data from React Query
   const { completedQuizzes, quizScores, quizAnswers } = useMemo(() => {
     const completedQuizzesMap: { [lessonId: number]: boolean } = {}
@@ -641,10 +659,11 @@ export default function CourseLearningPage() {
                   <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
                     <div className="w-full h-full max-w-full max-h-full">
                       <VideoPlayer
+                        key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
                         lessonTitle={currentLesson.title}
                         onComplete={handleLessonComplete}
                         autoPlay={true}
-                        isActive={true}
+                        isActive={activeTab === "video"}
                         videoUrl={(currentLesson as any).url}
                         vimeoVideoId={(currentLesson as any).vimeoVideoId}
                         courseId={id}

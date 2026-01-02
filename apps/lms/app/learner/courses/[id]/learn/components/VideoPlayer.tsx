@@ -196,6 +196,10 @@ export default function VideoPlayer({
     const video = videoRef.current
     const container = containerRef.current
     if (video && container) {
+      // First, ensure video is paused and reset when lesson changes
+      video.pause()
+      video.currentTime = 0
+      
       video.addEventListener("timeupdate", handleTimeUpdate)
       video.addEventListener("loadedmetadata", handleLoadedMetadata)
       video.addEventListener("ended", handleVideoComplete)
@@ -261,13 +265,16 @@ export default function VideoPlayer({
         video.removeEventListener("timeupdate", handleTimeUpdate)
         video.removeEventListener("loadedmetadata", handleLoadedMetadata)
         video.removeEventListener("ended", handleVideoComplete)
-        // Pause video on cleanup
-        if (video && !video.paused) {
+        // Pause video on cleanup and reset
+        if (video) {
           video.pause()
+          video.currentTime = 0
+          video.src = "" // Clear video source
+          video.load() // Reset video element
         }
       }
     }
-  }, [autoPlay, lessonTitle, isActive, isPlaying, isVimeoVideo])
+  }, [autoPlay, lessonTitle, isActive, isPlaying, isVimeoVideo, lessonId, videoUrl])
 
   // Set up event listeners for showing/hiding controls
   useEffect(() => {

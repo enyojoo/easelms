@@ -13,6 +13,12 @@ export const metadata = {
   title: "Enthronement University - Learning Management System",
   description: "A modern, easy-to-use Learning Management System for creating and managing courses and educational content.",
   generator: "Next.js",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
   icons: {
     icon: "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Faviconn.svg",
   },
