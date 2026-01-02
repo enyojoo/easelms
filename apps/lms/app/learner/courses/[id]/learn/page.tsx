@@ -263,9 +263,23 @@ export default function CourseLearningPage() {
     // Check if lesson has a quiz
     const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
     
-    // If there's a quiz, don't mark as completed - just navigate to quiz
-    // Lesson will only be marked as completed when quiz is passed (in handleQuizComplete)
+    // If there's a quiz, explicitly save progress with completed: false
+    // and navigate to quiz. Lesson will only be marked as completed when quiz is passed.
     if (hasQuiz) {
+      // Ensure lesson is NOT marked as completed - explicitly set to false
+      // This prevents any previous completed: true from persisting
+      // Save immediately (no debounce) to ensure it's saved right away
+      try {
+        const progressPayload: any = {
+          course_id: parseInt(id),
+          lesson_id: lesson.id,
+          completed: false,
+          completed_at: null,
+        }
+        await saveProgressMutation.mutateAsync(progressPayload)
+      } catch (error) {
+        console.error("Error saving progress:", error)
+      }
       setActiveTab("quiz")
       return
     }
