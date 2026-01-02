@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 
 interface QuizQuestion {
@@ -300,12 +301,12 @@ export default function QuizComponent({
         {/* Show answer review */}
         {quiz.showCorrectAnswers && (
           <Card className="p-6 space-y-4">
-            <div className="space-y-2">
-            <h4 className="font-semibold text-lg">Review Your Answers</h4>
-              {!passed && attemptCount < maxAttempts && (
-                <p className="text-sm text-muted-foreground">
-                  Attempt {attemptCount} of {maxAttempts}. Correct answers will be revealed after your final attempt.
-                </p>
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-lg">Review Your Answers</h4>
+              {attemptCount > 0 && (
+                <Badge variant="secondary" className="ml-auto">
+                  Attempt {attemptCount} of {maxAttempts}
+                </Badge>
               )}
             </div>
             <div className="space-y-4">
@@ -397,13 +398,21 @@ export default function QuizComponent({
   }
 
   const question = questions[currentQuestion]
+  const maxAttempts = quiz.maxAttempts || 3
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div className="space-y-2">
-        <h3 className="text-xl font-semibold">
-          Question {currentQuestion + 1} of {questions.length}
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold">
+            Question {currentQuestion + 1} of {questions.length}
+          </h3>
+          {attemptCount > 0 && (
+            <Badge variant="secondary" className="ml-auto">
+              Attempt {attemptCount} of {maxAttempts}
+            </Badge>
+          )}
+        </div>
         <p className="text-lg">{question.question}</p>
       </div>
 
