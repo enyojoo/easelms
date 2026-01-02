@@ -430,7 +430,7 @@ export default function VideoPlayer({
           src={videoUrl}
           controls={true}
           autoplay={autoPlay && isActive}
-          key={`${lessonId}-${currentLessonIndex}`}
+          key={`lesson-${lessonId}`}
           onReady={(player) => {
             // Set up progress tracking with video player
             if (videoProgression && progressStorageKey) {
