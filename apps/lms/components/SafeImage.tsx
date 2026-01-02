@@ -55,6 +55,50 @@ export default function SafeImage({
     }
   }, [blurhash, width, height])
 
+  // Check if image is already cached in browser
+  const checkImageCache = (imageSrc: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (!imageSrc || imageSrc.startsWith("data:") || imageSrc === defaultPlaceholder) {
+        resolve(false)
+        return
+      }
+
+      // Create a new Image object to check cache
+      const img = new Image()
+      
+      // Set up timeout to check if image loads quickly (cached)
+      const timeout = setTimeout(() => {
+        if (img.complete && img.naturalWidth > 0) {
+          resolve(true)
+        } else {
+          resolve(false)
+        }
+      }, 50)
+      
+      // If image loads, clear timeout and resolve
+      img.onload = () => {
+        clearTimeout(timeout)
+        // If image loaded very quickly, it's likely cached
+        resolve(true)
+      }
+      
+      img.onerror = () => {
+        clearTimeout(timeout)
+        resolve(false)
+      }
+      
+      // Set src to trigger load check
+      img.src = imageSrc
+      
+      // If image is already complete (cached), resolve immediately
+      if (img.complete && img.naturalWidth > 0) {
+        clearTimeout(timeout)
+        resolve(true)
+        return
+      }
+    })
+  }
+
   // Update src when prop changes
   useEffect(() => {
     // Check if src is valid (not empty, not just whitespace, and not already placeholder)
@@ -63,7 +107,17 @@ export default function SafeImage({
     if (isValidSrc) {
       setImgSrc(src)
       setHasError(false)
-      setIsLoading(true)
+      
+      // Check if image is cached before showing loading state
+      checkImageCache(src).then((isCached) => {
+        if (isCached) {
+          // Image is cached, skip loading state
+          setIsLoading(false)
+        } else {
+          // Image not cached, show loading state
+          setIsLoading(true)
+        }
+      })
     } else {
       setImgSrc(defaultPlaceholder)
       setHasError(false)
@@ -116,6 +170,7 @@ export default function SafeImage({
           className={className}
           onError={handleError}
           onLoad={handleLoad}
+          loading={priority ? "eager" : "lazy"}
           style={{
             objectFit: className?.includes("object-contain") ? "contain" : "cover",
             width: "100%",
@@ -125,12 +180,12 @@ export default function SafeImage({
             left: 0,
             right: 0,
             bottom: 0,
-            transition: 'opacity 0.3s ease-in-out',
+            transition: isLoading ? 'opacity 0.2s ease-in-out' : 'none',
             opacity: isLoading ? 0 : 1,
           }}
         />
         {isLoading && !showPlaceholder && (
-          <div className="absolute inset-0 bg-muted animate-pulse z-[-1]" />
+          <div className="absolute inset-0 bg-muted/50 animate-pulse z-[-1]" />
         )}
       </>
     )
@@ -165,13 +220,14 @@ export default function SafeImage({
         className={className}
         onError={handleError}
         onLoad={handleLoad}
+        loading={priority ? "eager" : "lazy"}
         style={{
-          transition: 'opacity 0.3s ease-in-out',
+          transition: isLoading ? 'opacity 0.2s ease-in-out' : 'none',
           opacity: isLoading ? 0 : 1,
         }}
       />
       {isLoading && !showPlaceholder && (
-        <div className="absolute inset-0 bg-muted animate-pulse" />
+        <div className="absolute inset-0 bg-muted/50 animate-pulse" />
       )}
     </div>
   )

@@ -324,6 +324,7 @@ export default function CoursePage() {
                 alt={course.title}
                 fill
                 className="object-cover"
+                priority={true}
               />
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
                 <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
@@ -502,6 +503,7 @@ export default function CoursePage() {
                   alt={course?.title || "Course"}
                   fill
                   className="object-cover"
+                  priority={true}
                 />
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
                   <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
