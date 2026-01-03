@@ -105,12 +105,18 @@ export default function CourseLearningPage() {
     return { completedLessons: completed, progress: progressPercent }
   }, [course, progressData])
 
+  // Track if we've already marked enrollment as completed to prevent duplicate calls
+  const enrollmentMarkedRef = useRef(false)
+
   // Mark enrollment as completed when all lessons are completed
   useEffect(() => {
-    if (allLessonsCompleted && course && id && user) {
+    if (allLessonsCompleted && course && id && user && !enrollmentMarkedRef.current) {
       // Mark enrollment as completed
       const markEnrollmentCompleted = async () => {
         try {
+          console.log("🎯 Marking enrollment as completed:", { courseId: parseInt(id), allLessonsCompleted })
+          enrollmentMarkedRef.current = true
+          
           const response = await fetch("/api/enrollments", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -119,11 +125,23 @@ export default function CourseLearningPage() {
               status: "completed",
             }),
           })
+          
           if (response.ok) {
+            const data = await response.json()
+            console.log("✅ Enrollment marked as completed:", data)
+            // Invalidate all related queries
             queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+            queryClient.invalidateQueries({ queryKey: ["progress", id] })
+            // Force refetch
+            queryClient.refetchQueries({ queryKey: ["enrollments"] })
+          } else {
+            const errorData = await response.json().catch(() => ({}))
+            console.error("❌ Failed to mark enrollment as completed:", errorData)
+            enrollmentMarkedRef.current = false // Reset on error so we can retry
           }
         } catch (error) {
-          console.error("Error marking course as completed:", error)
+          console.error("❌ Error marking course as completed:", error)
+          enrollmentMarkedRef.current = false // Reset on error so we can retry
         }
       }
       markEnrollmentCompleted()
