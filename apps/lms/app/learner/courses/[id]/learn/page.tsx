@@ -408,17 +408,20 @@ export default function CourseLearningPage() {
     const hasVideo = !!(lesson as any).url
     const hasText = !!((lesson as any).html || (lesson as any).text)
 
-    // For mixed lessons, mark video as completed and check if text is also viewed
+    // For mixed lessons, mark video as completed and navigate to text tab
     if (isMixedLesson && hasVideo && hasText) {
       setVideoCompleted((prev) => ({ ...prev, [currentLessonIndex]: true }))
       
+      // Navigate to text tab when video completes
+      setActiveTab("text")
+
       // Check if text is also viewed - if so, proceed with completion
       const textCompleted = textViewed[currentLessonIndex] || false
       if (textCompleted) {
         // Both video and text viewed - proceed with completion logic
         await proceedWithLessonCompletion()
       }
-      // If text not viewed yet, wait for text completion
+      // If text not viewed yet, user will view text and then complete
       return
     }
 
