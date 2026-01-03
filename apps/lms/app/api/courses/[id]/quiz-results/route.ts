@@ -1,4 +1,3 @@
-import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { extractIdFromSlug } from "@/lib/slug"
 
@@ -6,7 +5,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { createClient } = await import("@/lib/supabase/server")
+  const { createClient, createServiceRoleClient } = await import("@/lib/supabase/server")
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
