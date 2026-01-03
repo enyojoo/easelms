@@ -3,8 +3,7 @@ export interface Lesson {
   title: string
   type?: string
   content?: {
-    url?: string // Video URL (for non-Vimeo videos or legacy support)
-    vimeoVideoId?: string // Vimeo video ID
+    url?: string // Video URL (S3)
     text?: string // For text-based lessons
     [key: string]: any // Allow other content properties
   }
@@ -29,8 +28,7 @@ export interface Module {
   enrolledStudents?: number
   requirements?: string
   whoIsThisFor?: string
-  previewVideo?: string // Video URL (for non-Vimeo videos or legacy support)
-  vimeoVideoId?: string // Vimeo video ID for preview video
+  previewVideo?: string // Video URL (S3)
   settings?: {
     isPublished?: boolean
     requiresSequentialProgress?: boolean

@@ -7,8 +7,6 @@ import {
   VideoPlayerControlBar,
   VideoPlayerMuteButton,
   VideoPlayerPlayButton,
-  VideoPlayerSeekBackwardButton,
-  VideoPlayerSeekForwardButton,
   VideoPlayerTimeDisplay,
   VideoPlayerTimeRange,
   VideoPlayerVolumeRange,
@@ -45,17 +43,45 @@ export default function ModernVideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const autoplayProcessedRef = useRef(false)
 
   // Cleanup: Pause and reset video when src changes or component unmounts
+  // Also ensure HTML5 controls are always disabled and playsInline is set for iOS/Android
   useEffect(() => {
-    return () => {
-      const video = videoRef.current
-      if (video) {
-        video.pause()
-        video.currentTime = 0
-        video.src = "" // Clear video source to stop loading
-        video.load() // Reset video element
+    const video = videoRef.current
+    if (video) {
+      // Always disable HTML5 controls - we use custom controls
+      // Set both attribute and property to ensure it works on all browsers (especially mobile)
+      video.controls = false
+      video.removeAttribute('controls')
+      ;(video as any).controls = false
+      
+      // Set playsInline for iOS and Android to prevent auto-fullscreen on play
+      video.setAttribute('playsinline', 'true')
+      video.setAttribute('webkit-playsinline', 'true')
+      video.setAttribute('x5-playsinline', 'true') // For Android WeChat/QQ browsers
+      // Also set the property for programmatic access
+      ;(video as any).playsInline = true
+      ;(video as any).webkitPlaysInline = true
+      
+      // Continuously monitor and disable controls (browsers, especially mobile, may re-enable them)
+      const checkControls = setInterval(() => {
+        if (video && video.controls) {
+          video.controls = false
+          video.removeAttribute('controls')
+          ;(video as any).controls = false
+        }
+      }, 500)
+      
+      return () => {
+        clearInterval(checkControls)
       }
+    }
+    
+    return () => {
+      // Don't pause or reset video on cleanup - preserve video state across viewport changes
+      // This ensures video continues playing when viewport changes (e.g., DevTools responsive mode)
+      // The cleanup only runs when src changes, not on viewport changes
     }
   }, [src]) // Re-run when src changes
 
@@ -111,156 +137,138 @@ export default function ModernVideoPlayer({
     }
   }, [onReady])
 
+  // Reset autoplay processed flag when src changes
+  useEffect(() => {
+    autoplayProcessedRef.current = false
+  }, [src])
+
   // Aggressive autoplay handling - try to play immediately when autoplay is enabled
   // But only if the video element is actually visible in the viewport
   useEffect(() => {
     const video = videoRef.current
     const container = containerRef.current
-    if (!video || !autoplay || !container) return
+    if (!video || !autoplay || !container) {
+      // If autoplay is disabled, don't do anything - let video state persist
+      return
+    }
 
-    // Check if element is visible using Intersection Observer
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            // Video is visible, try to play
-            const attemptPlay = () => {
-              if (video.paused && autoplay) {
-                video.play().catch((error) => {
-                  // Silently handle autoplay errors (browser policies)
-                  if (error.name !== 'NotAllowedError') {
-                    console.error("Error autoplaying video (immediate):", error)
-                  }
-                })
-              }
-            }
-            attemptPlay()
-            // Also try after a microtask to ensure DOM is ready
-            Promise.resolve().then(() => {
-              attemptPlay()
-            })
-          } else {
-            // Video is not visible, pause it
-            if (!video.paused) {
-              video.pause()
-            }
-          }
-        })
-      },
-      {
-        threshold: 0.5, // At least 50% visible
-        rootMargin: '0px',
+    // If video is already playing, never try to play again (preserves state across viewport changes)
+    if (!video.paused) {
+      autoplayProcessedRef.current = true
+      return
+    }
+
+    // Track if we're currently attempting to play to prevent conflicts
+    let isAttemptingPlay = false
+    let playTimeoutId: NodeJS.Timeout | null = null
+
+    // Helper to check if video has valid source
+    const hasValidSource = () => {
+      if (!video.src || video.src.trim() === '' || 
+          video.src.includes('your_cloudfront_domain') || 
+          video.src.includes('your-cloudfront-domain')) {
+        return false
       }
-    )
+      
+      // Check if video has error
+      if (video.error && video.error.code !== 0) {
+        return false
+      }
+      
+      // Allow play attempt if readyState is at least HAVE_NOTHING (0) or higher
+      // We'll wait for metadata in the event handlers
+      return video.readyState >= HTMLMediaElement.HAVE_NOTHING
+    }
 
-    observer.observe(container)
-
-    // Fallback: try to play immediately if container is already in view
+    // Safe play function that checks source validity
     const attemptPlay = () => {
-      if (video.paused && autoplay) {
-        // Check if container is in viewport
-        const rect = container.getBoundingClientRect()
-        const isInView = rect.top >= 0 && rect.left >= 0 && 
-                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        
-        if (isInView) {
-          video.play().catch((error) => {
-            // Silently handle autoplay errors (browser policies)
-            if (error.name !== 'NotAllowedError') {
-              console.error("Error autoplaying video (immediate):", error)
+      // Don't attempt if already attempting, no valid source, or video is already playing
+      if (isAttemptingPlay || !video.src || video.src.trim() === '' || !video.paused) {
+        return
+      }
+      
+      // If we've already processed autoplay for this src, don't try again
+      if (autoplayProcessedRef.current) {
+        return
+      }
+
+      // Check if video has error (only if it's a real error, not code 0)
+      if (video.error && video.error.code !== 0) {
+        console.error("Video has error, cannot play:", video.error)
+        return
+      }
+
+      // Only attempt if video has at least loaded nothing (0) or higher
+      // We'll let the event handlers handle when metadata is ready
+      if (video.readyState < HTMLMediaElement.HAVE_NOTHING) {
+        return
+      }
+
+      isAttemptingPlay = true
+      autoplayProcessedRef.current = true
+      const playPromise = video.play()
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            isAttemptingPlay = false
+          })
+          .catch((error) => {
+            isAttemptingPlay = false
+            // Silently handle autoplay errors (browser policies and abort errors)
+            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
+              console.error("Error autoplaying video:", error)
             }
           })
-        }
+      } else {
+        isAttemptingPlay = false
       }
     }
 
-    // Try immediately
-    attemptPlay()
+    // Try when video source is ready
+    const handleCanPlay = () => {
+      if (autoplay && hasValidSource()) {
+        attemptPlay()
+      }
+    }
 
-    // Also try after a microtask to ensure DOM is ready
-    Promise.resolve().then(() => {
+    const handleLoadedData = () => {
+      if (autoplay && hasValidSource()) {
+        attemptPlay()
+      }
+    }
+
+    const handleLoadedMetadata = () => {
+      if (autoplay && hasValidSource()) {
+        attemptPlay()
+      }
+    }
+
+    // Try immediately if video already has source
+    if (hasValidSource()) {
       attemptPlay()
-    })
+    }
+
+    // Try after a short delay to ensure DOM is ready
+    playTimeoutId = setTimeout(() => {
+      if (hasValidSource()) {
+        attemptPlay()
+      }
+    }, 100)
 
     // Try when video becomes ready
-    const handleCanPlay = () => {
-      if (autoplay && video.paused) {
-        // Check if still in view before playing
-        const rect = container.getBoundingClientRect()
-        const isInView = rect.top >= 0 && rect.left >= 0 && 
-                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        
-        if (isInView) {
-          attemptPlay()
-        }
-      }
-    }
-    const handleLoadedData = () => {
-      if (autoplay && video.paused) {
-        const rect = container.getBoundingClientRect()
-        const isInView = rect.top >= 0 && rect.left >= 0 && 
-                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        
-        if (isInView) {
-          attemptPlay()
-        }
-      }
-    }
-    const handleLoadedMetadata = () => {
-      if (autoplay && video.paused) {
-        const rect = container.getBoundingClientRect()
-        const isInView = rect.top >= 0 && rect.left >= 0 && 
-                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        
-        if (isInView) {
-          attemptPlay()
-        }
-      }
-    }
-
     video.addEventListener("canplay", handleCanPlay)
     video.addEventListener("loadeddata", handleLoadedData)
     video.addEventListener("loadedmetadata", handleLoadedMetadata)
 
-    // Handle window resize/orientation change - continue playing if video was playing
-    const handleResize = () => {
-      if (video && !video.paused && autoplay) {
-        // Video was playing, check if still in view
-        const rect = container.getBoundingClientRect()
-        const isInView = rect.top >= 0 && rect.left >= 0 && 
-                        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-        if (!isInView) {
-          video.pause()
-        } else if (video.paused && autoplay) {
-          // Try to resume if it was paused due to resize
-          video.play().catch((error) => {
-            if (error.name !== 'NotAllowedError') {
-              console.error("Error resuming video after resize:", error)
-            }
-          })
-        }
-      }
-    }
-
-    window.addEventListener("resize", handleResize)
-    window.addEventListener("orientationchange", handleResize)
-
     return () => {
-      observer.disconnect()
-      window.removeEventListener("resize", handleResize)
-      window.removeEventListener("orientationchange", handleResize)
       video.removeEventListener("canplay", handleCanPlay)
       video.removeEventListener("loadeddata", handleLoadedData)
       video.removeEventListener("loadedmetadata", handleLoadedMetadata)
-      // Pause video when component unmounts or autoplay changes
-      if (video && !video.paused) {
-        video.pause()
+      if (playTimeoutId) {
+        clearTimeout(playTimeoutId)
       }
+      // Don't pause video on cleanup - let it continue playing naturally
     }
   }, [autoplay])
 
@@ -279,13 +287,46 @@ export default function ModernVideoPlayer({
       const video = videoRef.current
       const container = containerRef.current
       if (video && container) {
+        // Always disable HTML5 controls - we use custom controls
+        // This is critical to prevent native download button from appearing
+        video.controls = false
+        video.removeAttribute('controls')
+        ;(video as any).controls = false
+        
+        // Force disable controls immediately (browsers sometimes re-enable them in fullscreen)
         if (isFullscreenNow) {
           // In fullscreen, ensure video fills the viewport properly
           // The CSS will handle the styling, but we ensure the video element is properly sized
           video.style.objectFit = 'contain' // Use contain in fullscreen to show full video without cropping
+          // Remove playsInline in fullscreen to allow fullscreen on mobile
+          video.removeAttribute('playsinline')
+          video.removeAttribute('webkit-playsinline')
+          ;(video as any).playsInline = false
+          ;(video as any).webkitPlaysInline = false
+          
+          // Ensure controls stay disabled in fullscreen (browsers, especially mobile, re-enable them)
+          // Use multiple timeouts to catch browser re-enabling controls at different stages
+          const disableControls = () => {
+            if (video) {
+              video.controls = false
+              video.removeAttribute('controls')
+              ;(video as any).controls = false
+            }
+          }
+          setTimeout(disableControls, 0)
+          setTimeout(disableControls, 50)
+          setTimeout(disableControls, 100)
+          setTimeout(disableControls, 200)
+          setTimeout(disableControls, 300)
         } else {
           // Reset to normal styling
           video.style.objectFit = ''
+          // Restore playsInline when exiting fullscreen
+          video.setAttribute('playsinline', 'true')
+          video.setAttribute('webkit-playsinline', 'true')
+          video.setAttribute('x5-playsinline', 'true')
+          ;(video as any).playsInline = true
+          ;(video as any).webkitPlaysInline = true
         }
       }
     }
@@ -328,20 +369,72 @@ export default function ModernVideoPlayer({
       )
 
       if (!isCurrentlyFullscreen) {
-        // Enter fullscreen - request on video element for better mobile support
-        const elementToFullscreen = video || container
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
         
-        if (elementToFullscreen.requestFullscreen) {
-          await elementToFullscreen.requestFullscreen()
-        } else if ((elementToFullscreen as any).webkitRequestFullscreen) {
-          // Safari
-          await (elementToFullscreen as any).webkitRequestFullscreen()
-        } else if ((elementToFullscreen as any).mozRequestFullScreen) {
-          // Firefox
-          await (elementToFullscreen as any).mozRequestFullScreen()
-        } else if ((elementToFullscreen as any).msRequestFullscreen) {
-          // IE/Edge
-          await (elementToFullscreen as any).msRequestFullscreen()
+        // Ensure HTML5 controls are disabled before entering fullscreen
+        if (video) {
+          video.controls = false
+          video.removeAttribute('controls')
+          // Also set the property directly
+          ;(video as any).controls = false
+        }
+        
+        // Always use container for fullscreen to prevent native controls from showing
+        // This works on both desktop and mobile/tablet
+        const elementToFullscreen = container
+        
+        if (!elementToFullscreen) return
+        
+        // For iOS, temporarily remove playsInline to allow fullscreen
+        // But we still use container, not video element
+        if (isMobile && video) {
+          video.removeAttribute('playsinline')
+          video.removeAttribute('webkit-playsinline')
+          ;(video as any).playsInline = false
+          ;(video as any).webkitPlaysInline = false
+        }
+        
+        try {
+          if (elementToFullscreen.requestFullscreen) {
+            await elementToFullscreen.requestFullscreen()
+          } else if ((elementToFullscreen as any).webkitRequestFullscreen) {
+            // Safari
+            await (elementToFullscreen as any).webkitRequestFullscreen()
+          } else if ((elementToFullscreen as any).mozRequestFullScreen) {
+            // Firefox
+            await (elementToFullscreen as any).mozRequestFullScreen()
+          } else if ((elementToFullscreen as any).msRequestFullscreen) {
+            // IE/Edge
+            await (elementToFullscreen as any).msRequestFullscreen()
+          }
+          
+          // Ensure controls stay disabled after entering fullscreen (critical for mobile)
+          if (video) {
+            // Use multiple timeouts to catch browser re-enabling controls
+            setTimeout(() => {
+              if (video) {
+                video.controls = false
+                video.removeAttribute('controls')
+                ;(video as any).controls = false
+              }
+            }, 0)
+            setTimeout(() => {
+              if (video) {
+                video.controls = false
+                video.removeAttribute('controls')
+                ;(video as any).controls = false
+              }
+            }, 100)
+            setTimeout(() => {
+              if (video) {
+                video.controls = false
+                video.removeAttribute('controls')
+                ;(video as any).controls = false
+              }
+            }, 300)
+          }
+        } catch (err) {
+          console.error("Error entering fullscreen:", err)
         }
       } else {
         // Exit fullscreen
@@ -353,6 +446,15 @@ export default function ModernVideoPlayer({
           await (document as any).mozCancelFullScreen()
         } else if ((document as any).msExitFullscreen) {
           await (document as any).msExitFullscreen()
+        }
+        
+        // Restore playsInline after exiting fullscreen on mobile
+        if (video) {
+          video.setAttribute('playsinline', 'true')
+          video.setAttribute('webkit-playsinline', 'true')
+          video.setAttribute('x5-playsinline', 'true')
+          ;(video as any).playsInline = true
+          ;(video as any).webkitPlaysInline = true
         }
       }
     } catch (error) {
@@ -374,13 +476,12 @@ export default function ModernVideoPlayer({
       ref={containerRef} 
       className={cn("w-full h-full flex items-center justify-center", className)}
       style={{
-        // On mobile/tablet, ensure video fits within frame, not fills entire screen
         maxWidth: '100%',
         maxHeight: '100%',
-        aspectRatio: '16/9',
       }}
     >
       <VideoPlayer
+        key={src} // Force re-render when src changes
         className={cn(
           "overflow-hidden border w-full h-full flex items-center justify-center",
           isFullscreen && "border-0"
@@ -402,14 +503,40 @@ export default function ModernVideoPlayer({
         muted={false}
         preload="auto"
         slot="media"
-        src={src.trim()}
+        src={src && typeof src === 'string' ? src.trim() : undefined}
         poster={poster}
-        autoPlay={autoplay}
+        autoPlay={false}
+        controls={false}
+        playsInline={true}
+        webkit-playsinline="true"
+        x5-playsinline="true"
         className="w-full h-full"
         style={{ 
           width: '100%', 
           height: '100%', 
-          objectFit: isFullscreen ? 'contain' : 'cover' // Use contain in fullscreen to show full video
+          objectFit: 'contain' // Use contain to show full video without cropping
+        }}
+        onError={(e) => {
+          const video = e.currentTarget
+          if (video.error) {
+            // Only log if it's a real error (not just loading)
+            // video.error.code might be undefined in some browsers, so check both code and message
+            const hasRealError = video.error.code !== undefined && video.error.code !== 0
+            const hasErrorMessage = video.error.message && video.error.message.trim() !== ""
+            
+            if (hasRealError || hasErrorMessage) {
+              console.error("Video playback error:", {
+                code: video.error.code,
+                message: video.error.message,
+                networkState: video.networkState,
+                readyState: video.readyState,
+                videoSrc: video.src,
+                expectedSrc: src,
+                videoSrcAttribute: video.getAttribute('src'),
+                videoCurrentSrc: video.currentSrc
+              })
+            }
+          }
         }}
         onLoadedMetadata={(e) => {
           const video = e.currentTarget
@@ -478,12 +605,13 @@ export default function ModernVideoPlayer({
       {controls && (
         <VideoPlayerControlBar>
           <VideoPlayerPlayButton />
-          <VideoPlayerSeekBackwardButton />
-          <VideoPlayerSeekForwardButton />
           <VideoPlayerTimeRange />
           <VideoPlayerTimeDisplay showDuration />
-          <VideoPlayerMuteButton />
-          <VideoPlayerVolumeRange />
+          {/* Hide volume controls on mobile/tablet */}
+          <div className="hidden lg:flex items-center">
+            <VideoPlayerMuteButton />
+            <VideoPlayerVolumeRange />
+          </div>
           <Button
             variant="ghost"
             size="icon"

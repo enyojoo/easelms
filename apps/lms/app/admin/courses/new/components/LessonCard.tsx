@@ -79,7 +79,7 @@ export default function LessonCard({
 
   const getLessonStatus = (): "complete" | "incomplete" | "draft" => {
     if (!localLesson.title || localLesson.title.trim() === "") return "draft"
-    if (localLesson.type === "video" && !localLesson.content?.vimeoVideoId && !localLesson.content?.url) {
+    if (localLesson.type === "video" && !localLesson.content?.url) {
       return "incomplete"
     }
     if (localLesson.type === "text" && !localLesson.content?.text && !localLesson.content?.html) {

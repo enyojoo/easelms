@@ -351,11 +351,15 @@ media-control-bar {
     object-fit: contain !important;
   }
 
-  /* Video container should maintain aspect ratio */
+  /* Video container should maintain aspect ratio and fit content */
   [class*="video"] {
-    aspect-ratio: 16/9;
     max-width: 100%;
     max-height: 100%;
+  }
+  
+  /* Video containers with aspect ratio should maintain it */
+  [style*="aspectRatio"] {
+    aspect-ratio: 16/9 !important;
   }
 }
 

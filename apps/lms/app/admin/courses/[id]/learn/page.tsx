@@ -26,7 +26,6 @@ interface Course {
     quiz_questions?: Array<any>
     // Content fields (spread from lesson.content)
     url?: string
-    vimeoVideoId?: string
     html?: string
     text?: string
     estimatedDuration?: number
@@ -458,22 +457,19 @@ export default function AdminCourseLearningPage() {
               </TabsList>
 
               <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {((currentLesson as any).url || (currentLesson as any).vimeoVideoId) ? (
-                  <div className="relative w-full overflow-hidden" style={{ paddingTop: "56.25%" }}> {/* 16:9 Aspect Ratio */}
-                    <div className="absolute inset-0">
-                      <VideoPlayer
-                        lessonTitle={currentLesson.title}
-                        onComplete={handleLessonComplete}
-                        autoPlay={true}
-                        isActive={true}
-                        videoUrl={(currentLesson as any).url}
-                        vimeoVideoId={(currentLesson as any).vimeoVideoId}
-                        courseId={id}
-                        lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                        videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
-                        onProgressUpdate={handleVideoProgressUpdate}
-                      />
-                    </div>
+                {((currentLesson as any).url) ? (
+                  <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
+                    <VideoPlayer
+                      lessonTitle={currentLesson.title}
+                      onComplete={handleLessonComplete}
+                      autoPlay={true}
+                      isActive={true}
+                      videoUrl={(currentLesson as any).url}
+                      courseId={id}
+                      lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
+                      videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
+                      onProgressUpdate={handleVideoProgressUpdate}
+                    />
                   </div>
                 ) : ((currentLesson as any).html || (currentLesson as any).text) ? (
                   <ScrollArea className="w-full h-full flex-1 min-h-0">
@@ -665,7 +661,7 @@ export default function AdminCourseLearningPage() {
                         {isCompleted ? (
                           <CheckCircle2 className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-green-500" />
                         ) : (() => {
-                          const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId || (lesson as any).content?.url || (lesson as any).content?.vimeoVideoId
+                          const isVideoLesson = (lesson as any).url || (lesson as any).content?.url
                           const isTextLesson = (lesson as any).html || (lesson as any).text || (lesson as any).content?.html || (lesson as any).content?.text
                           const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
                           return <LessonIcon className={`mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 ${isCurrent ? "" : "text-muted-foreground"}`} />

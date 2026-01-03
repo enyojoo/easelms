@@ -30,7 +30,6 @@ interface Course {
     quiz_questions?: Array<any>
     // Content fields (spread from lesson.content)
     url?: string
-    vimeoVideoId?: string
     html?: string
     text?: string
     estimatedDuration?: number
@@ -106,20 +105,32 @@ export default function CourseLearningPage() {
     return { completedLessons: completed, progress: progressPercent }
   }, [course, progressData])
 
+  // Track if we've processed the lessonIndex parameter to prevent duplicate processing
+  const lessonIndexProcessedRef = useRef(false)
+
   // Set initial lesson index from query parameter or find first incomplete lesson
   useEffect(() => {
     if (!course || !progressData?.progress) return
 
-    // If lessonIndex is provided in query params, use it
-    if (lessonIndexParam !== null) {
+    // If lessonIndex is provided in query params, use it (only process once)
+    if (lessonIndexParam !== null && !lessonIndexProcessedRef.current) {
       const index = parseInt(lessonIndexParam, 10)
       if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
+        lessonIndexProcessedRef.current = true
         setCurrentLessonIndex(index)
         // Reset active tab to video when changing lesson
         setActiveTab("video")
+        
+        // Remove lessonIndex from URL to prevent reprocessing
+        const url = new URL(window.location.href)
+        url.searchParams.delete('lessonIndex')
+        window.history.replaceState({}, '', url.toString())
         return
       }
     }
+
+    // Only run auto-detection logic if we haven't processed a lessonIndex parameter
+    if (lessonIndexProcessedRef.current) return
 
     // Otherwise, find the first incomplete lesson
     if (completedLessons.length > 0 && course.lessons) {
@@ -138,21 +149,17 @@ export default function CourseLearningPage() {
     }
   }, [course, progressData, completedLessons, lessonIndexParam])
 
-  // Cleanup: Pause all videos when lesson index changes
+  // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
-    // Pause all video elements on the page when lesson changes
+    // Only pause videos if we're actually changing to a different lesson
+    // This prevents unnecessary pausing when the component re-renders due to viewport changes
     const allVideos = document.querySelectorAll('video')
     allVideos.forEach((video) => {
+      // Only reset if video is playing - don't interrupt paused videos unnecessarily
       if (!video.paused) {
         video.pause()
         video.currentTime = 0
       }
-    })
-    
-    // Also pause Vimeo iframes
-    const allIframes = document.querySelectorAll('iframe[src*="vimeo"]')
-    allIframes.forEach((iframe) => {
-      iframe.contentWindow?.postMessage({ method: "pause" }, "*")
     })
   }, [currentLessonIndex])
 
@@ -597,6 +604,7 @@ export default function CourseLearningPage() {
   }
 
   const currentLesson = course.lessons[currentLessonIndex]
+  
   if (!currentLesson) {
     console.error("Learn page: No current lesson found", { 
       currentLessonIndex,
@@ -667,9 +675,9 @@ export default function CourseLearningPage() {
               </TabsList>
 
               <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {((currentLesson as any).url || (currentLesson as any).vimeoVideoId) ? (
+                {((currentLesson as any).url) ? (
                   <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                    <div className="w-full h-full max-w-full max-h-full lg:max-w-full lg:max-h-full">
+                    <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
                       <VideoPlayer
                         key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
                         lessonTitle={currentLesson.title}
@@ -677,7 +685,6 @@ export default function CourseLearningPage() {
                         autoPlay={true}
                         isActive={activeTab === "video"}
                         videoUrl={(currentLesson as any).url}
-                        vimeoVideoId={(currentLesson as any).vimeoVideoId}
                         courseId={id}
                         lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
                         videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
@@ -780,13 +787,12 @@ export default function CourseLearningPage() {
 
             {/* Footer - Fixed */}
             <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-background">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+              <div className="flex items-center justify-between gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={handlePreviousLesson}
                   disabled={currentLessonIndex === 0}
-                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm"
-                  size="sm"
+                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary flex-1 sm:flex-initial h-10 sm:h-12 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 lg:px-8"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
@@ -801,12 +807,11 @@ export default function CourseLearningPage() {
                     activeTab === "resources" &&
                     currentLessonIndex === course.lessons.length - 1
                   }
-                  className={`text-foreground w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm ${
+                  className={`text-foreground flex-1 sm:flex-initial h-10 sm:h-12 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 lg:px-8 ${
                     allLessonsCompleted
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
                   }`}
-                  size="sm"
                 >
                   {allLessonsCompleted ? (
                     <>
@@ -880,7 +885,7 @@ export default function CourseLearningPage() {
                         {isCompleted ? (
                           <CheckCircle2 className="mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 text-green-500" />
                         ) : (() => {
-                          const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                          const isVideoLesson = (lesson as any).url
                           const isTextLesson = (lesson as any).html || (lesson as any).text
                           const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
                           return <LessonIcon className={`mr-2 sm:mr-2.5 md:mr-3 h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 flex-shrink-0 ${isCurrent ? "" : "text-muted-foreground"}`} />
@@ -905,7 +910,7 @@ export default function CourseLearningPage() {
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0">
           <SheetHeader className="p-4 border-b">
-            <SheetTitle>Course Progress</SheetTitle>
+            <SheetTitle className="text-left">Course Progress</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col h-[calc(100vh-73px)]">
             <div className="p-4 border-b flex-shrink-0">
@@ -929,7 +934,7 @@ export default function CourseLearningPage() {
                     const isCompleted = completedLessons.includes(index)
                     const isCurrent = index === currentLessonIndex
                     const canAccess = canAccessLesson(index)
-                    const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                    const isVideoLesson = (lesson as any).url
                     const isTextLesson = (lesson as any).html || (lesson as any).text
                     const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : BookOpen
 
@@ -966,11 +971,6 @@ export default function CourseLearningPage() {
                           )}
                           <span className="text-sm font-medium truncate flex-1">{lesson.title}</span>
                         </div>
-                        {lesson.estimatedDuration && (
-                          <span className="text-xs text-muted-foreground ml-2 flex-shrink-0">
-                            {Math.round(lesson.estimatedDuration / 60)} min
-                          </span>
-                        )}
                       </Button>
                     )
                   })}

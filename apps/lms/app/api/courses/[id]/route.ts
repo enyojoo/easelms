@@ -237,7 +237,7 @@ export async function GET(
             isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
             videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
           },
-          // Spread content properties (url, vimeoVideoId, html, text, estimatedDuration, etc)
+          // Spread content properties (url, html, text, estimatedDuration, etc)
           // But NOT quiz and resources (we process those separately)
           ...contentRest,
           resources: resources,
@@ -251,6 +251,11 @@ export async function GET(
           hasResources: resources.length > 0,
           hasQuizQuestions: quiz_questions.length > 0,
           quizSettings: quizSettings,
+          url: (processedLesson as any).url,
+          urlType: typeof (processedLesson as any).url,
+          contentRestKeys: Object.keys(contentRest),
+          contentRest: contentRest,
+          hasUrl: !!(processedLesson as any).url,
         })
         
         return processedLesson

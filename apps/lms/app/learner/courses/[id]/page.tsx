@@ -130,14 +130,6 @@ export default function CoursePage() {
     return total + (lesson.resources?.length || 0)
   }, 0)
 
-  // Extract Vimeo ID from preview video if present
-  const extractVimeoId = (url?: string) => {
-    if (!url) return null
-    const match = url.match(/(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/)
-    return match ? match[1] : null
-  }
-
-  const vimeoId = extractVimeoId(course.preview_video)
   const videoUrl = course.preview_video || ""
 
   // Instructor information - use course creator's profile
@@ -393,7 +385,7 @@ export default function CoursePage() {
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
               <Accordion type="single" collapsible className="w-full">
                 {(course.lessons || []).map((lesson, index) => {
-                  const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId
+                  const isVideoLesson = (lesson as any).url
                   const isTextLesson = (lesson as any).html || (lesson as any).text
                   const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
                   
@@ -555,7 +547,6 @@ export default function CoursePage() {
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
         videoUrl={videoUrl}
-        vimeoVideoId={vimeoId || undefined}
         title={course.title}
       />
     </div>

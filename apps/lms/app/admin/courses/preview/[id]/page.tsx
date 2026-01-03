@@ -14,7 +14,6 @@ import { ArrowLeft, Edit } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
 import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
 import { useClientAuthState } from "@/utils/client-auth"
-import { extractVimeoId } from "@/lib/vimeo/utils"
 
 interface Course {
   id: number
@@ -156,8 +155,6 @@ export default function InstructorCoursePreviewPage() {
     return total + (lesson.resources?.length || 0)
   }, 0)
 
-  // Extract Vimeo ID for video preview
-  const vimeoId = course.preview_video ? extractVimeoId(course.preview_video) : null
   const videoUrl = course.preview_video || ""
 
   const getAccessDetails = () => {
@@ -243,7 +240,7 @@ export default function InstructorCoursePreviewPage() {
                 {lessons.map((lesson, index) => {
                   const quizQuestions = lesson.quiz_questions || []
                   const resources = lesson.resources || []
-                  const isVideoLesson = (lesson as any).url || (lesson as any).vimeoVideoId || (lesson as any).content?.url || (lesson as any).content?.vimeoVideoId
+                  const isVideoLesson = (lesson as any).url || (lesson as any).content?.url
                   const isTextLesson = (lesson as any).html || (lesson as any).text || (lesson as any).content?.html || (lesson as any).content?.text
                   const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
 
@@ -377,7 +374,6 @@ export default function InstructorCoursePreviewPage() {
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
         videoUrl={videoUrl}
-        vimeoVideoId={vimeoId || undefined}
         title={course.title}
       />
     </div>

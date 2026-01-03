@@ -19,7 +19,6 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
       onChange({
         ...content,
         url: undefined,
-        vimeoVideoId: undefined,
       })
     }
   }, [content.url])
@@ -40,7 +39,6 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
                 onChange({
                   ...content,
                   url: urls[0],
-                  vimeoVideoId: undefined, // Clear Vimeo ID when using S3
                 })
               }
             }}
@@ -48,13 +46,12 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
               onChange({
                 ...content,
                 url: "",
-                vimeoVideoId: undefined,
               })
             }}
           />
         </div>
 
-        {content.url && !content.url.includes("vimeo.com") && (
+        {content.url && (
           <div className="space-y-2">
             <Label>Video Preview</Label>
             <div className="relative w-full aspect-video overflow-hidden border">
