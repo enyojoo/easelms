@@ -156,20 +156,44 @@ export default function CourseCompletionPage() {
       const scorePercentage = quizScoreMap[lessonId] || 0
       
       // Calculate points earned and total points for display
-      const pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
-      
-      // Get total points from quiz questions (must match quiz component calculation)
-      // Quiz component uses: question.points || 1 (defaults to 1 if not set)
+      // Match quiz component calculation: sum points for correct answers
+      let pointsEarned = 0
       let totalPoints = 0
+      
       if (lesson?.quiz_questions && Array.isArray(lesson.quiz_questions)) {
-        totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => {
-          // Match quiz component exactly: question.points || 1
-          // If points is 0 or undefined/null, default to 1
-          const points = q.points || 1
-          return sum + points
-        }, 0)
+        // Create a map of question ID to question (with points)
+        const questionMap = new Map<string | number, any>()
+        lesson.quiz_questions.forEach((q: any) => {
+          const qId = q.id?.toString() || q.id
+          questionMap.set(qId, q)
+        })
+        
+        // Calculate points earned by matching quiz_results with questions
+        lessonResults.forEach((r: any) => {
+          const questionId = r.quiz_question_id?.toString() || r.quiz_question_id
+          const question = questionMap.get(questionId)
+          
+          if (question) {
+            // Match quiz component: question.points || 1
+            const questionPoints = question.points || 1
+            totalPoints += questionPoints
+            
+            // If correct, add points; if incorrect, add 0
+            if (r.is_correct || r.isCorrect) {
+              pointsEarned += questionPoints
+            }
+          } else {
+            // Fallback: if question not found, use score value or default to 1 point
+            const questionPoints = 1
+            totalPoints += questionPoints
+            if (r.is_correct || r.isCorrect) {
+              pointsEarned += (r.score || questionPoints)
+            }
+          }
+        })
       } else {
-        // Fallback: if quiz_questions not available, use number of questions * 1
+        // Fallback: if quiz_questions not available, use score values from results
+        pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
         totalPoints = lessonResults.length
       }
       
