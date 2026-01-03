@@ -26,9 +26,19 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
     // For documents, force download
     setDownloadingIndex(index)
     try {
-      const response = await fetch(resource.url)
+      // Check if URL is an S3 URL (needs to go through our API)
+      const isS3Url = resource.url.includes("s3.amazonaws.com") || resource.url.includes("amazonaws.com") || resource.url.includes("cloudfront.net")
+      
+      let downloadUrl = resource.url
+      if (isS3Url) {
+        // Use our download API endpoint for S3 files
+        downloadUrl = `/api/resources/download?url=${encodeURIComponent(resource.url)}`
+      }
+      
+      const response = await fetch(downloadUrl)
       if (!response.ok) {
-        throw new Error("Failed to fetch file")
+        const errorData = await response.json().catch(() => ({ error: "Failed to fetch file" }))
+        throw new Error(errorData.error || "Failed to fetch file")
       }
 
       const blob = await response.blob()
@@ -47,10 +57,14 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
         extension = ".zip"
       } else {
         // Try to get extension from URL
-        const urlPath = new URL(resource.url).pathname
-        const match = urlPath.match(/\.([a-z0-9]+)$/i)
-        if (match) {
-          extension = "." + match[1]
+        try {
+          const urlPath = new URL(resource.url).pathname
+          const match = urlPath.match(/\.([a-z0-9]+)$/i)
+          if (match) {
+            extension = "." + match[1]
+          }
+        } catch (e) {
+          // URL parsing failed, skip extension
         }
       }
 
@@ -66,9 +80,9 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
       
       // Clean up blob URL
       window.URL.revokeObjectURL(blobUrl)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error downloading file:", error)
-      alert("Failed to download file. Please try again.")
+      alert(error.message || "Failed to download file. Please try again.")
     } finally {
       setDownloadingIndex(null)
     }
