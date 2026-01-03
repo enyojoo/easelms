@@ -520,10 +520,10 @@ export default function CourseLearningPage() {
     await proceedWithLessonCompletion()
   }
 
-  const clearQuizData = (lessonId: number) => {
+  const clearQuizData = async (lessonId: number) => {
     // Invalidate quiz results cache to refetch fresh data when retaking
     // This will cause the quiz data to be recalculated from React Query
-    queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
+    await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
   }
 
   const handleVideoProgressUpdate = async (progressPercentage: number) => {

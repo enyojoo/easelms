@@ -211,7 +211,7 @@ export default function QuizComponent({
     return questions.reduce((total, question) => total + (question.points || 1), 0)
   }
 
-  const handleRetryQuiz = () => {
+  const handleRetryQuiz = async () => {
     // Check if multiple attempts are allowed
     if (!quiz.allowMultipleAttempts && attemptCount > 0) {
       return // Don't allow retry if multiple attempts are disabled
@@ -227,9 +227,9 @@ export default function QuizComponent({
     // Reset completion flag for retry
     quizCompletedRef.current = false
     
-    // Clear old quiz data before retrying
+    // Clear old quiz data before retrying (wait for it to complete)
     if (onRetry) {
-      onRetry()
+      await onRetry()
     }
     
     setCurrentQuestion(0)
