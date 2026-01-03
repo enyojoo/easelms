@@ -370,11 +370,10 @@ export default function QuizComponent({
                   ? mappedAnswersForReview[index] 
                   : originalAnswers[index]
                 
-                // Use question's correct answer
+                // Use question's correct answer (for calculation only, not displayed)
                 const correctAnswerIndex = question.correctAnswer
                 
                 const isCorrect = userAnswer === correctAnswerIndex
-                const canSeeCorrectAnswer = passed || attemptCount >= maxAttempts
                 
                 return (
                   <Card key={index} className={`${isCorrect ? "border-green-500/50 bg-green-50/30 dark:bg-green-950/10" : "border-red-500/50 bg-red-50/30 dark:bg-red-950/10"}`}>
@@ -414,18 +413,14 @@ export default function QuizComponent({
                     <div className="space-y-1">
                       {question.options.map((option, optIndex) => {
                         const isUserAnswer = userAnswer === optIndex
-                        const isCorrectAnswer = optIndex === correctAnswerIndex
-                        
-                        // Only highlight correct answer if user can see it
-                        const showCorrectAnswer = canSeeCorrectAnswer && isCorrectAnswer
-                        const showWrongAnswer = isUserAnswer && !isCorrect
                         const showUserCorrectAnswer = isUserAnswer && isCorrect
+                        const showWrongAnswer = isUserAnswer && !isCorrect
                         
                         return (
                           <div
                             key={optIndex}
                             className={`p-3 md:p-4 rounded-lg text-sm md:text-base transition-colors ${
-                              showCorrectAnswer || showUserCorrectAnswer
+                              showUserCorrectAnswer
                                 ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-500"
                                 : showWrongAnswer
                                 ? "bg-red-100 dark:bg-red-900/40 border-2 border-red-500"
@@ -433,25 +428,19 @@ export default function QuizComponent({
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              {(showCorrectAnswer || showUserCorrectAnswer) && (
+                              {showUserCorrectAnswer && (
                                 <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                               )}
                               {showWrongAnswer && (
                                 <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                               )}
                               <span className="flex-1">{option}</span>
-                              {showUserCorrectAnswer && (
-                                <Badge variant="secondary" className="text-xs bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200">
-                                  Your Answer
-                                </Badge>
-                              )}
-                              {showCorrectAnswer && !isUserAnswer && (
-                                <Badge variant="secondary" className="text-xs bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200">
-                                  Correct Answer
-                                </Badge>
-                              )}
-                              {showWrongAnswer && (
-                                <Badge variant="secondary" className="text-xs bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200">
+                              {isUserAnswer && (
+                                <Badge variant="secondary" className={`text-xs ${
+                                  showUserCorrectAnswer
+                                    ? "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                    : "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
+                                }`}>
                                   Your Answer
                                 </Badge>
                               )}
