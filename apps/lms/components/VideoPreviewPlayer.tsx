@@ -37,14 +37,29 @@ export default function VideoPreviewPlayer({
 
     const handlePlay = () => {
       setIsPlaying(true)
-      // Hide controls after 5 seconds when playing
-      setShowControls(true) // Show immediately when playing starts
+      // Hide controls immediately on mobile/tablet, after 5 seconds on desktop
+      // On mobile/tablet (no hover), hide immediately when playing starts
+      // On desktop, show briefly then hide after 5 seconds
+      const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                                (typeof window !== 'undefined' && window.innerWidth < 1024)
+      
+      setShowControls(true) // Show immediately when playing starts (for desktop hover)
+      
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
       }
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000) // Hide after 5 seconds
+      
+      if (isMobileOrTablet) {
+        // On mobile/tablet, hide immediately when playing
+        controlsTimeoutRef.current = setTimeout(() => {
+          setShowControls(false)
+        }, 0) // Hide immediately
+      } else {
+        // On desktop, hide after 5 seconds
+        controlsTimeoutRef.current = setTimeout(() => {
+          setShowControls(false)
+        }, 5000)
+      }
     }
     const handlePause = () => {
       setIsPlaying(false)
@@ -211,7 +226,9 @@ export default function VideoPreviewPlayer({
   }
 
   // Show play button when not playing and controls are visible
-  // Show pause button when playing and controls are visible (and hovering if showControlsOnHover is enabled)
+  // Show pause button when playing and controls are visible
+  // When showControlsOnHover is true: pause button only shows on hover (desktop) or tap (mobile)
+  // When showControlsOnHover is false: pause button shows normally
   const showPlayButton = !isPlaying && showControls
   const showPauseButton = isPlaying && showControls && (!showControlsOnHover || isHovered)
   const showOverlay = showPlayButton || showPauseButton
@@ -232,7 +249,7 @@ export default function VideoPreviewPlayer({
       className={`relative w-full aspect-video overflow-hidden cursor-pointer group ${className}`}
       onMouseEnter={() => {
         setIsHovered(true)
-        // Show controls on hover when playing
+        // Show controls on hover when playing (desktop only)
         if (isPlaying) {
           setShowControls(true)
           if (controlsTimeoutRef.current) {
@@ -246,7 +263,28 @@ export default function VideoPreviewPlayer({
       }}
       onMouseLeave={() => {
         setIsHovered(false)
-        // Don't hide controls immediately on mouse leave - let timeout handle it
+        // On desktop with showControlsOnHover, hide controls immediately when mouse leaves
+        if (isPlaying && showControlsOnHover) {
+          setShowControls(false)
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current)
+          }
+        }
+      }}
+      onTouchStart={() => {
+        // On mobile/tablet, show controls briefly on touch
+        if (isPlaying) {
+          setShowControls(true)
+          setIsHovered(true)
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current)
+          }
+          // Hide again after 5 seconds
+          controlsTimeoutRef.current = setTimeout(() => {
+            setShowControls(false)
+            setIsHovered(false)
+          }, 5000)
+        }
       }}
       onClick={handleTogglePlay}
     >
