@@ -559,14 +559,7 @@ export default function ModernVideoPlayer({
     <div 
       ref={containerRef} 
       className={cn("w-full h-full flex items-center justify-center", className)}
-      style={isFullscreen ? {
-        width: '100vw',
-        height: '100vh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 9999,
-      } : {
+      style={{
         maxWidth: '100%',
         maxHeight: '100%',
       }}
@@ -577,13 +570,7 @@ export default function ModernVideoPlayer({
           "overflow-hidden border w-full h-full flex items-center justify-center",
           isFullscreen && "border-0"
         )}
-        style={isFullscreen ? { 
-          width: '100vw', 
-          height: '100vh', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-        } : { 
+        style={{ 
           width: '100%', 
           height: '100%', 
           display: 'flex', 
