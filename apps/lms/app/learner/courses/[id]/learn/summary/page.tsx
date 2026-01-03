@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getClientAuthState } from "@/utils/client-auth"
+import { useClientAuthState } from "@/utils/client-auth"
 import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star, Loader2 } from "lucide-react"
 import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { extractIdFromSlug } from "@/lib/slug"
+import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
+import { useCourse, useEnrollments } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -35,54 +36,66 @@ export default function CourseCompletionPage() {
   const params = useParams()
   const slugOrId = params.id as string
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
-  const [course, setCourse] = useState<Course | null>(null)
+  const { user, loading: authLoading, userType } = useClientAuthState()
+  const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
+  const { data: enrollmentsData } = useEnrollments()
+  
   const [quizResults, setQuizResults] = useState<{ [key: string]: QuizResult }>({})
-  const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [certificateId, setCertificateId] = useState<string | null>(null)
   const [downloadingCertificate, setDownloadingCertificate] = useState(false)
   const [mounted, setMounted] = useState(false)
 
+  const course = courseData?.course
+
   // Track mount state to prevent flash of content
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Redirect if not authenticated
   useEffect(() => {
-    const fetchData = async () => {
-      const { isLoggedIn, userType, user } = getClientAuthState()
-      if (!isLoggedIn || userType !== "user") {
-        router.push("/auth/learner/login")
-        return
-      }
+    if (!authLoading && (!user || userType !== "user")) {
+      router.push("/auth/learner/login")
+    }
+  }, [authLoading, user, userType, router])
 
-      if (!id) {
-        router.push("/learner/courses")
-        return
-      }
+  // Check enrollment and redirect if not enrolled or not completed
+  useEffect(() => {
+    if (!id || !course || authLoading || coursePending) return
+    if (!enrollmentsData?.enrollments) return
 
-      setUser(user)
+    const courseId = parseInt(id)
+    const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
+    
+    if (!enrollment) {
+      // Not enrolled, redirect to course page
+      router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
+      return
+    }
+
+    if (enrollment.status !== "completed") {
+      // Enrolled but not completed, redirect to learn page
+      router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}/learn`)
+      return
+    }
+    // If we get here, enrollment exists and status is "completed" - allow access to summary page
+  }, [id, course, enrollmentsData, router, authLoading, coursePending])
+
+  // Fetch quiz results and certificate
+  useEffect(() => {
+    const fetchAdditionalData = async () => {
+      if (!id || !course || !user) return
 
       try {
         setLoading(true)
         setError(null)
 
-        // Fetch course data
         const courseId = parseInt(id)
         if (isNaN(courseId)) {
           throw new Error("Invalid course ID")
         }
-        const courseResponse = await fetch(`/api/courses/${courseId}`)
-        if (!courseResponse.ok) {
-          if (courseResponse.status === 404) {
-            router.push("/learner/courses")
-            return
-          }
-          throw new Error("Failed to fetch course")
-        }
-        const courseData = await courseResponse.json()
-        setCourse(courseData.course)
 
         // Fetch quiz results
         const quizResponse = await fetch(`/api/courses/${courseId}/quiz-results`)
@@ -90,7 +103,6 @@ export default function CourseCompletionPage() {
           const quizData = await quizResponse.json()
           
           // Transform quiz results to match component structure
-          // Group by lessonId
           const groupedResults: { [key: string]: QuizResult } = {}
           
           if (quizData.results && Array.isArray(quizData.results)) {
@@ -109,7 +121,7 @@ export default function CourseCompletionPage() {
             Object.keys(lessonGroups).forEach((lessonIdStr) => {
               const lessonId = parseInt(lessonIdStr)
               const lessonResults = lessonGroups[lessonId]
-              const lesson = courseData.course.lessons?.find((l: any) => l.id === lessonId)
+              const lesson = course.lessons?.find((l: any) => l.id === lessonId)
               
               // API returns is_correct (snake_case) from database
               const correctCount = lessonResults.filter((r: any) => r.is_correct || r.isCorrect).length
@@ -137,21 +149,23 @@ export default function CourseCompletionPage() {
         if (certificatesResponse.ok) {
           const certificatesData = await certificatesResponse.json()
           const certificates = certificatesData.certificates || []
-          const certificate = certificates.find((c: any) => c.courseId === parseInt(id))
+          const certificate = certificates.find((c: any) => c.courseId === courseId)
           if (certificate) {
             setCertificateId(certificate.id.toString())
           }
         }
       } catch (err: any) {
-        console.error("Error fetching data:", err)
+        console.error("Error fetching additional data:", err)
         setError(err.message || "Failed to load course completion data")
       } finally {
         setLoading(false)
       }
     }
 
-    fetchData()
-  }, [id, router])
+    if (course && user) {
+      fetchAdditionalData()
+    }
+  }, [id, course, user])
 
   const calculateOverallScore = () => {
     if (!quizResults || Object.keys(quizResults).length === 0) return 0
@@ -196,19 +210,23 @@ export default function CourseCompletionPage() {
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
   const hasData = !!course
-  if ((!mounted || loading) && !hasData) {
+  if ((!mounted || authLoading || coursePending || loading) && !hasData) {
     return <CourseSummarySkeleton />
   }
 
-  if (error || !course || !user) {
+  if (courseError || error) {
     return (
       <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
-          <p className="text-destructive">{error || "Failed to load completion data"}</p>
+          <p className="text-destructive">{courseError?.message || error || "Failed to load completion data"}</p>
           <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
         </div>
       </div>
     )
+  }
+
+  if (!course || !user) {
+    return <CourseSummarySkeleton />
   }
 
   const overallScore = calculateOverallScore()
@@ -220,11 +238,20 @@ export default function CourseCompletionPage() {
   const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10
   const totalTimeSpent = totalHours > 0 ? `${totalHours} hour${totalHours !== 1 ? "s" : ""}` : "Less than 1 hour"
   
-  const completionDate = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
+  // Get completion date from enrollment data
+  const courseId = parseInt(id)
+  const enrollment = enrollmentsData?.enrollments?.find((e: any) => e.course_id === courseId)
+  const completionDate = enrollment?.completed_at 
+    ? new Date(enrollment.completed_at).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">

@@ -98,6 +98,17 @@ export async function GET() {
       ? (payments?.reduce((sum, payment) => sum + (payment.amount_usd || 0), 0) || 0)
       : 0
 
+    // Get total completed courses count (enrollments with status = 'completed')
+    const { count: totalCompleted, error: completedError } = await adminClient
+      .from("enrollments")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "completed")
+
+    if (completedError) {
+      console.error("Error fetching completed enrollments:", completedError)
+      // Don't throw, just log the error and use 0 as default
+    }
+
     // Get recent activity (last 5 items from user signups, enrollments, course completions, payments)
     // Use admin client to bypass RLS
     const [recentSignups, enrollmentsData, completionsData, recentPayments] = await Promise.all([
@@ -320,6 +331,7 @@ export async function GET() {
       totalCourses: totalCourses || 0,
       totalLearners: totalLearners || 0,
       totalRevenue: totalRevenue,
+      totalCompleted: totalCompleted || 0,
       recentActivity: recentActivity
     })
 

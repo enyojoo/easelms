@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, BookOpen, DollarSign, Activity, UserPlus } from "lucide-react"
+import { Users, BookOpen, DollarSign, Activity, UserPlus, Award } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import { useAdminStats, useRealtimeAdminStats, useProfile } from "@/lib/react-query/hooks"
 import type { User } from "@/data/users"
@@ -15,6 +15,7 @@ interface DashboardStats {
   totalCourses: number
   totalLearners: number
   totalRevenue: number
+  totalCompleted: number
   recentActivity: Array<{
     id: string
     type: "signup" | "enrollment" | "completion" | "payment"
@@ -90,7 +91,7 @@ export default function InstructorDashboard() {
         </h1>
       </div>
 
-      <div className={`grid grid-cols-1 ${isInstructor ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6 mb-6`}>
+      <div className={`grid grid-cols-1 ${isInstructor ? 'md:grid-cols-2' : 'md:grid-cols-4'} gap-6 mb-6`}>
         {!isInstructor && (
           <Card>
             <CardHeader>
@@ -134,6 +135,20 @@ export default function InstructorDashboard() {
               <p className="text-sm text-destructive">Error loading courses</p>
             ) : (
               <p className="text-3xl font-bold">{stats?.totalCourses?.toLocaleString() || "0"}</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Award className="mr-2" /> Total Completed
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {statsError ? (
+              <p className="text-sm text-destructive">Error loading completed</p>
+            ) : (
+              <p className="text-3xl font-bold">{stats?.totalCompleted?.toLocaleString() || "0"}</p>
             )}
           </CardContent>
         </Card>
