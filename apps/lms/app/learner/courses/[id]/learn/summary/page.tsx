@@ -158,10 +158,15 @@ export default function CourseCompletionPage() {
       // Calculate points earned and total points for display
       const pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
       
-      // Get total points from quiz questions
+      // Get total points from quiz questions (must match quiz component calculation)
+      // Quiz component uses: question.points || 1 (defaults to 1 if not set)
       let totalPoints = 0
       if (lesson?.quiz_questions && Array.isArray(lesson.quiz_questions)) {
-        totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => sum + (q.points || 1), 0)
+        totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => {
+          // Match quiz component: use points if > 0, otherwise default to 1
+          const points = (q.points && q.points > 0) ? q.points : 1
+          return sum + points
+        }, 0)
       } else {
         // Fallback: if quiz_questions not available, use number of questions * 1
         totalPoints = lessonResults.length
@@ -189,16 +194,11 @@ export default function CourseCompletionPage() {
   const calculateOverallScore = () => {
     if (!quizResults || Object.keys(quizResults).length === 0) return 0
     
-    // Calculate weighted average based on points
-    let totalPointsEarned = 0
-    let totalPointsPossible = 0
-    
-    Object.values(quizResults).forEach((result: QuizResult) => {
-      totalPointsEarned += result.pointsEarned
-      totalPointsPossible += result.totalPoints
-    })
-    
-    return totalPointsPossible > 0 ? Math.round((totalPointsEarned / totalPointsPossible) * 100) : 0
+    // Calculate average of all quiz percentages (one percentage per lesson quiz)
+    const percentages = Object.values(quizResults).map((result: QuizResult) => result.score)
+    return percentages.length > 0 
+      ? Math.round(percentages.reduce((sum, p) => sum + p, 0) / percentages.length)
+      : 0
   }
 
   const handleDownloadCertificate = async () => {
