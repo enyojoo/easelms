@@ -14,7 +14,7 @@ interface VideoModalProps {
 export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] p-0 sm:rounded-t-lg sm:rounded-b-none overflow-hidden [&>button]:rounded-t-lg">
+      <DialogContent className="mx-4 my-4 sm:mx-0 sm:my-0 sm:max-w-[800px] p-0 sm:rounded-t-lg sm:rounded-b-none overflow-hidden rounded-lg [&>button]:rounded-t-lg">
         <div className="p-4 border-b">
           <div>
             <div className="text-sm font-medium text-muted-foreground">Course Preview</div>
