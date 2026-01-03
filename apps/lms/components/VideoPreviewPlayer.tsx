@@ -26,7 +26,9 @@ export default function VideoPreviewPlayer({
   const [isHovered, setIsHovered] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [showControls, setShowControls] = useState(true) // Controls visibility state
   const videoRef = useRef<HTMLVideoElement>(null)
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Sync video state with isPlaying and handle autoplay
   useEffect(() => {
@@ -35,9 +37,22 @@ export default function VideoPreviewPlayer({
 
     const handlePlay = () => {
       setIsPlaying(true)
+      // Hide controls after 5 seconds when playing
+      setShowControls(true) // Show immediately when playing starts
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 5000) // Hide after 5 seconds
     }
     const handlePause = () => {
       setIsPlaying(false)
+      // Show controls when paused
+      setShowControls(true)
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
     }
     const handleEnded = () => {
       setIsPlaying(false)
@@ -133,6 +148,9 @@ export default function VideoPreviewPlayer({
       video.removeEventListener("loadedmetadata", handleLoadedMetadata)
       video.removeEventListener("canplay", handleCanPlay)
       video.removeEventListener("loadeddata", handleLoadedData)
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
     }
   }, [autoplay])
 
@@ -192,10 +210,10 @@ export default function VideoPreviewPlayer({
     }
   }
 
-  // Show play button when not playing
-  // Show pause button when playing and hovering (if showControlsOnHover is true)
-  const showPlayButton = !isPlaying
-  const showPauseButton = isPlaying && isHovered && showControlsOnHover
+  // Show play button when not playing and controls are visible
+  // Show pause button when playing and controls are visible (and hovering if showControlsOnHover is enabled)
+  const showPlayButton = !isPlaying && showControls
+  const showPauseButton = isPlaying && showControls && (!showControlsOnHover || isHovered)
   const showOverlay = showPlayButton || showPauseButton
   
   // Calculate progress percentage
@@ -214,9 +232,21 @@ export default function VideoPreviewPlayer({
       className={`relative w-full aspect-video overflow-hidden cursor-pointer group ${className}`}
       onMouseEnter={() => {
         setIsHovered(true)
+        // Show controls on hover when playing
+        if (isPlaying) {
+          setShowControls(true)
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current)
+          }
+          // Hide again after 5 seconds if still playing
+          controlsTimeoutRef.current = setTimeout(() => {
+            setShowControls(false)
+          }, 5000)
+        }
       }}
       onMouseLeave={() => {
         setIsHovered(false)
+        // Don't hide controls immediately on mouse leave - let timeout handle it
       }}
       onClick={handleTogglePlay}
     >
