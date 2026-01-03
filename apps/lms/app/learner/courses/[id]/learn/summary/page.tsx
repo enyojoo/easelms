@@ -163,8 +163,9 @@ export default function CourseCompletionPage() {
       let totalPoints = 0
       if (lesson?.quiz_questions && Array.isArray(lesson.quiz_questions)) {
         totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => {
-          // Match quiz component: use points if > 0, otherwise default to 1
-          const points = (q.points && q.points > 0) ? q.points : 1
+          // Match quiz component exactly: question.points || 1
+          // If points is 0 or undefined/null, default to 1
+          const points = q.points || 1
           return sum + points
         }, 0)
       } else {
