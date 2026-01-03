@@ -57,24 +57,54 @@ export default function ModernVideoPlayer({
       ;(video as any).controls = false
       
       // Set playsInline for iOS and Android to prevent auto-fullscreen on play
-      video.setAttribute('playsinline', 'true')
-      video.setAttribute('webkit-playsinline', 'true')
-      video.setAttribute('x5-playsinline', 'true') // For Android WeChat/QQ browsers
-      // Also set the property for programmatic access
-      ;(video as any).playsInline = true
-      ;(video as any).webkitPlaysInline = true
+      // This MUST be set before any play() call to prevent iOS from auto-fullscreening
+      const ensurePlaysInline = () => {
+        const isFullscreen = !!(
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement ||
+          (document as any).msFullscreenElement
+        )
+        
+        if (!isFullscreen) {
+          video.setAttribute('playsinline', 'true')
+          video.setAttribute('webkit-playsinline', 'true')
+          video.setAttribute('x5-playsinline', 'true') // For Android WeChat/QQ browsers
+          ;(video as any).playsInline = true
+          ;(video as any).webkitPlaysInline = true
+        }
+      }
+      
+      // Set immediately
+      ensurePlaysInline()
+      
+      // Intercept play events to ensure playsInline is set before video plays
+      const handleBeforePlay = (e: Event) => {
+        ensurePlaysInline()
+      }
+      video.addEventListener('play', handleBeforePlay, true) // Use capture phase
+      video.addEventListener('playing', handleBeforePlay, true)
       
       // Continuously monitor and disable controls (browsers, especially mobile, may re-enable them)
-      const checkControls = setInterval(() => {
-        if (video && video.controls) {
-          video.controls = false
-          video.removeAttribute('controls')
-          ;(video as any).controls = false
+      // Also ensure playsInline stays true to prevent auto-fullscreen on iOS/Android
+      const checkControlsAndPlaysInline = setInterval(() => {
+        if (video) {
+          // Disable controls
+          if (video.controls) {
+            video.controls = false
+            video.removeAttribute('controls')
+            ;(video as any).controls = false
+          }
+          
+          // Ensure playsInline stays true (unless we're in fullscreen)
+          ensurePlaysInline()
         }
       }, 500)
       
       return () => {
-        clearInterval(checkControls)
+        video.removeEventListener('play', handleBeforePlay, true)
+        video.removeEventListener('playing', handleBeforePlay, true)
+        clearInterval(checkControlsAndPlaysInline)
       }
     }
     
@@ -202,6 +232,21 @@ export default function ModernVideoPlayer({
       // We'll let the event handlers handle when metadata is ready
       if (video.readyState < HTMLMediaElement.HAVE_NOTHING) {
         return
+      }
+
+      // Ensure playsInline is set BEFORE calling play() to prevent iOS/Android auto-fullscreen
+      const isFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      if (!isFullscreen) {
+        video.setAttribute('playsinline', 'true')
+        video.setAttribute('webkit-playsinline', 'true')
+        video.setAttribute('x5-playsinline', 'true')
+        ;(video as any).playsInline = true
+        ;(video as any).webkitPlaysInline = true
       }
 
       isAttemptingPlay = true
@@ -597,7 +642,22 @@ export default function ModernVideoPlayer({
             onReady(playerProxy as any)
           }
         }}
-        onPlay={() => {
+        onPlay={(e) => {
+          // Ensure playsInline is set before play event propagates (prevents iOS auto-fullscreen)
+          const video = e.currentTarget
+          const isFullscreen = !!(
+            document.fullscreenElement ||
+            (document as any).webkitFullscreenElement ||
+            (document as any).mozFullScreenElement ||
+            (document as any).msFullscreenElement
+          )
+          if (!isFullscreen && video) {
+            video.setAttribute('playsinline', 'true')
+            video.setAttribute('webkit-playsinline', 'true')
+            video.setAttribute('x5-playsinline', 'true')
+            ;(video as any).playsInline = true
+            ;(video as any).webkitPlaysInline = true
+          }
           onPlay?.()
         }}
         onPause={() => {
