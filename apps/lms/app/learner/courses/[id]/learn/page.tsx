@@ -608,12 +608,12 @@ export default function CourseLearningPage() {
     // Mark lesson as completed ONLY if quiz was passed
     console.log(`Checking lesson completion: quizPassed=${quizPassed}, currentLessonIndex=${currentLessonIndex}`)
     
-    if (quizPassed && !completedLessons.includes(currentLessonIndex)) {
+    // Don't check completedLessons here as it might be stale during refetch
+    // The progress data will be updated via the mutation and cache invalidation
+    if (quizPassed) {
       console.log("✅ Lesson marked as completed in course content", { lessonId: lesson.id, currentLessonIndex })
-    } else if (!quizPassed) {
-      console.log("❌ Quiz not passed - lesson will not be marked as completed")
     } else {
-      console.log("⏭️ Lesson already marked as completed")
+      console.log("❌ Quiz not passed - lesson will not be marked as completed")
     }
     
     // Don't auto-navigate - keep user on quiz results screen
