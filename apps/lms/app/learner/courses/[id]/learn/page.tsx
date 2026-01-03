@@ -885,7 +885,7 @@ export default function CourseLearningPage() {
                             <VideoPlayer
                               key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
                               lessonTitle={currentLesson.title}
-                              onComplete={isMixed ? handleVideoComplete : handleLessonComplete}
+                              onComplete={handleVideoComplete}
                               autoPlay={true}
                               isActive={activeTab === "video"}
                               videoUrl={(currentLesson as any).url}
