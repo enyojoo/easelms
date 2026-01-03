@@ -4,15 +4,18 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle2, XCircle, Loader2, Info, ArrowRight, RotateCcw } from "lucide-react"
+import SafeImage from "@/components/SafeImage"
 
 interface QuizQuestion {
   question: string
   options: string[]
   correctAnswer: number
   id?: string
+  points?: number
+  imageUrl?: string
 }
 
 interface QuizProps {
@@ -60,6 +63,7 @@ export default function QuizComponent({
   const [originalAnswers, setOriginalAnswers] = useState<number[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [quizStarted, setQuizStarted] = useState(false) // Track if user has started the quiz
   const quizCompletedRef = useRef(false) // Track if quiz has been completed
 
   // Answers are already in original order (no mapping needed)
@@ -185,13 +189,18 @@ export default function QuizComponent({
   }
 
   const calculateScore = () => {
-    let score = 0
+    let pointsEarned = 0
     questions.forEach((question, index) => {
       if (selectedAnswers[index] === question.correctAnswer) {
-        score++
+        // Use points if available, otherwise default to 1
+        pointsEarned += question.points || 1
       }
     })
-    return score
+    return pointsEarned
+  }
+  
+  const calculateTotalPoints = () => {
+    return questions.reduce((total, question) => total + (question.points || 1), 0)
   }
 
   const handleRetryQuiz = () => {
@@ -218,6 +227,7 @@ export default function QuizComponent({
     setCurrentQuestion(0)
     setSelectedAnswers([])
     setShowResults(false)
+    setQuizStarted(false) // Reset quiz started state to show info card again
   }
 
   if (!quiz?.questions || questions.length === 0) {
@@ -231,72 +241,107 @@ export default function QuizComponent({
   if (showResults) {
     // If showing results for a previously completed quiz, use initialScore if available
     // Otherwise calculate from current answers
-    const score = showResultsOnly && initialScore !== undefined 
-      ? Math.round((initialScore / 100) * questions.length)
+    const totalPoints = calculateTotalPoints()
+    const pointsEarned = showResultsOnly && initialScore !== undefined 
+      ? Math.round((initialScore / 100) * totalPoints)
       : calculateScore()
     const percentage = showResultsOnly && initialScore !== undefined 
       ? initialScore 
-      : (score / questions.length) * 100
+      : totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0
     const passed = percentage >= minimumQuizScore
     const maxAttempts = quiz.maxAttempts || 3
     const canRetry = (quiz.allowMultipleAttempts !== false) && (attemptCount < maxAttempts)
 
     return (
-      <div className="space-y-6 max-w-2xl mx-auto">
-        <div className="text-center space-y-4">
-          <h3 className="text-2xl font-bold">Quiz Results</h3>
-          <div className="w-24 h-24 mx-auto relative">
-            <svg className="w-24 h-24" viewBox="0 0 100 100">
-              <circle
-                className="text-muted stroke-current dark:text-muted-foreground"
-                strokeWidth="10"
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-              ></circle>
-              <circle
-                className={passed ? "text-green-500 stroke-current" : "text-red-500 stroke-current"}
-                strokeWidth="10"
-                strokeLinecap="round"
-                cx="50"
-                cy="50"
-                r="40"
-                fill="transparent"
-                strokeDasharray={`${percentage * 2.51327}, 251.327`}
-                transform="rotate(-90 50 50)"
-              ></circle>
-              <text
-                x="50"
-                y="50"
-                fontFamily="Verdana"
-                fontSize="16"
-                textAnchor="middle"
-                alignmentBaseline="central"
-                className="fill-current text-foreground dark:text-foreground"
-              >{`${percentage.toFixed(0)}%`}</text>
-            </svg>
-          </div>
-          <p className="text-xl">
-            You scored <span className="font-bold">{score}</span> out of{" "}
-            <span className="font-bold">{questions.length}</span>
-          </p>
-          {passed ? (
-            <p className="text-green-500 font-semibold">Congratulations! You passed the quiz.</p>
-          ) : (
-            <p className="text-red-500 font-semibold">
-              You need {minimumQuizScore}% to pass. {canRetry ? "Try again!" : "Please contact your instructor."}
-            </p>
-          )}
-          {submissionError && (
-            <p className="text-sm text-destructive mt-2">
-              Note: {submissionError} (Results may not be saved)
-            </p>
-          )}
-          {submitting && (
-            <p className="text-sm text-muted-foreground mt-2">Saving quiz results...</p>
-          )}
-        </div>
+      <div className="space-y-6 max-w-3xl mx-auto">
+        {/* Results Header */}
+        <Card className={`border-2 ${passed ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20" : "border-red-500/50 bg-red-50/50 dark:bg-red-950/20"}`}>
+          <CardContent className="p-6 md:p-8">
+            <div className="text-center space-y-6">
+              <div>
+                <h3 className="text-2xl md:text-3xl font-bold mb-2">Quiz Results</h3>
+                {attemptCount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    Attempt {attemptCount} of {maxAttempts}
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Score Circle */}
+              <div className="w-32 h-32 mx-auto relative">
+                <svg className="w-32 h-32" viewBox="0 0 100 100">
+                  <circle
+                    className="text-muted stroke-current dark:text-muted-foreground"
+                    strokeWidth="8"
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                  ></circle>
+                  <circle
+                    className={passed ? "text-green-500 stroke-current" : "text-red-500 stroke-current"}
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                    strokeDasharray={`${percentage * 2.51327}, 251.327`}
+                    transform="rotate(-90 50 50)"
+                  ></circle>
+                  <text
+                    x="50"
+                    y="50"
+                    fontFamily="Verdana"
+                    fontSize="20"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    alignmentBaseline="central"
+                    className="fill-current text-foreground dark:text-foreground"
+                  >{`${percentage.toFixed(0)}%`}</text>
+                </svg>
+              </div>
+              
+              {/* Score Details */}
+              <div className="space-y-2">
+                <p className="text-xl md:text-2xl">
+                  You scored <span className="font-bold text-primary">{pointsEarned}</span> out of{" "}
+                  <span className="font-bold">{totalPoints}</span> points
+                </p>
+                {passed ? (
+                  <div className="space-y-2">
+                    <p className="text-lg md:text-xl text-green-600 dark:text-green-400 font-semibold">
+                      🎉 Congratulations! You passed the quiz.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-lg md:text-xl text-red-600 dark:text-red-400 font-semibold">
+                      You need {minimumQuizScore}% ({minimumPointsNeeded} points) to pass.
+                    </p>
+                    {canRetry && (
+                      <p className="text-sm text-muted-foreground">You can retry the quiz to improve your score.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {submissionError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm text-destructive">
+                    Note: {submissionError} (Results may not be saved)
+                  </p>
+                </div>
+              )}
+              {submitting && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Saving quiz results...</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Show answer review */}
         {quiz.showCorrectAnswers && (
@@ -324,16 +369,40 @@ export default function QuizComponent({
                 const canSeeCorrectAnswer = passed || attemptCount >= maxAttempts
                 
                 return (
-                  <div key={index} className="space-y-2 p-4 border rounded-lg">
-                    <div className="flex items-start justify-between">
-                      <p className="font-medium">Question {index + 1}</p>
-                      {isCorrect ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  <Card key={index} className={`${isCorrect ? "border-green-500/50 bg-green-50/30 dark:bg-green-950/10" : "border-red-500/50 bg-red-50/30 dark:bg-red-950/10"}`}>
+                    <CardContent className="p-4 md:p-6 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-semibold text-base">Question {index + 1}</p>
+                            {question.points && question.points > 0 && (
+                              <Badge variant="outline" className="text-xs">
+                                {question.points} {question.points === 1 ? "point" : "points"}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm md:text-base leading-relaxed">{question.question}</p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {isCorrect ? (
+                            <CheckCircle2 className="h-6 w-6 text-green-500" />
+                          ) : (
+                            <XCircle className="h-6 w-6 text-red-500" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Question Image */}
+                      {question.imageUrl && (
+                        <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border bg-muted">
+                          <SafeImage 
+                            src={question.imageUrl} 
+                            alt={`Question ${index + 1} image`} 
+                            fill 
+                            className="object-contain" 
+                          />
+                        </div>
                       )}
-                    </div>
-                    <p className="text-sm">{question.question}</p>
                     <div className="space-y-1">
                       {question.options.map((option, optIndex) => {
                         const isUserAnswer = userAnswer === optIndex
@@ -347,93 +416,206 @@ export default function QuizComponent({
                         return (
                           <div
                             key={optIndex}
-                            className={`p-2 rounded text-sm ${
+                            className={`p-3 md:p-4 rounded-lg text-sm md:text-base transition-colors ${
                               showCorrectAnswer || showUserCorrectAnswer
-                                ? "bg-green-100 dark:bg-green-900/30 border border-green-500"
+                                ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-500"
                                 : showWrongAnswer
-                                ? "bg-red-100 dark:bg-red-900/30 border border-red-500"
-                                : "bg-muted"
+                                ? "bg-red-100 dark:bg-red-900/40 border-2 border-red-500"
+                                : "bg-muted/50 border border-border"
                             }`}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               {(showCorrectAnswer || showUserCorrectAnswer) && (
-                                <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
                               )}
                               {showWrongAnswer && (
-                                <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                               )}
-                              <span>{option}</span>
-                              {showUserCorrectAnswer && <span className="text-xs text-green-600 dark:text-green-400 ml-auto">Your Answer</span>}
-                              {showCorrectAnswer && !isUserAnswer && <span className="text-xs text-green-600 dark:text-green-400 ml-auto">Correct Answer</span>}
-                              {showWrongAnswer && <span className="text-xs text-red-600 dark:text-red-400 ml-auto">Your Answer</span>}
+                              <span className="flex-1">{option}</span>
+                              {showUserCorrectAnswer && (
+                                <Badge variant="secondary" className="text-xs bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                  Your Answer
+                                </Badge>
+                              )}
+                              {showCorrectAnswer && !isUserAnswer && (
+                                <Badge variant="secondary" className="text-xs bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                  Correct Answer
+                                </Badge>
+                              )}
+                              {showWrongAnswer && (
+                                <Badge variant="secondary" className="text-xs bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200">
+                                  Your Answer
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         )
                       })}
                     </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 )
               })}
             </div>
           </Card>
         )}
 
-        <div className="flex justify-center gap-4">
-          {canRetry && (
-            <Button onClick={handleRetryQuiz} variant="outline">
-              Retry Quiz
-            </Button>
-          )}
-          {passed && (
-            <Button onClick={() => {
-              // Continue button only navigates - no actions
-              onContinue?.()
-            }} className="bg-primary hover:bg-primary/90">
-              Continue
-            </Button>
-          )}
-        </div>
+        {/* Action Buttons */}
+        <Card>
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              {canRetry && (
+                <Button 
+                  onClick={handleRetryQuiz} 
+                  variant="outline"
+                  size="lg"
+                  className="min-h-[44px]"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Retry Quiz
+                </Button>
+              )}
+              {passed && onContinue && (
+                <Button 
+                  onClick={() => onContinue()} 
+                  className="bg-primary hover:bg-primary/90 min-h-[44px]"
+                  size="lg"
+                >
+                  Continue to Next Lesson
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   const question = questions[currentQuestion]
   const maxAttempts = quiz.maxAttempts || 3
+  const totalPoints = calculateTotalPoints()
+  const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
+  
+  // Show quiz info card before starting (when quiz hasn't been started yet)
+  if (!quizStarted && currentQuestion === 0 && selectedAnswers.length === 0) {
+    return (
+      <div className="space-y-6 max-w-2xl mx-auto">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold mb-2">Quiz Information</h3>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Questions:</span>
+                    <span className="font-medium text-foreground">{questions.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Total Points:</span>
+                    <span className="font-medium text-foreground">{totalPoints}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Minimum Score to Pass:</span>
+                    <span className="font-medium text-foreground">{minimumQuizScore}%</span>
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-2 mt-2">
+                    <span>Points Needed to Pass:</span>
+                    <span className="font-semibold text-primary">{minimumPointsNeeded} / {totalPoints}</span>
+                  </div>
+                  {maxAttempts > 1 && (
+                    <div className="flex items-center justify-between">
+                      <span>Attempts Allowed:</span>
+                      <span className="font-medium text-foreground">{maxAttempts}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button 
+              onClick={() => setQuizStarted(true)}
+              className="w-full"
+              size="lg"
+            >
+              Start Quiz
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">
-            Question {currentQuestion + 1} of {questions.length}
-          </h3>
-          {attemptCount > 0 && (
-            <Badge variant="secondary" className="ml-auto">
-              Attempt {attemptCount} of {maxAttempts}
-            </Badge>
-          )}
-        </div>
-        <p className="text-lg">{question.question}</p>
-      </div>
-
-      <Card className="border-border bg-card p-4 space-y-4">
-        <RadioGroup 
-          value={selectedAnswers[currentQuestion] !== undefined ? selectedAnswers[currentQuestion].toString() : ""} 
-          onValueChange={(value) => handleAnswerSelect(Number.parseInt(value))} 
-          className="space-y-1"
-        >
-          {question.options.map((option, index) => (
-            <div
-              key={index}
-              className="flex items-center space-x-2 py-1 px-2 rounded-md hover:bg-accent hover:text-accent-foreground"
-            >
-              <RadioGroupItem value={index.toString()} id={`answer-${index}`} className="border-primary text-primary" />
-              <Label htmlFor={`answer-${index}`} className="flex-grow cursor-pointer">
-                {option}
-              </Label>
+    <div className="space-y-6 max-w-3xl mx-auto">
+      {/* Question Header */}
+      <Card>
+        <CardContent className="p-4 md:p-6">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div className="flex-1">
+              <h3 className="text-xl md:text-2xl font-bold">
+                Question {currentQuestion + 1} of {questions.length}
+              </h3>
             </div>
-          ))}
-        </RadioGroup>
+            <div className="flex items-center gap-2">
+              {question.points && question.points > 0 && (
+                <Badge variant="outline" className="text-sm">
+                  {question.points} {question.points === 1 ? "point" : "points"}
+                </Badge>
+              )}
+              {attemptCount > 0 && (
+                <Badge variant="secondary" className="text-sm">
+                  Attempt {attemptCount} of {maxAttempts}
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          {/* Question Text */}
+          <p className="text-base md:text-lg leading-relaxed mb-4">{question.question}</p>
+          
+          {/* Question Image */}
+          {question.imageUrl && (
+            <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border bg-muted mb-4">
+              <SafeImage 
+                src={question.imageUrl} 
+                alt={`Question ${currentQuestion + 1} image`} 
+                fill 
+                className="object-contain" 
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Answer Options */}
+      <Card>
+        <CardContent className="p-4 md:p-6">
+          <RadioGroup 
+            value={selectedAnswers[currentQuestion] !== undefined ? selectedAnswers[currentQuestion].toString() : ""} 
+            onValueChange={(value) => handleAnswerSelect(Number.parseInt(value))} 
+            className="space-y-3"
+          >
+            {question.options.map((option, index) => (
+              <div
+                key={index}
+                className="flex items-center space-x-3 p-4 rounded-lg border-2 border-border hover:border-primary/50 hover:bg-accent/50 transition-all cursor-pointer"
+              >
+                <RadioGroupItem 
+                  value={index.toString()} 
+                  id={`answer-${index}`} 
+                  className="border-2 border-primary text-primary h-5 w-5" 
+                />
+                <Label 
+                  htmlFor={`answer-${index}`} 
+                  className="flex-grow cursor-pointer text-base md:text-lg leading-relaxed"
+                >
+                  {option}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </CardContent>
       </Card>
 
       <Button 

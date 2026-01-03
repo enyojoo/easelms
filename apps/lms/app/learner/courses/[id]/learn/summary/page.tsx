@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientAuthState } from "@/utils/client-auth"
-import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star, Loader2 } from "lucide-react"
+import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, BookOpen, Star, Loader2 } from "lucide-react"
 import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
@@ -20,6 +20,10 @@ interface Course {
     id: number
     title: string
     estimated_duration?: number
+    quiz_questions?: Array<{
+      id: string | number
+      points?: number
+    }>
   }>
 }
 
@@ -27,7 +31,10 @@ interface QuizResult {
   lessonId: number
   lessonTitle?: string
   score: number
+  correctCount: number
   totalQuestions: number
+  pointsEarned: number
+  totalPoints: number
   answers: boolean[]
 }
 
@@ -123,16 +130,31 @@ export default function CourseCompletionPage() {
               const lessonResults = lessonGroups[lessonId]
               const lesson = course.lessons?.find((l: any) => l.id === lessonId)
               
+              // Calculate points earned (from score field which now stores points)
+              const pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
+              
+              // Get total points from quiz questions
+              let totalPoints = 0
+              if (lesson?.quiz_questions && Array.isArray(lesson.quiz_questions)) {
+                totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => sum + (q.points || 1), 0)
+              } else {
+                // Fallback: if quiz_questions not available, use number of questions * 1
+                totalPoints = lessonResults.length
+              }
+              
               // API returns is_correct (snake_case) from database
               const correctCount = lessonResults.filter((r: any) => r.is_correct || r.isCorrect).length
               const totalQuestions = lessonResults.length
-              const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0
+              const score = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0
               
               groupedResults[lesson?.title || `Lesson ${lessonId}`] = {
                 lessonId,
                 lessonTitle: lesson?.title,
                 score,
+                correctCount,
                 totalQuestions,
+                pointsEarned,
+                totalPoints,
                 answers: lessonResults.map((r: any) => r.is_correct || r.isCorrect),
               }
             })
@@ -169,8 +191,17 @@ export default function CourseCompletionPage() {
 
   const calculateOverallScore = () => {
     if (!quizResults || Object.keys(quizResults).length === 0) return 0
-    const scores = Object.values(quizResults).map((result: QuizResult) => result.score)
-    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    
+    // Calculate weighted average based on points
+    let totalPointsEarned = 0
+    let totalPointsPossible = 0
+    
+    Object.values(quizResults).forEach((result: QuizResult) => {
+      totalPointsEarned += result.pointsEarned
+      totalPointsPossible += result.totalPoints
+    })
+    
+    return totalPointsPossible > 0 ? Math.round((totalPointsEarned / totalPointsPossible) * 100) : 0
   }
 
   const handleDownloadCertificate = async () => {
@@ -230,13 +261,6 @@ export default function CourseCompletionPage() {
   }
 
   const overallScore = calculateOverallScore()
-  
-  // Calculate total time from course lessons
-  const totalDurationMinutes = course.lessons?.reduce((total, lesson) => {
-    return total + (lesson.estimated_duration || 0)
-  }, 0) || 0
-  const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10
-  const totalTimeSpent = totalHours > 0 ? `${totalHours} hour${totalHours !== 1 ? "s" : ""}` : "Less than 1 hour"
   
   // Get completion date from enrollment data
   const courseId = parseInt(id)
@@ -311,58 +335,45 @@ export default function CourseCompletionPage() {
             <CardContent className="p-4 md:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Time Spent</p>
-                  <p className="text-xl md:text-2xl font-bold">{totalTimeSpent}</p>
-                </div>
-                <Clock className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Average Score</p>
+                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Overall Score</p>
                   <p className="text-xl md:text-2xl font-bold">{overallScore}%</p>
                 </div>
                 <Award className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="text-xs md:text-sm text-muted-foreground mb-1">Your Certificate</p>
+                  </div>
+                  <Award className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
+                </div>
+                <Button 
+                  onClick={handleDownloadCertificate} 
+                  className="w-full min-h-[44px]" 
+                  size="lg"
+                  disabled={!certificateId || downloadingCertificate}
+                  variant={certificateId ? "default" : "outline"}
+                >
+                  {downloadingCertificate ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      {certificateId ? "Download Certificate" : "Certificate Not Available"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Certificate Download */}
-        <Card className="mb-6 md:mb-8">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-lg md:text-xl">Your Certificate</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            <div className="flex flex-col items-center justify-center py-6 md:py-8">
-              <Award className="h-16 w-16 md:h-20 md:w-20 text-primary mb-4 opacity-50" />
-              <p className="text-sm md:text-base text-muted-foreground mb-6 text-center">
-                Download your certificate of completion for {course.title}
-              </p>
-              <Button 
-                onClick={handleDownloadCertificate} 
-                className="min-h-[44px]" 
-                size="lg"
-                disabled={!certificateId || downloadingCertificate}
-              >
-                {downloadingCertificate ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    {certificateId ? "Download Certificate" : "Certificate Not Available"}
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card className="mb-6 md:mb-8">
           <CardHeader className="p-4 md:p-6">
@@ -378,7 +389,7 @@ export default function CourseCompletionPage() {
                       <div className="flex justify-between w-full items-center gap-2">
                         <span className="text-sm md:text-base text-left break-words flex-1">{lesson}</span>
                         <span className="text-sm md:text-base font-semibold flex-shrink-0">
-                          {result.score}/{result.totalQuestions}
+                          {result.pointsEarned}/{result.totalPoints} pts
                         </span>
                       </div>
                     </AccordionTrigger>
@@ -449,6 +460,13 @@ export default function CourseCompletionPage() {
                 Continue your learning journey! Explore more courses to expand your skills and knowledge.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
+                <Button 
+                  onClick={() => router.push(`/learner/courses/${createCourseSlug(course.title, parseInt(id))}/learn`)} 
+                  variant="outline" 
+                  className="flex-1 min-h-[44px]"
+                >
+                  View Course Again
+                </Button>
                 <Button onClick={() => router.push("/learner/courses")} variant="outline" className="flex-1 min-h-[44px]">
                   Browse More Courses
                 </Button>

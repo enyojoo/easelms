@@ -150,6 +150,8 @@ export async function POST(
     // Process and save each answer
     const resultsToInsert = []
     let correctCount = 0
+    let totalPoints = 0
+    let pointsEarned = 0
 
     for (let i = 0; i < answers.length; i++) {
       const answer = answers[i]
@@ -209,6 +211,13 @@ export async function POST(
 
       if (isCorrect) correctCount++
 
+      // Get points from question (default to 1 if not specified)
+      const questionPoints = question.points || 1
+      const earnedPoints = isCorrect ? questionPoints : 0
+      
+      totalPoints += questionPoints
+      pointsEarned += earnedPoints
+
       resultsToInsert.push({
         user_id: user.id,
         course_id: courseId,
@@ -216,7 +225,7 @@ export async function POST(
         quiz_question_id: question.id || answer.questionId,
         user_answer: answer.userAnswer,
         is_correct: isCorrect,
-        score: isCorrect ? 1 : 0,
+        score: earnedPoints,
       })
     }
 
@@ -247,9 +256,9 @@ export async function POST(
       console.log("Quiz results saved successfully:", insertedResults?.length, "records")
     }
 
-    // Calculate overall score
+    // Calculate overall score based on points
     const totalQuestions = answers.length
-    const overallScore = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0
+    const overallScore = totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0
 
     return NextResponse.json({
       message: "Quiz completed successfully",
@@ -258,6 +267,8 @@ export async function POST(
         totalQuestions,
         correctAnswers: correctCount,
         incorrectAnswers: totalQuestions - correctCount,
+        totalPoints,
+        pointsEarned,
         overallScore: Math.round(overallScore * 100) / 100,
       },
     })

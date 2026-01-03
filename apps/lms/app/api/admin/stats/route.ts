@@ -145,6 +145,7 @@ export async function GET() {
           course_id
         `)
         .eq("status", "completed")
+        .not("completed_at", "is", null)
         .order("completed_at", { ascending: false })
         .limit(5),
 
@@ -169,8 +170,16 @@ export async function GET() {
       console.error("Error fetching enrollments:", enrollmentsData.error)
     }
 
+    // Check for errors in completions query
+    if (completionsData.error) {
+      console.error("Error fetching completions:", completionsData.error)
+    }
+
     // Ensure we have valid enrollment data
     const validEnrollmentsData = enrollmentsData.error ? { data: [] } : enrollmentsData
+    
+    // Ensure we have valid completions data
+    const validCompletionsData = completionsData.error ? { data: [] } : completionsData
 
     // Fetch user names and course titles for enrollments
     const enrollmentUserIds = (validEnrollmentsData.data || []).map((e: any) => e.user_id).filter(Boolean)
@@ -217,8 +226,8 @@ export async function GET() {
     console.log("Mapped enrollments:", enrollments.data.length, "records")
 
     // Fetch user names and course titles for completions
-    const completionUserIds = completionsData.data?.map(e => e.user_id).filter(Boolean) || []
-    const completionCourseIds = completionsData.data?.map(e => e.course_id).filter(Boolean) || []
+    const completionUserIds = (validCompletionsData.data || []).map(e => e.user_id).filter(Boolean)
+    const completionCourseIds = (validCompletionsData.data || []).map(e => e.course_id).filter(Boolean)
     
     const [completionUsers, completionCourses] = await Promise.all([
       completionUserIds.length > 0
@@ -241,12 +250,18 @@ export async function GET() {
 
     // Map completions with user and course names
     const completions = {
-      data: completionsData.data?.map(e => ({
+      data: (validCompletionsData.data || []).map(e => ({
         ...e,
         profiles: { name: completionUserMap.get(e.user_id) || "Unknown User" },
         courses: { title: completionCourseMap.get(e.course_id) || "Unknown Course" }
-      })) || []
+      }))
     }
+    
+    console.log("Completions data:", {
+      rawCount: validCompletionsData.data?.length || 0,
+      mappedCount: completions.data.length,
+      sample: completions.data[0]
+    })
 
     // Fetch user names and course titles for payments (only if admin)
     let paymentsWithData = { data: [] as any[] }

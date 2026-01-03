@@ -95,15 +95,15 @@ export default function InstructorDashboard() {
         {!isInstructor && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <DollarSign className="mr-2" /> Total Revenue
+              <CardTitle className="flex items-center text-sm">
+                <DollarSign className="mr-2 h-4 w-4" /> Total Revenue
               </CardTitle>
             </CardHeader>
             <CardContent>
               {statsError ? (
                 <p className="text-sm text-destructive">Error loading revenue</p>
               ) : (
-                  <p className="text-3xl font-bold">
+                  <p className="text-2xl font-bold">
                     ${stats?.totalRevenue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
                   </p>
               )}
@@ -112,43 +112,43 @@ export default function InstructorDashboard() {
         )}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2" /> Total Learners
+            <CardTitle className="flex items-center text-sm">
+              <Users className="mr-2 h-4 w-4" /> Total Learners
             </CardTitle>
           </CardHeader>
           <CardContent>
             {statsError ? (
               <p className="text-sm text-destructive">Error loading learners</p>
             ) : (
-              <p className="text-3xl font-bold">{stats?.totalLearners?.toLocaleString() || "0"}</p>
+              <p className="text-2xl font-bold">{stats?.totalLearners?.toLocaleString() || "0"}</p>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <BookOpen className="mr-2" /> Total Courses
+            <CardTitle className="flex items-center text-sm">
+              <BookOpen className="mr-2 h-4 w-4" /> Total Courses
             </CardTitle>
           </CardHeader>
           <CardContent>
             {statsError ? (
               <p className="text-sm text-destructive">Error loading courses</p>
             ) : (
-              <p className="text-3xl font-bold">{stats?.totalCourses?.toLocaleString() || "0"}</p>
+              <p className="text-2xl font-bold">{stats?.totalCourses?.toLocaleString() || "0"}</p>
             )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Award className="mr-2" /> Total Completed
+            <CardTitle className="flex items-center text-sm">
+              <Award className="mr-2 h-4 w-4" /> Total Completed
             </CardTitle>
           </CardHeader>
           <CardContent>
             {statsError ? (
               <p className="text-sm text-destructive">Error loading completed</p>
             ) : (
-              <p className="text-3xl font-bold">{stats?.totalCompleted?.toLocaleString() || "0"}</p>
+              <p className="text-2xl font-bold">{stats?.totalCompleted?.toLocaleString() || "0"}</p>
             )}
           </CardContent>
         </Card>

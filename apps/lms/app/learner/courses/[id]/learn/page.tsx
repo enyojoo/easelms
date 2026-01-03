@@ -446,27 +446,30 @@ export default function CourseLearningPage() {
     let scorePercentage = 0
     
     if (answers && answers.length > 0 && questions && questions.length > 0) {
-      let correctCount = 0
+      let pointsEarned = 0
+      let totalPoints = 0
       
-      // Count correct answers using the questions (which match the order of answers)
+      // Calculate points earned and total points
       console.log("Score calculation - Answers and questions:")
       for (let i = 0; i < answers.length; i++) {
         const question = questions[i]
         const userAnswer = answers[i]
         const isCorrect = question && userAnswer === question.correctAnswer
+        const questionPoints = (question as any)?.points || 1
         
-        console.log(`Q${i+1}: User answer=${userAnswer}, Correct answer=${question?.correctAnswer}, Match=${isCorrect}`)
+        console.log(`Q${i+1}: User answer=${userAnswer}, Correct answer=${question?.correctAnswer}, Match=${isCorrect}, Points=${questionPoints}`)
         
+        totalPoints += questionPoints
         if (isCorrect) {
-          correctCount++
+          pointsEarned += questionPoints
         }
       }
       
-      scorePercentage = (correctCount / answers.length) * 100
+      scorePercentage = totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0
       const minimumScore = course?.settings?.minimumQuizScore || 50
       quizPassed = scorePercentage >= minimumScore
 
-      console.log(`Quiz score: ${scorePercentage.toFixed(0)}% (${correctCount}/${answers.length}), Minimum: ${minimumScore}%, Passed: ${quizPassed}`)
+      console.log(`Quiz score: ${scorePercentage.toFixed(0)}% (${pointsEarned}/${totalPoints} points), Minimum: ${minimumScore}%, Passed: ${quizPassed}`)
     } else {
       console.warn("Cannot calculate score - missing answers or questions", { answers, questions })
     }
@@ -801,6 +804,8 @@ export default function CourseLearningPage() {
                             options: options,
                             correctAnswer: correctAnswer,
                             id: q.id?.toString() || "",
+                            points: q.points || 1,
+                            imageUrl: q.imageUrl || q.image_url,
                           }
                         }),
                             showResultsImmediately: currentLesson.quiz?.showCorrectAnswers || true,
