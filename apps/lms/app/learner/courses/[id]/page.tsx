@@ -220,15 +220,13 @@ export default function CoursePage() {
         // Enroll directly for free courses using React Query mutation
         try {
           await enrollCourseMutation.mutateAsync(Number.parseInt(id))
-          // Invalidate enrollments cache to ensure fresh data
-          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-          setIsEnrolled(true)
-          // Small delay to ensure cache is updated before redirect
-          setTimeout(() => {
-            router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
-          }, 100)
+          // Refetch enrollments to ensure cache is updated before redirect
+          await queryClient.refetchQueries({ queryKey: ["enrollments"] })
+          // Redirect to learn page after enrollment and cache update
+          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
         } catch (error) {
           console.error("Error enrolling in course:", error)
+          setIsEnrolling(false)
         }
       } else {
         // Handle payment/subscription for paid courses
@@ -241,14 +239,16 @@ export default function CoursePage() {
           user
         )
         if (success) {
-          setIsEnrolled(true)
+          // Refetch enrollments after payment (payment webhook should create enrollment)
+          await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Redirect to learn page after successful payment
           router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+        } else {
+          setIsEnrolling(false)
         }
       }
     } catch (error) {
       console.error("Error enrolling in course:", error)
-    } finally {
       setIsEnrolling(false)
     }
   }

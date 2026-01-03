@@ -61,7 +61,7 @@ export default function CourseLearningPage() {
 
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
-  const { data: enrollmentsData } = useEnrollments()
+  const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
   const { data: progressData } = useProgress(id)
   const { data: quizResultsData } = useQuizResults(id)
   const saveProgressMutation = useSaveProgress()
@@ -317,6 +317,9 @@ export default function CourseLearningPage() {
     }
 
     // Normal enrollment check (only if we have enrollment data)
+    // Don't redirect if enrollment data is still loading (enrollment might be in progress)
+    if (enrollmentsPending) return
+
     if (!enrollmentsData?.enrollments) return
 
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
