@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import SafeImage from "@/components/SafeImage"
+import FileUpload from "@/components/FileUpload"
 
 interface CourseCertificateSettingsProps {
   settings: {
@@ -52,35 +53,23 @@ export default function CourseCertificateSettings({ settings, onUpdate }: Course
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Upload Signature Image</Label>
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          const reader = new FileReader()
-                          reader.onloadend = () => {
-                            onUpdate({ ...settings, signatureImage: reader.result as string })
-                          }
-                          reader.readAsDataURL(file)
-                        }
-                      }}
-                    />
-                    {settings.signatureImage && (
-                      <div className="relative h-12 w-auto">
-                        <SafeImage
-                          src={settings.signatureImage}
-                          alt="Signature Preview"
-                          width={48}
-                          height={48}
-                          className="h-12 w-auto object-contain"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  <FileUpload
+                    type="thumbnail"
+                    accept="image/png,image/jpeg,image/jpg"
+                    maxSize={1 * 1024 * 1024} // 1MB
+                    multiple={false}
+                    initialValue={settings.signatureImage ? [settings.signatureImage] : undefined}
+                    onUploadComplete={(files, urls) => {
+                      if (urls.length > 0) {
+                        onUpdate({ ...settings, signatureImage: urls[0] })
+                      }
+                    }}
+                    onRemove={() => {
+                      onUpdate({ ...settings, signatureImage: "" })
+                    }}
+                  />
                   <p className="text-sm text-muted-foreground">
-                    Upload an image of your signature (PNG or JPEG, max 1MB)
+                    Upload an image of your signature (PNG or JPEG, max 1MB). Will be embedded in the certificate.
                   </p>
                 </div>
 

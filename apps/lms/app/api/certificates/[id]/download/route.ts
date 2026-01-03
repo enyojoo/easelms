@@ -85,15 +85,15 @@ export async function GET(
     }
 
     // PDF doesn't exist or failed to download, generate new one
-    // Get platform settings for organization name
-    const { data: platformSettings } = await supabase
-      .from("platform_settings")
-      .select("organization_name")
-      .single()
-
     // Get course certificate settings
     const courseSettings = certificate.courses?.settings as any
     const certificateSettings = courseSettings?.certificate || {}
+
+    // Use black logo URL for certificates (white background) - same as Logo component
+    const logoUrl = "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk.svg"
+    
+    // Organization name (hardcoded, same as used in Logo component)
+    const organizationName = "Enthronement University"
 
     // Generate PDF certificate
     pdfBuffer = await generateCertificatePDF({
@@ -102,7 +102,8 @@ export async function GET(
       courseTitle: certificate.courses?.title || "Course",
       issuedAt: certificate.issued_at,
       certificateType: certificate.certificate_type || certificateSettings.certificateType || "completion",
-      organizationName: platformSettings?.organization_name || "Enthronement University",
+      organizationName,
+      logoUrl,
       signatureImage: certificateSettings.signatureImage,
       signatureTitle: certificateSettings.signatureTitle,
       additionalText: certificateSettings.additionalText,

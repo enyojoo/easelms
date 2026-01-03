@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, Pl
 import VideoPlayer from "@/app/learner/courses/[id]/learn/components/VideoPlayer"
 import QuizComponent from "@/app/learner/courses/[id]/learn/components/QuizComponent"
 import ResourcesPanel from "@/app/learner/courses/[id]/learn/components/ResourcesPanel"
+import TextContentWithTracking from "@/app/learner/courses/[id]/learn/components/TextContentWithTracking"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 
@@ -118,6 +119,22 @@ export default function AdminCourseLearningPage() {
     fetchCourseData()
   }, [id, mounted, authLoading, user, userType, router])
 
+  // Helper function to get initial tab based on lesson type
+  const getInitialTab = (lesson: any): string => {
+    if (!lesson) return "video"
+    const lessonType = lesson.type || (lesson.url ? "video" : "text")
+    const hasVideo = !!lesson.url
+    const hasText = !!(lesson.html || lesson.text)
+    const isMixed = lessonType === "mixed" && hasVideo && hasText
+    
+    if (isMixed || hasVideo) {
+      return "video"
+    } else if (hasText) {
+      return "text"
+    }
+    return "video" // Default fallback
+  }
+
   // Check if required lessons are completed before allowing access
   const canAccessLesson = (lessonIndex: number): boolean => {
     if (!course) return false
@@ -157,8 +174,9 @@ export default function AdminCourseLearningPage() {
         // If no quiz or resources, go to next lesson
         const nextIndex = currentLessonIndex + 1
         if (canAccessLesson(nextIndex)) {
+          const nextLesson = course.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
-          setActiveTab("video")
+          setActiveTab(getInitialTab(nextLesson))
         }
       }
       return
@@ -187,8 +205,9 @@ export default function AdminCourseLearningPage() {
       // If no quiz or resources, go to next lesson
       const nextIndex = currentLessonIndex + 1
       if (canAccessLesson(nextIndex)) {
+        const nextLesson = course.lessons[nextIndex]
         setCurrentLessonIndex(nextIndex)
-        setActiveTab("video")
+        setActiveTab(getInitialTab(nextLesson))
       }
     }
   }
@@ -303,14 +322,32 @@ export default function AdminCourseLearningPage() {
         alert("You must complete all required previous lessons before accessing this lesson.")
         return
       }
+      const nextLesson = course.lessons[nextIndex]
       setCurrentLessonIndex(nextIndex)
-      setActiveTab("video")
+      setActiveTab(getInitialTab(nextLesson))
       setTimeLimitExceeded(false)
     }
   }
 
   const handleNextLesson = () => {
-    if (activeTab === "video") {
+    if (!course) return
+    
+    const currentLesson = course.lessons[currentLessonIndex]
+    if (!currentLesson) return
+    
+    const lessonType = (currentLesson as any).type || ((currentLesson as any).url ? "video" : "text")
+    const hasVideo = !!(currentLesson as any).url
+    const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+    const isMixed = lessonType === "mixed" && hasVideo && hasText
+
+    if (activeTab === "video" || activeTab === "text") {
+      // For mixed lessons, navigate from video to text, or from text to quiz/resources/next lesson
+      if (isMixed && activeTab === "video") {
+        // From video tab in mixed lesson, go to text tab
+        setActiveTab("text")
+        return
+      }
+      
       // Navigate to next available tab: quiz -> resources -> next lesson
       const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
       const hasResources = currentLesson.resources && currentLesson.resources.length > 0
@@ -327,8 +364,9 @@ export default function AdminCourseLearningPage() {
             alert("You must complete all required previous lessons before accessing this lesson.")
             return
           }
+          const nextLesson = course.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
-          setActiveTab("video")
+          setActiveTab(getInitialTab(nextLesson))
           setTimeLimitExceeded(false)
         }
       }
@@ -345,8 +383,9 @@ export default function AdminCourseLearningPage() {
             alert("You must complete all required previous lessons before accessing this lesson.")
             return
           }
+          const nextLesson = course.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
-          setActiveTab("video")
+          setActiveTab(getInitialTab(nextLesson))
           setTimeLimitExceeded(false)
         }
       }
@@ -358,8 +397,9 @@ export default function AdminCourseLearningPage() {
           alert("You must complete all required previous lessons before accessing this lesson.")
           return
         }
+        const nextLesson = course.lessons[nextIndex]
         setCurrentLessonIndex(nextIndex)
-        setActiveTab("video")
+        setActiveTab(getInitialTab(nextLesson))
         setTimeLimitExceeded(false)
       }
     }
@@ -373,8 +413,9 @@ export default function AdminCourseLearningPage() {
         alert("You must complete all required previous lessons before accessing this lesson.")
         return
       }
+      const prevLesson = course.lessons[prevIndex]
       setCurrentLessonIndex(prevIndex)
-      setActiveTab("video")
+      setActiveTab(getInitialTab(prevLesson))
       setTimeLimitExceeded(false)
     }
   }
@@ -431,69 +472,103 @@ export default function AdminCourseLearningPage() {
         <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none min-h-0">
           <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
-                <TabsTrigger
-                  value="video"
-                  className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                >
-                  Lesson
-                </TabsTrigger>
-                {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
-                  <TabsTrigger
-                    value="quiz"
-                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                  >
-                    Quiz
-                  </TabsTrigger>
-                )}
-                {currentLesson.resources && currentLesson.resources.length > 0 && (
-                  <TabsTrigger
-                    value="resources"
-                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                  >
-                    Resources
-                  </TabsTrigger>
-                )}
-              </TabsList>
+              {(() => {
+                const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
+                const hasVideo = !!(currentLesson as any).url
+                const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+                const isMixed = lessonType === "mixed" && hasVideo && hasText
+                const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
+                const hasResources = currentLesson.resources && currentLesson.resources.length > 0
 
-              <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {((currentLesson as any).url) ? (
-                  <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                    <VideoPlayer
-                      lessonTitle={currentLesson.title}
-                      onComplete={handleLessonComplete}
-                      autoPlay={true}
-                      isActive={true}
-                      videoUrl={(currentLesson as any).url}
-                      courseId={id}
-                      lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                      videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
-                      onProgressUpdate={handleVideoProgressUpdate}
-                    />
-                  </div>
-                ) : ((currentLesson as any).html || (currentLesson as any).text) ? (
-                  <ScrollArea className="w-full h-full flex-1 min-h-0">
-                    <div className="p-3 sm:p-4 md:p-6">
-                      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                        {currentLesson.title}
-                      </h1>
-                      <div 
-                        className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                        dangerouslySetInnerHTML={{
-                          __html: (currentLesson as any).html || (currentLesson as any).text
-                        }}
-                      />
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <p className="text-lg font-semibold mb-2">No content available</p>
-                      <p className="text-sm">This lesson doesn't have any content. Please check back later.</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
+                // Determine which tabs to show based on lesson type
+                let tabs: Array<{ value: string; label: string }> = []
+                
+                if (isMixed) {
+                  // Mixed lesson: Video | Text | Quiz (if available) | Resources (if available)
+                  tabs.push({ value: "video", label: "Video" })
+                  tabs.push({ value: "text", label: "Text" })
+                } else if (hasVideo) {
+                  // Video lesson: Video | Quiz (if available) | Resources (if available)
+                  tabs.push({ value: "video", label: "Video" })
+                } else if (hasText) {
+                  // Text lesson: Text | Quiz (if available) | Resources (if available)
+                  tabs.push({ value: "text", label: "Text" })
+                }
+                
+                if (hasQuiz) {
+                  tabs.push({ value: "quiz", label: "Quiz" })
+                }
+                
+                if (hasResources) {
+                  tabs.push({ value: "resources", label: "Resources" })
+                }
+
+                return (
+                  <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
+                    {tabs.map((tab) => (
+                      <TabsTrigger
+                        key={tab.value}
+                        value={tab.value}
+                        className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
+                      >
+                        {tab.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                )
+              })()}
+
+              {(() => {
+                const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
+                const hasVideo = !!(currentLesson as any).url
+                const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+                const isMixed = lessonType === "mixed" && hasVideo && hasText
+
+                return (
+                  <>
+                    {/* Video Tab - for video-only and mixed lessons */}
+                    {(hasVideo && !isMixed) || isMixed ? (
+                      <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                        <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
+                          <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
+                            <VideoPlayer
+                              key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
+                              lessonTitle={currentLesson.title}
+                              onComplete={handleLessonComplete}
+                              autoPlay={true}
+                              isActive={activeTab === "video"}
+                              videoUrl={(currentLesson as any).url}
+                              courseId={id}
+                              lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
+                              videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
+                              onProgressUpdate={handleVideoProgressUpdate}
+                            />
+                          </div>
+                        </div>
+                      </TabsContent>
+                    ) : null}
+
+                    {/* Text Tab - for text-only and mixed lessons */}
+                    {(hasText && !isMixed) || isMixed ? (
+                      <TabsContent value="text" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                        <ScrollArea className="w-full h-full flex-1 min-h-0">
+                          <div className="p-3 sm:p-4 md:p-6">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
+                              {currentLesson.title}
+                            </h1>
+                            <div 
+                              className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+                              dangerouslySetInnerHTML={{
+                                __html: (currentLesson as any).html || (currentLesson as any).text
+                              }}
+                            />
+                          </div>
+                        </ScrollArea>
+                      </TabsContent>
+                    ) : null}
+                  </>
+                )
+              })()}
 
               {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
@@ -642,8 +717,9 @@ export default function AdminCourseLearningPage() {
                           alert("You must complete all required previous lessons before accessing this lesson.")
                           return
                         }
+                        const lesson = course.lessons[index]
                         setCurrentLessonIndex(index)
-                        setActiveTab("video")
+                        setActiveTab(getInitialTab(lesson))
                         setTimeLimitExceeded(false)
                       }}
                       disabled={!canAccess}

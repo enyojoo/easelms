@@ -8,13 +8,34 @@ interface CertificateData {
   issuedAt: string
   certificateType: "completion" | "participation"
   organizationName?: string
-  signatureImage?: string // URL to signature image (Supabase Storage URL)
+  logoUrl?: string // URL to platform logo (black version for white background)
+  signatureImage?: string // URL to signature image (S3 URL)
   signatureTitle?: string // Title for signature (e.g., "Director of Education")
   additionalText?: string // Additional text to display on certificate
 }
 
+// Helper function to fetch image from URL or data URL and return as buffer
+async function fetchImageBuffer(url: string): Promise<Buffer> {
+  // Handle base64 data URLs (for backward compatibility)
+  if (url.startsWith("data:")) {
+    const base64Data = url.split(",")[1]
+    if (!base64Data) {
+      throw new Error("Invalid data URL format")
+    }
+    return Buffer.from(base64Data, "base64")
+  }
+  
+  // Handle regular URLs
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${response.statusText}`)
+  }
+  const arrayBuffer = await response.arrayBuffer()
+  return Buffer.from(arrayBuffer)
+}
+
 export async function generateCertificatePDF(data: CertificateData): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: "LETTER",
@@ -35,6 +56,26 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       })
       doc.on("error", reject)
 
+      // Fetch logo and signature images asynchronously
+      let logoBuffer: Buffer | null = null
+      let signatureBuffer: Buffer | null = null
+
+      try {
+        if (data.logoUrl) {
+          logoBuffer = await fetchImageBuffer(data.logoUrl)
+        }
+      } catch (error) {
+        console.warn("Failed to fetch logo image:", error)
+      }
+
+      try {
+        if (data.signatureImage) {
+          signatureBuffer = await fetchImageBuffer(data.signatureImage)
+        }
+      } catch (error) {
+        console.warn("Failed to fetch signature image:", error)
+      }
+
       // Background color (light cream/beige)
       doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
 
@@ -52,13 +93,34 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .rect(50, 50, doc.page.width - 100, doc.page.height - 100)
         .stroke()
 
-      // Header - Organization Name (if provided)
+      // Header - Logo and Organization Name
+      let headerY = 80
+      
+      // Add logo (if available) - top left or center top
+      if (logoBuffer) {
+        try {
+          // Place logo at top center, above organization name
+          const logoWidth = 120
+          const logoHeight = 40
+          doc.image(logoBuffer, (doc.page.width - logoWidth) / 2, 40, {
+            width: logoWidth,
+            height: logoHeight,
+            fit: [logoWidth, logoHeight],
+            align: "center",
+          })
+          headerY = 90 // Adjust header position if logo is present
+        } catch (error) {
+          console.warn("Failed to embed logo in PDF:", error)
+        }
+      }
+
+      // Organization Name (if provided) - below logo
       if (data.organizationName) {
         doc
           .fontSize(24)
           .fillColor("#2C3E50")
           .font("Helvetica-Bold")
-          .text(data.organizationName, doc.page.width / 2, 80, {
+          .text(data.organizationName, doc.page.width / 2, headerY, {
             align: "center",
           })
       }
@@ -172,17 +234,49 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Signature section
       const signatureY = doc.page.height - 120
+      const signatureXLeft = doc.page.width / 2 - 100
+      const signatureXRight = doc.page.width / 2 + 100
       
-      // Signature image placeholder (if signature image URL is provided, it would need to be fetched and embedded)
-      // For now, we'll use a signature line
+      // Left signature (signature image or line)
+      if (signatureBuffer) {
+        try {
+          // Embed signature image
+          const signatureWidth = 80
+          const signatureHeight = 30
+          doc.image(signatureBuffer, signatureXLeft - signatureWidth / 2, signatureY - 5, {
+            width: signatureWidth,
+            height: signatureHeight,
+            fit: [signatureWidth, signatureHeight],
+            align: "center",
+          })
+        } catch (error) {
+          console.warn("Failed to embed signature image, using line instead:", error)
+          // Fallback to signature line
+          doc
+            .fontSize(12)
+            .fillColor("#34495E")
+            .font("Helvetica")
+            .text("_________________________", signatureXLeft, signatureY, {
+              align: "center",
+            })
+        }
+      } else {
+        // No signature image, use signature line
+        doc
+          .fontSize(12)
+          .fillColor("#34495E")
+          .font("Helvetica")
+          .text("_________________________", signatureXLeft, signatureY, {
+            align: "center",
+          })
+      }
+      
+      // Right signature line (for date)
       doc
         .fontSize(12)
         .fillColor("#34495E")
         .font("Helvetica")
-        .text("_________________________", doc.page.width / 2 - 100, signatureY, {
-          align: "center",
-        })
-        .text("_________________________", doc.page.width / 2 + 100, signatureY, {
+        .text("_________________________", signatureXRight, signatureY, {
           align: "center",
         })
 
@@ -192,10 +286,10 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .fontSize(10)
         .fillColor("#7F8C8D")
         .font("Helvetica")
-        .text(signatureLabel, doc.page.width / 2 - 100, signatureY + 20, {
+        .text(signatureLabel, signatureXLeft, signatureY + 25, {
           align: "center",
         })
-        .text("Date", doc.page.width / 2 + 100, signatureY + 20, {
+        .text("Date", signatureXRight, signatureY + 25, {
           align: "center",
         })
 

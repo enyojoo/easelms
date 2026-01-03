@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, Pl
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
-import MixedLessonContent from "./components/MixedLessonContent"
+import TextContentWithTracking from "./components/TextContentWithTracking"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProgress, useRealtimeQuizResults, useSaveProgress } from "@/lib/react-query/hooks"
@@ -55,6 +55,7 @@ export default function CourseLearningPage() {
   const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
   const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
   const [textViewed, setTextViewed] = useState<{ [key: number]: boolean }>({})
+  const [videoCompleted, setVideoCompleted] = useState<{ [key: number]: boolean }>({}) // Track video completion separately for mixed lessons
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const textViewedRefs = useRef<{ [key: number]: { viewed: boolean; scrollTop: number; scrollHeight: number } }>({})
 
@@ -160,6 +161,22 @@ export default function CourseLearningPage() {
   // Track if we've processed the lessonIndex parameter to prevent duplicate processing
   const lessonIndexProcessedRef = useRef(false)
 
+  // Helper function to get initial tab based on lesson type
+  const getInitialTab = (lesson: any): string => {
+    if (!lesson) return "video"
+    const lessonType = lesson.type || (lesson.url ? "video" : "text")
+    const hasVideo = !!lesson.url
+    const hasText = !!(lesson.html || lesson.text)
+    const isMixed = lessonType === "mixed" && hasVideo && hasText
+    
+    if (isMixed || hasVideo) {
+      return "video"
+    } else if (hasText) {
+      return "text"
+    }
+    return "video" // Default fallback
+  }
+
   // Set initial lesson index from query parameter or find first incomplete lesson
   useEffect(() => {
     if (!course || !progressData?.progress) return
@@ -170,8 +187,9 @@ export default function CourseLearningPage() {
       if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
         lessonIndexProcessedRef.current = true
         setCurrentLessonIndex(index)
-        // Reset active tab to video when changing lesson
-        setActiveTab("video")
+        // Reset active tab based on lesson type
+        const lesson = course.lessons[index]
+        setActiveTab(getInitialTab(lesson))
         
         // Remove lessonIndex from URL to prevent reprocessing
         const url = new URL(window.location.href)
@@ -187,7 +205,7 @@ export default function CourseLearningPage() {
     // If course is already completed, always start from first lesson (lesson 0)
     if (isCourseCompleted && course.lessons && course.lessons.length > 0) {
       setCurrentLessonIndex(0)
-      setActiveTab("video")
+      setActiveTab(getInitialTab(course.lessons[0]))
       return
     }
 
@@ -196,14 +214,14 @@ export default function CourseLearningPage() {
       for (let i = 0; i < course.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
           setCurrentLessonIndex(i)
-          setActiveTab("video")
+          setActiveTab(getInitialTab(course.lessons[i]))
           return
         }
       }
       // All lessons completed, go to last lesson
       if (course.lessons.length > 0) {
         setCurrentLessonIndex(course.lessons.length - 1)
-        setActiveTab("video")
+        setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
       }
     }
   }, [course, progressData, completedLessons, lessonIndexParam, isCourseCompleted])
@@ -375,7 +393,8 @@ export default function CourseLearningPage() {
   }
 
 
-  const handleLessonComplete = async () => {
+  // Handle video completion (for video-only and mixed lessons)
+  const handleVideoComplete = async () => {
     if (!course) return
 
     const lesson = course.lessons[currentLessonIndex]
@@ -386,17 +405,59 @@ export default function CourseLearningPage() {
     const hasVideo = !!(lesson as any).url
     const hasText = !!((lesson as any).html || (lesson as any).text)
 
-    // For mixed lessons, check if both video and text are viewed
+    // For mixed lessons, mark video as completed and check if text is also viewed
     if (isMixedLesson && hasVideo && hasText) {
-      const textCompleted = textViewed[currentLessonIndex] || false
+      setVideoCompleted((prev) => ({ ...prev, [currentLessonIndex]: true }))
       
-      if (!textCompleted) {
-        // Text not viewed yet - don't mark as complete
-        // Video completion callback will be called again after text is viewed
-        return
+      // Check if text is also viewed - if so, proceed with completion
+      const textCompleted = textViewed[currentLessonIndex] || false
+      if (textCompleted) {
+        // Both video and text viewed - proceed with completion logic
+        await proceedWithLessonCompletion()
       }
-      // Both video and text viewed - proceed with completion logic
+      // If text not viewed yet, wait for text completion
+      return
     }
+
+    // For video-only lessons, proceed directly with completion
+    await proceedWithLessonCompletion()
+  }
+
+  // Handle text completion (for text-only and mixed lessons)
+  const handleTextComplete = async () => {
+    if (!course) return
+
+    const lesson = course.lessons[currentLessonIndex]
+    if (!lesson) return
+
+    const lessonType = (lesson as any).type || ((lesson as any).url ? "video" : "text")
+    const isMixedLesson = lessonType === "mixed"
+    const hasVideo = !!(lesson as any).url
+    const hasText = !!((lesson as any).html || (lesson as any).text)
+
+    setTextViewed((prev) => ({ ...prev, [currentLessonIndex]: true }))
+
+    // For mixed lessons, check if video is also completed
+    if (isMixedLesson && hasVideo && hasText) {
+      const videoCompletedForLesson = videoCompleted[currentLessonIndex] || false
+      if (videoCompletedForLesson) {
+        // Both video and text viewed - proceed with completion logic
+        await proceedWithLessonCompletion()
+      }
+      // If video not completed yet, wait for video completion
+      return
+    }
+
+    // For text-only lessons, proceed directly with completion
+    await proceedWithLessonCompletion()
+  }
+
+  // Common completion logic (check quiz, mark complete, navigate)
+  const proceedWithLessonCompletion = async () => {
+    if (!course) return
+
+    const lesson = course.lessons[currentLessonIndex]
+    if (!lesson) return
 
     // Check if lesson has a quiz
     const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
@@ -453,6 +514,26 @@ export default function CourseLearningPage() {
       }
     }
     // If it's the last lesson, stay on the current tab - "Complete Course" button will show
+  }
+
+  // Legacy handler for backward compatibility (used for non-mixed lessons)
+  const handleLessonComplete = async () => {
+    if (!course) return
+
+    const lesson = course.lessons[currentLessonIndex]
+    if (!lesson) return
+
+    const lessonType = (lesson as any).type || ((lesson as any).url ? "video" : "text")
+    const isMixedLesson = lessonType === "mixed"
+    
+    // For mixed lessons, this should not be called directly - use handleVideoComplete/handleTextComplete
+    if (isMixedLesson) {
+      console.warn("handleLessonComplete called for mixed lesson - this should not happen")
+      return
+    }
+
+    // For non-mixed lessons, proceed with completion
+    await proceedWithLessonCompletion()
   }
 
   const clearQuizData = (lessonId: number) => {
@@ -569,15 +650,33 @@ export default function CourseLearningPage() {
         })
         return
       }
+      const nextLesson = course.lessons[nextIndex]
       setCurrentLessonIndex(nextIndex)
-      setActiveTab("video")
+      setActiveTab(getInitialTab(nextLesson))
       setTimeLimitExceeded(false)
     }
     // If it's the last lesson and no resources, stay on quiz results - "Complete Course" button will show
   }
 
   const handleNextLesson = () => {
-    if (activeTab === "video") {
+    if (!course) return
+    
+    const currentLesson = course.lessons[currentLessonIndex]
+    if (!currentLesson) return
+    
+    const lessonType = (currentLesson as any).type || ((currentLesson as any).url ? "video" : "text")
+    const hasVideo = !!(currentLesson as any).url
+    const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+    const isMixed = lessonType === "mixed" && hasVideo && hasText
+
+    if (activeTab === "video" || activeTab === "text") {
+      // For mixed lessons, navigate from video to text, or from text to quiz/resources/next lesson
+      if (isMixed && activeTab === "video") {
+        // From video tab in mixed lesson, go to text tab
+        setActiveTab("text")
+        return
+      }
+      
       // Navigate to next available tab: quiz -> resources -> next lesson
       const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
       const hasResources = currentLesson.resources && currentLesson.resources.length > 0
@@ -598,8 +697,9 @@ export default function CourseLearningPage() {
             })
             return
           }
+          const nextLesson = course.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
-          setActiveTab("video")
+          setActiveTab(getInitialTab(nextLesson))
           setTimeLimitExceeded(false)
         } else {
           router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
@@ -622,8 +722,9 @@ export default function CourseLearningPage() {
             })
             return
           }
+          const nextLesson = course.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
-          setActiveTab("video")
+          setActiveTab(getInitialTab(nextLesson))
           setTimeLimitExceeded(false)
         } else {
           router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
@@ -641,8 +742,9 @@ export default function CourseLearningPage() {
           })
           return
         }
+        const nextLesson = course.lessons[nextIndex]
         setCurrentLessonIndex(nextIndex)
-        setActiveTab("video")
+        setActiveTab(getInitialTab(nextLesson))
         setTimeLimitExceeded(false)
       } else {
         // All lessons completed, redirect to summary page
@@ -663,8 +765,9 @@ export default function CourseLearningPage() {
         })
         return
       }
+      const prevLesson = course.lessons[prevIndex]
       setCurrentLessonIndex(prevIndex)
-      setActiveTab("video")
+      setActiveTab(getInitialTab(prevLesson))
       setTimeLimitExceeded(false)
     }
   }
@@ -736,107 +839,113 @@ export default function CourseLearningPage() {
         <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none min-h-0">
           <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
-                <TabsTrigger
-                  value="video"
-                  className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                >
-                    Lesson
-                </TabsTrigger>
-                {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
-                  <TabsTrigger
-                    value="quiz"
-                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                  >
-                    Quiz
-                  </TabsTrigger>
-                )}
-                {currentLesson.resources && currentLesson.resources.length > 0 && (
-                  <TabsTrigger
-                    value="resources"
-                    className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
-                  >
-                    Resources
-                  </TabsTrigger>
-                )}
-              </TabsList>
+              {(() => {
+                const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
+                const hasVideo = !!(currentLesson as any).url
+                const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+                const isMixed = lessonType === "mixed" && hasVideo && hasText
+                const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
+                const hasResources = currentLesson.resources && currentLesson.resources.length > 0
 
-              <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {(() => {
-                  const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
-                  const hasVideo = !!(currentLesson as any).url
-                  const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
-                  const isMixed = lessonType === "mixed" && hasVideo && hasText
+                // Determine which tabs to show based on lesson type
+                let tabs: Array<{ value: string; label: string }> = []
+                
+                if (isMixed) {
+                  // Mixed lesson: Video | Text | Quiz (if available) | Resources (if available)
+                  tabs.push({ value: "video", label: "Video" })
+                  tabs.push({ value: "text", label: "Text" })
+                } else if (hasVideo) {
+                  // Video lesson: Video | Quiz (if available) | Resources (if available)
+                  tabs.push({ value: "video", label: "Video" })
+                } else if (hasText) {
+                  // Text lesson: Text | Quiz (if available) | Resources (if available)
+                  tabs.push({ value: "text", label: "Text" })
+                }
+                
+                if (hasQuiz) {
+                  tabs.push({ value: "quiz", label: "Quiz" })
+                }
+                
+                if (hasResources) {
+                  tabs.push({ value: "resources", label: "Resources" })
+                }
 
-                  // Mixed lesson: video on top, text below (stacked, scrollable)
-                  if (isMixed) {
-                    return (
-                      <MixedLessonContent
-                        currentLesson={currentLesson}
-                        currentLessonIndex={currentLessonIndex}
-                        id={id}
-                        activeTab={activeTab}
-                        onComplete={handleLessonComplete}
-                        onProgressUpdate={handleVideoProgressUpdate}
-                        textViewed={textViewed}
-                        setTextViewed={setTextViewed}
-                        textViewedRefs={textViewedRefs}
-                      />
-                    )
-                  }
+                return (
+                  <TabsList className="flex-shrink-0 w-full justify-start bg-muted p-0 h-10 sm:h-12 border-b border-border overflow-x-auto touch-pan-x">
+                    {tabs.map((tab) => (
+                      <TabsTrigger
+                        key={tab.value}
+                        value={tab.value}
+                        className="rounded-none h-10 sm:h-12 px-3 sm:px-4 md:px-6 lg:px-8 flex-shrink-0 text-xs sm:text-sm md:text-base"
+                      >
+                        {tab.label}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                )
+              })()}
 
-                  // Video only
-                  if (hasVideo) {
-                    return (
-                      <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                        <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
-                          <VideoPlayer
-                            key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
-                            lessonTitle={currentLesson.title}
-                            onComplete={handleLessonComplete}
-                            autoPlay={true}
-                            isActive={activeTab === "video"}
-                            videoUrl={(currentLesson as any).url}
-                            courseId={id}
-                            lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                            videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
-                            onProgressUpdate={handleVideoProgressUpdate}
-                          />
+              {(() => {
+                const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
+                const hasVideo = !!(currentLesson as any).url
+                const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+                const isMixed = lessonType === "mixed" && hasVideo && hasText
+
+                return (
+                  <>
+                    {/* Video Tab - for video-only and mixed lessons */}
+                    {(hasVideo && !isMixed) || isMixed ? (
+                      <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                        <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
+                          <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
+                            <VideoPlayer
+                              key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
+                              lessonTitle={currentLesson.title}
+                              onComplete={isMixed ? handleVideoComplete : handleLessonComplete}
+                              autoPlay={true}
+                              isActive={activeTab === "video"}
+                              videoUrl={(currentLesson as any).url}
+                              courseId={id}
+                              lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
+                              videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
+                              onProgressUpdate={handleVideoProgressUpdate}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )
-                  }
+                      </TabsContent>
+                    ) : null}
 
-                  // Text only
-                  if (hasText) {
-                    return (
-                      <ScrollArea className="w-full h-full flex-1 min-h-0">
-                        <div className="p-3 sm:p-4 md:p-6">
-                          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                            {currentLesson.title}
-                          </h1>
-                          <div 
-                            className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{
-                              __html: (currentLesson as any).html || (currentLesson as any).text
-                            }}
+                    {/* Text Tab - for text-only and mixed lessons */}
+                    {(hasText && !isMixed) || isMixed ? (
+                      <TabsContent value="text" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                        {isMixed ? (
+                          <TextContentWithTracking
+                            content={(currentLesson as any).html || (currentLesson as any).text || ""}
+                            lessonIndex={currentLessonIndex}
+                            onTextViewed={handleTextComplete}
+                            textViewedRefs={textViewedRefs}
+                            textViewed={textViewed}
                           />
-                        </div>
-                      </ScrollArea>
-                    )
-                  }
-
-                  // No content
-                  return (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <p className="text-lg font-semibold mb-2">No content available</p>
-                        <p className="text-sm">This lesson doesn't have any content. Please check back later.</p>
-                      </div>
-                    </div>
-                  )
-                })()}
-              </TabsContent>
+                        ) : (
+                          <ScrollArea className="w-full h-full flex-1 min-h-0">
+                            <div className="p-3 sm:p-4 md:p-6">
+                              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
+                                {currentLesson.title}
+                              </h1>
+                              <div 
+                                className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{
+                                  __html: (currentLesson as any).html || (currentLesson as any).text
+                                }}
+                              />
+                            </div>
+                          </ScrollArea>
+                        )}
+                      </TabsContent>
+                    ) : null}
+                  </>
+                )
+              })()}
 
               {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
@@ -1043,8 +1152,9 @@ export default function CourseLearningPage() {
             })
                           return
                         }
+                        const lesson = course.lessons[index]
                         setCurrentLessonIndex(index)
-                        setActiveTab("video")
+                        setActiveTab(getInitialTab(lesson))
                         setTimeLimitExceeded(false)
                       }}
                       disabled={!canAccess}
