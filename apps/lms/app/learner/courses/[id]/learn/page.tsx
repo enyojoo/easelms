@@ -349,8 +349,20 @@ export default function CourseLearningPage() {
     // Only mark as completed if there's no quiz
     // If already completed, just navigate
     if (!completedLessons.includes(currentLessonIndex)) {
-      // Save progress to API - progress will update automatically from React Query cache
-      await saveProgress(lesson.id, true)
+      // Save progress immediately (no debounce) to ensure lesson is marked complete before navigation
+      try {
+        const progressPayload: any = {
+          course_id: parseInt(id),
+          lesson_id: lesson.id,
+          completed: true,
+          completed_at: new Date().toISOString(),
+        }
+        await saveProgressMutation.mutateAsync(progressPayload)
+        // Invalidate progress cache to refresh the UI
+        queryClient.invalidateQueries({ queryKey: ["progress", id] })
+      } catch (error) {
+        console.error("Error saving lesson completion:", error)
+      }
     }
     
     // Auto-advance to resources or next lesson
