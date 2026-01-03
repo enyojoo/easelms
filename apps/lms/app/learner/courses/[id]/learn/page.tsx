@@ -411,22 +411,21 @@ export default function CourseLearningPage() {
     // For mixed lessons, mark video as completed and navigate to text tab
     if (isMixedLesson && hasVideo && hasText) {
       setVideoCompleted((prev) => ({ ...prev, [currentLessonIndex]: true }))
-      
-      // Navigate to text tab when video completes
+      // Navigate to text tab when video completes - user navigates from there manually
       setActiveTab("text")
-
-      // Check if text is also viewed - if so, proceed with completion
-      const textCompleted = textViewed[currentLessonIndex] || false
-      if (textCompleted) {
-        // Both video and text viewed - proceed with completion logic
-        await proceedWithLessonCompletion()
-      }
-      // If text not viewed yet, user will view text and then complete
       return
     }
 
-    // For video-only lessons, proceed directly with completion
-    await proceedWithLessonCompletion()
+    // For video-only lessons, navigate to quiz (if available) or resources (if available)
+    const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
+    const hasResources = lesson.resources && lesson.resources.length > 0
+
+    if (hasQuiz) {
+      setActiveTab("quiz")
+    } else if (hasResources) {
+      setActiveTab("resources")
+    }
+    // If no quiz or resources, stay on video tab - user navigates manually
   }
 
   // Handle text completion (for text-only and mixed lessons)
@@ -443,22 +442,12 @@ export default function CourseLearningPage() {
 
     setTextViewed((prev) => ({ ...prev, [currentLessonIndex]: true }))
 
-    // For mixed lessons, check if video is also completed
-    if (isMixedLesson && hasVideo && hasText) {
-      const videoCompletedForLesson = videoCompleted[currentLessonIndex] || false
-      if (videoCompletedForLesson) {
-        // Both video and text viewed - proceed with completion logic
-        await proceedWithLessonCompletion()
-      }
-      // If video not completed yet, wait for video completion
-      return
-    }
-
-    // For text-only lessons, proceed directly with completion
-    await proceedWithLessonCompletion()
+    // Text viewing is tracked - user navigates manually
+    // No auto-navigation, user controls navigation themselves
   }
 
-  // Common completion logic (check quiz, mark complete, navigate)
+  // Common completion logic - mark lesson as completed (no auto-navigation)
+  // User navigates manually - this function only saves progress
   const proceedWithLessonCompletion = async () => {
     if (!course) return
 
@@ -469,7 +458,7 @@ export default function CourseLearningPage() {
     const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
 
     // If there's a quiz, explicitly save progress with completed: false
-    // and navigate to quiz. Lesson will only be marked as completed when quiz is passed.
+    // Lesson will only be marked as completed when quiz is passed
     if (hasQuiz) {
       // Ensure lesson is NOT marked as completed - explicitly set to false
       // This prevents any previous completed: true from persisting
@@ -485,14 +474,15 @@ export default function CourseLearningPage() {
       } catch (error) {
         console.error("Error saving progress:", error)
       }
+      // Navigate to quiz tab (for video-only lessons after video completes)
       setActiveTab("quiz")
       return
     }
 
     // Only mark as completed if there's no quiz
-    // If already completed, just navigate
+    // User navigates manually - no auto-advance
     if (!completedLessons.includes(currentLessonIndex)) {
-      // Save progress immediately (no debounce) to ensure lesson is marked complete before navigation
+      // Save progress immediately (no debounce) to ensure lesson is marked complete
       try {
         const progressPayload: any = {
           course_id: parseInt(id),
@@ -507,19 +497,7 @@ export default function CourseLearningPage() {
         console.error("Error saving lesson completion:", error)
       }
     }
-    
-    // Auto-advance to resources or next lesson
-    if (lesson.resources && lesson.resources.length > 0) {
-      setActiveTab("resources")
-    } else if (currentLessonIndex < course.lessons.length - 1) {
-      // If no resources, go to next lesson
-      const nextIndex = currentLessonIndex + 1
-      if (canAccessLesson(nextIndex)) {
-        setCurrentLessonIndex(nextIndex)
-        setActiveTab("video")
-      }
-    }
-    // If it's the last lesson, stay on the current tab - "Complete Course" button will show
+    // No auto-navigation - user navigates manually via buttons/tabs
   }
 
   // Legacy handler for backward compatibility (used for non-mixed lessons)
