@@ -343,10 +343,18 @@ function LearnerDetailsPage() {
               {enrolledCourses.length > 0 ? (
                 <div className="space-y-4">
                   {enrolledCourses.map((course) => {
+                    const isCompleted = completedCourses.some(c => c.id === course.id)
                     return (
                       <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
-                          <h3 className="font-semibold">{course.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{course.title}</h3>
+                            {isCompleted && (
+                              <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                Completed
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-4">
                           <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`}>
@@ -364,6 +372,42 @@ function LearnerDetailsPage() {
               )}
             </CardContent>
           </Card>
+          
+          {completedCourses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Completed Courses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {completedCourses.map((course) => {
+                    return (
+                      <div key={course.id} className="flex items-center justify-between p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/20">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{course.title}</h3>
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                              Completed
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`}>
+                            <Button variant="outline" size="sm">
+                              View Course
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="progress" className="space-y-4">
