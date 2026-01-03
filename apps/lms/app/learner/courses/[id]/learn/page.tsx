@@ -854,6 +854,7 @@ export default function CourseLearningPage() {
                     if (allLessonsCompleted) {
                       // Mark enrollment as completed before navigating
                       try {
+                        console.log("🎯 Complete Course clicked - updating enrollment status to completed")
                         const response = await fetch("/api/enrollments", {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
@@ -862,14 +863,34 @@ export default function CourseLearningPage() {
                             status: "completed",
                           }),
                         })
+                        
                         if (response.ok) {
-                          // Invalidate enrollments cache to update UI
+                          const data = await response.json()
+                          console.log("✅ Enrollment updated to completed:", data)
+                          // Invalidate all related queries to force refresh
                           queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+                          queryClient.invalidateQueries({ queryKey: ["progress", id] })
+                          // Force immediate refetch
+                          await queryClient.refetchQueries({ queryKey: ["enrollments"] })
+                          // Navigate to summary page
+                          router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+                        } else {
+                          const errorData = await response.json().catch(() => ({}))
+                          console.error("❌ Failed to update enrollment:", errorData)
+                          toast({
+                            title: "Error",
+                            description: "Failed to mark course as completed. Please try again.",
+                            variant: "destructive",
+                          })
                         }
                       } catch (error) {
-                        console.error("Error marking course as completed:", error)
+                        console.error("❌ Error marking course as completed:", error)
+                        toast({
+                          title: "Error",
+                          description: "An error occurred while completing the course. Please try again.",
+                          variant: "destructive",
+                        })
                       }
-                      router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
                     } else {
                       handleNextLesson()
                     }
