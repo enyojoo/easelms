@@ -97,10 +97,12 @@ export default function CourseCompletionPage() {
             const lessonGroups: { [lessonId: number]: any[] } = {}
             
             quizData.results.forEach((result: any) => {
-              if (!lessonGroups[result.lessonId]) {
-                lessonGroups[result.lessonId] = []
+              // API returns lesson_id (snake_case) from database
+              const lessonId = result.lesson_id || result.lessonId
+              if (!lessonGroups[lessonId]) {
+                lessonGroups[lessonId] = []
               }
-              lessonGroups[result.lessonId].push(result)
+              lessonGroups[lessonId].push(result)
             })
 
             // Convert to component format
