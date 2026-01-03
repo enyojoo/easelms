@@ -539,7 +539,7 @@ export default function CourseLearningPage() {
   const clearQuizData = (lessonId: number) => {
     // Invalidate quiz results cache to refetch fresh data when retaking
     // This will cause the quiz data to be recalculated from React Query
-    queryClient.invalidateQueries({ queryKey: ["quizResults", id] })
+    queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
   }
 
   const handleVideoProgressUpdate = async (progressPercentage: number) => {
@@ -590,7 +590,7 @@ export default function CourseLearningPage() {
 
     // Quiz results are saved by QuizComponent via API
     // Invalidate React Query cache to refetch updated quiz results
-    queryClient.invalidateQueries({ queryKey: ["quizResults", id] })
+    queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
 
     // Always save progress immediately (no debounce for quiz completion)
     // This ensures quiz results and progress are saved to the database
@@ -611,7 +611,7 @@ export default function CourseLearningPage() {
       
       // Invalidate caches to update UI
       queryClient.invalidateQueries({ queryKey: ["progress", id] })
-      queryClient.invalidateQueries({ queryKey: ["quizResults", id] })
+      queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
     } catch (error) {
       console.error("❌ Error saving quiz progress:", error)
     }
