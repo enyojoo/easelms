@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Video, FileText } from "lucide-react"
+import { Video, FileText, Layers } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 
 interface CoursePreviewProps {
@@ -16,8 +16,10 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
         return <Video className="w-4 h-4" />
       case "text":
         return <FileText className="w-4 h-4" />
+      case "mixed":
+        return <Layers className="w-4 h-4" />
       default:
-        return null
+        return <FileText className="w-4 h-4" />
     }
   }
 
@@ -92,7 +94,11 @@ export default function CoursePreview({ courseData }: CoursePreviewProps) {
                   <div className="flex-grow">
                     <h3 className="font-medium">{lesson.title || `Lesson ${index + 1}`}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {lesson.type ? lesson.type.charAt(0).toUpperCase() + lesson.type.slice(1) + " Lesson" : "Lesson"}
+                      {lesson.type === "mixed" 
+                        ? "Mixed Lesson (Video + Text)"
+                        : lesson.type 
+                        ? lesson.type.charAt(0).toUpperCase() + lesson.type.slice(1) + " Lesson"
+                        : "Lesson"}
                     </p>
                   </div>
                   {lesson.settings?.isRequired && <Badge variant="secondary">Required</Badge>}

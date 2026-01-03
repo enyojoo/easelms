@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Circle,
   Clock,
+  Layers,
 } from "lucide-react"
 import LessonContentEditor from "./LessonContentEditor"
 import QuizBuilder from "./QuizBuilder"
@@ -32,7 +33,7 @@ import type { Resource } from "./ResourceManager"
 interface Lesson {
   id: string
   title: string
-  type: "video" | "text"
+  type: "video" | "text" | "mixed"
   content: any
   resources: Resource[]
   settings: {
@@ -110,8 +111,10 @@ export default function LessonCard({
           <div className="flex-1 flex items-center gap-2">
             {localLesson.type === "video" ? (
               <Video className="w-4 h-4 text-muted-foreground" />
-            ) : (
+            ) : localLesson.type === "text" ? (
               <FileText className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <Layers className="w-4 h-4 text-muted-foreground" />
             )}
             <span className="text-sm font-medium text-muted-foreground">Lesson {index + 1}</span>
             <Badge variant="secondary" className={`${statusConfig[status].color} text-white text-xs`}>
@@ -173,7 +176,7 @@ export default function LessonCard({
                 <Label>Lesson Type</Label>
                 <Select
                   value={localLesson.type}
-                  onValueChange={(value: "video" | "text") => updateLesson({ type: value })}
+                  onValueChange={(value: "video" | "text" | "mixed") => updateLesson({ type: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -181,6 +184,7 @@ export default function LessonCard({
                   <SelectContent>
                     <SelectItem value="video">Video Lesson</SelectItem>
                     <SelectItem value="text">Text Lesson</SelectItem>
+                    <SelectItem value="mixed">Mixed Lesson (Video + Text)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -273,7 +277,7 @@ export default function LessonCard({
                     />
                   </div>
 
-                  {localLesson.type === "video" && (
+                  {(localLesson.type === "video" || localLesson.type === "mixed") && (
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <Label>Video Progress Tracking</Label>

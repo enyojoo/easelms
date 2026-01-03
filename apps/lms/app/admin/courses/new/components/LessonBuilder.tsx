@@ -25,7 +25,7 @@ interface Question {
 export interface Lesson {
   id: string
   title: string
-  type: "video" | "text"
+  type: "video" | "text" | "mixed"
   content: any
   resources: Resource[]
   settings: {

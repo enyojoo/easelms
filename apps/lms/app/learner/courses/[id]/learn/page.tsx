@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2, ArrowLeft, Clock, Pl
 import VideoPlayer from "./components/VideoPlayer"
 import QuizComponent from "./components/QuizComponent"
 import ResourcesPanel from "./components/ResourcesPanel"
+import MixedLessonContent from "./components/MixedLessonContent"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProgress, useRealtimeQuizResults, useSaveProgress } from "@/lib/react-query/hooks"
@@ -33,6 +34,7 @@ interface Course {
     html?: string
     text?: string
     estimatedDuration?: number
+    type?: string
   }>
 }
 
@@ -52,7 +54,9 @@ export default function CourseLearningPage() {
   const [lessonStartTime, setLessonStartTime] = useState<number | null>(null)
   const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
   const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
+  const [textViewed, setTextViewed] = useState<{ [key: number]: boolean }>({})
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const textViewedRefs = useRef<{ [key: number]: { viewed: boolean; scrollTop: number; scrollHeight: number } }>({})
 
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
@@ -377,9 +381,26 @@ export default function CourseLearningPage() {
     const lesson = course.lessons[currentLessonIndex]
     if (!lesson) return
 
+    const lessonType = (lesson as any).type || ((lesson as any).url ? "video" : "text")
+    const isMixedLesson = lessonType === "mixed"
+    const hasVideo = !!(lesson as any).url
+    const hasText = !!((lesson as any).html || (lesson as any).text)
+
+    // For mixed lessons, check if both video and text are viewed
+    if (isMixedLesson && hasVideo && hasText) {
+      const textCompleted = textViewed[currentLessonIndex] || false
+      
+      if (!textCompleted) {
+        // Text not viewed yet - don't mark as complete
+        // Video completion callback will be called again after text is viewed
+        return
+      }
+      // Both video and text viewed - proceed with completion logic
+    }
+
     // Check if lesson has a quiz
     const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
-    
+
     // If there's a quiz, explicitly save progress with completed: false
     // and navigate to quiz. Lesson will only be marked as completed when quiz is passed.
     if (hasQuiz) {
@@ -741,45 +762,80 @@ export default function CourseLearningPage() {
               </TabsList>
 
               <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                {((currentLesson as any).url) ? (
-                  <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                    <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
-                      <VideoPlayer
-                        key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
-                        lessonTitle={currentLesson.title}
+                {(() => {
+                  const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
+                  const hasVideo = !!(currentLesson as any).url
+                  const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
+                  const isMixed = lessonType === "mixed" && hasVideo && hasText
+
+                  // Mixed lesson: video on top, text below (stacked, scrollable)
+                  if (isMixed) {
+                    return (
+                      <MixedLessonContent
+                        currentLesson={currentLesson}
+                        currentLessonIndex={currentLessonIndex}
+                        id={id}
+                        activeTab={activeTab}
                         onComplete={handleLessonComplete}
-                        autoPlay={true}
-                        isActive={activeTab === "video"}
-                        videoUrl={(currentLesson as any).url}
-                        courseId={id}
-                        lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                        videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
                         onProgressUpdate={handleVideoProgressUpdate}
+                        textViewed={textViewed}
+                        setTextViewed={setTextViewed}
+                        textViewedRefs={textViewedRefs}
                       />
+                    )
+                  }
+
+                  // Video only
+                  if (hasVideo) {
+                    return (
+                      <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
+                        <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
+                          <VideoPlayer
+                            key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
+                            lessonTitle={currentLesson.title}
+                            onComplete={handleLessonComplete}
+                            autoPlay={true}
+                            isActive={activeTab === "video"}
+                            videoUrl={(currentLesson as any).url}
+                            courseId={id}
+                            lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
+                            videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
+                            onProgressUpdate={handleVideoProgressUpdate}
+                          />
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Text only
+                  if (hasText) {
+                    return (
+                      <ScrollArea className="w-full h-full flex-1 min-h-0">
+                        <div className="p-3 sm:p-4 md:p-6">
+                          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
+                            {currentLesson.title}
+                          </h1>
+                          <div 
+                            className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: (currentLesson as any).html || (currentLesson as any).text
+                            }}
+                          />
+                        </div>
+                      </ScrollArea>
+                    )
+                  }
+
+                  // No content
+                  return (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <div className="text-center text-muted-foreground">
+                        <p className="text-lg font-semibold mb-2">No content available</p>
+                        <p className="text-sm">This lesson doesn't have any content. Please check back later.</p>
+                      </div>
                     </div>
-                  </div>
-                ) : ((currentLesson as any).html || (currentLesson as any).text) ? (
-                  <ScrollArea className="w-full h-full flex-1 min-h-0">
-                    <div className="p-3 sm:p-4 md:p-6">
-                      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
-                        {currentLesson.title}
-                      </h1>
-                      <div 
-                        className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                        dangerouslySetInnerHTML={{
-                          __html: (currentLesson as any).html || (currentLesson as any).text
-                        }}
-                      />
-                    </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <p className="text-lg font-semibold mb-2">No content available</p>
-                      <p className="text-sm">This lesson doesn't have any content. Please check back later.</p>
-                    </div>
-                  </div>
-                )}
+                  )
+                })()}
               </TabsContent>
 
               {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
