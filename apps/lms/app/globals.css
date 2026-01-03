@@ -373,7 +373,7 @@ media-control-bar {
     height: 100vh !important;
     max-width: 100vw !important;
     max-height: 100vh !important;
-    object-fit: contain !important;
+    object-fit: cover !important;
   }
   
   :fullscreen media-controller,
