@@ -134,7 +134,7 @@ export async function GET() {
           course_id
         `)
         .eq("status", "completed")
-        .order("completed_at", { ascending: false, nullsFirst: false })
+        .order("completed_at", { ascending: false })
         .limit(5),
 
       isAdmin
