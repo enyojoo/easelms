@@ -62,7 +62,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { createClient } = await import("@/lib/supabase/server")
+  const { createClient, createServiceRoleClient } = await import("@/lib/supabase/server")
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
