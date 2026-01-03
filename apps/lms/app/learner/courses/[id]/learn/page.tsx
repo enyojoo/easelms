@@ -108,9 +108,14 @@ export default function CourseLearningPage() {
   // Track if we've already marked enrollment as completed to prevent duplicate calls
   const enrollmentMarkedRef = useRef(false)
 
-  // Mark enrollment as completed when all lessons are completed
+  // Check if course is already completed (don't auto-mark if already completed)
+  const courseIdForEnrollment = parseInt(id)
+  const enrollmentForStatus = enrollmentsData?.enrollments?.find((e: any) => e.course_id === courseIdForEnrollment)
+  const isCourseCompleted = enrollmentForStatus?.status === "completed"
+
+  // Mark enrollment as completed when all lessons are completed (only if not already completed)
   useEffect(() => {
-    if (allLessonsCompleted && course && id && user && !enrollmentMarkedRef.current) {
+    if (allLessonsCompleted && course && id && user && !enrollmentMarkedRef.current && !isCourseCompleted) {
       // Mark enrollment as completed
       const markEnrollmentCompleted = async () => {
         try {
@@ -146,7 +151,7 @@ export default function CourseLearningPage() {
       }
       markEnrollmentCompleted()
     }
-  }, [allLessonsCompleted, course, id, user, queryClient])
+  }, [allLessonsCompleted, course, id, user, queryClient, isCourseCompleted])
 
   // Track if we've processed the lessonIndex parameter to prevent duplicate processing
   const lessonIndexProcessedRef = useRef(false)
@@ -175,6 +180,13 @@ export default function CourseLearningPage() {
     // Only run auto-detection logic if we haven't processed a lessonIndex parameter
     if (lessonIndexProcessedRef.current) return
 
+    // If course is already completed, always start from first lesson (lesson 0)
+    if (isCourseCompleted && course.lessons && course.lessons.length > 0) {
+      setCurrentLessonIndex(0)
+      setActiveTab("video")
+      return
+    }
+
     // Otherwise, find the first incomplete lesson
     if (completedLessons.length > 0 && course.lessons) {
       for (let i = 0; i < course.lessons.length; i++) {
@@ -190,7 +202,7 @@ export default function CourseLearningPage() {
         setActiveTab("video")
       }
     }
-  }, [course, progressData, completedLessons, lessonIndexParam])
+  }, [course, progressData, completedLessons, lessonIndexParam, isCourseCompleted])
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
@@ -854,9 +866,16 @@ export default function CourseLearningPage() {
                 </Button>
 
                 <Button
-                  variant={allLessonsCompleted ? "default" : "outline"}
+                  variant={allLessonsCompleted && !isCourseCompleted ? "default" : isCourseCompleted && currentLessonIndex === course.lessons.length - 1 ? "default" : "outline"}
                   onClick={async () => {
-                    if (allLessonsCompleted) {
+                    // If course is already completed and we're on the last lesson, go to summary
+                    if (isCourseCompleted && currentLessonIndex === course.lessons.length - 1) {
+                      router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+                      return
+                    }
+
+                    // If all lessons completed and course is not already completed, mark as completed
+                    if (allLessonsCompleted && !isCourseCompleted) {
                       // Mark enrollment as completed before navigating
                       try {
                         console.log("🎯 Complete Course clicked - updating enrollment status to completed")
@@ -901,17 +920,21 @@ export default function CourseLearningPage() {
                     }
                   }}
                   disabled={
-                    !allLessonsCompleted &&
+                    !allLessonsCompleted && !isCourseCompleted &&
                     activeTab === "resources" &&
                     currentLessonIndex === course.lessons.length - 1
                   }
                   className={`text-foreground flex-1 sm:flex-initial h-10 sm:h-12 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 lg:px-8 ${
-                    allLessonsCompleted
+                    (allLessonsCompleted && !isCourseCompleted) || (isCourseCompleted && currentLessonIndex === course.lessons.length - 1)
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
                   }`}
                 >
-                  {allLessonsCompleted ? (
+                  {isCourseCompleted && currentLessonIndex === course.lessons.length - 1 ? (
+                    <>
+                      View Summary <Eye className="ml-2 h-4 w-4" />
+                    </>
+                  ) : allLessonsCompleted && !isCourseCompleted ? (
                     <>
                       Complete Course <CheckCircle2 className="ml-2 h-4 w-4" />
                     </>

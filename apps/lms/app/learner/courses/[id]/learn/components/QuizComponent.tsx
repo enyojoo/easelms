@@ -481,7 +481,7 @@ export default function QuizComponent({
                   className="bg-primary hover:bg-primary/90 min-h-[44px]"
                   size="lg"
                 >
-                  Continue to Next Lesson
+                  Continue
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               )}

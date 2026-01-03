@@ -1,17 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useClientAuthState } from "@/utils/client-auth"
-import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, BookOpen, Star, Loader2 } from "lucide-react"
+import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Star, Loader2 } from "lucide-react"
 import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
-import { useCourse, useEnrollments } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useQuizResults } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -46,10 +45,8 @@ export default function CourseCompletionPage() {
   const { user, loading: authLoading, userType } = useClientAuthState()
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
+  const { data: quizResultsData } = useQuizResults(id)
   
-  const [quizResults, setQuizResults] = useState<{ [key: string]: QuizResult }>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [certificateId, setCertificateId] = useState<string | null>(null)
   const [downloadingCertificate, setDownloadingCertificate] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -90,83 +87,17 @@ export default function CourseCompletionPage() {
     // If we get here, enrollment exists and status is "completed" - allow access to summary page
   }, [id, course, enrollmentsData, router, authLoading, coursePending])
 
-  // Fetch quiz results and certificate
+  // Fetch certificates (kept as manual fetch since no hook exists yet)
   useEffect(() => {
-    const fetchAdditionalData = async () => {
-      if (!id || !course || !user) return
+    const fetchCertificates = async () => {
+      if (!id || !user) return
 
       try {
-        setLoading(true)
-        setError(null)
-
         const courseId = parseInt(id)
         if (isNaN(courseId)) {
-          throw new Error("Invalid course ID")
+          return
         }
 
-        // Fetch quiz results
-        const quizResponse = await fetch(`/api/courses/${courseId}/quiz-results`)
-        if (quizResponse.ok) {
-          const quizData = await quizResponse.json()
-          
-          // Transform quiz results to match component structure
-          const groupedResults: { [key: string]: QuizResult } = {}
-          
-          if (quizData.results && Array.isArray(quizData.results)) {
-            const lessonGroups: { [lessonId: number]: any[] } = {}
-            
-            quizData.results.forEach((result: any) => {
-              // API returns lesson_id (snake_case) from database
-              const lessonId = result.lesson_id || result.lessonId
-              if (!lessonGroups[lessonId]) {
-                lessonGroups[lessonId] = []
-              }
-              lessonGroups[lessonId].push(result)
-            })
-
-            // Convert to component format
-            Object.keys(lessonGroups).forEach((lessonIdStr) => {
-              const lessonId = parseInt(lessonIdStr)
-              const lessonResults = lessonGroups[lessonId]
-              const lesson = course.lessons?.find((l: any) => l.id === lessonId)
-              
-              // Calculate points earned (from score field which now stores points)
-              const pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
-              
-              // Get total points from quiz questions
-              let totalPoints = 0
-              if (lesson?.quiz_questions && Array.isArray(lesson.quiz_questions)) {
-                totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => sum + (q.points || 1), 0)
-              } else {
-                // Fallback: if quiz_questions not available, use number of questions * 1
-                totalPoints = lessonResults.length
-              }
-              
-              // API returns is_correct (snake_case) from database
-              const correctCount = lessonResults.filter((r: any) => r.is_correct || r.isCorrect).length
-              const totalQuestions = lessonResults.length
-              const score = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0
-              
-              groupedResults[lesson?.title || `Lesson ${lessonId}`] = {
-                lessonId,
-                lessonTitle: lesson?.title,
-                score,
-                correctCount,
-                totalQuestions,
-                pointsEarned,
-                totalPoints,
-                answers: lessonResults.map((r: any) => r.is_correct || r.isCorrect),
-              }
-            })
-          }
-          
-          setQuizResults(groupedResults)
-        } else {
-          // No quiz results yet, set empty
-          setQuizResults({})
-        }
-
-        // Fetch certificate if exists
         const certificatesResponse = await fetch("/api/certificates")
         if (certificatesResponse.ok) {
           const certificatesData = await certificatesResponse.json()
@@ -177,17 +108,70 @@ export default function CourseCompletionPage() {
           }
         }
       } catch (err: any) {
-        console.error("Error fetching additional data:", err)
-        setError(err.message || "Failed to load course completion data")
-      } finally {
-        setLoading(false)
+        console.error("Error fetching certificates:", err)
       }
     }
 
-    if (course && user) {
-      fetchAdditionalData()
+    if (user) {
+      fetchCertificates()
     }
-  }, [id, course, user])
+  }, [id, user])
+
+  // Transform quiz results to match component structure (using React Query data)
+  const quizResults = useMemo(() => {
+    if (!quizResultsData?.results || !course) {
+      return {}
+    }
+
+    const groupedResults: { [key: string]: QuizResult } = {}
+    const lessonGroups: { [lessonId: number]: any[] } = {}
+    
+    quizResultsData.results.forEach((result: any) => {
+      // API returns lesson_id (snake_case) from database
+      const lessonId = result.lesson_id || result.lessonId
+      if (!lessonGroups[lessonId]) {
+        lessonGroups[lessonId] = []
+      }
+      lessonGroups[lessonId].push(result)
+    })
+
+    // Convert to component format
+    Object.keys(lessonGroups).forEach((lessonIdStr) => {
+      const lessonId = parseInt(lessonIdStr)
+      const lessonResults = lessonGroups[lessonId]
+      const lesson = course.lessons?.find((l: any) => l.id === lessonId)
+      
+      // Calculate points earned (from score field which now stores points)
+      const pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
+      
+      // Get total points from quiz questions
+      let totalPoints = 0
+      if (lesson?.quiz_questions && Array.isArray(lesson.quiz_questions)) {
+        totalPoints = lesson.quiz_questions.reduce((sum: number, q: any) => sum + (q.points || 1), 0)
+      } else {
+        // Fallback: if quiz_questions not available, use number of questions * 1
+        totalPoints = lessonResults.length
+      }
+      
+      // API returns is_correct (snake_case) from database
+      const correctCount = lessonResults.filter((r: any) => r.is_correct || r.isCorrect).length
+      const totalQuestions = lessonResults.length
+      const score = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0
+      
+      groupedResults[lesson?.title || `Lesson ${lessonId}`] = {
+        lessonId,
+        lessonTitle: lesson?.title,
+        score,
+        correctCount,
+        totalQuestions,
+        pointsEarned,
+        totalPoints,
+        answers: lessonResults.map((r: any) => r.is_correct || r.isCorrect),
+      }
+    })
+
+    return groupedResults
+  }, [quizResultsData, course])
 
   const calculateOverallScore = () => {
     if (!quizResults || Object.keys(quizResults).length === 0) return 0
@@ -241,15 +225,15 @@ export default function CourseCompletionPage() {
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
   const hasData = !!course
-  if ((!mounted || authLoading || coursePending || loading) && !hasData) {
+  if ((!mounted || authLoading || coursePending) && !hasData) {
     return <CourseSummarySkeleton />
   }
 
-  if (courseError || error) {
+  if (courseError) {
     return (
       <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
-          <p className="text-destructive">{courseError?.message || error || "Failed to load completion data"}</p>
+          <p className="text-destructive">{courseError?.message || "Failed to load completion data"}</p>
           <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
         </div>
       </div>
@@ -283,13 +267,34 @@ export default function CourseCompletionPage() {
         {/* Completion Celebration */}
         <Card className="mb-6 md:mb-8 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader className="p-4 md:p-6">
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0">
-                <ArrowLeft className="mr-2 h-4 w-4" />
+            <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                </Button>
+                <CardTitle className="text-xl md:text-2xl">
+                  Course Completed! 🎉
+                </CardTitle>
+              </div>
+              <Button
+                onClick={handleDownloadCertificate}
+                size="sm"
+                disabled={!certificateId || downloadingCertificate}
+                variant={certificateId ? "default" : "outline"}
+                className="flex-shrink-0"
+              >
+                {downloadingCertificate ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
+                    {certificateId ? "Download Certificate" : "Certificate Not Available"}
+                  </>
+                )}
               </Button>
-              <CardTitle className="text-xl md:text-2xl">
-                Course Completed! 🎉
-              </CardTitle>
             </div>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">
@@ -311,69 +316,11 @@ export default function CourseCompletionPage() {
                   </div>
                   <span className="text-sm md:text-base text-muted-foreground">Overall Score</span>
                 </div>
-                <Progress value={100} className="h-2 md:h-3 mb-4" />
                 <p className="text-xs md:text-sm text-muted-foreground">Completed on {completionDate}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Course Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Total Lessons</p>
-                  <p className="text-xl md:text-2xl font-bold">{course.lessons.length}</p>
-                </div>
-                <BookOpen className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground mb-1">Overall Score</p>
-                  <p className="text-xl md:text-2xl font-bold">{overallScore}%</p>
-                </div>
-                <Award className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <div className="flex items-center justify-between w-full">
-                  <div>
-                    <p className="text-xs md:text-sm text-muted-foreground mb-1">Your Certificate</p>
-                  </div>
-                  <Award className="h-6 w-6 md:h-8 md:w-8 text-primary opacity-50 flex-shrink-0" />
-                </div>
-                <Button 
-                  onClick={handleDownloadCertificate} 
-                  className="w-full min-h-[44px]" 
-                  size="lg"
-                  disabled={!certificateId || downloadingCertificate}
-                  variant={certificateId ? "default" : "outline"}
-                >
-                  {downloadingCertificate ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="mr-2 h-4 w-4" />
-                      {certificateId ? "Download Certificate" : "Certificate Not Available"}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         <Card className="mb-6 md:mb-8">
           <CardHeader className="p-4 md:p-6">
