@@ -155,9 +155,7 @@ export default function FileUpload({
 
           for (let i = 0; i < validFiles.length; i++) {
             const file = validFiles[i]
-            const formData = new FormData()
-            formData.append("file", file)
-
+            
             // Determine file type for bucket selection
             let fileType = type
             if (type === "all") {
@@ -168,44 +166,106 @@ export default function FileUpload({
               }
             }
 
-            formData.append("type", fileType)
-            if (bucket) {
-              formData.append("bucket", bucket)
-            }
-            if (additionalPath) {
-              formData.append("additionalPath", additionalPath)
-            }
+            // Use presigned URL for video files or files larger than 4MB (to avoid Vercel body size limits)
+            const usePresignedUrl = fileType === "video" || file.size > 4 * 1024 * 1024
 
-            const response = await fetch("/api/upload", {
-              method: "POST",
-              body: formData,
-            })
+            let data: { url: string; path: string; bucket?: string }
+            
+            if (usePresignedUrl) {
+              // Get presigned URL for direct S3 upload
+              const presignedResponse = await fetch("/api/upload/presigned-s3", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  filename: file.name,
+                  fileType,
+                  contentType: file.type,
+                  additionalPath,
+                }),
+              })
 
-            if (!response.ok) {
-              // Try to parse error response - check content type first to avoid consuming body twice
-              let errorMessage = `Failed to upload ${file.name}`
-              const contentType = response.headers.get("content-type")
-              
-              if (contentType && contentType.includes("application/json")) {
+              if (!presignedResponse.ok) {
+                let errorMessage = `Failed to get upload URL for ${file.name}`
                 try {
-                  const errorData = await response.json()
+                  const errorData = await presignedResponse.json()
                   errorMessage = errorData.error || errorMessage
                 } catch {
-                  errorMessage = response.statusText || errorMessage
+                  errorMessage = presignedResponse.statusText || errorMessage
                 }
-              } else {
-                // For non-JSON responses (like plain text errors from Next.js), read as text
-                try {
-                  const errorText = await response.text()
-                  errorMessage = errorText || errorMessage
-                } catch {
-                  errorMessage = response.statusText || errorMessage
-                }
+                throw new Error(errorMessage)
               }
-              throw new Error(errorMessage)
+
+              const presignedData = await presignedResponse.json()
+
+              // Upload directly to S3 using presigned URL
+              const uploadResponse = await fetch(presignedData.presignedUrl, {
+                method: "PUT",
+                body: file,
+                headers: {
+                  "Content-Type": file.type,
+                },
+              })
+
+              if (!uploadResponse.ok) {
+                throw new Error(`Failed to upload ${file.name} to S3: ${uploadResponse.statusText}`)
+              }
+
+              data = {
+                url: presignedData.url,
+                path: presignedData.key,
+                bucket: "s3",
+              }
+            } else {
+              // Use regular upload route for smaller files
+              const formData = new FormData()
+              formData.append("file", file)
+              formData.append("type", fileType)
+              if (bucket) {
+                formData.append("bucket", bucket)
+              }
+              if (additionalPath) {
+                formData.append("additionalPath", additionalPath)
+              }
+
+              const response = await fetch("/api/upload", {
+                method: "POST",
+                body: formData,
+              })
+
+              if (!response.ok) {
+                // Try to parse error response - check content type first to avoid consuming body twice
+                let errorMessage = `Failed to upload ${file.name}`
+                const contentType = response.headers.get("content-type")
+                
+                if (contentType && contentType.includes("application/json")) {
+                  try {
+                    const errorData = await response.json()
+                    errorMessage = errorData.error || errorMessage
+                  } catch {
+                    errorMessage = response.statusText || errorMessage
+                  }
+                } else {
+                  // For non-JSON responses (like plain text errors from Next.js), read as text
+                  try {
+                    const errorText = await response.text()
+                    errorMessage = errorText || errorMessage
+                  } catch {
+                    errorMessage = response.statusText || errorMessage
+                  }
+                }
+                throw new Error(errorMessage)
+              }
+
+              const responseData = await response.json()
+              data = {
+                url: responseData.url,
+                path: responseData.path,
+                bucket: responseData.bucket || "s3",
+              }
             }
 
-            const data = await response.json()
             urls.push(data.url)
             
             // For S3 files, extract the key from the path
@@ -213,7 +273,7 @@ export default function FileUpload({
             const isS3File = data.bucket === "s3"
             metadata.push({
               url: data.url,
-              bucket: isS3File ? "s3" : data.bucket,
+              bucket: isS3File ? "s3" : data.bucket || "s3",
               path: data.path, // This is the S3 key for S3 files
             })
 
@@ -258,9 +318,7 @@ export default function FileUpload({
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        const formData = new FormData()
-        formData.append("file", file)
-
+        
         // Determine file type for bucket selection
         let fileType = type
         if (type === "all") {
@@ -271,44 +329,105 @@ export default function FileUpload({
           }
         }
 
-        formData.append("type", fileType)
-        if (bucket) {
-          formData.append("bucket", bucket)
-        }
-        if (additionalPath) {
-          formData.append("additionalPath", additionalPath)
-        }
+        // Use presigned URL for video files or files larger than 4MB (to avoid Vercel body size limits)
+        const usePresignedUrl = fileType === "video" || file.size > 4 * 1024 * 1024
 
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
+        let data: { url: string; path: string; bucket?: string }
+        
+        if (usePresignedUrl) {
+          // Get presigned URL for direct S3 upload
+          const presignedResponse = await fetch("/api/upload/presigned-s3", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              filename: file.name,
+              fileType,
+              contentType: file.type,
+              additionalPath,
+            }),
+          })
 
-        if (!response.ok) {
-          // Try to parse error response - check content type first to avoid consuming body twice
-          let errorMessage = `Failed to upload ${file.name}`
-          const contentType = response.headers.get("content-type")
-          
-          if (contentType && contentType.includes("application/json")) {
+          if (!presignedResponse.ok) {
+            let errorMessage = `Failed to get upload URL for ${file.name}`
             try {
-              const errorData = await response.json()
+              const errorData = await presignedResponse.json()
               errorMessage = errorData.error || errorMessage
             } catch {
-              errorMessage = response.statusText || errorMessage
+              errorMessage = presignedResponse.statusText || errorMessage
             }
-          } else {
-            // For non-JSON responses (like plain text errors from Next.js), read as text
-            try {
-              const errorText = await response.text()
-              errorMessage = errorText || errorMessage
-            } catch {
-              errorMessage = response.statusText || errorMessage
-            }
+            throw new Error(errorMessage)
           }
-          throw new Error(errorMessage)
-        }
 
-        const data = await response.json()
+          const presignedData = await presignedResponse.json()
+
+          // Upload directly to S3 using presigned URL
+          const uploadResponse = await fetch(presignedData.presignedUrl, {
+            method: "PUT",
+            body: file,
+            headers: {
+              "Content-Type": file.type,
+            },
+          })
+
+          if (!uploadResponse.ok) {
+            throw new Error(`Failed to upload ${file.name} to S3: ${uploadResponse.statusText}`)
+          }
+
+          data = {
+            url: presignedData.url,
+            path: presignedData.key,
+            bucket: "s3",
+          }
+        } else {
+          // Use regular upload route for smaller files
+          const formData = new FormData()
+          formData.append("file", file)
+          formData.append("type", fileType)
+          if (bucket) {
+            formData.append("bucket", bucket)
+          }
+          if (additionalPath) {
+            formData.append("additionalPath", additionalPath)
+          }
+
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          })
+
+          if (!response.ok) {
+            // Try to parse error response - check content type first to avoid consuming body twice
+            let errorMessage = `Failed to upload ${file.name}`
+            const contentType = response.headers.get("content-type")
+            
+            if (contentType && contentType.includes("application/json")) {
+              try {
+                const errorData = await response.json()
+                errorMessage = errorData.error || errorMessage
+              } catch {
+                errorMessage = response.statusText || errorMessage
+              }
+            } else {
+              // For non-JSON responses (like plain text errors from Next.js), read as text
+              try {
+                const errorText = await response.text()
+                errorMessage = errorText || errorMessage
+              } catch {
+                errorMessage = response.statusText || errorMessage
+              }
+            }
+            throw new Error(errorMessage)
+          }
+
+          const responseData = await response.json()
+          data = {
+            url: responseData.url,
+            path: responseData.path,
+            bucket: responseData.bucket || "s3",
+          }
+        }
         urls.push(data.url)
 
         // Update progress

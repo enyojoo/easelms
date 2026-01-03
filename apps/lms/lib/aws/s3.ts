@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import type { PutObjectCommandInput } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 const s3Client = new S3Client({
@@ -69,12 +70,29 @@ export async function uploadFileToS3(
 }
 
 /**
- * Get presigned URL for private access (if needed)
+ * Get presigned URL for private access (if needed) - GET
  */
 export async function getPresignedUrl(key: string, expiresIn: number = 3600) {
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
+  })
+
+  return await getSignedUrl(s3Client, command, { expiresIn })
+}
+
+/**
+ * Get presigned URL for uploading (PUT) - for direct client uploads
+ */
+export async function getPresignedPutUrl(
+  key: string,
+  contentType: string,
+  expiresIn: number = 3600
+): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
   })
 
   return await getSignedUrl(s3Client, command, { expiresIn })
