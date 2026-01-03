@@ -127,7 +127,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[250px] sm:w-[300px] p-0">
+          <SheetContent side="left" className="w-[250px] sm:w-[300px] p-0 z-[60]">
             <SheetHeader className="sr-only">
               <SheetTitle>Navigation Menu</SheetTitle>
             </SheetHeader>
@@ -216,7 +216,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
           <Logo className="w-10 h-10" variant="icon" />
         </div>
       </header>
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-md h-16 px-4 flex items-center justify-around lg:hidden border-t border-border">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border h-16 px-4 flex items-center justify-around lg:hidden shadow-lg">
         {currentMenu.map((item) => (
           <Link
             key={item.href}
