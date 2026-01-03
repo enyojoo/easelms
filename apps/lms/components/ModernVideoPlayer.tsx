@@ -377,8 +377,8 @@ export default function ModernVideoPlayer({
           setTimeout(disableControls, 200)
           setTimeout(disableControls, 300)
         } else {
-          // Reset to normal styling (cover for normal view to fill frame)
-          video.style.objectFit = 'cover'
+          // Reset to normal styling (contain to show full video like Netflix/YouTube)
+          video.style.objectFit = 'contain'
           video.style.width = ''
           video.style.height = ''
           // Restore playsInline when exiting fullscreen
@@ -590,14 +590,10 @@ export default function ModernVideoPlayer({
         webkit-playsinline="true"
         x5-playsinline="true"
         className="w-full h-full"
-        style={isFullscreen ? {
-          width: '100vw',
-          height: '100vh',
-          objectFit: 'contain' // Use contain in fullscreen to show entire video without cropping
-        } : {
-          width: '100%', 
-          height: '100%', 
-          objectFit: 'cover' // Use cover in normal view to fill frame without black bars
+        style={{
+          width: isFullscreen ? '100vw' : '100%', 
+          height: isFullscreen ? '100vh' : '100%', 
+          objectFit: 'contain' // Use contain (like Netflix/YouTube) to show complete video without cropping
         }}
         onError={(e) => {
           const video = e.currentTarget
