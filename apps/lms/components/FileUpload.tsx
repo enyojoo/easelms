@@ -314,6 +314,7 @@ export default function FileUpload({
 
     try {
       const urls: string[] = []
+      const metadata: Array<{ url: string; bucket: string; path: string }> = []
       const totalFiles = files.length
 
       for (let i = 0; i < files.length; i++) {
@@ -429,12 +430,22 @@ export default function FileUpload({
           }
         }
         urls.push(data.url)
+        
+        // For S3 files, extract the key from the path
+        // The API returns path as the S3 key when bucket is "s3"
+        const isS3File = data.bucket === "s3"
+        metadata.push({
+          url: data.url,
+          bucket: isS3File ? "s3" : data.bucket || "s3",
+          path: data.path, // This is the S3 key for S3 files
+        })
 
         // Update progress
         setProgress(Math.round(((i + 1) / totalFiles) * 100))
       }
 
       setUploadedUrls(urls)
+      setUploadMetadata(metadata)
       setUploading(false)
       setUploaded(true)
       onUploadComplete?.(files, urls)

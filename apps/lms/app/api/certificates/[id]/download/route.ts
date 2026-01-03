@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateCertificatePDF } from "@/lib/certificates/generate-pdf"
-import { uploadFile } from "@/lib/supabase/storage"
-import { getStoragePath } from "@/lib/supabase/storage-helpers"
+import { uploadFileToS3, getS3StoragePath, getPublicUrl } from "@/lib/aws/s3"
 
 export async function GET(
   request: Request,
@@ -54,30 +53,35 @@ export async function GET(
   }
 
   try {
-    // Check if PDF already exists in storage
+    // Check if PDF URL already exists (from previous generation)
     let pdfBuffer: Buffer
-    let pdfPath: string | null = certificate.pdf_url || null
+    let pdfUrl: string | null = certificate.pdf_url || null
 
-    if (pdfPath) {
-      // Try to download existing PDF from storage
-      const { data: existingPdf, error: downloadError } = await supabase.storage
-        .from("certificates")
-        .download(pdfPath)
-
-      if (!downloadError && existingPdf) {
-        // PDF exists, return it
-        const arrayBuffer = await existingPdf.arrayBuffer()
-        pdfBuffer = Buffer.from(arrayBuffer)
-        
-        return new NextResponse(pdfBuffer, {
-          headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="certificate-${certificate.certificate_number}.pdf"`,
-            "Content-Length": pdfBuffer.length.toString(),
-          },
-        })
+    // If PDF URL exists and is an S3 URL, try to fetch it
+    // Otherwise, regenerate (since we're migrating from Supabase Storage)
+    if (pdfUrl && (pdfUrl.includes("s3.amazonaws.com") || pdfUrl.includes("cloudfront.net") || pdfUrl.includes("amazonaws.com"))) {
+      try {
+        const response = await fetch(pdfUrl, { method: "HEAD" })
+        if (response.ok) {
+          // PDF exists in S3, download and return it
+          const pdfResponse = await fetch(pdfUrl)
+          if (pdfResponse.ok) {
+            const arrayBuffer = await pdfResponse.arrayBuffer()
+            pdfBuffer = Buffer.from(arrayBuffer)
+            
+            return new NextResponse(pdfBuffer, {
+              headers: {
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `attachment; filename="certificate-${certificate.certificate_number}.pdf"`,
+                "Content-Length": pdfBuffer.length.toString(),
+              },
+            })
+          }
+        }
+      } catch (error) {
+        // If fetch fails, regenerate PDF
+        console.log("Failed to fetch existing PDF, regenerating:", error)
       }
-      // If download failed, regenerate PDF
     }
 
     // PDF doesn't exist or failed to download, generate new one
@@ -104,29 +108,25 @@ export async function GET(
       additionalText: certificateSettings.additionalText,
     })
 
-    // Upload PDF to Supabase Storage
+    // Upload PDF to S3
     const filename = `certificate-${certificate.certificate_number}.pdf`
-    pdfPath = getStoragePath("certificate", certificate.user_id, filename)
+    const s3Key = getS3StoragePath("certificate", certificate.user_id, filename)
     
-    const uploadResult = await uploadFile(
-      "certificates",
-      pdfPath,
-      pdfBuffer,
-      {
-        contentType: "application/pdf",
-        upsert: true, // Overwrite if exists
-      }
-    )
+    try {
+      const { key, url } = await uploadFileToS3(
+        pdfBuffer,
+        s3Key,
+        "application/pdf"
+      )
 
-    if (uploadResult.error) {
-      console.error("Error uploading certificate PDF:", uploadResult.error)
-      // Continue to return PDF even if upload fails
-    } else {
       // Save PDF URL to database
       await supabase
         .from("certificates")
-        .update({ pdf_url: uploadResult.path })
+        .update({ pdf_url: url })
         .eq("id", params.id)
+    } catch (uploadError) {
+      console.error("Error uploading certificate PDF to S3:", uploadError)
+      // Continue to return PDF even if upload fails
     }
 
     // Return PDF as downloadable file
