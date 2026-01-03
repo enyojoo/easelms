@@ -244,17 +244,22 @@ export default function ModernVideoPlayer({
       }
     }
 
-    // Try immediately if video already has source
-    if (hasValidSource()) {
+    // Check if we're on iOS - iOS requires user interaction for autoplay
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    
+    // Try immediately if video already has source (but not on iOS due to autoplay restrictions)
+    if (hasValidSource() && !isIOS) {
       attemptPlay()
     }
 
-    // Try after a short delay to ensure DOM is ready
-    playTimeoutId = setTimeout(() => {
-      if (hasValidSource()) {
-        attemptPlay()
-      }
-    }, 100)
+    // Try after a short delay to ensure DOM is ready (but not on iOS)
+    if (!isIOS) {
+      playTimeoutId = setTimeout(() => {
+        if (hasValidSource()) {
+          attemptPlay()
+        }
+      }, 100)
+    }
 
     // Try when video becomes ready
     video.addEventListener("canplay", handleCanPlay)
@@ -358,7 +363,7 @@ export default function ModernVideoPlayer({
   const toggleFullscreen = async () => {
     const container = containerRef.current
     const video = videoRef.current
-    if (!container) return
+    if (!container || !video) return
 
     try {
       const isCurrentlyFullscreen = !!(
@@ -369,72 +374,79 @@ export default function ModernVideoPlayer({
       )
 
       if (!isCurrentlyFullscreen) {
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+        const isAndroid = /Android/i.test(navigator.userAgent)
+        const isMobile = isIOS || isAndroid
         
         // Ensure HTML5 controls are disabled before entering fullscreen
-        if (video) {
-          video.controls = false
-          video.removeAttribute('controls')
-          // Also set the property directly
-          ;(video as any).controls = false
-        }
-        
-        // Always use container for fullscreen to prevent native controls from showing
-        // This works on both desktop and mobile/tablet
-        const elementToFullscreen = container
-        
-        if (!elementToFullscreen) return
-        
-        // For iOS, temporarily remove playsInline to allow fullscreen
-        // But we still use container, not video element
-        if (isMobile && video) {
-          video.removeAttribute('playsinline')
-          video.removeAttribute('webkit-playsinline')
-          ;(video as any).playsInline = false
-          ;(video as any).webkitPlaysInline = false
-        }
+        video.controls = false
+        video.removeAttribute('controls')
+        ;(video as any).controls = false
         
         try {
-          if (elementToFullscreen.requestFullscreen) {
-            await elementToFullscreen.requestFullscreen()
-          } else if ((elementToFullscreen as any).webkitRequestFullscreen) {
-            // Safari
-            await (elementToFullscreen as any).webkitRequestFullscreen()
-          } else if ((elementToFullscreen as any).mozRequestFullScreen) {
-            // Firefox
-            await (elementToFullscreen as any).mozRequestFullScreen()
-          } else if ((elementToFullscreen as any).msRequestFullscreen) {
-            // IE/Edge
-            await (elementToFullscreen as any).msRequestFullscreen()
+          // iOS Safari requires using the video element's webkitEnterFullscreen() method
+          // This is the only way to get native fullscreen on iOS
+          if (isIOS && (video as any).webkitEnterFullscreen) {
+            // Remove playsInline temporarily for iOS fullscreen
+            video.removeAttribute('playsinline')
+            video.removeAttribute('webkit-playsinline')
+            ;(video as any).playsInline = false
+            ;(video as any).webkitPlaysInline = false
+            
+            // Use iOS native fullscreen
+            await (video as any).webkitEnterFullscreen()
+            
+            // Restore playsInline after fullscreen (handled in fullscreen change event)
+          } else if (isAndroid && (video as any).webkitEnterFullscreen) {
+            // Android Chrome also supports webkitEnterFullscreen
+            await (video as any).webkitEnterFullscreen()
+          } else {
+            // For desktop and other browsers, use container fullscreen
+            const elementToFullscreen = container
+            
+            if (elementToFullscreen.requestFullscreen) {
+              await elementToFullscreen.requestFullscreen()
+            } else if ((elementToFullscreen as any).webkitRequestFullscreen) {
+              await (elementToFullscreen as any).webkitRequestFullscreen()
+            } else if ((elementToFullscreen as any).mozRequestFullScreen) {
+              await (elementToFullscreen as any).mozRequestFullScreen()
+            } else if ((elementToFullscreen as any).msRequestFullscreen) {
+              await (elementToFullscreen as any).msRequestFullscreen()
+            }
           }
           
           // Ensure controls stay disabled after entering fullscreen (critical for mobile)
-          if (video) {
-            // Use multiple timeouts to catch browser re-enabling controls
-            setTimeout(() => {
-              if (video) {
-                video.controls = false
-                video.removeAttribute('controls')
-                ;(video as any).controls = false
-              }
-            }, 0)
-            setTimeout(() => {
-              if (video) {
-                video.controls = false
-                video.removeAttribute('controls')
-                ;(video as any).controls = false
-              }
-            }, 100)
-            setTimeout(() => {
-              if (video) {
-                video.controls = false
-                video.removeAttribute('controls')
-                ;(video as any).controls = false
-              }
-            }, 300)
-          }
+          // Use multiple timeouts to catch browser re-enabling controls
+          setTimeout(() => {
+            if (video) {
+              video.controls = false
+              video.removeAttribute('controls')
+              ;(video as any).controls = false
+            }
+          }, 0)
+          setTimeout(() => {
+            if (video) {
+              video.controls = false
+              video.removeAttribute('controls')
+              ;(video as any).controls = false
+            }
+          }, 100)
+          setTimeout(() => {
+            if (video) {
+              video.controls = false
+              video.removeAttribute('controls')
+              ;(video as any).controls = false
+            }
+          }, 300)
         } catch (err) {
           console.error("Error entering fullscreen:", err)
+          // If fullscreen fails, restore playsInline
+          if (video) {
+            video.setAttribute('playsinline', 'true')
+            video.setAttribute('webkit-playsinline', 'true')
+            ;(video as any).playsInline = true
+            ;(video as any).webkitPlaysInline = true
+          }
         }
       } else {
         // Exit fullscreen
@@ -500,7 +512,6 @@ export default function ModernVideoPlayer({
       <VideoPlayerContent
         ref={videoRef}
         crossOrigin="anonymous"
-        muted={false}
         preload="auto"
         slot="media"
         src={src && typeof src === 'string' ? src.trim() : undefined}
