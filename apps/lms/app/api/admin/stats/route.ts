@@ -128,12 +128,14 @@ export async function GET() {
         .from("enrollments")
         .select(`
           id,
+          completed_at,
           updated_at,
           user_id,
           course_id
         `)
         .eq("status", "completed")
-        .order("updated_at", { ascending: false })
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
         .limit(5),
 
       isAdmin
@@ -296,8 +298,8 @@ export async function GET() {
         type: "completion" as const,
         user: e.profiles?.name || "Unknown User",
         course: e.courses?.title || "Unknown Course",
-        time: new Date(e.updated_at).toISOString(),
-        timestamp: new Date(e.updated_at).getTime()
+        time: new Date(e.completed_at || e.updated_at).toISOString(),
+        timestamp: new Date(e.completed_at || e.updated_at).getTime()
       })) || []),
       // Only include payment activities for admins
       ...(isAdmin ? (paymentsWithData.data?.map((p: any) => ({

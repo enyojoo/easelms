@@ -231,7 +231,14 @@ export default function CourseCard({
 
   // Get course type badge
   const getCourseTypeBadge = () => {
-    if (actualStatus === "enrolled" || actualStatus === "completed") {
+    if (actualStatus === "completed") {
+      return (
+        <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+          Completed
+        </Badge>
+      )
+    }
+    if (actualStatus === "enrolled") {
       return (
         <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
           Enrolled
