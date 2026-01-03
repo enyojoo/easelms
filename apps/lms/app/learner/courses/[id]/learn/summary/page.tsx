@@ -111,7 +111,8 @@ export default function CourseCompletionPage() {
               const lessonResults = lessonGroups[lessonId]
               const lesson = courseData.course.lessons?.find((l: any) => l.id === lessonId)
               
-              const correctCount = lessonResults.filter((r: any) => r.isCorrect).length
+              // API returns is_correct (snake_case) from database
+              const correctCount = lessonResults.filter((r: any) => r.is_correct || r.isCorrect).length
               const totalQuestions = lessonResults.length
               const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0
               
@@ -120,7 +121,7 @@ export default function CourseCompletionPage() {
                 lessonTitle: lesson?.title,
                 score,
                 totalQuestions,
-                answers: lessonResults.map((r: any) => r.isCorrect),
+                answers: lessonResults.map((r: any) => r.is_correct || r.isCorrect),
               }
             })
           }
