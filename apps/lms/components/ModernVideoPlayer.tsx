@@ -558,7 +558,7 @@ export default function ModernVideoPlayer({
   return (
     <div 
       ref={containerRef} 
-      className={cn("w-full h-full flex items-center justify-center", className)}
+      className={cn("w-full h-full", className)}
       style={{
         maxWidth: '100%',
         maxHeight: '100%',
@@ -567,15 +567,12 @@ export default function ModernVideoPlayer({
       <VideoPlayer
         key={src} // Force re-render when src changes
         className={cn(
-          "overflow-hidden border w-full h-full flex items-center justify-center",
+          "overflow-hidden border w-full h-full",
           isFullscreen && "border-0"
         )}
         style={{ 
           width: '100%', 
-          height: '100%', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
+          height: '100%',
           maxWidth: '100%',
           maxHeight: '100%',
         }}
@@ -600,7 +597,7 @@ export default function ModernVideoPlayer({
         } : {
           width: '100%', 
           height: '100%', 
-          objectFit: 'contain' // Use contain in normal view to show full video
+          objectFit: 'cover' // Use cover to fill frame without black bars
         }}
         onError={(e) => {
           const video = e.currentTarget

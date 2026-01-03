@@ -100,7 +100,7 @@ export default function VideoPlayer({
   const validVideoUrl = videoUrl && typeof videoUrl === 'string' && videoUrl.trim() ? videoUrl.trim() : null
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center bg-black">
+    <div className="relative w-full h-full bg-black">
       {validVideoUrl ? (
         <ModernVideoPlayer
           src={validVideoUrl}
