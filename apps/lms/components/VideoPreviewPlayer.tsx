@@ -37,25 +37,23 @@ export default function VideoPreviewPlayer({
 
     const handlePlay = () => {
       setIsPlaying(true)
-      // Hide controls immediately on mobile/tablet, after 5 seconds on desktop
-      // On mobile/tablet (no hover), hide immediately when playing starts
-      // On desktop, show briefly then hide after 5 seconds
-      const isMobileOrTablet = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
-                                (typeof window !== 'undefined' && window.innerWidth < 1024)
-      
-      setShowControls(true) // Show immediately when playing starts (for desktop hover)
+      // Check if mobile/tablet
+      const isMobileOrTablet = typeof window !== 'undefined' && 
+        (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 1024)
       
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
       }
       
-      if (isMobileOrTablet) {
-        // On mobile/tablet, hide immediately when playing
-        controlsTimeoutRef.current = setTimeout(() => {
-          setShowControls(false)
-        }, 0) // Hide immediately
+      // When showControlsOnHover is true and on mobile/tablet, hide controls immediately
+      // (pause button won't show anyway since there's no hover on mobile)
+      // On desktop or when showControlsOnHover is false, show controls then hide after 5 seconds
+      if (showControlsOnHover && isMobileOrTablet) {
+        // On mobile/tablet with showControlsOnHover, hide controls immediately
+        setShowControls(false)
       } else {
-        // On desktop, hide after 5 seconds
+        // On desktop or when showControlsOnHover is false, show controls then hide after 5 seconds
+        setShowControls(true)
         controlsTimeoutRef.current = setTimeout(() => {
           setShowControls(false)
         }, 5000)
