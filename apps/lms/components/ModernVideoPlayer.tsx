@@ -44,6 +44,7 @@ export default function ModernVideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const autoplayProcessedRef = useRef(false)
+  const wasPlayingBeforeFullscreenRef = useRef(false) // Track if video was playing before fullscreen
 
   // Cleanup: Pause and reset video when src changes or component unmounts
   // Also ensure HTML5 controls are always disabled and playsInline is set for iOS/Android
@@ -289,21 +290,26 @@ export default function ModernVideoPlayer({
       }
     }
 
-    // Check if we're on iOS - iOS requires user interaction for autoplay
+    // Check if we're on mobile - iOS requires user interaction for autoplay, but Android can autoplay
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    const isAndroid = /Android/i.test(navigator.userAgent)
+    const isMobile = isIOS || isAndroid
     
     // Try immediately if video already has source (but not on iOS due to autoplay restrictions)
+    // Android can autoplay, so we try it
     if (hasValidSource() && !isIOS) {
       attemptPlay()
     }
 
     // Try after a short delay to ensure DOM is ready (but not on iOS)
+    // For Android, try with a slightly longer delay to help with loading
     if (!isIOS) {
+      const delay = isAndroid ? 300 : 100 // Give Android more time to load
       playTimeoutId = setTimeout(() => {
         if (hasValidSource()) {
           attemptPlay()
         }
-      }, 100)
+      }, delay)
     }
 
     // Try when video becomes ready
@@ -377,6 +383,20 @@ export default function ModernVideoPlayer({
           video.setAttribute('x5-playsinline', 'true')
           ;(video as any).playsInline = true
           ;(video as any).webkitPlaysInline = true
+          
+          // Resume playback if video was playing before fullscreen (mobile fix)
+          if (wasPlayingBeforeFullscreenRef.current && video.paused) {
+            // Use a small delay to ensure fullscreen transition is complete
+            setTimeout(() => {
+              if (video && video.paused) {
+                video.play().catch((error) => {
+                  // Silently handle play errors (user might have paused)
+                  console.debug("Could not resume playback after fullscreen:", error)
+                })
+              }
+            }, 100)
+          }
+          wasPlayingBeforeFullscreenRef.current = false
         }
       }
     }
@@ -422,6 +442,9 @@ export default function ModernVideoPlayer({
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
         const isAndroid = /Android/i.test(navigator.userAgent)
         const isMobile = isIOS || isAndroid
+        
+        // Remember if video was playing before entering fullscreen (for mobile resume)
+        wasPlayingBeforeFullscreenRef.current = !video.paused
         
         // Ensure HTML5 controls are disabled before entering fullscreen
         video.controls = false
@@ -668,7 +691,8 @@ export default function ModernVideoPlayer({
         }}
         onTimeUpdate={(e) => {
           const video = e.currentTarget
-          if (onTimeUpdate && video.duration) {
+          // Only update time if video is actually playing (prevents progress bar moving when paused)
+          if (onTimeUpdate && video.duration && !video.paused) {
             onTimeUpdate(video.currentTime, video.duration)
           }
         }}
