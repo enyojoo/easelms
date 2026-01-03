@@ -85,7 +85,7 @@ export default function CourseCompletionPage() {
         setCourse(courseData.course)
 
         // Fetch quiz results
-        const quizResponse = await fetch(`/api/courses/${id}/quiz-results`)
+        const quizResponse = await fetch(`/api/courses/${courseId}/quiz-results`)
         if (quizResponse.ok) {
           const quizData = await quizResponse.json()
           

@@ -1,10 +1,12 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { extractIdFromSlug } from "@/lib/slug"
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { createClient } = await import("@/lib/supabase/server")
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -14,7 +16,13 @@ export async function GET(
 
   // Await params since it's a Promise in Next.js 16
   const { id } = await params
-  const courseId = parseInt(id)
+  // Extract actual ID from slug (handles both "course-title-123" and "123" formats)
+  const idStr = extractIdFromSlug(id)
+  const courseId = parseInt(idStr, 10)
+  
+  if (isNaN(courseId)) {
+    return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
+  }
 
   console.log("Quiz results GET - User:", user.id, "CourseId:", courseId)
 
@@ -55,6 +63,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { createClient } = await import("@/lib/supabase/server")
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -64,7 +73,13 @@ export async function POST(
 
   // Await params since it's a Promise in Next.js 16
   const { id } = await params
-  const courseId = parseInt(id)
+  // Extract actual ID from slug (handles both "course-title-123" and "123" formats)
+  const idStr = extractIdFromSlug(id)
+  const courseId = parseInt(idStr, 10)
+  
+  if (isNaN(courseId)) {
+    return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
+  }
 
   console.log("Quiz results POST - User:", user.id, "CourseId:", courseId, "ParamsId:", id)
 
