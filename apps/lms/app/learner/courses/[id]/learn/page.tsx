@@ -105,6 +105,31 @@ export default function CourseLearningPage() {
     return { completedLessons: completed, progress: progressPercent }
   }, [course, progressData])
 
+  // Mark enrollment as completed when all lessons are completed
+  useEffect(() => {
+    if (allLessonsCompleted && course && id && user) {
+      // Mark enrollment as completed
+      const markEnrollmentCompleted = async () => {
+        try {
+          const response = await fetch("/api/enrollments", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              courseId: parseInt(id),
+              status: "completed",
+            }),
+          })
+          if (response.ok) {
+            queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+          }
+        } catch (error) {
+          console.error("Error marking course as completed:", error)
+        }
+      }
+      markEnrollmentCompleted()
+    }
+  }, [allLessonsCompleted, course, id, user, queryClient])
+
   // Track if we've processed the lessonIndex parameter to prevent duplicate processing
   const lessonIndexProcessedRef = useRef(false)
 
@@ -375,10 +400,8 @@ export default function CourseLearningPage() {
         setCurrentLessonIndex(nextIndex)
         setActiveTab("video")
       }
-    } else {
-      // All lessons completed, go to summary
-      router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
     }
+    // If it's the last lesson, stay on the current tab - "Complete Course" button will show
   }
 
   const clearQuizData = (lessonId: number) => {
@@ -483,22 +506,20 @@ export default function CourseLearningPage() {
       setActiveTab("resources")
     } else if (currentLessonIndex < course.lessons.length - 1) {
       // Go to next lesson
-        const nextIndex = currentLessonIndex + 1
-        if (!canAccessLesson(nextIndex)) {
-          toast({
-            title: "Lesson Locked",
-            description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-            variant: "destructive",
-          })
-          return
-        }
-        setCurrentLessonIndex(nextIndex)
-        setActiveTab("video")
-        setTimeLimitExceeded(false)
-      } else {
-      // All lessons completed, go to summary
-        router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+      const nextIndex = currentLessonIndex + 1
+      if (!canAccessLesson(nextIndex)) {
+        toast({
+          title: "Lesson Locked",
+          description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
+          variant: "destructive",
+        })
+        return
+      }
+      setCurrentLessonIndex(nextIndex)
+      setActiveTab("video")
+      setTimeLimitExceeded(false)
     }
+    // If it's the last lesson and no resources, stay on quiz results - "Complete Course" button will show
   }
 
   const handleNextLesson = () => {
@@ -811,9 +832,30 @@ export default function CourseLearningPage() {
 
                 <Button
                   variant={allLessonsCompleted ? "default" : "outline"}
-                  onClick={
-                    allLessonsCompleted ? () => router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`) : handleNextLesson
-                  }
+                  onClick={async () => {
+                    if (allLessonsCompleted) {
+                      // Mark enrollment as completed before navigating
+                      try {
+                        const response = await fetch("/api/enrollments", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            courseId: parseInt(id),
+                            status: "completed",
+                          }),
+                        })
+                        if (response.ok) {
+                          // Invalidate enrollments cache to update UI
+                          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+                        }
+                      } catch (error) {
+                        console.error("Error marking course as completed:", error)
+                      }
+                      router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+                    } else {
+                      handleNextLesson()
+                    }
+                  }}
                   disabled={
                     !allLessonsCompleted &&
                     activeTab === "resources" &&

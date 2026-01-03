@@ -141,3 +141,42 @@ export async function POST(request: Request) {
   return NextResponse.json({ enrollment: data })
 }
 
+export async function PATCH(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  const { courseId, status } = await request.json()
+
+  if (!courseId) {
+    return NextResponse.json({ error: "courseId is required" }, { status: 400 })
+  }
+
+  if (!status) {
+    return NextResponse.json({ error: "status is required" }, { status: 400 })
+  }
+
+  // Use service role client to bypass RLS
+  const serviceSupabase = createServiceRoleClient()
+
+  const { data, error } = await serviceSupabase
+    .from("enrollments")
+    .update({
+      status: status,
+      completed_at: status === "completed" ? new Date().toISOString() : null,
+    })
+    .eq("user_id", user.id)
+    .eq("course_id", courseId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Error updating enrollment:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ enrollment: data })
+}
