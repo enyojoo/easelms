@@ -10,7 +10,7 @@ import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Star, Loader2
 import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
-import { useCourse, useEnrollments, useQuizResults } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useQuizResults, useProgress } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -46,6 +46,7 @@ export default function CourseCompletionPage() {
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
   const { data: quizResultsData } = useQuizResults(id)
+  const { data: progressData } = useProgress(id)
   
   const [certificateId, setCertificateId] = useState<string | null>(null)
   const [downloadingCertificate, setDownloadingCertificate] = useState(false)
@@ -118,14 +119,16 @@ export default function CourseCompletionPage() {
   }, [id, user])
 
   // Transform quiz results to match component structure (using React Query data)
+  // Use quiz_score from progress table (like learn page) instead of recalculating
   const quizResults = useMemo(() => {
-    if (!quizResultsData?.results || !course) {
+    if (!quizResultsData?.results || !course || !progressData?.progress) {
       return {}
     }
 
     const groupedResults: { [key: string]: QuizResult } = {}
     const lessonGroups: { [lessonId: number]: any[] } = {}
     
+    // Group quiz results by lesson (for answers display)
     quizResultsData.results.forEach((result: any) => {
       // API returns lesson_id (snake_case) from database
       const lessonId = result.lesson_id || result.lessonId
@@ -135,13 +138,24 @@ export default function CourseCompletionPage() {
       lessonGroups[lessonId].push(result)
     })
 
+    // Create a map of quiz_score from progress table (matches learn page)
+    const quizScoreMap: { [lessonId: number]: number } = {}
+    progressData.progress.forEach((p: any) => {
+      if (p.lesson_id && p.quiz_score !== null && p.quiz_score !== undefined) {
+        quizScoreMap[p.lesson_id] = p.quiz_score // This is already a percentage (0-100)
+      }
+    })
+
     // Convert to component format
     Object.keys(lessonGroups).forEach((lessonIdStr) => {
       const lessonId = parseInt(lessonIdStr)
       const lessonResults = lessonGroups[lessonId]
       const lesson = course.lessons?.find((l: any) => l.id === lessonId)
       
-      // Calculate points earned (from score field which now stores points)
+      // Get quiz_score percentage from progress table (same as learn page)
+      const scorePercentage = quizScoreMap[lessonId] || 0
+      
+      // Calculate points earned and total points for display
       const pointsEarned = lessonResults.reduce((sum: number, r: any) => sum + (r.score || 0), 0)
       
       // Get total points from quiz questions
@@ -156,12 +170,11 @@ export default function CourseCompletionPage() {
       // API returns is_correct (snake_case) from database
       const correctCount = lessonResults.filter((r: any) => r.is_correct || r.isCorrect).length
       const totalQuestions = lessonResults.length
-      const score = totalPoints > 0 ? Math.round((pointsEarned / totalPoints) * 100) : 0
       
       groupedResults[lesson?.title || `Lesson ${lessonId}`] = {
         lessonId,
         lessonTitle: lesson?.title,
-        score,
+        score: scorePercentage, // Use quiz_score from progress table (percentage)
         correctCount,
         totalQuestions,
         pointsEarned,
@@ -171,7 +184,7 @@ export default function CourseCompletionPage() {
     })
 
     return groupedResults
-  }, [quizResultsData, course])
+  }, [quizResultsData, course, progressData])
 
   const calculateOverallScore = () => {
     if (!quizResults || Object.keys(quizResults).length === 0) return 0
