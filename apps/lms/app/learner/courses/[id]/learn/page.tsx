@@ -880,21 +880,19 @@ export default function CourseLearningPage() {
                     {/* Video Tab - for video-only and mixed lessons */}
                     {(hasVideo && !isMixed) || isMixed ? (
                       <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                        <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                          <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
-                            <VideoPlayer
-                              key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
-                              lessonTitle={currentLesson.title}
-                              onComplete={handleVideoComplete}
-                              autoPlay={true}
-                              isActive={activeTab === "video"}
-                              videoUrl={(currentLesson as any).url}
-                              courseId={id}
-                              lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                              videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
-                              onProgressUpdate={handleVideoProgressUpdate}
-                            />
-                          </div>
+                        <div className="relative w-full h-full bg-black">
+                          <VideoPlayer
+                            key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
+                            lessonTitle={currentLesson.title}
+                            onComplete={handleVideoComplete}
+                            autoPlay={true}
+                            isActive={activeTab === "video"}
+                            videoUrl={(currentLesson as any).url}
+                            courseId={id}
+                            lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
+                            videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
+                            onProgressUpdate={handleVideoProgressUpdate}
+                          />
                         </div>
                       </TabsContent>
                     ) : null}
