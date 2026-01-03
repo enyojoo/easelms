@@ -261,7 +261,7 @@ export default function InstructorCoursePreviewPage() {
                             <div className="flex items-center justify-between py-2 pl-7">
                               <div className="flex items-center">
                                 <BrainCircuit className="w-4 h-4 mr-2 text-primary" />
-                                <span className="text-sm">Quiz {index + 1}</span>
+                                <span className="text-sm">Quiz</span>
                               </div>
                               <span className="text-sm text-muted-foreground">{quizQuestions.length} questions</span>
                             </div>
@@ -351,7 +351,7 @@ export default function InstructorCoursePreviewPage() {
                 {totalResources > 0 && (
                   <div className="flex items-center">
                     <FileText className="w-5 h-5 mr-2 text-primary" />
-                    <span>{totalResources} downloadable resources</span>
+                    <span>{totalResources} resources</span>
                   </div>
                 )}
                 <div className="flex items-center">

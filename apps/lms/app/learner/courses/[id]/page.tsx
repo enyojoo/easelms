@@ -341,7 +341,7 @@ export default function CoursePage() {
               {totalResources > 0 && (
                 <div className="flex items-center">
                   <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                  <span className="text-xs md:text-sm">{totalResources} downloadable resources</span>
+                  <span className="text-xs md:text-sm">{totalResources} resources</span>
                 </div>
               )}
               <div className="flex items-center">
@@ -406,7 +406,7 @@ export default function CoursePage() {
                             <div className="flex items-center justify-between py-2 pl-6 md:pl-7">
                               <div className="flex items-center min-w-0 flex-1">
                                 <BrainCircuit className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                                <span className="text-xs md:text-sm truncate">Quiz {index + 1}</span>
+                                <span className="text-xs md:text-sm truncate">Quiz</span>
                               </div>
                               <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
                                 {lesson.quiz_questions.length} questions
@@ -520,7 +520,7 @@ export default function CoursePage() {
                 {totalResources > 0 && (
                   <div className="flex items-center">
                     <FileText className="w-5 h-5 mr-2 text-primary" />
-                    <span>{totalResources} downloadable resources</span>
+                    <span>{totalResources} resources</span>
                   </div>
                 )}
                 <div className="flex items-center">
