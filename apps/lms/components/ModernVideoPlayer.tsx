@@ -351,9 +351,11 @@ export default function ModernVideoPlayer({
         
         // Force disable controls immediately (browsers sometimes re-enable them in fullscreen)
         if (isFullscreenNow) {
-          // In fullscreen, ensure video fills the viewport properly
-          // The CSS will handle the styling, but we ensure the video element is properly sized
-          video.style.objectFit = 'contain' // Use contain in fullscreen to show full video without cropping
+          // In fullscreen, ensure video fills the entire viewport
+          // Use cover to fill the screen (may crop edges but fills completely)
+          video.style.objectFit = 'cover'
+          video.style.width = '100%'
+          video.style.height = '100%'
           // Remove playsInline in fullscreen to allow fullscreen on mobile
           video.removeAttribute('playsinline')
           video.removeAttribute('webkit-playsinline')
@@ -375,8 +377,10 @@ export default function ModernVideoPlayer({
           setTimeout(disableControls, 200)
           setTimeout(disableControls, 300)
         } else {
-          // Reset to normal styling
-          video.style.objectFit = ''
+          // Reset to normal styling (contain for normal view)
+          video.style.objectFit = 'contain'
+          video.style.width = ''
+          video.style.height = ''
           // Restore playsInline when exiting fullscreen
           video.setAttribute('playsinline', 'true')
           video.setAttribute('webkit-playsinline', 'true')
@@ -555,7 +559,14 @@ export default function ModernVideoPlayer({
     <div 
       ref={containerRef} 
       className={cn("w-full h-full flex items-center justify-center", className)}
-      style={{
+      style={isFullscreen ? {
+        width: '100vw',
+        height: '100vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+      } : {
         maxWidth: '100%',
         maxHeight: '100%',
       }}
@@ -566,13 +577,18 @@ export default function ModernVideoPlayer({
           "overflow-hidden border w-full h-full flex items-center justify-center",
           isFullscreen && "border-0"
         )}
-        style={{ 
+        style={isFullscreen ? { 
+          width: '100vw', 
+          height: '100vh', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+        } : { 
           width: '100%', 
           height: '100%', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          // On mobile, maintain aspect ratio
           maxWidth: '100%',
           maxHeight: '100%',
         }}
@@ -590,10 +606,14 @@ export default function ModernVideoPlayer({
         webkit-playsinline="true"
         x5-playsinline="true"
         className="w-full h-full"
-        style={{ 
+        style={isFullscreen ? {
+          width: '100vw',
+          height: '100vh',
+          objectFit: 'cover' // Use cover in fullscreen to fill entire screen
+        } : {
           width: '100%', 
           height: '100%', 
-          objectFit: 'contain' // Use contain to show full video without cropping
+          objectFit: 'contain' // Use contain in normal view to show full video
         }}
         onError={(e) => {
           const video = e.currentTarget
