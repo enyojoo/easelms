@@ -75,8 +75,13 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed
   useEffect(() => {
-    // Don't reset if quiz has been completed
-    if (quizCompletedRef.current) return
+    // Don't reset if quiz has been completed (prevents reset after submission when data refetches)
+    if (quizCompletedRef.current) {
+      // If quiz was completed and we're showing results, ensure results stay visible
+      if (showResults) {
+        return
+      }
+    }
     
     setCurrentQuestion(0)
     // If quiz was already completed (showResultsOnly is true), show results screen
@@ -95,10 +100,13 @@ export default function QuizComponent({
         setOriginalAnswers([])
       }
     } else {
-      setSelectedAnswers([])
-      setShowResults(false)
+      // Only reset if quiz hasn't been completed
+      if (!quizCompletedRef.current) {
+        setSelectedAnswers([])
+        setShowResults(false)
+      }
     }
-  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview])
+  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview, showResults])
 
   const handleAnswerSelect = (answerIndex: number) => {
     const newSelectedAnswers = [...selectedAnswers]
