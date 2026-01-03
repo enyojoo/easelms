@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { getClientAuthState } from "@/utils/client-auth"
-import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star } from "lucide-react"
+import { Award, Download, CheckCircle, XCircle, ArrowLeft, Trophy, Clock, BookOpen, Star, Loader2 } from "lucide-react"
 import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { extractIdFromSlug } from "@/lib/slug"
 
 interface Course {
   id: number
@@ -32,7 +33,8 @@ interface QuizResult {
 export default function CourseCompletionPage() {
   const router = useRouter()
   const params = useParams()
-  const id = params.id as string
+  const slugOrId = params.id as string
+  const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const [course, setCourse] = useState<Course | null>(null)
   const [quizResults, setQuizResults] = useState<{ [key: string]: QuizResult }>({})
   const [user, setUser] = useState<any>(null)
@@ -67,7 +69,11 @@ export default function CourseCompletionPage() {
         setError(null)
 
         // Fetch course data
-        const courseResponse = await fetch(`/api/courses/${id}`)
+        const courseId = parseInt(id)
+        if (isNaN(courseId)) {
+          throw new Error("Invalid course ID")
+        }
+        const courseResponse = await fetch(`/api/courses/${courseId}`)
         if (!courseResponse.ok) {
           if (courseResponse.status === 404) {
             router.push("/learner/courses")
