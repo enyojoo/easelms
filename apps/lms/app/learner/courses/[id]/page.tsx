@@ -157,7 +157,7 @@ export default function CoursePage() {
       return {
         price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
         buttonText: "View Summary",
-        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full lifetime access",
+        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full access for 3 months",
       }
     }
 
@@ -165,7 +165,7 @@ export default function CoursePage() {
       return {
         price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
         buttonText: "Continue",
-        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full lifetime access",
+        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full access for 3 months",
       }
     }
     
@@ -174,13 +174,13 @@ export default function CoursePage() {
         return {
           price: "Free",
           buttonText: "Enroll",
-          access: "Full lifetime access",
+          access: "Full access for 3 months",
         }
       case "buy":
         return {
           price: `$${coursePrice}`,
           buttonText: "Buy",
-          access: "Full lifetime access",
+          access: "Full access for 3 months",
         }
       case "recurring":
         return {
@@ -192,7 +192,7 @@ export default function CoursePage() {
         return {
           price: "Free",
           buttonText: "Enroll",
-          access: "Full lifetime access",
+          access: "Full access for 3 months",
         }
     }
   }
@@ -256,7 +256,7 @@ export default function CoursePage() {
   const getCourseBadge = () => {
     if (isCompleted) {
       return (
-        <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+        <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
           Completed
         </Badge>
       )
@@ -308,8 +308,8 @@ export default function CoursePage() {
         <Card className="border-primary/20">
           <CardContent className="p-4 md:p-6">
             <div
-              className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
-              onClick={() => setIsVideoModalOpen(true)}
+              className={`relative aspect-video mb-4 rounded-lg overflow-hidden ${videoUrl ? "cursor-pointer group" : ""}`}
+              onClick={videoUrl ? () => setIsVideoModalOpen(true) : undefined}
             >
               <SafeImage
                 src={course.image || "/placeholder.svg?height=400&width=600"}
@@ -318,9 +318,11 @@ export default function CoursePage() {
                 className="object-cover"
                 priority={true}
               />
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
-                <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
-              </div>
+              {videoUrl && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                  <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
+                </div>
+              )}
             </div>
             <div className="mt-4 mb-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -336,7 +338,9 @@ export default function CoursePage() {
             >
               {isEnrolling ? "Processing..." : buttonText}
             </Button>
-            <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            {enrollmentMode !== "free" && (
+              <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            )}
             <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
               {totalResources > 0 && (
                 <div className="flex items-center">
@@ -443,7 +447,7 @@ export default function CoursePage() {
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
               {course.whoIsThisFor ? (
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{course.whoIsThisFor}</p>
+                <div className="text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line">{course.whoIsThisFor}</div>
               ) : (
                 <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
                   <li>Individuals seeking personal and spiritual growth</li>
@@ -459,7 +463,7 @@ export default function CoursePage() {
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
               {course.requirements ? (
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{course.requirements}</p>
+                <div className="text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line">{course.requirements}</div>
               ) : (
                 <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
                   <li>Open heart and willingness to learn</li>
@@ -487,8 +491,8 @@ export default function CoursePage() {
           <Card className="sticky top-24 border-primary/20 h-fit">
             <CardContent className="p-6">
               <div
-                className="relative aspect-video mb-4 rounded-lg overflow-hidden cursor-pointer group"
-                onClick={() => setIsVideoModalOpen(true)}
+                className={`relative aspect-video mb-4 rounded-lg overflow-hidden ${videoUrl ? "cursor-pointer group" : ""}`}
+                onClick={videoUrl ? () => setIsVideoModalOpen(true) : undefined}
               >
                 <SafeImage
                   src={course?.image || "/placeholder.svg"}
@@ -497,9 +501,11 @@ export default function CoursePage() {
                   className="object-cover"
                   priority={true}
                 />
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
-                  <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
-                </div>
+                {videoUrl && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                    <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                )}
               </div>
               <div className="mt-4 mb-4 flex items-center justify-between">
                 <div>
@@ -515,7 +521,9 @@ export default function CoursePage() {
               >
                 {isEnrolling ? "Processing..." : buttonText}
               </Button>
-              <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+              {enrollmentMode !== "free" && (
+                <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+              )}
               <div className="space-y-2 text-muted-foreground">
                 {totalResources > 0 && (
                   <div className="flex items-center">
