@@ -162,21 +162,52 @@ export async function PATCH(request: Request) {
   // Use service role client to bypass RLS
   const serviceSupabase = createServiceRoleClient()
 
+  console.log("📝 Updating enrollment:", { userId: user.id, courseId, status })
+
+  // First check if enrollment exists
+  const { data: existingEnrollment, error: checkError } = await serviceSupabase
+    .from("enrollments")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("course_id", courseId)
+    .single()
+
+  if (checkError && checkError.code !== "PGRST116") { // PGRST116 = not found, which is ok
+    console.error("Error checking enrollment:", checkError)
+    return NextResponse.json({ error: checkError.message }, { status: 500 })
+  }
+
+  if (!existingEnrollment) {
+    console.error("Enrollment not found for user:", user.id, "course:", courseId)
+    return NextResponse.json({ error: "Enrollment not found" }, { status: 404 })
+  }
+
+  // Update enrollment with status and completed_at
+  const updateData: any = {
+    status: status,
+  }
+
+  if (status === "completed") {
+    updateData.completed_at = new Date().toISOString()
+    // Also update progress to 100% if completing
+    updateData.progress = 100
+  } else {
+    updateData.completed_at = null
+  }
+
   const { data, error } = await serviceSupabase
     .from("enrollments")
-    .update({
-      status: status,
-      completed_at: status === "completed" ? new Date().toISOString() : null,
-    })
+    .update(updateData)
     .eq("user_id", user.id)
     .eq("course_id", courseId)
     .select()
     .single()
 
   if (error) {
-    console.error("Error updating enrollment:", error)
+    console.error("❌ Error updating enrollment:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  console.log("✅ Enrollment updated successfully:", data)
   return NextResponse.json({ enrollment: data })
 }
