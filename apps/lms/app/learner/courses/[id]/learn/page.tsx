@@ -578,8 +578,7 @@ export default function CourseLearningPage() {
     }
 
     // Quiz results are saved by QuizComponent via API
-    // Invalidate React Query cache to refetch updated quiz results
-    queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
+    // Note: Quiz results cache will be updated via real-time subscription or manual refetch
 
     // Always save progress immediately (no debounce for quiz completion)
     // This ensures quiz results and progress are saved to the database
@@ -598,9 +597,10 @@ export default function CourseLearningPage() {
       await saveProgressMutation.mutateAsync(progressPayload)
       console.log("✅ Quiz progress saved successfully")
       
-      // Invalidate caches to update UI
-      queryClient.invalidateQueries({ queryKey: ["progress", id] })
-      queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
+      // Use refetchQueries instead of invalidateQueries to avoid race conditions
+      // This ensures data is fetched after mutation completes
+      await queryClient.refetchQueries({ queryKey: ["progress", id] })
+      await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
     } catch (error) {
       console.error("❌ Error saving quiz progress:", error)
     }
