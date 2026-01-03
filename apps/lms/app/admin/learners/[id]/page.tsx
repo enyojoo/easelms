@@ -111,6 +111,28 @@ function LearnerDetailsPage() {
     fetchLearner()
   }, [params.id, mounted, authLoading, user, userType])
 
+  // Refresh learner data periodically to catch enrollment status updates
+  useEffect(() => {
+    if (!mounted || authLoading || !user || !params.id) return
+    
+    const interval = setInterval(() => {
+      const fetchLearner = async () => {
+        try {
+          const response = await fetch(`/api/learners/${params.id}`)
+          if (response.ok) {
+            const data = await response.json()
+            setLearner(data.learner)
+          }
+        } catch (err: any) {
+          console.error("Error refreshing learner:", err)
+        }
+      }
+      fetchLearner()
+    }, 10000) // Refresh every 10 seconds
+
+    return () => clearInterval(interval)
+  }, [params.id, mounted, authLoading, user, userType])
+
   useEffect(() => {
     const fetchCoursesAndProgress = async () => {
       if (!learner || learner.enrolledCourses.length === 0) return

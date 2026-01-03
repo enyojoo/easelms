@@ -149,6 +149,36 @@ export default function LearnersPage() {
     fetchLearners()
   }, [mounted, authLoading, user, userType, searchTerm, enrollmentFilter])
 
+  // Refresh learners data periodically to catch enrollment status updates
+  useEffect(() => {
+    if (!mounted || authLoading || !user) return
+    
+    const interval = setInterval(() => {
+      const fetchLearners = async () => {
+        try {
+          const params = new URLSearchParams()
+          if (searchTerm) {
+            params.append("search", searchTerm)
+          }
+          if (enrollmentFilter !== "all") {
+            params.append("enrollmentFilter", enrollmentFilter)
+          }
+
+          const response = await fetch(`/api/learners?${params.toString()}`)
+          if (response.ok) {
+            const data = await response.json()
+            setLearners(data.learners || [])
+          }
+        } catch (err: any) {
+          console.error("Error refreshing learners:", err)
+        }
+      }
+      fetchLearners()
+    }, 10000) // Refresh every 10 seconds
+
+    return () => clearInterval(interval)
+  }, [mounted, authLoading, user, userType, searchTerm, enrollmentFilter])
+
   // Fetch courses for enrollment dialog
   useEffect(() => {
     const fetchCourses = async () => {
