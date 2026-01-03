@@ -351,9 +351,9 @@ export default function ModernVideoPlayer({
         
         // Force disable controls immediately (browsers sometimes re-enable them in fullscreen)
         if (isFullscreenNow) {
-          // In fullscreen, ensure video fills the entire viewport
-          // Use cover to fill the screen (may crop edges but fills completely)
-          video.style.objectFit = 'cover'
+          // In fullscreen, ensure video shows completely without cropping
+          // Use contain to show entire video (may have black bars but no cropping)
+          video.style.objectFit = 'contain'
           video.style.width = '100%'
           video.style.height = '100%'
           // Remove playsInline in fullscreen to allow fullscreen on mobile
@@ -377,8 +377,8 @@ export default function ModernVideoPlayer({
           setTimeout(disableControls, 200)
           setTimeout(disableControls, 300)
         } else {
-          // Reset to normal styling (contain for normal view)
-          video.style.objectFit = 'contain'
+          // Reset to normal styling (cover for normal view to fill frame)
+          video.style.objectFit = 'cover'
           video.style.width = ''
           video.style.height = ''
           // Restore playsInline when exiting fullscreen
@@ -593,11 +593,11 @@ export default function ModernVideoPlayer({
         style={isFullscreen ? {
           width: '100vw',
           height: '100vh',
-          objectFit: 'cover' // Use cover in fullscreen to fill entire screen
+          objectFit: 'contain' // Use contain in fullscreen to show entire video without cropping
         } : {
           width: '100%', 
           height: '100%', 
-          objectFit: 'cover' // Use cover to fill frame without black bars
+          objectFit: 'cover' // Use cover in normal view to fill frame without black bars
         }}
         onError={(e) => {
           const video = e.currentTarget
