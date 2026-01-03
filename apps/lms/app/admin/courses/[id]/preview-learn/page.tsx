@@ -40,6 +40,20 @@ export default function AdminCoursePreviewLearningPage() {
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
+  // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
+  useEffect(() => {
+    // Only pause videos if we're actually changing to a different lesson
+    // This prevents unnecessary pausing when the component re-renders due to viewport changes
+    const allVideos = document.querySelectorAll('video')
+    allVideos.forEach((video) => {
+      // Only reset if video is playing - don't interrupt paused videos unnecessarily
+      if (!video.paused) {
+        video.pause()
+        video.currentTime = 0
+      }
+    })
+  }, [currentLessonIndex])
+
   // Track mount state to prevent flash of content
   useEffect(() => {
     setMounted(true)
@@ -153,10 +167,11 @@ export default function AdminCoursePreviewLearningPage() {
                   {((currentLesson as any)?.url) ? (
                     <div className="relative w-full h-full">
                       <VideoPlayer
+                        key={`lesson-${currentLesson.id}-${currentLessonIndex}`}
                         lessonTitle={currentLesson.title}
                         onComplete={() => {}}
                         autoPlay={true}
-                        isActive={true}
+                        isActive={activeTab === "video"}
                         videoUrl={(currentLesson as any)?.url}
                         courseId={course.id.toString()}
                         lessonId={currentLesson.id?.toString()}
