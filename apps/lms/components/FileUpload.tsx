@@ -182,8 +182,27 @@ export default function FileUpload({
             })
 
             if (!response.ok) {
-              const errorData = await response.json()
-              throw new Error(errorData.error || `Failed to upload ${file.name}`)
+              // Try to parse error response - check content type first to avoid consuming body twice
+              let errorMessage = `Failed to upload ${file.name}`
+              const contentType = response.headers.get("content-type")
+              
+              if (contentType && contentType.includes("application/json")) {
+                try {
+                  const errorData = await response.json()
+                  errorMessage = errorData.error || errorMessage
+                } catch {
+                  errorMessage = response.statusText || errorMessage
+                }
+              } else {
+                // For non-JSON responses (like plain text errors from Next.js), read as text
+                try {
+                  const errorText = await response.text()
+                  errorMessage = errorText || errorMessage
+                } catch {
+                  errorMessage = response.statusText || errorMessage
+                }
+              }
+              throw new Error(errorMessage)
             }
 
             const data = await response.json()
@@ -266,8 +285,27 @@ export default function FileUpload({
         })
 
         if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `Failed to upload ${file.name}`)
+          // Try to parse error response - check content type first to avoid consuming body twice
+          let errorMessage = `Failed to upload ${file.name}`
+          const contentType = response.headers.get("content-type")
+          
+          if (contentType && contentType.includes("application/json")) {
+            try {
+              const errorData = await response.json()
+              errorMessage = errorData.error || errorMessage
+            } catch {
+              errorMessage = response.statusText || errorMessage
+            }
+          } else {
+            // For non-JSON responses (like plain text errors from Next.js), read as text
+            try {
+              const errorText = await response.text()
+              errorMessage = errorText || errorMessage
+            } catch {
+              errorMessage = response.statusText || errorMessage
+            }
+          }
+          throw new Error(errorMessage)
         }
 
         const data = await response.json()
