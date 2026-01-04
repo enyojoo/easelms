@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,15 +39,40 @@ export default function LearnerDashboard() {
   // Use profile data from React Query cache (instant, no fetching)
   const dashboardUser = profileData?.profile || (user ? { name: user.name, email: user.email, profileImage: user.profileImage } : null)
 
-  // Process recommended courses
-  const recommendedCourses = useMemo(() => {
-    if (!recommendedData?.courses) return []
-    return recommendedData.courses.slice(0, 4).map((course: any) => ({
-            id: course.id,
-            title: course.title,
-            image: course.image || "/placeholder.svg",
-          }))
+  // Store shuffled courses in state to persist randomization across re-renders
+  const [shuffledRecommendedCourses, setShuffledRecommendedCourses] = useState<any[]>([])
+  const lastRecommendedDataRef = useRef<any[]>([])
+
+  // Process recommended courses - shuffle once when data changes and limit to 2
+  useEffect(() => {
+    if (!recommendedData?.courses || recommendedData.courses.length === 0) {
+      setShuffledRecommendedCourses([])
+      return
+    }
+
+    // Only shuffle if the data actually changed (by reference comparison)
+    if (recommendedData.courses !== lastRecommendedDataRef.current) {
+      lastRecommendedDataRef.current = recommendedData.courses
+      
+      // Create a shuffled copy of the courses array using Fisher-Yates shuffle
+      const shuffled = [...recommendedData.courses]
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+      }
+      
+      // Take only 2 courses and update state
+      const selected = shuffled.slice(0, 2).map((course: any) => ({
+        id: course.id,
+        title: course.title,
+        image: course.image || "/placeholder.svg",
+      }))
+      setShuffledRecommendedCourses(selected)
+    }
   }, [recommendedData])
+
+  // Use the shuffled courses from state
+  const recommendedCourses = shuffledRecommendedCourses
 
   // Get enrolled course IDs
   const enrolledCourseIds = useMemo(() => {
@@ -225,11 +250,11 @@ export default function LearnerDashboard() {
             <CardContent className="p-4 md:p-6 pt-0">
               {recommendedCourses.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3 md:gap-4">
-                  {recommendedCourses.map((course, index) => (
+                  {recommendedCourses.map((course) => (
                     <Link 
                       key={course.id} 
                       href={`/learner/courses/${createCourseSlug(course.title, course.id)}`} 
-                      className={`flex min-w-0 ${index >= 2 ? 'hidden sm:flex' : ''}`}
+                      className="flex min-w-0"
                     >
                       <div className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow flex flex-col w-full min-w-0">
                         <div className="relative w-full h-32 sm:h-24 md:h-32">

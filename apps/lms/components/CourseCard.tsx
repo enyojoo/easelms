@@ -64,7 +64,7 @@ export default function CourseCard({
 
   // Calculate first incomplete lesson index
   const firstIncompleteLessonIndex = useMemo(() => {
-    if (!course.lessons || !progressData?.progress || actualStatus !== "enrolled") {
+    if (!course || !Array.isArray(course.lessons) || !progressData?.progress || actualStatus !== "enrolled") {
       return 0
     }
 
@@ -82,6 +82,7 @@ export default function CourseCard({
     // Find first incomplete lesson
     for (let i = 0; i < course.lessons.length; i++) {
       const lesson = course.lessons[i]
+      if (!lesson) continue // Skip null/undefined lessons
       const lessonId = typeof lesson.id === 'string' ? parseInt(lesson.id, 10) : lesson.id
       if (!completedLessonIds.has(lessonId)) {
         return i
@@ -90,7 +91,7 @@ export default function CourseCard({
 
     // All lessons completed, return last lesson index
     return course.lessons.length > 0 ? course.lessons.length - 1 : 0
-  }, [course.lessons, progressData, actualStatus])
+  }, [course, progressData, actualStatus])
 
   const handleEnroll = async (e: React.MouseEvent) => {
     e.preventDefault()

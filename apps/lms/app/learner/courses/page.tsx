@@ -41,14 +41,16 @@ export default function CoursesPage() {
   // Process courses data
   const courses = useMemo(() => {
     if (!coursesData?.courses) return []
-    return coursesData.courses.map((course: any) => ({
-      ...course,
-      lessons: Array.isArray(course.lessons) ? course.lessons : [],
-      settings: course.settings || {},
-      price: course.price || 0,
-      description: course.description || "",
-      image: course.image || course.thumbnail || "/placeholder.svg",
-    }))
+    return coursesData.courses
+      .filter((course: any) => course != null) // Filter out null/undefined courses
+      .map((course: any) => ({
+        ...course,
+        lessons: Array.isArray(course?.lessons) ? course.lessons : [],
+        settings: course?.settings || {},
+        price: course?.price || 0,
+        description: course?.description || "",
+        image: course?.image || course?.thumbnail || "/placeholder.svg",
+      }))
   }, [coursesData])
 
   // Process enrollments data
