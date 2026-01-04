@@ -216,13 +216,14 @@ export default function QuizComponent({
       
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
-      onComplete(selectedAnswers, questions, attemptCount + 1)
-      
-      // Reset submission ref after a brief delay to allow refetch to complete
-      // This prevents the useEffect from running during the transitional state
+      // Use setTimeout to defer onComplete call and allow current render cycle to complete
       setTimeout(() => {
-        isSubmittingRef.current = false
-      }, 100)
+        onComplete(selectedAnswers, questions, attemptCount + 1)
+        // Reset submission ref after refetch has time to complete
+        setTimeout(() => {
+          isSubmittingRef.current = false
+        }, 500)
+      }, 0)
     }
   }
 
