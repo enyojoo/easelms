@@ -251,32 +251,47 @@ export default function CourseLearningPage() {
     const answersMap: { [lessonId: number]: number[] } = {}
     const scoresMap: { [lessonId: number]: number } = {}
 
-    if (!quizResultsData?.results || !progressData?.progress) {
+    // Defensive check: ensure data structures are fully initialized
+    if (!quizResultsData || !progressData) {
+      return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
+    }
+
+    // Ensure results and progress are arrays (defensive check for transitional states)
+    if (!Array.isArray(quizResultsData.results) || !Array.isArray(progressData.progress)) {
       return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
     }
 
     // Process quiz results (answers)
     const resultsByLesson: { [lessonId: number]: any[] } = {}
     quizResultsData.results.forEach((result: any) => {
-      const lessonId = result.lesson_id
-      if (!resultsByLesson[lessonId]) {
-        resultsByLesson[lessonId] = []
+      // Defensive check: ensure result has lesson_id
+      if (result && typeof result.lesson_id !== 'undefined' && result.lesson_id !== null) {
+        const lessonId = result.lesson_id
+        if (!resultsByLesson[lessonId]) {
+          resultsByLesson[lessonId] = []
+        }
+        resultsByLesson[lessonId].push(result)
       }
-      resultsByLesson[lessonId].push(result)
     })
 
     Object.entries(resultsByLesson).forEach(([lessonId, results]: [string, any]) => {
       const lessonIdNum = parseInt(lessonId)
-      completedQuizzesMap[lessonIdNum] = true
-      answersMap[lessonIdNum] = results.map((r: any) => {
-        const answer = r.user_answer
-        return typeof answer === 'string' ? parseInt(answer) : answer
-      }).filter((a: any) => a !== null && !isNaN(a))
+      if (!isNaN(lessonIdNum)) {
+        completedQuizzesMap[lessonIdNum] = true
+        // Defensive check: ensure results is an array
+        if (Array.isArray(results)) {
+          answersMap[lessonIdNum] = results.map((r: any) => {
+            const answer = r?.user_answer
+            return typeof answer === 'string' ? parseInt(answer) : answer
+          }).filter((a: any) => a !== null && !isNaN(a))
+        }
+      }
     })
 
     // Process progress data (scores)
     progressData.progress.forEach((p: any) => {
-      if (p.lesson_id && p.quiz_score !== null && p.quiz_score !== undefined) {
+      // Defensive check: ensure progress item has required fields
+      if (p && typeof p.lesson_id !== 'undefined' && p.lesson_id !== null && p.quiz_score !== null && p.quiz_score !== undefined) {
         scoresMap[p.lesson_id] = p.quiz_score
       }
     })

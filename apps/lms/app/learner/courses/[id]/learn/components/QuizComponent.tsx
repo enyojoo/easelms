@@ -65,6 +65,7 @@ export default function QuizComponent({
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [quizStarted, setQuizStarted] = useState(false) // Track if user has started the quiz
   const quizCompletedRef = useRef(false) // Track if quiz has been completed
+  const isSubmittingRef = useRef(false) // Track if quiz submission is in progress
 
   // Answers are already in original order (no mapping needed)
   const mappedAnswersForReview = useMemo(() => {
@@ -77,6 +78,7 @@ export default function QuizComponent({
     if (lessonId !== undefined) {
       // Reset all state when lesson changes
       quizCompletedRef.current = false
+      isSubmittingRef.current = false
       setCurrentQuestion(0)
       setSelectedAnswers([])
       setShowResults(false)
@@ -90,6 +92,11 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
+    // Skip if submission is in progress to prevent race conditions during refetch
+    if (isSubmittingRef.current) {
+      return
+    }
+    
     // Skip if we're in the middle of a retry (quizCompletedRef is false means we're retrying)
     // In retry mode, handleRetryQuiz has already reset the state, so we don't need to do anything here
     if (!quizCompletedRef.current) {
@@ -194,6 +201,8 @@ export default function QuizComponent({
     } else {
       // Mark quiz as completed to prevent reset
       quizCompletedRef.current = true
+      // Mark submission as in progress to prevent useEffect from running during refetch
+      isSubmittingRef.current = true
       
       // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
@@ -208,6 +217,12 @@ export default function QuizComponent({
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
       onComplete(selectedAnswers, questions, attemptCount + 1)
+      
+      // Reset submission ref after a brief delay to allow refetch to complete
+      // This prevents the useEffect from running during the transitional state
+      setTimeout(() => {
+        isSubmittingRef.current = false
+      }, 100)
     }
   }
 
