@@ -256,7 +256,8 @@ export default function QuizComponent({
     )
   }
 
-  if (showResults) {
+  // Show results if showResultsOnly is true (quiz was already completed) OR if showResults state is true (just completed)
+  if (showResultsOnly || showResults) {
     // If showing results for a previously completed quiz, use initialScore if available
     // Otherwise calculate from current answers
     const totalPoints = calculateTotalPoints()
