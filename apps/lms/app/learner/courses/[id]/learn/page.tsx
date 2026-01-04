@@ -406,12 +406,18 @@ export default function CourseLearningPage() {
     // For mixed lessons, mark video as completed and navigate to text tab
     if (isMixedLesson && hasVideo && hasText) {
       setVideoCompleted((prev) => ({ ...prev, [currentLessonIndex]: true }))
+      
+      // Check if text was already viewed - if so, mark lesson as completed (if no quiz)
+      if (textViewed[currentLessonIndex]) {
+        await proceedWithLessonCompletion()
+      }
+      
       // Navigate to text tab when video completes - user navigates from there manually
       setActiveTab("text")
       return
     }
 
-    // For video-only lessons, navigate to quiz (if available) or resources (if available)
+    // For video-only lessons, check if there's a quiz
     const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
     const hasResources = lesson.resources && lesson.resources.length > 0
 
@@ -419,8 +425,13 @@ export default function CourseLearningPage() {
       setActiveTab("quiz")
     } else if (hasResources) {
       setActiveTab("resources")
+      // Video-only lesson without quiz - mark as completed
+      await proceedWithLessonCompletion()
+    } else {
+      // Video-only lesson without quiz or resources - mark as completed
+      await proceedWithLessonCompletion()
     }
-    // If no quiz or resources, stay on video tab - user navigates manually
+    // User navigates manually from here
   }
 
   // Handle text completion (for text-only and mixed lessons)
@@ -437,6 +448,18 @@ export default function CourseLearningPage() {
 
     setTextViewed((prev) => ({ ...prev, [currentLessonIndex]: true }))
 
+    // For mixed lessons, check if both video and text are completed
+    if (isMixedLesson && hasVideo && hasText) {
+      // Check if video was also completed
+      if (videoCompleted[currentLessonIndex]) {
+        // Both video and text are completed, mark lesson as completed (if no quiz)
+        await proceedWithLessonCompletion()
+      }
+      // If video not completed yet, wait for it (it will check text when video completes)
+    } else if (!isMixedLesson && hasText) {
+      // Text-only lesson - mark as completed (if no quiz)
+      await proceedWithLessonCompletion()
+    }
     // Text viewing is tracked - user navigates manually
     // No auto-navigation, user controls navigation themselves
   }

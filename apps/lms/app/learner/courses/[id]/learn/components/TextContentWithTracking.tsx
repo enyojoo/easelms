@@ -37,8 +37,8 @@ export default function TextContentWithTracking({
         const clientHeight = viewport.clientHeight
         const scrollPercentage = scrollHeight > 0 ? (scrollTop + clientHeight) / scrollHeight : 0
         
-        // Mark as viewed when user scrolls 80% of the content
-        if (scrollPercentage >= 0.8 && !textViewedRefs.current[lessonIndex]?.viewed) {
+        // Mark as viewed when user scrolls to the end (100%) of the content
+        if (scrollPercentage >= 1.0 && !textViewedRefs.current[lessonIndex]?.viewed) {
           textViewedRefs.current[lessonIndex] = {
             viewed: true,
             scrollTop,
