@@ -73,40 +73,40 @@ export default function QuizComponent({
   }, [showResultsOnly, prefilledAnswers])
 
   // Reset quiz when questions change or initialize with prefilled answers
-  // Don't reset if quiz has been completed
+  // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
-    // Don't reset if quiz has been completed (prevents reset after submission when data refetches)
-    // BUT allow reset if we're in retry mode (quizCompletedRef is false)
-    if (quizCompletedRef.current && showResults) {
-      // If quiz was completed and we're showing results, ensure results stay visible
+    // Skip if we're in the middle of a retry (quizCompletedRef is false means we're retrying)
+    // In retry mode, handleRetryQuiz has already reset the state, so we don't need to do anything here
+    if (!quizCompletedRef.current) {
+      // We're retrying - state was already reset in handleRetryQuiz, so don't interfere
       return
     }
     
-    setCurrentQuestion(0)
-    // If quiz was already completed (showResultsOnly is true), show results screen
-    // BUT only if quizCompletedRef is also true (not in retry mode)
-    if (showResultsOnly && quizCompletedRef.current) {
-      // Mark as completed to prevent reset
-      quizCompletedRef.current = true
-      
-      if (prefilledAnswers.length > 0) {
-        setSelectedAnswers(mappedAnswersForReview)
-        setShowResults(true)
-        setOriginalAnswers(mappedAnswersForReview)
-      } else {
-        // Even if no prefilled answers, show results if quiz was completed
-        setShowResults(true)
-        setSelectedAnswers([])
-        setOriginalAnswers([])
-      }
-    } else if (!showResultsOnly || !quizCompletedRef.current) {
-      // Only reset if quiz hasn't been completed OR if we're retrying (quizCompletedRef is false)
-      if (!quizCompletedRef.current) {
-        setSelectedAnswers([])
-        setShowResults(false)
+    // Don't reset if quiz has been completed and we're showing results
+    // This prevents reset after submission when data refetches
+    if (quizCompletedRef.current) {
+      // If quiz was completed (showResultsOnly is true), show results screen
+      if (showResultsOnly) {
+        setCurrentQuestion(0)
+        if (prefilledAnswers.length > 0) {
+          setSelectedAnswers(mappedAnswersForReview)
+          setShowResults(true)
+          setOriginalAnswers(mappedAnswersForReview)
+        } else {
+          // Even if no prefilled answers, show results if quiz was completed
+          setShowResults(true)
+          setSelectedAnswers([])
+          setOriginalAnswers([])
+        }
+        return
       }
     }
-  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview, showResults])
+    
+    // Quiz hasn't been completed yet - reset to initial state
+    setCurrentQuestion(0)
+    setSelectedAnswers([])
+    setShowResults(false)
+  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview])
 
   const handleAnswerSelect = (answerIndex: number) => {
     const newSelectedAnswers = [...selectedAnswers]
