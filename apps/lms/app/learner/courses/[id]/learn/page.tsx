@@ -456,16 +456,27 @@ export default function CourseLearningPage() {
     if (isMixedLesson && hasVideo && hasText) {
       // Check if video was also completed
       if (videoCompleted[currentLessonIndex]) {
-        // Both video and text are completed, mark lesson as completed (if no quiz)
+        // Both video and text are completed
+        // Check if there's a quiz or resources to navigate to
+        const hasQuiz = lesson.quiz_questions && lesson.quiz_questions.length > 0
+        const hasResources = lesson.resources && lesson.resources.length > 0
+        
+        // Mark lesson as completed (proceedWithLessonCompletion handles quiz navigation)
         await proceedWithLessonCompletion()
+        
+        // If no quiz, navigate to resources if available
+        // (If there was a quiz, proceedWithLessonCompletion already navigated to quiz tab)
+        if (!hasQuiz && hasResources) {
+          setActiveTab("resources")
+        }
+        // If no quiz/resources, stay on text tab - user can navigate manually
       }
       // If video not completed yet, wait for it (it will check text when video completes)
     } else if (!isMixedLesson && hasText) {
       // Text-only lesson - mark as completed (if no quiz)
       await proceedWithLessonCompletion()
+      // User navigates manually from text-only lessons
     }
-    // Text viewing is tracked - user navigates manually
-    // No auto-navigation, user controls navigation themselves
   }
 
   // Common completion logic - mark lesson as completed (no auto-navigation)
