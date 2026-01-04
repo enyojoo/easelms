@@ -124,15 +124,20 @@ export default function CoursePage() {
     return null // Will show on refetch
   }
 
+  // Additional safety check - ensure course exists before accessing properties
+  if (!course) {
+    return null
+  }
+
   // Calculate total resources from lessons
-  const totalResources = (course.lessons || []).reduce((total, lesson) => {
-    return total + (lesson.resources?.length || 0)
+  const totalResources = (course?.lessons || []).reduce((total, lesson) => {
+    return total + (lesson?.resources?.length || 0)
   }, 0)
 
-  const videoUrl = course.preview_video || ""
+  const videoUrl = course?.preview_video || ""
 
   // Instructor information - use course creator's profile
-  const instructor = course.creator ? {
+  const instructor = course?.creator ? {
     name: course.creator.name || "Instructor",
     bio: course.creator.bio || "",
     profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
@@ -147,9 +152,9 @@ export default function CoursePage() {
   }
 
   // Get actual enrollment mode from course settings
-  const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
-  const coursePrice = course.settings?.enrollment?.price || 0
-  const recurringPrice = course.settings?.enrollment?.recurringPrice
+  const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
+  const coursePrice = course?.settings?.enrollment?.price || 0
+  const recurringPrice = course?.settings?.enrollment?.recurringPrice
 
   const getAccessDetails = () => {
     if (isCompleted) {
@@ -234,7 +239,7 @@ export default function CoursePage() {
           enrollmentMode,
           coursePrice,
           recurringPrice,
-          course.title,
+          course?.title || "",
           user
         )
         if (success) {
@@ -299,7 +304,7 @@ export default function CoursePage() {
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0">
           <ArrowLeft className="mr-2 h-4 w-4" />
         </Button>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course.title}</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
       </div>
 
       {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
@@ -311,8 +316,8 @@ export default function CoursePage() {
               onClick={videoUrl ? () => setIsVideoModalOpen(true) : undefined}
             >
               <SafeImage
-                src={course.image || "/placeholder.svg?height=400&width=600"}
-                alt={course.title}
+                src={course?.image || "/placeholder.svg?height=400&width=600"}
+                alt={course?.title || "Course"}
                 fill
                 className="object-cover"
                 priority={true}
@@ -359,7 +364,7 @@ export default function CoursePage() {
               )}
               <div className="flex items-center">
                 <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm">{course.enrolledStudents || 0} learners enrolled</span>
+                <span className="text-xs md:text-sm">{course?.enrolledStudents || 0} learners enrolled</span>
               </div>
             </div>
           </CardContent>
@@ -372,7 +377,7 @@ export default function CoursePage() {
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Overview</h2>
-              <p className="text-sm md:text-base text-muted-foreground mb-4 leading-relaxed">{course.description || ""}</p>
+              <p className="text-sm md:text-base text-muted-foreground mb-4 leading-relaxed">{course?.description || ""}</p>
               <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-4 border-t">
                 <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
                   <span>{course.lessons?.length || 0} lessons</span>
@@ -445,7 +450,7 @@ export default function CoursePage() {
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
-              {course.whoIsThisFor ? (
+              {course?.whoIsThisFor ? (
                 <div className="text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line">{course.whoIsThisFor}</div>
               ) : (
                 <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
@@ -461,7 +466,7 @@ export default function CoursePage() {
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
-              {course.requirements ? (
+              {course?.requirements ? (
                 <div className="text-sm md:text-base text-muted-foreground leading-relaxed whitespace-pre-line">{course.requirements}</div>
               ) : (
                 <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
@@ -554,7 +559,7 @@ export default function CoursePage() {
         isOpen={isVideoModalOpen}
         onClose={() => setIsVideoModalOpen(false)}
         videoUrl={videoUrl}
-        title={course.title}
+        title={course?.title || ""}
       />
     </div>
   )
