@@ -90,15 +90,10 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
-    // Skip if we're in the middle of a retry (quizCompletedRef is false means we're retrying)
-    // In retry mode, handleRetryQuiz has already reset the state, so we don't need to do anything here
-    if (!quizCompletedRef.current) {
-      // We're retrying - state was already reset in handleRetryQuiz, so don't interfere
-      return
-    }
-    
     // If quiz was completed (showResultsOnly is true), show results screen
+    // This takes priority over the retry check
     if (showResultsOnly) {
+      quizCompletedRef.current = true
       setCurrentQuestion(0)
       setShowResults(true) // Always show results when showResultsOnly is true
       if (prefilledAnswers.length > 0) {
@@ -108,6 +103,13 @@ export default function QuizComponent({
         setSelectedAnswers([])
         setOriginalAnswers([])
       }
+      return
+    }
+    
+    // Skip if we're in the middle of a retry (quizCompletedRef is false means we're retrying)
+    // In retry mode, handleRetryQuiz has already reset the state, so we don't need to do anything here
+    if (!quizCompletedRef.current) {
+      // We're retrying - state was already reset in handleRetryQuiz, so don't interfere
       return
     }
     
