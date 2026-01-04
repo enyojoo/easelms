@@ -100,13 +100,11 @@ export default function QuizComponent({
     // If quiz was completed (showResultsOnly is true), show results screen
     if (showResultsOnly) {
       setCurrentQuestion(0)
+      setShowResults(true) // Always show results when showResultsOnly is true
       if (prefilledAnswers.length > 0) {
         setSelectedAnswers(mappedAnswersForReview)
-        setShowResults(true)
         setOriginalAnswers(mappedAnswersForReview)
       } else {
-        // Even if no prefilled answers, show results if quiz was completed
-        setShowResults(true)
         setSelectedAnswers([])
         setOriginalAnswers([])
       }
@@ -505,9 +503,10 @@ export default function QuizComponent({
   const maxAttempts = quiz.maxAttempts || 3
   const totalPoints = calculateTotalPoints()
   const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
-  
-  // Show quiz info card before starting (when quiz hasn't been started yet)
-  if (!quizStarted && currentQuestion === 0 && selectedAnswers.length === 0) {
+
+  // Show quiz info card before starting (when quiz hasn't been started yet AND not showing results)
+  // Don't show info card if showResultsOnly is true (quiz was already completed)
+  if (!showResultsOnly && !quizStarted && currentQuestion === 0 && selectedAnswers.length === 0 && !showResults) {
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
         <Card className="border-primary/20 bg-primary/5">
