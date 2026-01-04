@@ -197,11 +197,11 @@ export default function PurchaseHistoryPage() {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => {
+                              onClick={async () => {
                                 if (window.confirm("Are you sure you want to cancel this subscription? You will be redirected to support to complete the cancellation.")) {
                                   cancelSubscription(purchase.id)
-                                  // Invalidate purchases cache to refetch updated data
-                                  queryClient.invalidateQueries({ queryKey: ["purchases"] })
+                                  // Refetch purchases cache to get updated data
+                                  await queryClient.refetchQueries({ queryKey: ["purchases"] })
                                   router.push("/learner/support")
                                 }
                               }}

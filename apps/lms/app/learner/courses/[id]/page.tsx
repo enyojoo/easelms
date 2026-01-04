@@ -103,11 +103,10 @@ export default function CoursePage() {
   // Get enrollment count from course data (total enrollments for the course)
   const enrollmentCount = course?.enrolledStudents || 0
 
-  // Wait for course to load - no skeleton, just show error if needed
-  if (courseError || (!coursePending && !course)) {
-    // Check if it's a 404 error
+  // Show error only if no cached data exists
+  if (courseError && !course) {
     const is404 = courseError instanceof Error && courseError.message.includes("404")
-    if (is404 || (!coursePending && !course)) {
+    if (is404) {
       notFound()
     }
     return (
@@ -120,9 +119,9 @@ export default function CoursePage() {
     )
   }
 
-  // Don't render until course is loaded
-  if (!course) {
-    return null
+  // Render with cached data immediately - don't wait for pending state
+  if (!course && !authLoading) {
+    return null // Will show on refetch
   }
 
   // Calculate total resources from lessons

@@ -139,11 +139,9 @@ export default function CourseLearningPage() {
           if (response.ok) {
             const data = await response.json()
             console.log("✅ Enrollment marked as completed:", data)
-            // Invalidate all related queries
-            queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-            queryClient.invalidateQueries({ queryKey: ["progress", id] })
-            // Force refetch
-            queryClient.refetchQueries({ queryKey: ["enrollments"] })
+            // Refetch all related queries to update cache
+            await queryClient.refetchQueries({ queryKey: ["enrollments"] })
+            await queryClient.refetchQueries({ queryKey: ["progress", id] })
           } else {
             const errorData = await response.json().catch(() => ({}))
             console.error("❌ Failed to mark enrollment as completed:", errorData)
@@ -293,11 +291,8 @@ export default function CourseLearningPage() {
 
     const courseId = parseInt(id)
 
-    // If payment was successful, invalidate enrollments cache and wait for it to update
+    // If payment was successful, refetch enrollments cache and wait for it to update
     if (paymentSuccess) {
-      // Invalidate enrollments cache to force refetch
-      queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-      
       // Refetch enrollments immediately
       queryClient.refetchQueries({ queryKey: ["enrollments"] })
       
@@ -491,8 +486,8 @@ export default function CourseLearningPage() {
           completed_at: new Date().toISOString(),
         }
         await saveProgressMutation.mutateAsync(progressPayload)
-        // Invalidate progress cache to refresh the UI
-        queryClient.invalidateQueries({ queryKey: ["progress", id] })
+        // Refetch progress cache to refresh the UI
+        await queryClient.refetchQueries({ queryKey: ["progress", id] })
       } catch (error) {
         console.error("Error saving lesson completion:", error)
       }
@@ -521,12 +516,26 @@ export default function CourseLearningPage() {
   }
 
   const clearQuizData = async (lessonId: number) => {
-    // Invalidate both quiz results and progress caches to properly reset quiz state
-    // This ensures completedQuizzes becomes false for this lesson
-    queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
-    queryClient.invalidateQueries({ queryKey: ["progress", id] })
-    // Wait a bit for cache to clear before refetching
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Immediately remove quiz results for this lesson from cache for instant UI update
+    const currentData = queryClient.getQueryData<{ results: any[] }>(["quiz-results", id])
+    if (currentData?.results) {
+      const filteredResults = currentData.results.filter((r: any) => r.lesson_id !== lessonId)
+      queryClient.setQueryData(["quiz-results", id], { results: filteredResults })
+    }
+    
+    // Also update progress to remove quiz_score for this lesson
+    const currentProgress = queryClient.getQueryData<{ progress: any[] }>(["progress", id])
+    if (currentProgress?.progress) {
+      const updatedProgress = currentProgress.progress.map((p: any) => {
+        if (p.lesson_id === lessonId) {
+          return { ...p, quiz_score: null, quiz_attempts: null }
+        }
+        return p
+      })
+      queryClient.setQueryData(["progress", id], { progress: updatedProgress })
+    }
+    
+    // Then refetch to get fresh data from server
     await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
     await queryClient.refetchQueries({ queryKey: ["progress", id] })
   }
@@ -761,12 +770,8 @@ export default function CourseLearningPage() {
     }
   }
 
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  const hasData = !!course
-  const showSkeleton = (authLoading || !user || coursePending) && !hasData
-
-  // Show error if course not found
-  if (courseError || (!coursePending && !course)) {
+  // Show error if course not found (only if no cached data exists)
+  if (courseError && !course) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center space-y-4">
@@ -777,8 +782,13 @@ export default function CourseLearningPage() {
     )
   }
 
-  // Don't render until course is loaded
-  if (!course || showSkeleton) {
+  // Render with cached data immediately - don't wait for pending state
+  if (!course && authLoading) {
+    return null // Wait for auth to complete
+  }
+
+  // If no course data exists at all, return null (will show on refetch)
+  if (!course) {
     return null
   }
 
@@ -1043,11 +1053,9 @@ export default function CourseLearningPage() {
                         if (response.ok) {
                           const data = await response.json()
                           console.log("✅ Enrollment updated to completed:", data)
-                          // Invalidate all related queries to force refresh
-                          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-                          queryClient.invalidateQueries({ queryKey: ["progress", id] })
-                          // Force immediate refetch
+                          // Refetch all related queries to update cache
                           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
+                          await queryClient.refetchQueries({ queryKey: ["progress", id] })
                           // Navigate to summary page
                           router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
                         } else {

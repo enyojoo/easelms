@@ -30,7 +30,7 @@ export function useProgress(courseId: string | number | null | undefined) {
       }
       return response.json()
     },
-    staleTime: 1 * 60 * 1000, // 1 minute - progress updates frequently
+    staleTime: 5 * 60 * 1000, // 5 minutes - use cached data for instant loading
     placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
   })
 }

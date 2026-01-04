@@ -260,14 +260,8 @@ export default function CourseCompletionPage() {
     }
   }
 
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  // Once we have data, never show skeleton again (even during refetches)
-  const hasData = !!course
-  if ((!mounted || authLoading || coursePending) && !hasData) {
-    return <CourseSummarySkeleton />
-  }
-
-  if (courseError) {
+  // Show error only if no cached data exists
+  if (courseError && !course && !authLoading) {
     return (
       <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
@@ -276,6 +270,16 @@ export default function CourseCompletionPage() {
         </div>
       </div>
     )
+  }
+
+  // Show skeleton only on true initial load (no cached data and auth loading)
+  if (!mounted || (authLoading && !course)) {
+    return <CourseSummarySkeleton />
+  }
+
+  // Render with cached data immediately if available
+  if (!course && !authLoading) {
+    return null // Will show on refetch
   }
 
   if (!course || !user) {

@@ -31,7 +31,7 @@ export function useQuizResults(courseId: string | number | null) {
       return response.json()
     },
     enabled: !!courseId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - use cached data for instant loading
     placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
   })
 }
