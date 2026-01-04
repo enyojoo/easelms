@@ -76,16 +76,16 @@ export default function QuizComponent({
   // Don't reset if quiz has been completed
   useEffect(() => {
     // Don't reset if quiz has been completed (prevents reset after submission when data refetches)
-    if (quizCompletedRef.current) {
+    // BUT allow reset if we're in retry mode (quizCompletedRef is false)
+    if (quizCompletedRef.current && showResults) {
       // If quiz was completed and we're showing results, ensure results stay visible
-      if (showResults) {
-        return
-      }
+      return
     }
     
     setCurrentQuestion(0)
     // If quiz was already completed (showResultsOnly is true), show results screen
-    if (showResultsOnly) {
+    // BUT only if quizCompletedRef is also true (not in retry mode)
+    if (showResultsOnly && quizCompletedRef.current) {
       // Mark as completed to prevent reset
       quizCompletedRef.current = true
       
@@ -99,8 +99,8 @@ export default function QuizComponent({
         setSelectedAnswers([])
         setOriginalAnswers([])
       }
-    } else {
-      // Only reset if quiz hasn't been completed
+    } else if (!showResultsOnly || !quizCompletedRef.current) {
+      // Only reset if quiz hasn't been completed OR if we're retrying (quizCompletedRef is false)
       if (!quizCompletedRef.current) {
         setSelectedAnswers([])
         setShowResults(false)
@@ -224,18 +224,19 @@ export default function QuizComponent({
       return // Don't allow retry if max attempts reached
     }
     
-    // Reset completion flag for retry
+    // Reset completion flag for retry BEFORE clearing data
     quizCompletedRef.current = false
     
-    // Clear old quiz data before retrying (wait for it to complete)
-    if (onRetry) {
-      await onRetry()
-    }
-    
+    // Reset local state first to prevent flicker
     setCurrentQuestion(0)
     setSelectedAnswers([])
     setShowResults(false)
     setQuizStarted(false) // Reset quiz started state to show info card again
+    
+    // Clear old quiz data (this will trigger refetch, but we've already reset local state)
+    if (onRetry) {
+      await onRetry()
+    }
   }
 
   if (!quiz?.questions || questions.length === 0) {
