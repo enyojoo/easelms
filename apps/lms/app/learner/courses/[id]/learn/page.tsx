@@ -176,6 +176,8 @@ export default function CourseLearningPage() {
   }
 
   // Set initial lesson index from query parameter or find first incomplete lesson
+  // Only runs on initial load - does NOT run when completedLessons changes during quiz completion
+  const initialLessonSetRef = useRef(false)
   useEffect(() => {
     if (!course || !progressData?.progress) return
 
@@ -184,6 +186,7 @@ export default function CourseLearningPage() {
       const index = parseInt(lessonIndexParam, 10)
       if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
         lessonIndexProcessedRef.current = true
+        initialLessonSetRef.current = true
         setCurrentLessonIndex(index)
         // Reset active tab based on lesson type
         const lesson = course.lessons[index]
@@ -197,20 +200,23 @@ export default function CourseLearningPage() {
       }
     }
 
-    // Only run auto-detection logic if we haven't processed a lessonIndex parameter
-    if (lessonIndexProcessedRef.current) return
+    // Only run auto-detection logic once on initial load
+    // Don't auto-navigate when completedLessons changes after quiz completion
+    if (initialLessonSetRef.current) return
 
     // If course is already completed, always start from first lesson (lesson 0)
     if (isCourseCompleted && course.lessons && course.lessons.length > 0) {
+      initialLessonSetRef.current = true
       setCurrentLessonIndex(0)
       setActiveTab(getInitialTab(course.lessons[0]))
       return
     }
 
-    // Otherwise, find the first incomplete lesson
+    // Otherwise, find the first incomplete lesson (only on initial load)
     if (completedLessons.length > 0 && course.lessons) {
       for (let i = 0; i < course.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
+          initialLessonSetRef.current = true
           setCurrentLessonIndex(i)
           setActiveTab(getInitialTab(course.lessons[i]))
           return
@@ -218,11 +224,12 @@ export default function CourseLearningPage() {
       }
       // All lessons completed, go to last lesson
       if (course.lessons.length > 0) {
+        initialLessonSetRef.current = true
         setCurrentLessonIndex(course.lessons.length - 1)
         setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
       }
     }
-  }, [course, progressData, completedLessons, lessonIndexParam, isCourseCompleted])
+  }, [course, progressData, lessonIndexParam, isCourseCompleted]) // Removed completedLessons from dependencies to prevent auto-navigation
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
@@ -423,15 +430,12 @@ export default function CourseLearningPage() {
 
     if (hasQuiz) {
       setActiveTab("quiz")
-    } else if (hasResources) {
-      setActiveTab("resources")
-      // Video-only lesson without quiz - mark as completed
-      await proceedWithLessonCompletion()
     } else {
-      // Video-only lesson without quiz or resources - mark as completed
+      // Video-only lesson without quiz - mark as completed
+      // Stay on current tab (video) - user can navigate to resources tab manually if available
       await proceedWithLessonCompletion()
+      // No auto-navigation - user stays on video tab and navigates manually
     }
-    // User navigates manually from here
   }
 
   // Handle text completion (for text-only and mixed lessons)
