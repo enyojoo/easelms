@@ -72,6 +72,21 @@ export default function QuizComponent({
     return prefilledAnswers
   }, [showResultsOnly, prefilledAnswers])
 
+  // Reset all state when lessonId changes (switching to a different lesson)
+  useEffect(() => {
+    if (lessonId !== undefined) {
+      // Reset all state when lesson changes
+      quizCompletedRef.current = false
+      setCurrentQuestion(0)
+      setSelectedAnswers([])
+      setShowResults(false)
+      setQuizStarted(false)
+      setAttemptCount(0)
+      setOriginalAnswers([])
+      setSubmissionError(null)
+    }
+  }, [lessonId])
+
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
