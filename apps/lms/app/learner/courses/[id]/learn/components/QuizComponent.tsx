@@ -65,7 +65,6 @@ export default function QuizComponent({
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [quizStarted, setQuizStarted] = useState(false) // Track if user has started the quiz
   const quizCompletedRef = useRef(false) // Track if quiz has been completed
-  const isSubmittingRef = useRef(false) // Track if quiz submission is in progress
 
   // Answers are already in original order (no mapping needed)
   const mappedAnswersForReview = useMemo(() => {
@@ -78,7 +77,6 @@ export default function QuizComponent({
     if (lessonId !== undefined) {
       // Reset all state when lesson changes
       quizCompletedRef.current = false
-      isSubmittingRef.current = false
       setCurrentQuestion(0)
       setSelectedAnswers([])
       setShowResults(false)
@@ -92,11 +90,6 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
-    // Skip if submission is in progress to prevent race conditions during refetch
-    if (isSubmittingRef.current) {
-      return
-    }
-    
     // Skip if we're in the middle of a retry (quizCompletedRef is false means we're retrying)
     // In retry mode, handleRetryQuiz has already reset the state, so we don't need to do anything here
     if (!quizCompletedRef.current) {
@@ -104,24 +97,20 @@ export default function QuizComponent({
       return
     }
     
-    // Don't reset if quiz has been completed and we're showing results
-    // This prevents reset after submission when data refetches
-    if (quizCompletedRef.current) {
-      // If quiz was completed (showResultsOnly is true), show results screen
-      if (showResultsOnly) {
-        setCurrentQuestion(0)
-        if (prefilledAnswers.length > 0) {
-          setSelectedAnswers(mappedAnswersForReview)
-          setShowResults(true)
-          setOriginalAnswers(mappedAnswersForReview)
-        } else {
-          // Even if no prefilled answers, show results if quiz was completed
-          setShowResults(true)
-          setSelectedAnswers([])
-          setOriginalAnswers([])
-        }
-        return
+    // If quiz was completed (showResultsOnly is true), show results screen
+    if (showResultsOnly) {
+      setCurrentQuestion(0)
+      if (prefilledAnswers.length > 0) {
+        setSelectedAnswers(mappedAnswersForReview)
+        setShowResults(true)
+        setOriginalAnswers(mappedAnswersForReview)
+      } else {
+        // Even if no prefilled answers, show results if quiz was completed
+        setShowResults(true)
+        setSelectedAnswers([])
+        setOriginalAnswers([])
       }
+      return
     }
     
     // Quiz hasn't been completed yet - reset to initial state
@@ -201,8 +190,6 @@ export default function QuizComponent({
     } else {
       // Mark quiz as completed to prevent reset
       quizCompletedRef.current = true
-      // Mark submission as in progress to prevent useEffect from running during refetch
-      isSubmittingRef.current = true
       
       // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
@@ -216,14 +203,7 @@ export default function QuizComponent({
       
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
-      // Use setTimeout to defer onComplete call and allow current render cycle to complete
-      setTimeout(() => {
-        onComplete(selectedAnswers, questions, attemptCount + 1)
-        // Reset submission ref after refetch has time to complete
-        setTimeout(() => {
-          isSubmittingRef.current = false
-        }, 500)
-      }, 0)
+      onComplete(selectedAnswers, questions, attemptCount + 1)
     }
   }
 

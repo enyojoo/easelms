@@ -659,12 +659,10 @@ export default function CourseLearningPage() {
       await saveProgressMutation.mutateAsync(progressPayload)
       console.log("✅ Quiz progress saved successfully")
       
-      // Defer refetch to next tick to avoid race conditions during render cycle
-      // This prevents initialization errors when props update during quiz completion
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: ["progress", id] }).catch(console.error)
-        queryClient.refetchQueries({ queryKey: ["quiz-results", id] }).catch(console.error)
-      }, 0)
+      // Use refetchQueries instead of invalidateQueries to avoid race conditions
+      // This ensures data is fetched after mutation completes
+      await queryClient.refetchQueries({ queryKey: ["progress", id] })
+      await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
     } catch (error) {
       console.error("❌ Error saving quiz progress:", error)
     }
