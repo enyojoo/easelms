@@ -14,9 +14,10 @@ interface MultipleChoiceQuestionProps {
   onChange: (question: MCQType) => void
   onDelete?: () => void
   courseId?: string | number
+  lessonId?: string | number
 }
 
-export default function MultipleChoiceQuestion({ question, onChange, onDelete, courseId }: MultipleChoiceQuestionProps) {
+export default function MultipleChoiceQuestion({ question, onChange, onDelete, courseId, lessonId }: MultipleChoiceQuestionProps) {
   const updateQuestion = (updates: Partial<MCQType>) => {
     onChange({ ...question, ...updates })
   }
@@ -68,12 +69,13 @@ export default function MultipleChoiceQuestion({ question, onChange, onDelete, c
               </div>
             )}
             <FileUpload
-              type="quiz-image"
+              type="quiz"
               bucket="course-documents"
               accept="image/*"
               maxSize={5 * 1024 * 1024}
               multiple={false}
               courseId={courseId}
+              lessonId={lessonId}
               fileId={question.id}
               initialValue={question.imageUrl || undefined}
               onUploadComplete={(files, urls) => {

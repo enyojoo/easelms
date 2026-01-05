@@ -17,14 +17,15 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!
  * Structure: 
  * - courses/course-{id}/thumbnail-{id}-{filename}
  * - courses/course-{id}/preview-video-{id}-{filename}
- * - courses/course-{id}/lessons/lesson-{id}/video-{id}-{filename}
+ * - courses/course-{id}/lessons/lesson-{id}/lesson-{id}-{filename}
  * - courses/course-{id}/lessons/lesson-{id}/resources/resource-{id}-{filename}
- * - courses/course-{id}/certificate/certificate-{id}-{filename}
- * - courses/course-{id}/quiz-images/quiz-{id}-{filename}
+ * - courses/course-{id}/certificate/template-{id}-{filename}
+ * - courses/course-{id}/certificate/signature-{id}-{filename}
+ * - courses/course-{id}/lessons/lesson-{id}/quiz/quiz-{id}-{filename}
  * - profile/user-{id}/avatar-{id}-{filename}
  */
 export function getS3StoragePath(
-  type: "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image",
+  type: "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image" | "certificate-template" | "signature" | "lesson" | "quiz" | "resource",
   userId: string,
   filename: string,
   additionalPath?: string,
@@ -111,19 +112,72 @@ export function getS3StoragePath(
       return `courses/temp-${userId}/resources/resource-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
       
     case "quiz-image":
-      // Quiz images: courses/course-{id}/quiz-images/quiz-{id}-{filename}
+      // Legacy support: Quiz images: courses/course-{id}/quiz-images/quiz-{id}-{filename}
       if (courseId) {
         const quizPrefix = fileId ? `quiz-${fileId}` : `quiz-${fileIdentifier}`
         return `courses/course-${courseId}/quiz-images/${quizPrefix}-${hashPrefix}${sanitizedFilename}`
       }
       return `courses/temp-${userId}/quiz-images/quiz-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
       
+    case "quiz":
+      // Quiz images: courses/course-{id}/lessons/lesson-{id}/quiz/quiz-{id}-{filename}
+      if (courseId && lessonId) {
+        const quizPrefix = fileId ? `quiz-${fileId}` : `quiz-${fileIdentifier}`
+        return `courses/course-${courseId}/lessons/lesson-${lessonId}/quiz/${quizPrefix}-${hashPrefix}${sanitizedFilename}`
+      }
+      // Fallback if no lessonId
+      if (courseId) {
+        const quizPrefix = fileId ? `quiz-${fileId}` : `quiz-${fileIdentifier}`
+        return `courses/course-${courseId}/quiz-images/${quizPrefix}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/quiz-images/quiz-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
+    case "resource":
+      // Resources: courses/course-{id}/lessons/lesson-{id}/resources/resource-{id}-{filename}
+      if (courseId) {
+        if (lessonId) {
+          // Lesson resource
+          const resourcePrefix = resourceId ? `resource-${resourceId}` : `resource-${fileIdentifier}`
+          return `courses/course-${courseId}/lessons/lesson-${lessonId}/resources/${resourcePrefix}-${hashPrefix}${sanitizedFilename}`
+        } else {
+          // Course-level resource
+          const resourcePrefix = resourceId ? `resource-${resourceId}` : `resource-${fileIdentifier}`
+          return `courses/course-${courseId}/resources/${resourcePrefix}-${hashPrefix}${sanitizedFilename}`
+        }
+      }
+      return `courses/temp-${userId}/resources/resource-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
+    case "lesson":
+      // Lesson videos: courses/course-{id}/lessons/lesson-{id}/lesson-{id}-{filename}
+      if (courseId && lessonId) {
+        return `courses/course-${courseId}/lessons/lesson-${lessonId}/lesson-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      }
+      // Fallback
+      if (courseId) {
+        return `courses/course-${courseId}/lessons/lesson-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/lessons/lesson-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
+    case "certificate-template":
+      // Certificate templates: courses/course-{id}/certificate/template-{id}-{filename}
+      if (courseId) {
+        return `courses/course-${courseId}/certificate/template-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/certificate/template-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
+    case "signature":
+      // Signature images: courses/course-{id}/certificate/signature-{id}-{filename}
+      if (courseId) {
+        return `courses/course-${courseId}/certificate/signature-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/certificate/signature-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
     case "avatar":
       // Profile avatars: profile/user-{id}/avatar-{id}-{filename}
       return `profile/user-${userId}/avatar-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
       
     case "certificate":
-      // Certificates: courses/course-{id}/certificate/certificate-{id}-{filename}
+      // Legacy support: Certificates: courses/course-{id}/certificate/certificate-{id}-{filename}
       if (courseId) {
         const certPrefix = fileId ? `certificate-${fileId}` : `certificate-${fileIdentifier}`
         return `courses/course-${courseId}/certificate/${certPrefix}-${hashPrefix}${sanitizedFilename}`

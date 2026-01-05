@@ -229,8 +229,8 @@ export function useAutoSave<T>({
         requirements: dbCourse.requirements || "",
         description: dbCourse.description || "",
         whoIsThisFor: dbCourse.who_is_this_for || "",
-        thumbnail: dbCourse.image || "", // Schema uses 'image', map back to 'thumbnail'
-        previewVideo: dbCourse.preview_video || "",
+        thumbnail: dbCourse.image && dbCourse.image.trim() !== "" ? dbCourse.image.trim() : "", // Schema uses 'image', map back to 'thumbnail'
+        previewVideo: dbCourse.preview_video && dbCourse.preview_video.trim() !== "" ? dbCourse.preview_video.trim() : "",
         price: dbCourse.price?.toString() || "",
       },
       lessons: (dbCourse.lessons || []).map((lesson: any) => {
@@ -240,20 +240,35 @@ export function useAutoSave<T>({
           videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
         }
 
+        // Get all data from dedicated columns (NO JSONB content)
+        const videoUrl = (lesson.video_url && lesson.video_url.trim() !== '') 
+          ? lesson.video_url.trim() 
+          : undefined
+
+        const textContent = (lesson.text_content && lesson.text_content.trim() !== '')
+          ? lesson.text_content.trim()
+          : undefined
+
+        const estimatedDuration = lesson.estimated_duration || 0
+
+        // Build content object for frontend compatibility (but data comes from columns)
+        const frontendContent: any = {}
+        if (videoUrl) frontendContent.url = videoUrl
+        if (textContent) {
+          frontendContent.html = textContent
+          frontendContent.text = textContent
+        }
+
         return {
           id: lesson.id?.toString() || `lesson-${Date.now()}`,
           title: lesson.title || "",
           type: lesson.type || "text",
-          content: {
-            ...content,
-            // Remove resources, quiz, estimatedDuration from content as they're separate
-            resources: undefined, // Don't include in content
-          },
+          content: frontendContent, // Built from dedicated columns, not JSONB
           // Resources and quiz come from normalized tables (via API)
           resources: lesson.resources || [],
           settings: settings,
           quiz: lesson.quiz || null, // Quiz settings from quiz_settings table
-          estimatedDuration: content.estimatedDuration || 0,
+          estimatedDuration: estimatedDuration,
         }
       }),
       settings: {

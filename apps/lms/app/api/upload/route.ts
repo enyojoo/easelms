@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   const formData = await request.formData()
   const file = formData.get("file") as File
-  const fileType = (formData.get("type") as string) || "document" // video, thumbnail, document, avatar, certificate, quiz-image
+  const fileType = (formData.get("type") as string) || "document" // video, thumbnail, document, avatar, certificate, quiz-image, certificate-template, signature, lesson, quiz, resource
   const additionalPath = (formData.get("additionalPath") as string) || undefined
   const courseId = (formData.get("courseId") as string) || undefined
   const lessonId = (formData.get("lessonId") as string) || undefined
@@ -25,12 +25,62 @@ export async function POST(request: Request) {
 
   try {
     // Determine file type and validate
-    let s3Type: "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image"
+    let s3Type: "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image" | "certificate-template" | "signature" | "lesson" | "quiz" | "resource"
     let maxSize: number
     let isValid: boolean
 
-    // Auto-detect file type if not explicitly set
-    if (fileType === "video" || file.type.startsWith("video/")) {
+    // Handle new specific types first
+    if (fileType === "certificate-template") {
+      s3Type = "certificate-template"
+      maxSize = getMaxDocumentSize()
+      isValid = isValidDocumentFile(file) || isValidImageFile(file) // Templates can be PDF or image
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid certificate template file type. Supported formats: PDF, PNG, JPG, JPEG" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "signature") {
+      s3Type = "signature"
+      maxSize = getMaxImageSize()
+      isValid = isValidImageFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid signature file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "lesson") {
+      s3Type = "lesson"
+      maxSize = getMaxVideoSize()
+      isValid = isValidVideoFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid lesson video file type. Supported formats: MP4, WebM, OGG" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "quiz") {
+      s3Type = "quiz"
+      maxSize = getMaxImageSize()
+      isValid = isValidImageFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid quiz image file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "resource") {
+      s3Type = "resource"
+      maxSize = getMaxDocumentSize()
+      isValid = isValidDocumentFile(file) || isValidImageFile(file) || isValidVideoFile(file) // Resources can be various types
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid resource file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG, MP4, WebM" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "video" || file.type.startsWith("video/")) {
       s3Type = "video"
       maxSize = getMaxVideoSize()
       isValid = isValidVideoFile(file)
@@ -41,6 +91,7 @@ export async function POST(request: Request) {
         )
       }
     } else if (fileType === "quiz-image") {
+      // Legacy support
       s3Type = "quiz-image"
       maxSize = getMaxImageSize()
       isValid = isValidImageFile(file)
@@ -61,6 +112,7 @@ export async function POST(request: Request) {
         )
       }
     } else if (fileType === "certificate") {
+      // Legacy support
       s3Type = "certificate"
       maxSize = getMaxDocumentSize()
       isValid = isValidDocumentFile(file) || isValidImageFile(file) // Certificates can be PDF or image
@@ -71,13 +123,13 @@ export async function POST(request: Request) {
         )
       }
     } else {
-      // Default to document
-      s3Type = "document"
+      // Default to document (legacy) or resource
+      s3Type = fileType === "document" ? "document" : "resource"
       maxSize = getMaxDocumentSize()
-      isValid = isValidDocumentFile(file)
+      isValid = isValidDocumentFile(file) || isValidImageFile(file) || isValidVideoFile(file)
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid document file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP" },
+          { error: "Invalid file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG, MP4, WebM" },
           { status: 400 }
         )
       }

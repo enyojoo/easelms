@@ -55,8 +55,12 @@ export async function POST(request: Request) {
       description: courseData.basicInfo?.description || "",
       requirements: courseData.basicInfo?.requirements || null,
       who_is_this_for: courseData.basicInfo?.whoIsThisFor || null,
-      image: courseData.basicInfo?.thumbnail || null, // Schema uses 'image', not 'thumbnail'
-      preview_video: courseData.basicInfo?.previewVideo || null,
+      image: courseData.basicInfo?.thumbnail && courseData.basicInfo.thumbnail.trim() !== "" 
+        ? courseData.basicInfo.thumbnail.trim() 
+        : null, // Schema uses 'image', not 'thumbnail'
+      preview_video: courseData.basicInfo?.previewVideo && courseData.basicInfo.previewVideo.trim() !== "" 
+        ? courseData.basicInfo.previewVideo.trim() 
+        : null,
       price: priceValue,
       currency: settings.currency || "USD",
       is_published: isPublished || settings.isPublished || false,
@@ -68,7 +72,9 @@ export async function POST(request: Request) {
       certificate_template: certificate.certificateTemplate || null,
       certificate_title: certificate.certificateTitle || null,
       certificate_description: certificate.certificateDescription || null,
-      signature_image: certificate.signatureImage || null,
+      signature_image: certificate.signatureImage && certificate.signatureImage.trim() !== "" 
+        ? certificate.signatureImage.trim() 
+        : null,
       signature_title: certificate.signatureTitle || null,
       additional_text: certificate.additionalText || null,
       certificate_type: certificate.certificateType || null,
@@ -132,13 +138,20 @@ export async function POST(request: Request) {
       const currentLessonIds = new Set<string>()
 
       courseData.lessons.forEach((lesson: any, index: number) => {
-        // Store estimatedDuration in content JSONB (resources and quiz settings moved to normalized tables)
-        const lessonContent = {
-          ...(lesson.content || {}),
-          // resources: lesson.resources || [], // REMOVED - now in resources table
-          // quiz: lesson.quiz || null, // REMOVED - quiz settings now in quiz_settings table
-          estimatedDuration: lesson.estimatedDuration || 0,
-        }
+        // Extract all data from content and save to dedicated columns (NO JSONB)
+        const videoUrl = lesson.content?.url && typeof lesson.content.url === 'string' && lesson.content.url.trim() !== ''
+          ? lesson.content.url.trim()
+          : null
+
+        // Extract text/html content
+        const textContent = (lesson.content?.html && lesson.content.html.trim() !== '') 
+          ? lesson.content.html.trim()
+          : ((lesson.content?.text && lesson.content.text.trim() !== '') 
+            ? lesson.content.text.trim() 
+            : null)
+
+        // Extract estimated duration
+        const estimatedDuration = lesson.estimatedDuration || lesson.content?.estimatedDuration || 0
 
         // Extract settings fields to match schema
         const settings = lesson.settings || {}
@@ -147,7 +160,10 @@ export async function POST(request: Request) {
           course_id: result.id,
           title: lesson.title || "",
           type: lesson.type || "text",
-          content: lessonContent,
+          video_url: videoUrl, // Video URL in dedicated column
+          text_content: textContent, // Text/HTML content in dedicated column
+          estimated_duration: estimatedDuration, // Duration in dedicated column
+          content: null, // No longer using content JSONB - set to null
           order_index: index,
           is_required: settings.isRequired !== undefined ? settings.isRequired : true,
           video_progression: settings.videoProgression !== undefined ? settings.videoProgression : false,
@@ -348,7 +364,9 @@ export async function POST(request: Request) {
             explanation: question.explanation || null,
             difficulty: question.difficulty || null,
             time_limit: question.timeLimit || null,
-            image_url: question.imageUrl || null,
+            image_url: question.imageUrl && question.imageUrl.trim() !== "" 
+              ? question.imageUrl.trim() 
+              : null,
             order_index: index,
           }
 
@@ -712,11 +730,21 @@ export async function GET(request: Request) {
       }
 
       data.lessons = data.lessons.map((lesson: any) => {
-        const content = lesson.content || {}
         const settings = {
           isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
           videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
         }
+
+        // Get all data from dedicated columns (NO JSONB content)
+        const videoUrl = lesson.video_url && lesson.video_url.trim() !== '' 
+          ? lesson.video_url.trim() 
+          : null
+
+        const textContent = lesson.text_content && lesson.text_content.trim() !== ''
+          ? lesson.text_content.trim()
+          : null
+
+        const estimatedDuration = lesson.estimated_duration || 0
 
         // Get resources, quiz settings, and quiz questions from normalized tables
         const resources = resourcesByLesson.get(lesson.id) || []
@@ -729,20 +757,23 @@ export async function GET(request: Request) {
           questions: quizQuestions,
         } : null
 
+        // Build content object for frontend compatibility (but data comes from columns)
+        const content: any = {}
+        if (videoUrl) content.url = videoUrl
+        if (textContent) {
+          content.html = textContent
+          content.text = textContent
+        }
+
         return {
           id: lesson.id?.toString() || `lesson-${Date.now()}`,
           title: lesson.title || "",
           type: lesson.type || "text",
-          content: {
-            ...content,
-            // Remove resources, quiz, estimatedDuration from content as they're separate
-            resources: undefined, // Don't include in content
-            quiz: undefined, // Don't include in content
-          },
+          content: content, // Built from dedicated columns, not JSONB
           resources: resources,
           settings: settings,
           quiz: quiz,
-          estimatedDuration: content.estimatedDuration || 0,
+          estimatedDuration: estimatedDuration,
         }
       })
     }

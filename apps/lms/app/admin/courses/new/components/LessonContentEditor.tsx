@@ -31,7 +31,7 @@ export default function LessonContentEditor({ type, content, onChange, courseId,
         <div className="space-y-2">
           <Label>Upload Video File</Label>
           <FileUpload
-            type="video"
+            type="lesson"
             accept="video/mp4,video/webm,video/ogg"
             maxSize={2 * 1024 * 1024 * 1024} // 2GB
             multiple={false}
@@ -93,10 +93,12 @@ export default function LessonContentEditor({ type, content, onChange, courseId,
           <div className="space-y-2">
             <Label>Upload Video File *</Label>
             <FileUpload
-              type="video"
+              type="lesson"
               accept="video/mp4,video/webm,video/ogg"
               maxSize={2 * 1024 * 1024 * 1024} // 2GB
               multiple={false}
+              courseId={courseId}
+              lessonId={lessonId}
               initialValue={content.url ? [content.url] : undefined}
               onUploadComplete={(files, urls) => {
                 if (urls.length > 0) {

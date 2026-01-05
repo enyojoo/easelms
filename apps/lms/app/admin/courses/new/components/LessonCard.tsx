@@ -254,6 +254,7 @@ export default function LessonCard({
                   onChange={(quiz) => updateLesson({ quiz })}
                   minimumQuizScore={minimumQuizScore}
                   courseId={courseId}
+                  lessonId={localLesson.id}
                 />
               </CollapsibleContent>
             </Collapsible>

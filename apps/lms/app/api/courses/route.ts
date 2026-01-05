@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       .from("courses")
       .select(`
         *,
-        lessons (id, content)
+        lessons (id, video_url, text_content, estimated_duration)
       `)
 
     // Only filter by is_published if not fetching all courses

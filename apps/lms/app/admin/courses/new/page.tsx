@@ -153,8 +153,8 @@ function NewCourseContent() {
                   requirements: course.requirements || "",
                   description: course.description || "",
                   whoIsThisFor: course.who_is_this_for || "",
-                  thumbnail: course.image || course.thumbnail || "", // Schema uses 'image', map to 'thumbnail'
-                  previewVideo: course.preview_video || "",
+                  thumbnail: (course.image && course.image.trim() !== "") ? course.image.trim() : (course.thumbnail && course.thumbnail.trim() !== "" ? course.thumbnail.trim() : ""), // Schema uses 'image', map to 'thumbnail'
+                  previewVideo: (course.preview_video && course.preview_video.trim() !== "") ? course.preview_video.trim() : "",
                   price: course.price?.toString() || "",
                 },
                 lessons: (course.lessons || []).map((lesson: any) => {
@@ -164,15 +164,30 @@ function NewCourseContent() {
                     videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
                   }
 
+                  // Get all data from dedicated columns (NO JSONB content)
+                  const videoUrl = (lesson.video_url && lesson.video_url.trim() !== '') 
+                    ? lesson.video_url.trim() 
+                    : undefined
+
+                  const textContent = (lesson.text_content && lesson.text_content.trim() !== '')
+                    ? lesson.text_content.trim()
+                    : undefined
+
+                  const estimatedDuration = lesson.estimated_duration || 0
+
+                  // Build content object for frontend compatibility (but data comes from columns)
+                  const frontendContent: any = {}
+                  if (videoUrl) frontendContent.url = videoUrl
+                  if (textContent) {
+                    frontendContent.html = textContent
+                    frontendContent.text = textContent
+                  }
+
                   return {
                     id: lesson.id?.toString() || `lesson-${Date.now()}`,
                     title: lesson.title || "",
                     type: lesson.type || "text",
-                    content: {
-                      ...content,
-                      // Remove resources, quiz, estimatedDuration from content as they're separate
-                      resources: undefined, // Don't include in content
-                    },
+                    content: frontendContent, // Built from dedicated columns, not JSONB
                     // Resources and quiz come from normalized tables (via API)
                     resources: lesson.resources || [],
                     settings: settings,
@@ -195,7 +210,7 @@ function NewCourseContent() {
                       timeLimit: null,
                       passingScore: null,
                     },
-                    estimatedDuration: content.estimatedDuration || 0,
+                    estimatedDuration: estimatedDuration,
                   }
                 }),
                 settings: {

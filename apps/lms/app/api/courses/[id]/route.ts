@@ -53,7 +53,7 @@ export async function GET(
       .from("courses")
       .select(`
         *,
-        lessons (id, title, type, content, is_required, video_progression),
+        lessons (id, title, type, video_url, text_content, estimated_duration, is_required, video_progression),
         profiles!courses_created_by_fkey (
           *
         )
@@ -126,9 +126,9 @@ export async function GET(
       firstLesson: lessons[0],
     })
     
-    // Calculate total duration from lessons
+    // Calculate total duration from lessons (using estimated_duration column)
     const totalDurationMinutes = lessons.reduce((total: number, lesson: any) => {
-      const estimatedDuration = lesson.content?.estimatedDuration || 0
+      const estimatedDuration = lesson.estimated_duration || lesson.content?.estimatedDuration || 0
       return total + estimatedDuration
     }, 0)
     const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10
@@ -162,20 +162,23 @@ export async function GET(
     const supabaseClientForShuffle = serviceSupabase
     
     const processedLessons = await Promise.all(lessons.map(async (lesson: any) => {
-        // Parse lesson content if it's a JSON string
-        let content = lesson.content
-        if (typeof content === 'string') {
-          try {
-            content = JSON.parse(content)
-          } catch (e) {
-            console.warn("Failed to parse lesson content:", e)
-            content = {}
-          }
-        }
-        
-        // Ensure content is an object
-        if (!content || typeof content !== 'object') {
-          content = {}
+        // Get all data from dedicated columns (NO JSONB content)
+        const videoUrl = (lesson.video_url && lesson.video_url.trim() !== '') 
+          ? lesson.video_url.trim() 
+          : null
+
+        const textContent = (lesson.text_content && lesson.text_content.trim() !== '')
+          ? lesson.text_content.trim()
+          : null
+
+        const estimatedDuration = lesson.estimated_duration || 0
+
+        // Build content object for frontend compatibility (but data comes from columns)
+        const content: any = {}
+        if (videoUrl) content.url = videoUrl
+        if (textContent) {
+          content.html = textContent
+          content.text = textContent
         }
         
         // Extract quiz and resources from content JSON (where they're stored)

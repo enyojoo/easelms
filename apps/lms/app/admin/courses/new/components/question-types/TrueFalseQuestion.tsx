@@ -14,9 +14,10 @@ interface TrueFalseQuestionProps {
   onChange: (question: TFQuestionType) => void
   onDelete?: () => void
   courseId?: string | number
+  lessonId?: string | number
 }
 
-export default function TrueFalseQuestion({ question, onChange, onDelete, courseId }: TrueFalseQuestionProps) {
+export default function TrueFalseQuestion({ question, onChange, onDelete, courseId, lessonId }: TrueFalseQuestionProps) {
   const updateQuestion = (updates: Partial<TFQuestionType>) => {
     onChange({ ...question, ...updates })
   }
@@ -42,12 +43,13 @@ export default function TrueFalseQuestion({ question, onChange, onDelete, course
               </div>
             )}
             <FileUpload
-              type="quiz-image"
+              type="quiz"
               bucket="course-documents"
               accept="image/*"
               maxSize={5 * 1024 * 1024}
               multiple={false}
               courseId={courseId}
+              lessonId={lessonId}
               fileId={question.id}
               initialValue={question.imageUrl || undefined}
               onUploadComplete={(files, urls) => {

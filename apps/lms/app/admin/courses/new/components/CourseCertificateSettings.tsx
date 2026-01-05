@@ -39,6 +39,45 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
 
       {settings.certificateEnabled && (
         <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Certificate Template</Label>
+                  <FileUpload
+                    type="certificate-template"
+                    accept="image/png,image/jpeg,image/jpg,application/pdf"
+                    maxSize={5 * 1024 * 1024} // 5MB
+                    multiple={false}
+                    courseId={courseId}
+                    initialValue={settings.certificateTemplate ? [settings.certificateTemplate] : undefined}
+                    onUploadComplete={(files, urls) => {
+                      if (urls.length > 0) {
+                        onUpdate({ ...settings, certificateTemplate: urls[0] })
+                      }
+                    }}
+                    onRemove={() => {
+                      onUpdate({ ...settings, certificateTemplate: "" })
+                    }}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Upload the certificate template/background image (PNG, JPEG, or PDF, max 5MB). This will be used as the base design for all certificates.
+                  </p>
+                  {settings.certificateTemplate && (
+                    <div className="mt-2">
+                      <SafeImage
+                        src={settings.certificateTemplate}
+                        alt="Certificate Template Preview"
+                        className="max-w-full h-auto rounded-md border"
+                        style={{ maxHeight: "200px" }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="space-y-2">
             <Label>Certificate Description</Label>
             <Textarea
@@ -55,7 +94,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 <div className="space-y-2">
                   <Label>Upload Signature Image</Label>
                   <FileUpload
-                    type="thumbnail"
+                    type="signature"
                     accept="image/png,image/jpeg,image/jpg"
                     maxSize={1 * 1024 * 1024} // 1MB
                     multiple={false}
