@@ -669,14 +669,26 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    // Use service role client to bypass RLS for admin operations
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      console.warn("Service role key not available, using regular client:", serviceError.message)
+      serviceClient = null
+    }
+
+    // Check if user is admin (use service client to bypass RLS)
+    const clientToUse = serviceClient || supabase
+    const { data: profile, error: profileError } = await clientToUse
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
       .single()
 
     if (profileError || !profile) {
+      console.error("Error fetching user profile:", profileError)
       return NextResponse.json({ error: "User profile not found" }, { status: 404 })
     }
 
@@ -685,8 +697,7 @@ export async function DELETE(
     }
 
     // Use service role client for deletion to bypass RLS
-    const { createServiceRoleClient } = await import("@/lib/supabase/server")
-    const serviceSupabase = createServiceRoleClient()
+    const serviceSupabase = serviceClient || createServiceRoleClient()
 
     console.log("Deleting course and all related data:", numericId)
 
