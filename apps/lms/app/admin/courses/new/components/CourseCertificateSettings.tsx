@@ -27,7 +27,8 @@ interface CourseCertificateSettingsProps {
 
 export default function CourseCertificateSettings({ settings, onUpdate, courseId }: CourseCertificateSettingsProps) {
   // Track if "optional" is selected to show custom title field
-  const isOptionalSelected = settings.certificateTitle !== undefined && settings.certificateTitle !== null && settings.certificateTitle !== ""
+  // Check if certificateTitle is explicitly set (even if empty, it means optional mode is active)
+  const isOptionalSelected = settings.certificateTitle !== undefined
   const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
 
   return (
@@ -91,11 +92,11 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 value={currentValue}
                 onValueChange={(value) => {
                   if (value === "optional") {
-                    // When switching to optional, keep current type and show title input
+                    // When switching to optional, keep current type and set certificateTitle to empty string to indicate optional mode
                     onUpdate({ 
                       ...settings, 
                       certificateType: settings.certificateType || "completion",
-                      certificateTitle: settings.certificateTitle || ""
+                      certificateTitle: settings.certificateTitle !== undefined ? settings.certificateTitle : ""
                     })
                   } else {
                     // When selecting a type, clear custom title (set to undefined to hide input)
@@ -110,7 +111,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="item-aligned">
                   <SelectItem value="completion">Completion</SelectItem>
                   <SelectItem value="participation">Participation</SelectItem>
                   <SelectItem value="achievement">Achievement</SelectItem>
