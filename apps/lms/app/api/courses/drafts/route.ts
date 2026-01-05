@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     const settings = courseData.settings || {}
     const enrollment = settings.enrollment || {}
     const certificate = settings.certificate || {}
+    const prerequisites = settings.prerequisites || { enabled: false, courseIds: [] }
     
     // Determine price - use enrollment price if available, otherwise basicInfo price
     const priceValue = enrollment.price !== undefined 
@@ -562,6 +563,67 @@ export async function POST(request: Request) {
           }
         }
       }
+
+      // Save prerequisites
+      if (result.id && prerequisites.enabled && Array.isArray(prerequisites.courseIds)) {
+        // Get existing prerequisites
+        const { data: existingPrerequisites } = await dbClient
+          .from("course_prerequisites")
+          .select("prerequisite_course_id")
+          .eq("course_id", result.id)
+
+        const existingPrerequisiteIds = new Set(
+          (existingPrerequisites || []).map((p: any) => p.prerequisite_course_id)
+        )
+
+        const currentPrerequisiteIds = new Set(prerequisites.courseIds)
+
+        // Delete removed prerequisites
+        const prerequisitesToDelete = Array.from(existingPrerequisiteIds).filter(
+          (id) => !currentPrerequisiteIds.has(id)
+        )
+        if (prerequisitesToDelete.length > 0) {
+          const { error: deleteError } = await dbClient
+            .from("course_prerequisites")
+            .delete()
+            .eq("course_id", result.id)
+            .in("prerequisite_course_id", prerequisitesToDelete)
+
+          if (deleteError) {
+            console.error("Error deleting prerequisites:", deleteError)
+          }
+        }
+
+        // Insert new prerequisites
+        const prerequisitesToInsert = prerequisites.courseIds
+          .filter((id) => !existingPrerequisiteIds.has(id))
+          .map((prerequisiteCourseId) => ({
+            course_id: result.id,
+            prerequisite_course_id: prerequisiteCourseId,
+          }))
+
+        if (prerequisitesToInsert.length > 0) {
+          const { error: insertError } = await dbClient
+            .from("course_prerequisites")
+            .insert(prerequisitesToInsert)
+
+          if (insertError) {
+            console.error("Error inserting prerequisites:", insertError)
+          } else {
+            console.log(`Successfully saved ${prerequisitesToInsert.length} prerequisites for course ${result.id}`)
+          }
+        }
+      } else if (result.id && !prerequisites.enabled) {
+        // If prerequisites are disabled, delete all existing prerequisites
+        const { error: deleteError } = await dbClient
+          .from("course_prerequisites")
+          .delete()
+          .eq("course_id", result.id)
+
+        if (deleteError) {
+          console.error("Error deleting prerequisites:", deleteError)
+        }
+      }
     }
 
     return NextResponse.json({ 
@@ -627,6 +689,14 @@ export async function GET(request: Request) {
       .eq("id", courseId)
       .eq("created_by", user.id) // Ensure user owns the course
       .single()
+
+    // Fetch prerequisites
+    const { data: prerequisitesData } = await dbClient
+      .from("course_prerequisites")
+      .select("prerequisite_course_id")
+      .eq("course_id", courseId)
+
+    const prerequisiteCourseIds = (prerequisitesData || []).map((p: any) => p.prerequisite_course_id)
 
     if (error) {
       console.error("Error fetching course draft:", error)
@@ -779,6 +849,12 @@ export async function GET(request: Request) {
           estimatedDuration: estimatedDuration,
         }
       })
+    }
+
+    // Add prerequisites to course data
+    data.prerequisites = {
+      enabled: prerequisiteCourseIds.length > 0,
+      courseIds: prerequisiteCourseIds,
     }
 
     return NextResponse.json({ course: data })

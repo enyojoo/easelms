@@ -60,6 +60,10 @@ function NewCourseContent() {
         additionalText: string
         certificateType: "completion" | "participation" | "achievement"
       }
+      prerequisites?: {
+        enabled: boolean
+        courseIds: number[]
+      }
       currency: string
     }
   }>({
@@ -91,6 +95,10 @@ function NewCourseContent() {
         signatureTitle: "",
         additionalText: "",
         certificateType: "completion",
+      },
+      prerequisites: {
+        enabled: false,
+        courseIds: [],
       },
       currency: "USD",
     },
@@ -235,6 +243,7 @@ function NewCourseContent() {
                     additionalText: course.additional_text || "",
                     certificateType: course.certificate_type || "completion",
                   },
+                  prerequisites: course.prerequisites || { enabled: false, courseIds: [] },
                   currency: course.currency || "USD",
                 },
               })

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import CourseEnrollmentSettings from "./CourseEnrollmentSettings"
 import CourseCertificateSettings from "./CourseCertificateSettings"
+import CoursePrerequisitesSettings from "./CoursePrerequisitesSettings"
 
 interface CourseSettingsProps {
   settings: {
@@ -26,6 +27,10 @@ interface CourseSettingsProps {
       additionalText?: string
       certificateType: "completion" | "participation" | "achievement"
     }
+    prerequisites?: {
+      enabled: boolean
+      courseIds: number[]
+    }
   }
   onUpdate: (settings: any) => void
   courseId?: string | number
@@ -40,10 +45,20 @@ export default function CourseSettings({ settings, onUpdate, courseId }: CourseS
     onUpdate({ ...settings, [field]: value })
   }
 
-  const handleSectionUpdate = (section: "enrollment" | "certificate", data: any) => {
+  const handleSectionUpdate = (section: "enrollment" | "certificate" | "prerequisites", data: any) => {
     onUpdate({
       ...settings,
       [section]: { ...settings[section], ...data },
+    })
+  }
+
+  const handlePrerequisitesUpdate = (enabled: boolean, courseIds: number[]) => {
+    onUpdate({
+      ...settings,
+      prerequisites: {
+        enabled,
+        courseIds,
+      },
     })
   }
 
@@ -93,6 +108,16 @@ export default function CourseSettings({ settings, onUpdate, courseId }: CourseS
         <CourseEnrollmentSettings
           settings={settings.enrollment}
           onUpdate={(data) => handleSectionUpdate("enrollment", data)}
+        />
+      </div>
+
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold">Prerequisites Settings</h3>
+        <CoursePrerequisitesSettings
+          prerequisitesEnabled={settings.prerequisites?.enabled || false}
+          prerequisiteCourseIds={settings.prerequisites?.courseIds || []}
+          onUpdate={handlePrerequisitesUpdate}
+          courseId={courseId}
         />
       </div>
 

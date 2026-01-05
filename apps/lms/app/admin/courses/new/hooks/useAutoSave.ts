@@ -291,6 +291,7 @@ export function useAutoSave<T>({
           additionalText: dbCourse.additional_text || "",
           certificateType: dbCourse.certificate_type || "completion",
         },
+        prerequisites: dbCourse.prerequisites || { enabled: false, courseIds: [] },
         currency: dbCourse.currency || "USD",
       },
     }

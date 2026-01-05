@@ -45,7 +45,11 @@ export function useEnrollCourse() {
       })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to enroll in course")
+        // Create error with full data for prerequisites handling
+        const error: any = new Error(errorData.error || "Failed to enroll in course")
+        error.response = response
+        error.errorData = errorData
+        throw error
       }
       return response.json()
     },

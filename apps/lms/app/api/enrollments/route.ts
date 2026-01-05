@@ -123,6 +123,61 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "courseId is required" }, { status: 400 })
   }
 
+  // Check prerequisites before enrollment
+  const { data: prerequisitesData } = await supabase
+    .from("course_prerequisites")
+    .select(`
+      prerequisite_course_id,
+      courses!course_prerequisites_prerequisite_course_id_fkey (
+        id,
+        title
+      )
+    `)
+    .eq("course_id", courseId)
+
+  if (prerequisitesData && prerequisitesData.length > 0) {
+    // Get prerequisite course IDs
+    const prerequisiteIds = prerequisitesData.map((p: any) => p.prerequisite_course_id)
+
+    // Check if user has completed all prerequisites
+    const { data: completedEnrollments } = await supabase
+      .from("enrollments")
+      .select("course_id, completed_at, progress")
+      .eq("user_id", targetUserId)
+      .in("course_id", prerequisiteIds)
+      .not("completed_at", "is", null)
+
+    const completedPrerequisiteIds = new Set(
+      (completedEnrollments || []).map((e: any) => e.course_id)
+    )
+
+    // Find missing prerequisites
+    const missingPrerequisites = prerequisitesData
+      .filter((p: any) => !completedPrerequisiteIds.has(p.prerequisite_course_id))
+      .map((p: any) => {
+        // Check if user is enrolled but not completed
+        const enrollment = completedEnrollments?.find((e: any) => e.course_id === p.prerequisite_course_id)
+        const isEnrolled = enrollment !== undefined
+        const isInProgress = isEnrolled && !enrollment.completed_at && enrollment.progress > 0
+
+        return {
+          id: p.prerequisite_course_id,
+          title: p.courses?.title || `Course ${p.prerequisite_course_id}`,
+          status: isInProgress ? "in_progress" : "not_started",
+        }
+      })
+
+    if (missingPrerequisites.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Prerequisites not met",
+          missingPrerequisites,
+        },
+        { status: 400 }
+      )
+    }
+  }
+
   const { data, error } = await supabase
     .from("enrollments")
     .insert({

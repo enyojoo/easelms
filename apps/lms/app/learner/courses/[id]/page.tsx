@@ -7,17 +7,26 @@ import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlayCircle, FileText, Award, Clock, Globe, Link, Users } from "lucide-react"
+import { PlayCircle, FileText, Award, Clock, Globe, Link as LinkIcon, Users, BrainCircuit, ArrowLeft, CheckCircle2, XCircle } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { BrainCircuit } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
 import InstructorCard from "@/components/InstructorCard"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
 import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import Link from "next/link"
 
 interface Course {
   id: number
@@ -35,6 +44,11 @@ interface Course {
     }
     certificate?: any
   }
+  prerequisites?: Array<{
+    id: number
+    title: string
+    image?: string
+  }>
   lessons?: Array<{
     id: number
     title: string
@@ -69,6 +83,10 @@ export default function CoursePage() {
   const [isEnrolling, setIsEnrolling] = useState(false)
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
+  const [prerequisitesError, setPrerequisitesError] = useState<{
+    show: boolean
+    missingPrerequisites: Array<{ id: number; title: string; status: string }>
+  }>({ show: false, missingPrerequisites: [] })
 
   // Get user auth state
   const { user, loading: authLoading } = useClientAuthState()
@@ -228,12 +246,40 @@ export default function CoursePage() {
           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Redirect to learn page after enrollment and cache update
           router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error enrolling in course:", error)
+          // Check if error is due to prerequisites
+          if (error?.errorData?.error === "Prerequisites not met" && error?.errorData?.missingPrerequisites) {
+            setPrerequisitesError({
+              show: true,
+              missingPrerequisites: error.errorData.missingPrerequisites,
+            })
+            setIsEnrolling(false)
+            return
+          }
           setIsEnrolling(false)
         }
       } else {
         // Handle payment/subscription for paid courses
+        // Check prerequisites before payment
+        const prereqCheckResponse = await fetch("/api/enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId: Number.parseInt(id) }),
+        })
+
+        if (!prereqCheckResponse.ok) {
+          const errorData = await prereqCheckResponse.json().catch(() => ({}))
+          if (errorData.error === "Prerequisites not met" && errorData.missingPrerequisites) {
+            setPrerequisitesError({
+              show: true,
+              missingPrerequisites: errorData.missingPrerequisites,
+            })
+            setIsEnrolling(false)
+            return
+          }
+        }
+
         const success = await handleCoursePayment(
           Number.parseInt(id),
           enrollmentMode,
@@ -429,7 +475,7 @@ export default function CoursePage() {
                                 {resource.type === "document" ? (
                                   <FileText className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                                 ) : (
-                                  <Link className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                  <LinkIcon className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                                 )}
                                 <span className="text-xs md:text-sm truncate">{resource.title}</span>
                               </div>
@@ -477,6 +523,73 @@ export default function CoursePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Prerequisites Section */}
+          {course?.prerequisites && course.prerequisites.length > 0 && (
+            <Card className="mb-4 md:mb-6">
+              <CardContent className="p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Prerequisites</h2>
+                <p className="text-sm md:text-base text-muted-foreground mb-4">
+                  Complete these courses before enrolling in this course:
+                </p>
+                <div className="space-y-3">
+                  {course.prerequisites.map((prereq: any) => {
+                    const enrollment = enrollmentsData?.enrollments?.find(
+                      (e: any) => e.course_id === prereq.id
+                    )
+                    const isCompleted = enrollment?.status === "completed" || enrollment?.completed_at !== null
+                    const isInProgress = enrollment && !isCompleted && enrollment.progress > 0
+                    const status = isCompleted ? "completed" : isInProgress ? "in_progress" : "not_started"
+
+                    return (
+                      <div
+                        key={prereq.id}
+                        className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
+                          <SafeImage
+                            src={prereq.image || "/placeholder.svg"}
+                            alt={prereq.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-sm md:text-base truncate">{prereq.title}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            {status === "completed" && (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                <span className="text-xs text-green-600">Completed</span>
+                              </>
+                            )}
+                            {status === "in_progress" && (
+                              <>
+                                <Clock className="w-4 h-4 text-blue-600" />
+                                <span className="text-xs text-blue-600">In Progress</span>
+                              </>
+                            )}
+                            {status === "not_started" && (
+                              <>
+                                <XCircle className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Not Started</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <Link
+                          href={`/learner/courses/${createCourseSlug(prereq.title, prereq.id)}`}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          {status === "completed" ? "View Course" : status === "in_progress" ? "Continue" : "Enroll Now"}
+                        </Link>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Instructor Profile Card */}
           {instructor && (
@@ -561,6 +674,39 @@ export default function CoursePage() {
         videoUrl={videoUrl}
         title={course?.title || ""}
       />
+
+      {/* Prerequisites Error Modal */}
+      <AlertDialog open={prerequisitesError.show} onOpenChange={(open) => setPrerequisitesError({ ...prerequisitesError, show: open })}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Prerequisites Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              You need to complete these courses before enrolling in this course:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2 my-4">
+            {prerequisitesError.missingPrerequisites.map((prereq) => (
+              <div key={prereq.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1">
+                  <p className="font-medium">{prereq.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {prereq.status === "in_progress" ? "In Progress" : "Not Started"}
+                  </p>
+                </div>
+                <Link
+                  href={`/learner/courses/${createCourseSlug(prereq.title, prereq.id)}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {prereq.status === "in_progress" ? "Continue Learning" : "Enroll Now"}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

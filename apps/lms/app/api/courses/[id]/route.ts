@@ -61,6 +61,25 @@ export async function GET(
       .eq("id", numericId)
       .single()
 
+    // Fetch prerequisites
+    const { data: prerequisitesData } = await supabase
+      .from("course_prerequisites")
+      .select(`
+        prerequisite_course_id,
+        courses!course_prerequisites_prerequisite_course_id_fkey (
+          id,
+          title,
+          image
+        )
+      `)
+      .eq("course_id", numericId)
+
+    const prerequisites = (prerequisitesData || []).map((p: any) => ({
+      id: p.prerequisite_course_id,
+      title: p.courses?.title || `Course ${p.prerequisite_course_id}`,
+      image: p.courses?.image || null,
+    }))
+
     // If error with lessons relation, try with simpler select
     if (error) {
       console.warn("Courses API: Error with lessons relation, trying with simpler select:", error.message)
@@ -624,6 +643,7 @@ export async function GET(
       totalDurationMinutes,
       totalHours,
       enrolledStudents: enrollmentCount || 0, // Total enrollment count
+      prerequisites: prerequisites, // Add prerequisites
       // Transform enrollment settings from database columns to nested structure
       settings: {
         enrollment: {
