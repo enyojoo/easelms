@@ -1,5 +1,5 @@
 -- Migration: Enable RLS and create policies for new tables
--- Tables: lesson_resources, quiz_attempts, quiz_settings, resources
+-- Tables: lesson_resources, quiz_attempts, quiz_settings, resources, quiz_questions
 
 -- ============================================================================
 -- LESSON_RESOURCES
@@ -114,6 +114,47 @@ USING (
 );
 
 -- ============================================================================
+-- QUIZ_QUESTIONS
+-- ============================================================================
+
+-- Enable RLS
+ALTER TABLE public.quiz_questions ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Admins and instructors can manage quiz questions
+CREATE POLICY "Admins and instructors can manage quiz_questions"
+ON public.quiz_questions
+FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.user_type IN ('admin', 'instructor')
+  )
+);
+
+-- Policy: Learners can read quiz questions for lessons in courses they're enrolled in
+CREATE POLICY "Learners can read quiz_questions for enrolled courses"
+ON public.quiz_questions
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.lessons
+    INNER JOIN public.courses ON courses.id = lessons.course_id
+    INNER JOIN public.enrollments ON enrollments.course_id = courses.id
+    WHERE lessons.id = quiz_questions.lesson_id
+    AND enrollments.user_id = auth.uid()
+    AND enrollments.status = 'active'
+  )
+  OR EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.user_type IN ('admin', 'instructor')
+  )
+);
+
+-- ============================================================================
 -- RESOURCES
 -- ============================================================================
 
@@ -172,6 +213,9 @@ COMMENT ON POLICY "Admins and instructors can read quiz attempts for their cours
 
 COMMENT ON POLICY "Admins and instructors can manage quiz_settings" ON public.quiz_settings IS 'Allows admins and instructors full access to quiz_settings';
 COMMENT ON POLICY "Learners can read quiz_settings for enrolled courses" ON public.quiz_settings IS 'Allows learners to read quiz_settings for courses they are enrolled in';
+
+COMMENT ON POLICY "Admins and instructors can manage quiz_questions" ON public.quiz_questions IS 'Allows admins and instructors full access to quiz_questions';
+COMMENT ON POLICY "Learners can read quiz_questions for enrolled courses" ON public.quiz_questions IS 'Allows learners to read quiz_questions for courses they are enrolled in';
 
 COMMENT ON POLICY "Users can manage their own resources" ON public.resources IS 'Allows users to create and manage resources they created';
 COMMENT ON POLICY "Admins and instructors can read all resources" ON public.resources IS 'Allows admins and instructors to read all resources';
