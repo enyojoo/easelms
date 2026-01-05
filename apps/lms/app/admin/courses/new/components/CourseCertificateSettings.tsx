@@ -44,7 +44,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Certificate Template</Label>
+                  <Label>Certificate Template (Optional)</Label>
                   <FileUpload
                     type="certificate-template"
                     accept="image/png,image/jpeg,image/jpg,application/pdf"
@@ -62,7 +62,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                     }}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Upload the certificate template/background image (PNG, JPEG, or PDF, max 5MB). This will be used as the base design for all certificates.
+                    Upload a custom certificate template/background image in <strong>landscape orientation</strong> (PNG, JPEG, or PDF, max 5MB). The template should be landscape format to match the certificate layout. If not provided, the default certificate design will be used.
                   </p>
                   {settings.certificateTemplate && (
                     <div className="mt-2">
@@ -105,7 +105,13 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 <SelectTrigger>
                   <SelectValue placeholder="Select certificate type" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent 
+                  position="popper"
+                  onCloseAutoFocus={(e) => {
+                    // Prevent auto-focus from causing scroll to top
+                    e.preventDefault()
+                  }}
+                >
                   <SelectItem value="completion">Completion</SelectItem>
                   <SelectItem value="participation">Participation</SelectItem>
                   <SelectItem value="achievement">Achievement</SelectItem>
