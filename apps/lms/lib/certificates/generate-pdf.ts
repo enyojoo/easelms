@@ -13,7 +13,8 @@ interface CertificateData {
   organizationName?: string
   logoUrl?: string // URL to platform logo (black version for white background)
   signatureImage?: string // URL to signature image (S3 URL)
-  signatureTitle?: string // Title for signature (e.g., "Director of Education")
+  signatureName?: string // Name of the signer (e.g., "John Doe")
+  signatureTitle?: string // Title of the signer (e.g., "Director of Education")
   additionalText?: string // Additional text to display on certificate
 }
 
@@ -409,14 +410,25 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           align: "center",
         })
 
-      // Signature title (if provided) or default text
-      const signatureLabel = data.signatureTitle || "Authorized Signature"
+      // Signature name and title (if provided) or default text
+      let signatureText = ""
+      if (data.signatureName && data.signatureTitle) {
+        signatureText = `${data.signatureName}\n${data.signatureTitle}`
+      } else if (data.signatureName) {
+        signatureText = data.signatureName
+      } else if (data.signatureTitle) {
+        signatureText = data.signatureTitle
+      } else {
+        signatureText = "Authorized Signature"
+      }
+
       doc
         .fontSize(10)
         .fillColor("#7F8C8D")
         .font("Helvetica")
-        .text(signatureLabel, signatureXLeft, signatureY + 25, {
+        .text(signatureText, signatureXLeft, signatureY + 25, {
           align: "center",
+          width: 150,
         })
         .text("Date", signatureXRight, signatureY + 25, {
           align: "center",

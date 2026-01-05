@@ -21,7 +21,15 @@ export async function GET(
       courses (
         id,
         title,
-        settings
+        settings,
+        certificate_template,
+        certificate_title,
+        certificate_description,
+        signature_image,
+        signature_name,
+        signature_title,
+        additional_text,
+        certificate_type
       ),
       profiles (
         id,
@@ -107,8 +115,9 @@ export async function GET(
       certificateTemplate: certificateSettings.certificateTemplate || certificate.courses?.certificate_template || undefined,
       organizationName,
       logoUrl,
-      signatureImage: certificateSettings.signatureImage,
-      signatureTitle: certificateSettings.signatureTitle,
+      signatureImage: certificateSettings.signatureImage || certificate.courses?.signature_image || undefined,
+      signatureName: certificateSettings.signatureName || certificate.courses?.signature_name || undefined,
+      signatureTitle: certificateSettings.signatureTitle || certificate.courses?.signature_title || undefined,
       additionalText: certificateSettings.additionalText,
     })
 

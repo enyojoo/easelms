@@ -55,6 +55,7 @@ function NewCourseContent() {
         certificateTemplate: string
         certificateDescription: string
         signatureImage: string
+        signatureName: string
         signatureTitle: string
         additionalText: string
         certificateType: "completion" | "participation" | "achievement"
@@ -86,6 +87,7 @@ function NewCourseContent() {
         certificateTemplate: "",
         certificateDescription: "",
         signatureImage: "",
+        signatureName: "",
         signatureTitle: "",
         additionalText: "",
         certificateType: "completion",
@@ -228,6 +230,7 @@ function NewCourseContent() {
                     certificateTitle: course.certificate_title || "",
                     certificateDescription: course.certificate_description || "",
                     signatureImage: course.signature_image || "",
+                    signatureName: course.signature_name || "",
                     signatureTitle: course.signature_title || "",
                     additionalText: course.additional_text || "",
                     certificateType: course.certificate_type || "completion",

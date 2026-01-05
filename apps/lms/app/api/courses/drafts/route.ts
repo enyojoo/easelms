@@ -75,6 +75,9 @@ export async function POST(request: Request) {
       signature_image: certificate.signatureImage && certificate.signatureImage.trim() !== "" 
         ? certificate.signatureImage.trim() 
         : null,
+      signature_name: certificate.signatureName && certificate.signatureName.trim() !== "" 
+        ? certificate.signatureName.trim() 
+        : null,
       signature_title: certificate.signatureTitle || null,
       additional_text: certificate.additionalText || null,
       certificate_type: certificate.certificateType || null,

@@ -21,6 +21,7 @@ interface CourseSettingsProps {
       certificateTemplate: string
       certificateDescription: string
       signatureImage: string
+      signatureName?: string
       signatureTitle?: string
       additionalText?: string
       certificateType: "completion" | "participation" | "achievement"

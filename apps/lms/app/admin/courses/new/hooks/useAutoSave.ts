@@ -286,6 +286,7 @@ export function useAutoSave<T>({
           certificateTitle: dbCourse.certificate_title || "",
           certificateDescription: dbCourse.certificate_description || "",
           signatureImage: dbCourse.signature_image || "",
+          signatureName: dbCourse.signature_name || "",
           signatureTitle: dbCourse.signature_title || "",
           additionalText: dbCourse.additional_text || "",
           certificateType: dbCourse.certificate_type || "completion",

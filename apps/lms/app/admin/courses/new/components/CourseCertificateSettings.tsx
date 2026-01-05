@@ -1,10 +1,13 @@
 "use client"
 
+"use client"
+
+import { useRef } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import SafeImage from "@/components/SafeImage"
 import FileUpload from "@/components/FileUpload"
@@ -16,6 +19,7 @@ interface CourseCertificateSettingsProps {
     certificateTitle?: string
     certificateDescription: string
     signatureImage?: string
+    signatureName?: string
     signatureTitle?: string
     additionalText?: string
     certificateType: "completion" | "participation" | "achievement"
@@ -28,6 +32,8 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
   // Track if "optional" is selected to show custom title field
   const isOptionalSelected = settings.certificateTitle !== undefined && settings.certificateTitle !== null && settings.certificateTitle !== ""
   const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
+  const scrollPositionRef = useRef<number>(0)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   return (
     <div className="space-y-6">
@@ -86,7 +92,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Certificate Type</Label>
-              <RadioGroup
+              <Select
                 value={currentValue}
                 onValueChange={(value) => {
                   if (value === "optional") {
@@ -105,56 +111,65 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                     })
                   }
                 }}
-                className="space-y-3"
+                onOpenChange={(open) => {
+                  if (open) {
+                    // Store scroll position when opening
+                    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+                  }
+                }}
               >
-                <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="completion" id="cert-completion" className="mt-1" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label htmlFor="cert-completion" className="cursor-pointer font-normal">
-                      Completion
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      "Certificate of Completion" - "has successfully completed"
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="participation" id="cert-participation" className="mt-1" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label htmlFor="cert-participation" className="cursor-pointer font-normal">
-                      Participation
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      "Certificate of Participation" - "has successfully participated in"
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="achievement" id="cert-achievement" className="mt-1" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label htmlFor="cert-achievement" className="cursor-pointer font-normal">
-                      Achievement
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      "Certificate of Achievement" - "has successfully achieved"
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-2">
-                  <RadioGroupItem value="optional" id="cert-optional" className="mt-1" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label htmlFor="cert-optional" className="cursor-pointer font-normal">
-                      Custom Title (Optional)
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Enter your own certificate title
-                    </p>
-                  </div>
-                </div>
-              </RadioGroup>
+                <SelectTrigger 
+                  ref={triggerRef}
+                  onMouseDown={(e) => {
+                    // Store scroll position before dropdown opens
+                    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+                  }}
+                >
+                  <SelectValue placeholder="Select certificate type" />
+                </SelectTrigger>
+                <SelectContent
+                  onCloseAutoFocus={(e) => {
+                    // Prevent default focus behavior that causes scroll
+                    e.preventDefault()
+                    // Restore scroll position after a brief delay to ensure DOM has updated
+                    setTimeout(() => {
+                      window.scrollTo({
+                        top: scrollPositionRef.current,
+                        behavior: 'instant'
+                      })
+                    }, 0)
+                  }}
+                  onEscapeKeyDown={(e) => {
+                    // Restore scroll on escape
+                    setTimeout(() => {
+                      window.scrollTo({
+                        top: scrollPositionRef.current,
+                        behavior: 'instant'
+                      })
+                    }, 0)
+                  }}
+                  onInteractOutside={(e) => {
+                    // Restore scroll when clicking outside
+                    setTimeout(() => {
+                      window.scrollTo({
+                        top: scrollPositionRef.current,
+                        behavior: 'instant'
+                      })
+                    }, 0)
+                  }}
+                >
+                  <SelectItem value="completion">Completion</SelectItem>
+                  <SelectItem value="participation">Participation</SelectItem>
+                  <SelectItem value="achievement">Achievement</SelectItem>
+                  <SelectItem value="optional">Custom Title (Optional)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                <strong>Completion:</strong> "Certificate of Completion" - "has successfully completed"<br />
+                <strong>Participation:</strong> "Certificate of Participation" - "has successfully participated in"<br />
+                <strong>Achievement:</strong> "Certificate of Achievement" - "has successfully achieved"<br />
+                <strong>Custom Title:</strong> Enter your own certificate title
+              </p>
             </div>
 
             {isOptionalSelected && (
@@ -230,12 +245,27 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Signature Title</Label>
+                  <Label>Name of Signer</Label>
                   <Input
-                    placeholder="e.g., Course Instructor"
-                    value={settings.signatureTitle}
+                    placeholder="e.g., John Doe"
+                    value={settings.signatureName || ""}
+                    onChange={(e) => onUpdate({ ...settings, signatureName: e.target.value })}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    The name of the person signing the certificate
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Title of Signer</Label>
+                  <Input
+                    placeholder="e.g., Course Instructor, Director of Education"
+                    value={settings.signatureTitle || ""}
                     onChange={(e) => onUpdate({ ...settings, signatureTitle: e.target.value })}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    The title or position of the signer (e.g., Course Instructor, Director)
+                  </p>
                 </div>
               </div>
             </CardContent>
