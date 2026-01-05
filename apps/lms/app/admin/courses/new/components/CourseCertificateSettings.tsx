@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
   // Check if certificateTitle is explicitly set (even if empty, it means optional mode is active)
   const isOptionalSelected = settings.certificateTitle !== undefined
   const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
+  const scrollPositionRef = useRef<number>(0)
 
   return (
     <div className="space-y-6">
@@ -107,6 +109,25 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                     })
                   }
                 }}
+                onOpenChange={(open) => {
+                  if (open) {
+                    // Store scroll position when opening
+                    scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop || 0
+                  } else {
+                    // Restore scroll position when closing
+                    const savedScroll = scrollPositionRef.current
+                    requestAnimationFrame(() => {
+                      window.scrollTo({
+                        top: savedScroll,
+                        behavior: 'instant'
+                      })
+                    })
+                  }
+                }}
+                onOpenAutoFocus={(e) => {
+                  // Prevent auto-focus from causing scroll
+                  e.preventDefault()
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -118,6 +139,38 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                   sideOffset={4}
                   collisionPadding={8}
                   avoidCollisions={true}
+                  onCloseAutoFocus={(e) => {
+                    // Prevent focus restoration from causing scroll
+                    e.preventDefault()
+                    // Restore scroll position
+                    const savedScroll = scrollPositionRef.current
+                    requestAnimationFrame(() => {
+                      window.scrollTo({
+                        top: savedScroll,
+                        behavior: 'instant'
+                      })
+                    })
+                  }}
+                  onEscapeKeyDown={() => {
+                    // Restore scroll on escape
+                    const savedScroll = scrollPositionRef.current
+                    requestAnimationFrame(() => {
+                      window.scrollTo({
+                        top: savedScroll,
+                        behavior: 'instant'
+                      })
+                    })
+                  }}
+                  onInteractOutside={() => {
+                    // Restore scroll when clicking outside
+                    const savedScroll = scrollPositionRef.current
+                    requestAnimationFrame(() => {
+                      window.scrollTo({
+                        top: savedScroll,
+                        behavior: 'instant'
+                      })
+                    })
+                  }}
                 >
                   <SelectItem value="completion">Completion</SelectItem>
                   <SelectItem value="participation">Participation</SelectItem>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -72,6 +72,7 @@ export default function LessonCard({
   minimumQuizScore = 50,
   courseId,
 }: LessonCardProps) {
+  const scrollPositionRef = useRef<number>(0)
   const [localLesson, setLocalLesson] = useState<Lesson>(lesson)
 
   const updateLesson = (updates: Partial<Lesson>) => {
@@ -179,6 +180,25 @@ export default function LessonCard({
                 <Select
                   value={localLesson.type}
                   onValueChange={(value: "video" | "text" | "mixed") => updateLesson({ type: value })}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      // Store scroll position when opening
+                      scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop || 0
+                    } else {
+                      // Restore scroll position when closing
+                      const savedScroll = scrollPositionRef.current
+                      requestAnimationFrame(() => {
+                        window.scrollTo({
+                          top: savedScroll,
+                          behavior: 'instant'
+                        })
+                      })
+                    }
+                  }}
+                  onOpenAutoFocus={(e) => {
+                    // Prevent auto-focus from causing scroll
+                    e.preventDefault()
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -190,6 +210,38 @@ export default function LessonCard({
                     sideOffset={4}
                     collisionPadding={8}
                     avoidCollisions={true}
+                    onCloseAutoFocus={(e) => {
+                      // Prevent focus restoration from causing scroll
+                      e.preventDefault()
+                      // Restore scroll position
+                      const savedScroll = scrollPositionRef.current
+                      requestAnimationFrame(() => {
+                        window.scrollTo({
+                          top: savedScroll,
+                          behavior: 'instant'
+                        })
+                      })
+                    }}
+                    onEscapeKeyDown={() => {
+                      // Restore scroll on escape
+                      const savedScroll = scrollPositionRef.current
+                      requestAnimationFrame(() => {
+                        window.scrollTo({
+                          top: savedScroll,
+                          behavior: 'instant'
+                        })
+                      })
+                    }}
+                    onInteractOutside={() => {
+                      // Restore scroll when clicking outside
+                      const savedScroll = scrollPositionRef.current
+                      requestAnimationFrame(() => {
+                        window.scrollTo({
+                          top: savedScroll,
+                          behavior: 'instant'
+                        })
+                      })
+                    }}
                   >
                     <SelectItem value="video">Video Lesson</SelectItem>
                     <SelectItem value="text">Text Lesson</SelectItem>
