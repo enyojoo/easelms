@@ -62,6 +62,19 @@ export default function QuizSettings({ quiz, onChange }: QuizSettingsProps) {
             <p className="text-xs text-muted-foreground">How many times students can attempt this quiz</p>
           </div>
         )}
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label>Shuffle Quiz</Label>
+            <p className="text-sm text-muted-foreground">
+              Randomize question and answer order for each learner to prevent answer sharing
+            </p>
+          </div>
+          <Switch
+            checked={quiz.shuffleQuiz || false}
+            onCheckedChange={(checked) => updateSetting("shuffleQuiz", checked)}
+          />
+        </div>
       </CardContent>
     </Card>
   )

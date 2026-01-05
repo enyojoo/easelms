@@ -191,15 +191,18 @@ export async function POST(request: Request) {
       }
 
       // Insert new lessons
+      let insertedLessonIds: number[] = []
       if (lessonsToInsert.length > 0) {
-        const { error: insertError } = await dbClient
+        const { data: insertedLessons, error: insertError } = await dbClient
           .from("lessons")
           .insert(lessonsToInsert)
+          .select("id")
 
         if (insertError) {
           console.error("Error inserting new lessons:", insertError)
         } else {
-          console.log(`Successfully inserted ${lessonsToInsert.length} new lessons for course ${result.id}`)
+          insertedLessonIds = (insertedLessons || []).map((l: any) => l.id)
+          console.log(`Successfully inserted ${insertedLessonIds.length} new lessons for course ${result.id}`)
         }
       }
 
@@ -215,6 +218,137 @@ export async function POST(request: Request) {
           console.error("Error deleting removed lessons:", deleteError)
         } else {
           console.log(`Successfully deleted ${lessonsToDelete.length} removed lessons for course ${result.id}`)
+        }
+      }
+
+      // Save quiz questions to quiz_questions table
+      // Create a mapping from lesson index to database ID
+      const lessonIdMap = new Map<number, number>()
+      
+      // Map updated lessons
+      lessonsToUpdate.forEach((lesson: any) => {
+        const lessonIndex = courseData.lessons.findIndex((l: any) => {
+          const lId = l.id?.toString()
+          return lId && !lId.startsWith("lesson-") && Number(lId) === lesson.id
+        })
+        if (lessonIndex >= 0) {
+          lessonIdMap.set(lessonIndex, lesson.id)
+        }
+      })
+
+      // Map inserted lessons (match by order)
+      let insertedIndex = 0
+      courseData.lessons.forEach((lesson: any, index: number) => {
+        const lId = lesson.id?.toString()
+        const isNewLesson = lId && lId.startsWith("lesson-")
+        if (isNewLesson && insertedIndex < insertedLessonIds.length) {
+          lessonIdMap.set(index, insertedLessonIds[insertedIndex])
+          insertedIndex++
+        }
+      })
+
+      // Process quiz questions for each lesson
+      for (let lessonIndex = 0; lessonIndex < courseData.lessons.length; lessonIndex++) {
+        const lesson = courseData.lessons[lessonIndex]
+        const actualLessonId = lessonIdMap.get(lessonIndex)
+        
+        if (!actualLessonId) {
+          // If we can't find the lesson ID, skip question processing
+          continue
+        }
+
+        // Get existing questions for this lesson
+        const { data: existingQuestions } = await dbClient
+          .from("quiz_questions")
+          .select("id")
+          .eq("lesson_id", actualLessonId)
+
+        const existingQuestionIds = new Set((existingQuestions || []).map((q: any) => q.id))
+
+        // Extract quiz questions from lesson data
+        const quiz = lesson.quiz
+        if (!quiz || !quiz.enabled || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
+          // If no quiz or no questions, delete existing questions
+          if (existingQuestionIds.size > 0) {
+            await dbClient
+              .from("quiz_questions")
+              .delete()
+              .eq("lesson_id", actualLessonId)
+          }
+          continue
+        }
+
+        // Prepare questions to insert
+        const questionsToInsert: any[] = []
+
+        quiz.questions.forEach((question: any, index: number) => {
+          // Extract question data based on type
+          const questionData: any = {}
+          
+          if (question.type === "multiple-choice") {
+            questionData.options = question.options || []
+            questionData.correctOption = question.correctOption ?? 0
+            questionData.allowMultipleCorrect = question.allowMultipleCorrect || false
+            questionData.partialCredit = question.partialCredit || false
+          } else if (question.type === "true-false") {
+            questionData.correctAnswer = question.correctAnswer ?? true
+          } else if (question.type === "fill-blank") {
+            questionData.correctAnswers = question.correctAnswers || []
+            questionData.caseSensitive = question.caseSensitive || false
+          } else if (question.type === "short-answer") {
+            questionData.correctKeywords = question.correctKeywords || []
+            questionData.caseSensitive = question.caseSensitive || false
+          } else if (question.type === "essay") {
+            questionData.wordLimit = question.wordLimit
+            questionData.rubric = question.rubric
+          } else if (question.type === "matching") {
+            questionData.leftItems = question.leftItems || []
+            questionData.rightItems = question.rightItems || []
+            questionData.correctMatches = question.correctMatches || []
+          }
+
+          const questionRecord = {
+            lesson_id: actualLessonId,
+            question_type: question.type || "multiple-choice",
+            question_text: question.text || "",
+            question_data: questionData,
+            points: question.points ?? 1,
+            explanation: question.explanation || null,
+            difficulty: question.difficulty || null,
+            time_limit: question.timeLimit || null,
+            image_url: question.imageUrl || null,
+            order_index: index,
+          }
+
+          // Check if question has a database ID (from quiz_questions table)
+          // Question IDs from frontend are temporary strings, so we always insert new
+          // unless we can match by some criteria (for now, we'll insert new and clean up old)
+          questionsToInsert.push(questionRecord)
+        })
+
+        // Delete existing questions for this lesson (we'll recreate them)
+        if (existingQuestionIds.size > 0) {
+          const { error: deleteError } = await dbClient
+            .from("quiz_questions")
+            .delete()
+            .eq("lesson_id", actualLessonId)
+
+          if (deleteError) {
+            console.error(`Error deleting questions for lesson ${actualLessonId}:`, deleteError)
+          }
+        }
+
+        // Insert new questions
+        if (questionsToInsert.length > 0) {
+          const { error: insertError } = await dbClient
+            .from("quiz_questions")
+            .insert(questionsToInsert)
+
+          if (insertError) {
+            console.error(`Error inserting questions for lesson ${actualLessonId}:`, insertError)
+          } else {
+            console.log(`Successfully saved ${questionsToInsert.length} questions for lesson ${actualLessonId}`)
+          }
         }
       }
     }

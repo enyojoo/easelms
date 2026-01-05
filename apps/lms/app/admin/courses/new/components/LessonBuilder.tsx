@@ -45,6 +45,11 @@ interface LessonBuilderProps {
   minimumQuizScore?: number
 }
 
+// Helper function to generate unique IDs
+const generateUniqueId = (prefix: string): string => {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
 export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50 }: LessonBuilderProps) {
   const [localLessons, setLocalLessons] = useState<Lesson[]>(lessons)
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
@@ -56,7 +61,7 @@ export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50
 
   const addNewLesson = () => {
     const newLesson: Lesson = {
-      id: `lesson-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateUniqueId("lesson"),
       title: "New Lesson",
       type: "video",
       content: {},
@@ -96,17 +101,17 @@ export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50
   const duplicateLesson = (lesson: Lesson) => {
     const duplicatedLesson: Lesson = {
       ...lesson,
-      id: `lesson-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateUniqueId("lesson"),
       title: `${lesson.title} (Copy)`,
       resources: lesson.resources.map((r) => ({
         ...r,
-        id: `resource-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: generateUniqueId("resource"),
       })),
       quiz: {
         ...lesson.quiz,
         questions: lesson.quiz.questions.map((q) => ({
           ...q,
-          id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: generateUniqueId("q"),
         })),
       },
     }
@@ -147,17 +152,17 @@ export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50
     const lessonsToDuplicate = localLessons.filter((lesson) => selectedLessons.has(lesson.id))
     const duplicatedLessons = lessonsToDuplicate.map((lesson) => ({
       ...lesson,
-      id: `lesson-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: generateUniqueId("lesson"),
       title: `${lesson.title} (Copy)`,
       resources: lesson.resources.map((r) => ({
         ...r,
-        id: `resource-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: generateUniqueId("resource"),
       })),
       quiz: {
         ...lesson.quiz,
         questions: lesson.quiz.questions.map((q) => ({
           ...q,
-          id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          id: generateUniqueId("q"),
         })),
       },
     }))

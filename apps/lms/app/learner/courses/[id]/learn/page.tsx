@@ -280,10 +280,94 @@ export default function CourseLearningPage() {
         completedQuizzesMap[lessonIdNum] = true
         // Defensive check: ensure results is an array
         if (Array.isArray(results)) {
-          answersMap[lessonIdNum] = results.map((r: any) => {
-            const answer = r?.user_answer
-            return typeof answer === 'string' ? parseInt(answer) : answer
-          }).filter((a: any) => a !== null && !isNaN(a))
+          // Get current lesson's questions to match by ID
+          const currentLesson = course?.lessons?.find((l: any) => l.id === lessonIdNum)
+          const questions = currentLesson?.quiz_questions || []
+          
+          if (questions.length > 0) {
+            // Check if results have shuffle data (denormalized for instant display)
+            const firstResult = results[0]
+            const hasShuffle = firstResult?.shuffled_question_order && Array.isArray(firstResult.shuffled_question_order) && firstResult.shuffled_question_order.length > 0
+            const shuffledQuestionOrder = hasShuffle ? firstResult.shuffled_question_order : null
+            const shuffledAnswerOrders = hasShuffle ? (firstResult.shuffled_answer_orders || {}) : {}
+            
+            if (hasShuffle && shuffledQuestionOrder) {
+              // Results are shuffled - map back to shuffled order for display
+              // Questions from API are already in shuffled order, so we match by position
+              const answersArray: (number | null)[] = new Array(shuffledQuestionOrder.length).fill(null)
+              
+              // Create a map of question ID to result for quick lookup
+              const resultMap = new Map()
+              results.forEach((r: any) => {
+                const questionId = r.quiz_question_id?.toString()
+                if (questionId) {
+                  resultMap.set(questionId, r)
+                }
+              })
+              
+              // Map results to shuffled positions (matching the order questions appear in)
+              shuffledQuestionOrder.forEach((originalQuestionId: number, shuffledIndex: number) => {
+                const questionIdStr = String(originalQuestionId)
+                const result = resultMap.get(questionIdStr)
+                
+                if (result) {
+                  const originalAnswer = result.user_answer
+                  const answerOrder = shuffledAnswerOrders[questionIdStr]
+                  
+                  // Map answer from original position back to shuffled position
+                  let shuffledAnswer = originalAnswer
+                  if (answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0) {
+                    // Find the shuffled index of the original answer
+                    shuffledAnswer = answerOrder.indexOf(originalAnswer)
+                    if (shuffledAnswer < 0) {
+                      shuffledAnswer = originalAnswer // Fallback if not found
+                    }
+                  }
+                  
+                  const numericAnswer = typeof shuffledAnswer === 'string' ? parseInt(shuffledAnswer) : shuffledAnswer
+                  if (numericAnswer !== null && !isNaN(numericAnswer)) {
+                    answersArray[shuffledIndex] = numericAnswer
+                  }
+                }
+              })
+              
+              answersMap[lessonIdNum] = answersArray.filter((a: any) => a !== null && !isNaN(a)) as number[]
+            } else {
+              // Not shuffled - use original matching logic
+              const answersArray: (number | null)[] = new Array(questions.length).fill(null)
+              
+              results.forEach((r: any) => {
+                // Try to find matching question by ID
+                const questionIndex = questions.findIndex((q: any) => {
+                  const questionId = q.id?.toString()
+                  const resultQuestionId = r.quiz_question_id?.toString()
+                  // Match by exact ID (handles both string and number IDs)
+                  return questionId && resultQuestionId && 
+                         (questionId === resultQuestionId || 
+                          questionId === String(resultQuestionId) ||
+                          String(questionId) === resultQuestionId)
+                })
+                
+                if (questionIndex >= 0 && questionIndex < answersArray.length) {
+                  const answer = r?.user_answer
+                  // Convert answer to number if it's a string
+                  const numericAnswer = typeof answer === 'string' ? parseInt(answer) : answer
+                  if (numericAnswer !== null && !isNaN(numericAnswer)) {
+                    answersArray[questionIndex] = numericAnswer
+                  }
+                }
+              })
+              
+              // Filter out null values and ensure all are valid numbers
+              answersMap[lessonIdNum] = answersArray.filter((a: any) => a !== null && !isNaN(a)) as number[]
+            }
+          } else {
+            // Fallback: if no questions found, use old method (for backward compatibility)
+            answersMap[lessonIdNum] = results.map((r: any) => {
+              const answer = r?.user_answer
+              return typeof answer === 'string' ? parseInt(answer) : answer
+            }).filter((a: any) => a !== null && !isNaN(a))
+          }
         }
       }
     })

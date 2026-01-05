@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { extractIdFromSlug } from "@/lib/slug"
+import { mapAnswerToOriginal } from "@/lib/quiz/shuffle"
 
 export async function GET(
   request: Request,
@@ -29,6 +30,7 @@ export async function GET(
   const serviceSupabase = createServiceRoleClient()
 
   // Get quiz results for this user and course
+  // Include shuffle data (denormalized) for instant display
   const { data: quizResults, error } = await serviceSupabase
     .from("quiz_results")
     .select("*")
@@ -41,14 +43,20 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Return results grouped by lesson
+  // Return results grouped by lesson with shuffle data included
   const resultsByLesson: { [lessonId: number]: any[] } = {}
   if (quizResults) {
     quizResults.forEach((result: any) => {
       if (!resultsByLesson[result.lesson_id]) {
         resultsByLesson[result.lesson_id] = []
       }
-      resultsByLesson[result.lesson_id].push(result)
+      // Include shuffle data in each result for instant display
+      resultsByLesson[result.lesson_id].push({
+        ...result,
+        shuffled_question_order: result.shuffled_question_order || null,
+        shuffled_answer_orders: result.shuffled_answer_orders || null,
+        attempt_id: result.attempt_id || null,
+      })
     })
   }
 
@@ -113,39 +121,144 @@ export async function POST(
     // Use service role client to bypass RLS policies for fetching lesson
     const serviceSupabase = createServiceRoleClient()
     
-    // Fetch lesson content to get quiz questions
-    const { data: lesson, error: lessonError } = await serviceSupabase
-      .from("lessons")
-      .select("content")
-      .eq("id", lessonId)
+    // Fetch quiz questions from quiz_questions table (preferred)
+    const { data: dbQuestions, error: questionsError } = await serviceSupabase
+      .from("quiz_questions")
+      .select("*")
+      .eq("lesson_id", lessonId)
+      .order("order_index", { ascending: true })
+
+    let quizQuestions: any[] = []
+
+    if (dbQuestions && dbQuestions.length > 0) {
+      // Transform database questions to match frontend format
+      quizQuestions = dbQuestions.map((q: any) => {
+        const questionData = q.question_data || {}
+        let options: string[] = []
+        let correctOption: any = 0
+        
+        if (q.question_type === "multiple-choice") {
+          options = questionData.options || []
+          correctOption = questionData.correctOption ?? 0
+        } else if (q.question_type === "true-false") {
+          options = ["True", "False"]
+          correctOption = questionData.correctAnswer === false ? 1 : 0
+        } else if (q.question_type === "fill-blank") {
+          options = questionData.correctAnswers || []
+          correctOption = 0
+        } else if (q.question_type === "short-answer") {
+          options = questionData.correctKeywords || []
+          correctOption = 0
+        } else if (q.question_type === "essay") {
+          options = []
+          correctOption = -1
+        } else if (q.question_type === "matching") {
+          options = []
+          correctOption = 0
+        }
+        
+        return {
+          id: q.id.toString(), // Use database ID as string for matching
+          dbId: q.id, // Keep integer ID for foreign key
+          type: q.question_type,
+          text: q.question_text,
+          options: options,
+          correctOption: correctOption,
+          correct_answer: correctOption,
+          points: q.points || 1,
+          imageUrl: q.image_url,
+          explanation: q.explanation,
+          difficulty: q.difficulty,
+          timeLimit: q.time_limit,
+          // Include type-specific data
+          ...questionData,
+        }
+      })
+      
+      console.log("Fetched quiz questions from table - Count:", quizQuestions.length)
+    } else {
+      // Fallback to JSONB storage (backward compatibility)
+      const { data: lesson, error: lessonError } = await serviceSupabase
+        .from("lessons")
+        .select("content")
+        .eq("id", lessonId)
+        .single()
+
+      if (lessonError || !lesson) {
+        console.error("Lesson fetch error:", lessonError)
+        return NextResponse.json(
+          { error: "Failed to fetch lesson" },
+          { status: 500 }
+        )
+      }
+
+      // Parse content if it's a JSON string
+      let content = lesson.content
+      if (typeof content === "string") {
+        try {
+          content = JSON.parse(content)
+        } catch (e) {
+          console.error("Failed to parse lesson content:", e)
+          content = {}
+        }
+      }
+
+      quizQuestions = content?.quiz?.questions || []
+      console.log("Fetched quiz questions from JSONB (fallback) - Count:", quizQuestions.length)
+    }
+    
+    console.log("Received answers:", answers)
+    console.log("Question IDs in quiz:", quizQuestions.map((q: any) => ({ id: q.id, dbId: q.dbId, type: typeof q.id })))
+
+    // Fetch quiz attempt to get shuffle mapping
+    const { data: quizAttempt } = await serviceSupabase
+      .from("quiz_attempts")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("lesson_id", lessonId)
+      .order("attempt_number", { ascending: false })
+      .limit(1)
       .single()
 
-    console.log("Fetching lesson - LessonId:", lessonId, "LessonError:", lessonError)
+    const hasShuffle = quizAttempt && quizAttempt.question_order && quizAttempt.question_order.length > 0
+    const questionOrder = hasShuffle ? quizAttempt.question_order : null
+    const answerOrders = hasShuffle ? (quizAttempt.answer_orders || {}) : {}
+    const attemptId = quizAttempt?.id || null
 
-    if (lessonError || !lesson) {
-      console.error("Lesson fetch error:", lessonError)
-      return NextResponse.json(
-        { error: "Failed to fetch lesson" },
-        { status: 500 }
-      )
+    // If shuffled, we need to reconstruct the shuffled questions that user saw
+    // The quizQuestions from DB are in original order, but user saw them shuffled with shuffled answers
+    // We need to re-shuffle to get the correct correctOption for comparison
+    let shuffledQuestionsForComparison: any[] = quizQuestions
+    let originalQuestions: any[] = quizQuestions
+    
+    if (hasShuffle && questionOrder && answerOrders) {
+      // Reconstruct original question order (for mapping back)
+      const questionMap = new Map(quizQuestions.map((q: any) => [q.dbId || parseInt(String(q.id)) || 0, q]))
+      originalQuestions = questionOrder.map((originalId: number) => questionMap.get(originalId)).filter(Boolean)
+      
+      // Re-shuffle questions to get shuffled versions with updated correctOption
+      // This matches what the user saw during the quiz
+      shuffledQuestionsForComparison = originalQuestions.map((q: any) => {
+        const questionIdStr = String(q.dbId || q.id || 0)
+        const answerOrder = answerOrders[questionIdStr]
+        
+        if (answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0 && q.options && Array.isArray(q.options)) {
+          // Re-shuffle options using the stored answer order
+          const shuffledOptions = answerOrder.map((originalIndex: number) => q.options[originalIndex]).filter((opt: any) => opt !== undefined)
+          
+          // Find new correctOption position
+          const originalCorrectIndex = q.correctOption
+          const newCorrectIndex = answerOrder.indexOf(originalCorrectIndex)
+          
+          return {
+            ...q,
+            options: shuffledOptions,
+            correctOption: newCorrectIndex >= 0 ? newCorrectIndex : q.correctOption,
+          }
+        }
+        return q
+      })
     }
-
-    // Parse content if it's a JSON string
-    let content = lesson.content
-    if (typeof content === "string") {
-      try {
-        content = JSON.parse(content)
-      } catch (e) {
-        console.error("Failed to parse lesson content:", e)
-        content = {}
-      }
-    }
-
-    // Extract quiz questions from content
-    const quizQuestions = content?.quiz?.questions || []
-    console.log("Extracted quiz questions - Count:", quizQuestions.length)
-    console.log("Received answers:", answers)
-    console.log("Question IDs in quiz:", quizQuestions.map((q: any) => ({ id: q.id, type: typeof q.id })))
 
     // Process and save each answer
     const resultsToInsert = []
@@ -156,32 +269,52 @@ export async function POST(
     for (let i = 0; i < answers.length; i++) {
       const answer = answers[i]
       let question = null
+      let originalQuestion: any = null
       
-      // Try multiple matching strategies
-      // 1. Match by exact ID (string or number)
-      question = quizQuestions.find((q: any) => {
-        return q.id === answer.questionId || 
-               String(q.id) === String(answer.questionId) ||
-               q.id?.toString() === answer.questionId?.toString()
-      })
-      
-      // 2. If not found, try by index (fallback)
-      if (!question && i < quizQuestions.length) {
-        console.log(`Question ID ${answer.questionId} not found, using index ${i} as fallback`)
-        question = quizQuestions[i]
+      // If shuffled, questions are in shuffled order, so use index directly
+      if (hasShuffle && questionOrder && i < questionOrder.length && i < shuffledQuestionsForComparison.length) {
+        // Question at index i in shuffled order (with shuffled correctOption)
+        question = shuffledQuestionsForComparison[i]
+        // Find original question for mapping back
+        const shuffledQuestionId = questionOrder[i]
+        originalQuestion = quizQuestions.find((q: any) => {
+          const qId = q.dbId || parseInt(String(q.id)) || 0
+          return qId === shuffledQuestionId
+        }) || question
+      } else {
+        // Not shuffled, match normally
+        question = quizQuestions.find((q: any) => {
+          return q.id === answer.questionId || 
+                 String(q.id) === String(answer.questionId) ||
+                 q.id?.toString() === answer.questionId?.toString()
+        })
+        
+        originalQuestion = question
+        
+        // Fallback to index
+        if (!question && i < quizQuestions.length) {
+          console.log(`Question ID ${answer.questionId} not found, using index ${i} as fallback`)
+          question = quizQuestions[i]
+          originalQuestion = question
+        }
       }
       
       if (!question) {
         console.error(`Question not found for answer ${i}:`, answer, "Available questions:", quizQuestions.length)
         continue
       }
+      
+      // Use original question for getting question ID and other metadata
+      const questionForMetadata = originalQuestion || question
 
       // Determine if answer is correct based on question type
+      // Note: If shuffled, answer.userAnswer is in shuffled position, so we compare directly
+      // The question's correctOption is already updated to shuffled position by shuffleAnswers function
       let isCorrect = false
       const qType = question.type || "multiple-choice" || "multiple_choice"
       
       if (qType === "multiple-choice" || qType === "multiple_choice") {
-        // For multiple choice, compare with correctOption or correct_answer
+        // For multiple choice, compare with correctOption (already in shuffled position if shuffled)
         const correctAnswer = question.correctOption !== undefined ? question.correctOption : question.correct_answer
         isCorrect = correctAnswer === answer.userAnswer
         console.log(`Question ${i} (multiple-choice): correctAnswer=${correctAnswer}, userAnswer=${answer.userAnswer}, isCorrect=${isCorrect}`)
@@ -218,12 +351,30 @@ export async function POST(
       totalPoints += questionPoints
       pointsEarned += earnedPoints
 
+      // Map answer back to original position if shuffled
+      let originalUserAnswer = answer.userAnswer
+      const questionIdStr = String(question.id || question.dbId || answer.questionId)
+      const answerOrder = answerOrders[questionIdStr]
+      
+      if (hasShuffle && answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0) {
+        // Map shuffled answer index back to original position
+        originalUserAnswer = mapAnswerToOriginal(answer.userAnswer, answerOrder)
+      }
+      
+      // Use database ID if available (integer), otherwise use string ID
+      const questionDbId = question.dbId || (typeof question.id === 'number' ? question.id : null)
+      const questionIdForResult = questionDbId || question.id || answer.questionId
+      
       resultsToInsert.push({
         user_id: user.id,
         course_id: courseId,
         lesson_id: lessonId,
-        quiz_question_id: question.id || answer.questionId,
-        user_answer: answer.userAnswer,
+        quiz_question_id: questionIdForResult, // Will be integer if from table, string if from JSONB
+        quiz_question_id_new: questionDbId, // Always integer if available
+        attempt_id: attemptId, // Reference to quiz_attempts
+        shuffled_question_order: hasShuffle ? questionOrder : null, // Denormalized for instant display
+        shuffled_answer_orders: hasShuffle ? answerOrders : null, // Denormalized for instant display
+        user_answer: originalUserAnswer, // Mapped back to original position
         is_correct: isCorrect,
         score: earnedPoints,
       })
