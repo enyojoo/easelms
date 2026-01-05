@@ -798,7 +798,15 @@ export default function ManageCoursesPage() {
         </div>
       )}
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog 
+        open={deleteDialogOpen} 
+        onOpenChange={(open) => {
+          // Prevent closing dialog while deleting
+          if (!deleting) {
+            setDeleteDialogOpen(open)
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -811,13 +819,13 @@ export default function ManageCoursesPage() {
             <AlertDialogAction 
               onClick={handleDeleteConfirm} 
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {deleting ? (
-                <>
+                <span className="flex items-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Deleting...
-                </>
+                </span>
               ) : (
                 "Delete"
               )}
