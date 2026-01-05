@@ -116,27 +116,31 @@ export default function CoursePrerequisitesSettings({
           <div className="space-y-2">
             <Label>Prerequisite Courses</Label>
             <div className="flex gap-2">
-              <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+              <Select 
+                value={selectedCourseId || undefined} 
+                onValueChange={setSelectedCourseId}
+                disabled={loading || availableForSelection.length === 0}
+              >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select a course..." />
+                  <SelectValue placeholder={
+                    loading 
+                      ? "Loading courses..." 
+                      : availableForSelection.length === 0
+                      ? (prerequisiteCourseIds.length > 0
+                          ? "All available courses are already selected"
+                          : "No courses available")
+                      : "Select a course..."
+                  } />
                 </SelectTrigger>
-                <SelectContent>
-                  {loading ? (
-                    <SelectItem value="" disabled>Loading courses...</SelectItem>
-                  ) : availableForSelection.length === 0 ? (
-                    <SelectItem value="" disabled>
-                      {prerequisiteCourseIds.length > 0
-                        ? "All available courses are already selected"
-                        : "No courses available"}
-                    </SelectItem>
-                  ) : (
-                    availableForSelection.map((course) => (
+                {availableForSelection.length > 0 && (
+                  <SelectContent>
+                    {availableForSelection.map((course) => (
                       <SelectItem key={course.id} value={course.id.toString()}>
                         {course.title} (ID: {course.id})
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
+                    ))}
+                  </SelectContent>
+                )}
               </Select>
               <Button
                 type="button"

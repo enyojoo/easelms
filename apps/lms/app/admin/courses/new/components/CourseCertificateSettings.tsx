@@ -1,7 +1,5 @@
 "use client"
 
-"use client"
-
 import { useRef } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -34,6 +32,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
   const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
   const scrollPositionRef = useRef<number>(0)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   return (
     <div className="space-y-6">
@@ -89,7 +88,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
             </CardContent>
           </Card>
 
-          <div className="space-y-4">
+          <div className="space-y-4" ref={containerRef}>
             <div className="space-y-2">
               <Label>Certificate Type</Label>
               <Select
@@ -113,8 +112,28 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 }}
                 onOpenChange={(open) => {
                   if (open) {
-                    // Store scroll position when opening
-                    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+                    // Store scroll position when opening - capture multiple times
+                    const captureScroll = () => {
+                      scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+                    }
+                    captureScroll()
+                    // Capture again after a brief delay to catch any scroll
+                    setTimeout(captureScroll, 10)
+                  } else {
+                    // Restore scroll position when closing - use multiple strategies
+                    const savedScroll = scrollPositionRef.current
+                    const restoreScroll = () => {
+                      window.scrollTo({
+                        top: savedScroll,
+                        behavior: 'instant'
+                      })
+                    }
+                    // Restore immediately and with delays
+                    restoreScroll()
+                    requestAnimationFrame(restoreScroll)
+                    setTimeout(restoreScroll, 0)
+                    setTimeout(restoreScroll, 50)
+                    setTimeout(restoreScroll, 100)
                   }
                 }}
               >
@@ -124,6 +143,10 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                     // Store scroll position before dropdown opens
                     scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
                   }}
+                  onClick={(e) => {
+                    // Also store on click as backup
+                    scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop
+                  }}
                 >
                   <SelectValue placeholder="Select certificate type" />
                 </SelectTrigger>
@@ -131,28 +154,47 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                   onCloseAutoFocus={(e) => {
                     // Prevent default focus behavior that causes scroll
                     e.preventDefault()
-                    // Restore scroll position after a brief delay to ensure DOM has updated
-                    setTimeout(() => {
+                    // Restore scroll position aggressively
+                    const savedScroll = scrollPositionRef.current
+                    const restoreScroll = () => {
                       window.scrollTo({
-                        top: scrollPositionRef.current,
+                        top: savedScroll,
                         behavior: 'instant'
                       })
-                    }, 0)
+                    }
+                    // Try multiple times to ensure it works
+                    restoreScroll()
+                    requestAnimationFrame(restoreScroll)
+                    setTimeout(restoreScroll, 0)
+                    setTimeout(restoreScroll, 50)
+                    setTimeout(restoreScroll, 100)
                   }}
-                  onEscapeKeyDown={(e) => {
+                  onEscapeKeyDown={() => {
                     // Restore scroll on escape
+                    const savedScroll = scrollPositionRef.current
                     setTimeout(() => {
                       window.scrollTo({
-                        top: scrollPositionRef.current,
+                        top: savedScroll,
                         behavior: 'instant'
                       })
                     }, 0)
                   }}
-                  onInteractOutside={(e) => {
+                  onInteractOutside={() => {
                     // Restore scroll when clicking outside
+                    const savedScroll = scrollPositionRef.current
                     setTimeout(() => {
                       window.scrollTo({
-                        top: scrollPositionRef.current,
+                        top: savedScroll,
+                        behavior: 'instant'
+                      })
+                    }, 0)
+                  }}
+                  onPointerDownOutside={() => {
+                    // Restore scroll when clicking outside
+                    const savedScroll = scrollPositionRef.current
+                    setTimeout(() => {
+                      window.scrollTo({
+                        top: savedScroll,
                         behavior: 'instant'
                       })
                     }, 0)
