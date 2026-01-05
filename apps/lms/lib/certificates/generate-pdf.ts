@@ -104,24 +104,24 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         }
       } else {
         // Hardcoded design (fallback)
-        doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
+      doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
       }
 
       // Border (only if no template - template may have its own borders)
       if (!templateBuffer) {
-        // Border
-        doc
-          .lineWidth(3)
-          .strokeColor("#2C3E50")
-          .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
-          .stroke()
+      // Border
+      doc
+        .lineWidth(3)
+        .strokeColor("#2C3E50")
+        .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
+        .stroke()
 
-        // Inner decorative border
-        doc
-          .lineWidth(1)
-          .strokeColor("#7F8C8D")
-          .rect(50, 50, doc.page.width - 100, doc.page.height - 100)
-          .stroke()
+      // Inner decorative border
+      doc
+        .lineWidth(1)
+        .strokeColor("#7F8C8D")
+        .rect(50, 50, doc.page.width - 100, doc.page.height - 100)
+        .stroke()
       }
 
       // Header - Logo (centered, no organization name if logo is present)
@@ -187,12 +187,12 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Decorative line (only if no template)
       if (!templateBuffer) {
-        doc
-          .lineWidth(2)
-          .strokeColor("#3498DB")
-          .moveTo(doc.page.width / 2 - 150, 180)
-          .lineTo(doc.page.width / 2 + 150, 180)
-          .stroke()
+      doc
+        .lineWidth(2)
+        .strokeColor("#3498DB")
+        .moveTo(doc.page.width / 2 - 150, 180)
+        .lineTo(doc.page.width / 2 + 150, 180)
+        .stroke()
       }
 
       // Certificate Description - use custom description if provided, otherwise use default
@@ -255,25 +255,25 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         }
       } else {
         // Default description format
-        // This is to certify that
-        doc
-          .fontSize(16)
-          .fillColor("#34495E")
-          .font("Helvetica")
+      // This is to certify that
+      doc
+        .fontSize(16)
+        .fillColor("#34495E")
+        .font("Helvetica")
           .text("This is to certify that", doc.page.width / 2, currentY, {
-            align: "center",
-          })
+          align: "center",
+        })
 
         currentY += 30
 
-        // Learner Name (prominent)
-        doc
-          .fontSize(32)
-          .fillColor("#2C3E50")
-          .font("Helvetica-Bold")
+      // Learner Name (prominent)
+      doc
+        .fontSize(32)
+        .fillColor("#2C3E50")
+        .font("Helvetica-Bold")
           .text(data.learnerName, doc.page.width / 2, currentY, {
-            align: "center",
-          })
+          align: "center",
+        })
 
         currentY += 40
 
@@ -291,18 +291,18 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           }
         }
 
-        doc
-          .fontSize(16)
-          .fillColor("#34495E")
-          .font("Helvetica")
-          .text(
+      doc
+        .fontSize(16)
+        .fillColor("#34495E")
+        .font("Helvetica")
+        .text(
             `has successfully ${getActionText()}`,
-            doc.page.width / 2,
+          doc.page.width / 2,
             currentY,
-            {
-              align: "center",
-            }
-          )
+          {
+            align: "center",
+          }
+        )
 
         currentY += 40
       }

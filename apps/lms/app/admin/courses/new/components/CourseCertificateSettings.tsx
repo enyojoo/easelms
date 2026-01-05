@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useRef, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -25,6 +26,23 @@ interface CourseCertificateSettingsProps {
 }
 
 export default function CourseCertificateSettings({ settings, onUpdate, courseId }: CourseCertificateSettingsProps) {
+  // Track if "optional" is selected to show custom title field
+  const isOptionalSelected = settings.certificateTitle !== undefined && settings.certificateTitle !== null && settings.certificateTitle !== ""
+  const selectRef = useRef<HTMLButtonElement>(null)
+  const scrollPositionRef = useRef<number>(0)
+
+  // Store scroll position when dropdown opens
+  const handleOpenChange = (open: boolean) => {
+    if (open) {
+      scrollPositionRef.current = window.scrollY
+    } else {
+      // Restore scroll position after dropdown closes
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollPositionRef.current)
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -83,10 +101,10 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
             <div className="space-y-2">
               <Label>Certificate Type</Label>
               <Select
-                value={settings.certificateTitle !== undefined && settings.certificateTitle !== null && settings.certificateTitle !== "" ? "optional" : (settings.certificateType || "completion")}
+                value={isOptionalSelected ? "optional" : (settings.certificateType || "completion")}
                 onValueChange={(value) => {
                   if (value === "optional") {
-                    // When switching to optional, keep current type and show title input (set to empty string to trigger input display)
+                    // When switching to optional, keep current type and show title input
                     onUpdate({ 
                       ...settings, 
                       certificateType: settings.certificateType || "completion",
@@ -101,15 +119,19 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                     })
                   }
                 }}
+                onOpenChange={handleOpenChange}
               >
-                <SelectTrigger>
+                <SelectTrigger ref={selectRef}>
                   <SelectValue placeholder="Select certificate type" />
                 </SelectTrigger>
                 <SelectContent 
-                  position="popper"
                   onCloseAutoFocus={(e) => {
                     // Prevent auto-focus from causing scroll to top
                     e.preventDefault()
+                    // Restore scroll position
+                    requestAnimationFrame(() => {
+                      window.scrollTo(0, scrollPositionRef.current)
+                    })
                   }}
                 >
                   <SelectItem value="completion">Completion</SelectItem>
@@ -126,7 +148,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
               </p>
             </div>
 
-            {(settings.certificateTitle !== undefined && settings.certificateTitle !== null) && (
+            {isOptionalSelected && (
               <div className="space-y-2">
                 <Label>Custom Certificate Title</Label>
                 <Input
