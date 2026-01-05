@@ -111,7 +111,14 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent position="item-aligned">
+                <SelectContent
+                  position="popper"
+                  side="bottom"
+                  align="start"
+                  sideOffset={4}
+                  collisionPadding={8}
+                  avoidCollisions={true}
+                >
                   <SelectItem value="completion">Completion</SelectItem>
                   <SelectItem value="participation">Participation</SelectItem>
                   <SelectItem value="achievement">Achievement</SelectItem>

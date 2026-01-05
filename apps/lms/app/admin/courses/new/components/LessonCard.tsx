@@ -183,7 +183,14 @@ export default function LessonCard({
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    collisionPadding={8}
+                    avoidCollisions={true}
+                  >
                     <SelectItem value="video">Video Lesson</SelectItem>
                     <SelectItem value="text">Text Lesson</SelectItem>
                     <SelectItem value="mixed">Mixed Lesson (Video + Text)</SelectItem>

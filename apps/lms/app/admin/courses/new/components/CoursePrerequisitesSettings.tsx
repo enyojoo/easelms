@@ -133,7 +133,14 @@ export default function CoursePrerequisitesSettings({
                   } />
                 </SelectTrigger>
                 {availableForSelection.length > 0 && (
-                  <SelectContent>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    collisionPadding={8}
+                    avoidCollisions={true}
+                  >
                     {availableForSelection.map((course) => (
                       <SelectItem key={course.id} value={course.id.toString()}>
                         {course.title} (ID: {course.id})
