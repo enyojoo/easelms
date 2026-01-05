@@ -13,11 +13,12 @@ interface CourseCertificateSettingsProps {
   settings: {
     certificateEnabled: boolean
     certificateTemplate: string
+    certificateTitle?: string
     certificateDescription: string
     signatureImage?: string
     signatureTitle?: string
     additionalText?: string
-    certificateType: "completion" | "participation"
+    certificateType: "completion" | "participation" | "achievement"
   }
   onUpdate: (settings: any) => void
   courseId?: string | number
@@ -78,14 +79,91 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
             </CardContent>
           </Card>
 
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Certificate Type</Label>
+              <Select
+                value={settings.certificateTitle !== undefined && settings.certificateTitle !== null && settings.certificateTitle !== "" ? "optional" : (settings.certificateType || "completion")}
+                onValueChange={(value) => {
+                  if (value === "optional") {
+                    // When switching to optional, keep current type and show title input (set to empty string to trigger input display)
+                    onUpdate({ 
+                      ...settings, 
+                      certificateType: settings.certificateType || "completion",
+                      certificateTitle: settings.certificateTitle || ""
+                    })
+                  } else {
+                    // When selecting a type, clear custom title (set to undefined to hide input)
+                    onUpdate({ 
+                      ...settings, 
+                      certificateType: value as "completion" | "participation" | "achievement",
+                      certificateTitle: undefined
+                    })
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select certificate type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="completion">Completion</SelectItem>
+                  <SelectItem value="participation">Participation</SelectItem>
+                  <SelectItem value="achievement">Achievement</SelectItem>
+                  <SelectItem value="optional">Custom Title (Optional)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                <strong>Completion:</strong> "Certificate of Completion" - "has successfully completed"<br />
+                <strong>Participation:</strong> "Certificate of Participation" - "has successfully participated in"<br />
+                <strong>Achievement:</strong> "Certificate of Achievement" - "has successfully achieved"<br />
+                <strong>Custom Title:</strong> Enter your own certificate title
+              </p>
+            </div>
+
+            {(settings.certificateTitle !== undefined && settings.certificateTitle !== null) && (
+              <div className="space-y-2">
+                <Label>Custom Certificate Title</Label>
+                <Input
+                  placeholder="e.g., Certificate of Excellence"
+                  value={settings.certificateTitle || ""}
+                  onChange={(e) => {
+                    const newTitle = e.target.value
+                    onUpdate({ 
+                      ...settings, 
+                      certificateTitle: newTitle,
+                      certificateType: settings.certificateType || "completion"
+                    })
+                  }}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enter a custom title for the certificate. This will override the default title.
+                </p>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Certificate Description</Label>
             <Textarea
-              placeholder="e.g., This is to certify that [student_name] has successfully completed the course..."
+              placeholder={
+                settings.certificateType === "completion"
+                  ? "e.g., This is to certify that [student_name] has successfully completed the course..."
+                  : settings.certificateType === "participation"
+                  ? "e.g., This is to certify that [student_name] has successfully participated in the course..."
+                  : settings.certificateType === "achievement"
+                  ? "e.g., This is to certify that [student_name] has successfully achieved excellence in the course..."
+                  : "e.g., This is to certify that [student_name] has successfully completed the course..."
+              }
               value={settings.certificateDescription}
               onChange={(e) => onUpdate({ ...settings, certificateDescription: e.target.value })}
             />
-            <p className="text-sm text-muted-foreground">Use [student_name] as a placeholder for the student's name</p>
+            <p className="text-sm text-muted-foreground">
+              Use <strong>[student_name]</strong> as a placeholder for the student's name (from their profile).<br />
+              <strong>Examples by type:</strong><br />
+              • <strong>Completion:</strong> "This is to certify that [student_name] has successfully completed the course..."<br />
+              • <strong>Participation:</strong> "This is to certify that [student_name] has successfully participated in the course..."<br />
+              • <strong>Achievement:</strong> "This is to certify that [student_name] has successfully achieved excellence in the course..."
+            </p>
           </div>
 
           <Card>

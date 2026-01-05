@@ -6,7 +6,10 @@ interface CertificateData {
   learnerName: string
   courseTitle: string
   issuedAt: string
-  certificateType: "completion" | "participation"
+  certificateType: "completion" | "participation" | "achievement"
+  certificateTitle?: string // Custom certificate title (overrides default)
+  certificateDescription?: string // Custom description with [student_name] placeholder
+  certificateTemplate?: string // URL to certificate template/background image
   organizationName?: string
   logoUrl?: string // URL to platform logo (black version for white background)
   signatureImage?: string // URL to signature image (S3 URL)
@@ -56,9 +59,10 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       })
       doc.on("error", reject)
 
-      // Fetch logo and signature images asynchronously
+      // Fetch images asynchronously
       let logoBuffer: Buffer | null = null
       let signatureBuffer: Buffer | null = null
+      let templateBuffer: Buffer | null = null
 
       try {
         if (data.logoUrl) {
@@ -76,30 +80,57 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         console.warn("Failed to fetch signature image:", error)
       }
 
-      // Background color (light cream/beige)
-      doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
+      try {
+        if (data.certificateTemplate) {
+          templateBuffer = await fetchImageBuffer(data.certificateTemplate)
+        }
+      } catch (error) {
+        console.warn("Failed to fetch certificate template image:", error)
+      }
 
-      // Border
-      doc
-        .lineWidth(3)
-        .strokeColor("#2C3E50")
-        .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
-        .stroke()
+      // Background - use template if provided, otherwise use hardcoded design
+      if (templateBuffer) {
+        // Use template as full background
+        try {
+          doc.image(templateBuffer, 0, 0, {
+            width: doc.page.width,
+            height: doc.page.height,
+            fit: [doc.page.width, doc.page.height],
+          })
+        } catch (error) {
+          console.warn("Failed to embed template image, using fallback:", error)
+          // Fallback to hardcoded background
+          doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
+        }
+      } else {
+        // Hardcoded design (fallback)
+        doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
+      }
 
-      // Inner decorative border
-      doc
-        .lineWidth(1)
-        .strokeColor("#7F8C8D")
-        .rect(50, 50, doc.page.width - 100, doc.page.height - 100)
-        .stroke()
+      // Border (only if no template - template may have its own borders)
+      if (!templateBuffer) {
+        // Border
+        doc
+          .lineWidth(3)
+          .strokeColor("#2C3E50")
+          .rect(30, 30, doc.page.width - 60, doc.page.height - 60)
+          .stroke()
 
-      // Header - Logo and Organization Name
+        // Inner decorative border
+        doc
+          .lineWidth(1)
+          .strokeColor("#7F8C8D")
+          .rect(50, 50, doc.page.width - 100, doc.page.height - 100)
+          .stroke()
+      }
+
+      // Header - Logo (centered, no organization name if logo is present)
       let headerY = 80
       
-      // Add logo (if available) - top left or center top
+      // Add logo (if available) - centered at top
       if (logoBuffer) {
         try {
-          // Place logo at top center, above organization name
+          // Place logo at top center
           const logoWidth = 120
           const logoHeight = 40
           doc.image(logoBuffer, (doc.page.width - logoWidth) / 2, 40, {
@@ -112,10 +143,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         } catch (error) {
           console.warn("Failed to embed logo in PDF:", error)
         }
-      }
-
-      // Organization Name (if provided) - below logo
-      if (data.organizationName) {
+      } else if (data.organizationName && !templateBuffer) {
+        // Only show organization name if no logo AND no template (template may have its own branding)
         doc
           .fontSize(24)
           .fillColor("#2C3E50")
@@ -126,71 +155,171 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       }
 
       // Title - Certificate of Completion/Participation
+      // Certificate Title - use custom title if provided, otherwise use default based on type
+      const getCertificateTitle = () => {
+        if (data.certificateTitle) {
+          return data.certificateTitle
+        }
+        switch (data.certificateType) {
+          case "completion":
+            return "Certificate of Completion"
+          case "participation":
+            return "Certificate of Participation"
+          case "achievement":
+            return "Certificate of Achievement"
+          default:
+            return "Certificate of Completion"
+        }
+      }
+
       doc
         .fontSize(36)
         .fillColor("#2C3E50")
         .font("Helvetica-Bold")
         .text(
-          `Certificate of ${data.certificateType === "completion" ? "Completion" : "Participation"}`,
+          getCertificateTitle(),
           doc.page.width / 2,
-          data.organizationName ? 130 : 100,
+          (logoBuffer || data.organizationName) ? 130 : 100,
           {
             align: "center",
           }
         )
 
-      // Decorative line
-      doc
-        .lineWidth(2)
-        .strokeColor("#3498DB")
-        .moveTo(doc.page.width / 2 - 150, 180)
-        .lineTo(doc.page.width / 2 + 150, 180)
-        .stroke()
+      // Decorative line (only if no template)
+      if (!templateBuffer) {
+        doc
+          .lineWidth(2)
+          .strokeColor("#3498DB")
+          .moveTo(doc.page.width / 2 - 150, 180)
+          .lineTo(doc.page.width / 2 + 150, 180)
+          .stroke()
+      }
 
-      // This is to certify that
-      doc
-        .fontSize(16)
-        .fillColor("#34495E")
-        .font("Helvetica")
-        .text("This is to certify that", doc.page.width / 2, 220, {
-          align: "center",
-        })
+      // Certificate Description - use custom description if provided, otherwise use default
+      let descriptionText: string
+      let currentY = 220
 
-      // Learner Name (prominent)
-      doc
-        .fontSize(32)
-        .fillColor("#2C3E50")
-        .font("Helvetica-Bold")
-        .text(data.learnerName, doc.page.width / 2, 260, {
-          align: "center",
-        })
-
-      // Has successfully completed/participated
-      doc
-        .fontSize(16)
-        .fillColor("#34495E")
-        .font("Helvetica")
-        .text(
-          `has successfully ${data.certificateType === "completion" ? "completed" : "participated in"}`,
-          doc.page.width / 2,
-          320,
-          {
+      if (data.certificateDescription) {
+        // Replace [student_name] placeholder with actual learner name
+        descriptionText = data.certificateDescription.replace(/\[student_name\]/gi, data.learnerName)
+        
+        // Split description into lines if it contains the learner name (for better formatting)
+        const parts = descriptionText.split(data.learnerName)
+        
+        if (parts.length === 2) {
+          // Description has learner name in the middle: "This is to certify that [name] has completed..."
+          doc
+            .fontSize(16)
+            .fillColor("#34495E")
+            .font("Helvetica")
+            .text(parts[0].trim(), doc.page.width / 2, currentY, {
+              align: "center",
+            })
+          
+          currentY += 30
+          
+          // Learner Name (prominent)
+          doc
+            .fontSize(32)
+            .fillColor("#2C3E50")
+            .font("Helvetica-Bold")
+            .text(data.learnerName, doc.page.width / 2, currentY, {
+              align: "center",
+            })
+          
+          currentY += 40
+          
+          // Rest of description
+          doc
+            .fontSize(16)
+            .fillColor("#34495E")
+            .font("Helvetica")
+            .text(parts[1].trim(), doc.page.width / 2, currentY, {
+              align: "center",
+              width: doc.page.width - 200,
+            })
+          
+          currentY += 40
+        } else {
+          // Description doesn't have learner name or has it in a different format
+          // Just replace and display as is
+          doc
+            .fontSize(16)
+            .fillColor("#34495E")
+            .font("Helvetica")
+            .text(descriptionText, doc.page.width / 2, currentY, {
+              align: "center",
+              width: doc.page.width - 200,
+            })
+          currentY += 60
+        }
+      } else {
+        // Default description format
+        // This is to certify that
+        doc
+          .fontSize(16)
+          .fillColor("#34495E")
+          .font("Helvetica")
+          .text("This is to certify that", doc.page.width / 2, currentY, {
             align: "center",
+          })
+
+        currentY += 30
+
+        // Learner Name (prominent)
+        doc
+          .fontSize(32)
+          .fillColor("#2C3E50")
+          .font("Helvetica-Bold")
+          .text(data.learnerName, doc.page.width / 2, currentY, {
+            align: "center",
+          })
+
+        currentY += 40
+
+        // Has successfully completed/participated/achieved
+        const getActionText = () => {
+          switch (data.certificateType) {
+            case "completion":
+              return "completed"
+            case "participation":
+              return "participated in"
+            case "achievement":
+              return "achieved"
+            default:
+              return "completed"
           }
-        )
+        }
+
+        doc
+          .fontSize(16)
+          .fillColor("#34495E")
+          .font("Helvetica")
+          .text(
+            `has successfully ${getActionText()}`,
+            doc.page.width / 2,
+            currentY,
+            {
+              align: "center",
+            }
+          )
+
+        currentY += 40
+      }
 
       // Course Title
       doc
         .fontSize(24)
         .fillColor("#2C3E50")
         .font("Helvetica-Bold")
-        .text(data.courseTitle, doc.page.width / 2, 360, {
+        .text(data.courseTitle, doc.page.width / 2, currentY, {
           align: "center",
           width: doc.page.width - 200,
         })
+      
+      currentY += 50
 
       // Additional text (if provided)
-      let currentY = 420
       if (data.additionalText) {
         doc
           .fontSize(14)

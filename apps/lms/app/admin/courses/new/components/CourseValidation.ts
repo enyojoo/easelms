@@ -36,7 +36,7 @@ export interface CourseData {
       signatureImage: string
       signatureTitle: string
       additionalText: string
-      certificateType: "completion" | "participation"
+      certificateType: "completion" | "participation" | "achievement"
     }
     currency: string
   }
@@ -69,7 +69,7 @@ export const courseValidationSchema = z.object({
       signatureImage: z.string().optional(),
       signatureTitle: z.string().optional(),
       additionalText: z.string().optional(),
-      certificateType: z.enum(["completion", "participation"]),
+      certificateType: z.enum(["completion", "participation", "achievement"]),
     }),
     currency: z.string(),
   }),
