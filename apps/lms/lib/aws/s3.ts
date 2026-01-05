@@ -14,37 +14,58 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!
 
 /**
  * Generate S3 storage path for a file
- * Follows the structure: courses/{courseId}/preview/ or courses/{courseId}/lessons/{lessonId}/video/
+ * Improved structure: courses/{courseId}/preview/ or courses/{courseId}/lessons/{lessonId}/video/
+ * Uses hash-based naming for better organization and deduplication
  */
 export function getS3StoragePath(
   type: "video" | "thumbnail" | "document" | "avatar" | "certificate",
   userId: string,
   filename: string,
-  additionalPath?: string
+  additionalPath?: string,
+  fileHash?: string // Optional hash for deduplication
 ): string {
   const timestamp = Date.now()
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_")
+  const extension = filename.split(".").pop()?.toLowerCase() || ""
+  
+  // Use hash in filename if provided (for deduplication)
+  const hashPrefix = fileHash ? `${fileHash.substring(0, 8)}-` : ""
   
   switch (type) {
     case "video":
-      // Videos: courses/{courseId}/preview/ or courses/{courseId}/lessons/{lessonId}/video/
+      // Videos: courses/{courseId}/preview/video-{hash}-{filename} or courses/{courseId}/lessons/{lessonId}/video-{hash}-{filename}
       if (additionalPath) {
-        return `courses/${additionalPath}/video/${timestamp}-${sanitizedFilename}`
+        // Check if additionalPath contains lesson ID (format: courseId/lessons/lessonId)
+        if (additionalPath.includes("/lessons/")) {
+          const [courseId, , lessonId] = additionalPath.split("/")
+          return `courses/${courseId}/lessons/${lessonId}/video/${hashPrefix}${timestamp}-${sanitizedFilename}`
+        }
+        // Preview video
+        return `courses/${additionalPath}/preview/video-${hashPrefix}${timestamp}-${sanitizedFilename}`
       }
-      return `courses/${userId}/videos/${timestamp}-${sanitizedFilename}`
+      return `courses/${userId}/videos/${hashPrefix}${timestamp}-${sanitizedFilename}`
     case "thumbnail":
-      return `courses/${userId}/thumbnail/${timestamp}-${sanitizedFilename}`
-    case "document":
+      // Thumbnails: courses/{courseId}/preview/thumbnail-{hash}-{filename}
       if (additionalPath) {
-        return `courses/${additionalPath}/resources/${timestamp}-${sanitizedFilename}`
+        return `courses/${additionalPath}/preview/thumbnail-${hashPrefix}${timestamp}-${sanitizedFilename}`
       }
-      return `courses/${userId}/documents/${timestamp}-${sanitizedFilename}`
+      return `courses/${userId}/preview/thumbnail-${hashPrefix}${timestamp}-${sanitizedFilename}`
+    case "document":
+      // Documents: courses/{courseId}/lessons/{lessonId}/resources/{hash}-{filename} or courses/{courseId}/resources/{hash}-{filename}
+      if (additionalPath) {
+        if (additionalPath.includes("/lessons/")) {
+          const [courseId, , lessonId] = additionalPath.split("/")
+          return `courses/${courseId}/lessons/${lessonId}/resources/${hashPrefix}${timestamp}-${sanitizedFilename}`
+        }
+        return `courses/${additionalPath}/resources/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      }
+      return `courses/${userId}/resources/${hashPrefix}${timestamp}-${sanitizedFilename}`
     case "avatar":
-      return `users/${userId}/avatar/${timestamp}-${sanitizedFilename}`
+      return `users/${userId}/avatar/${hashPrefix}${timestamp}-${sanitizedFilename}`
     case "certificate":
-      return `certificates/${userId}/${timestamp}-${sanitizedFilename}`
+      return `certificates/${userId}/${hashPrefix}${timestamp}-${sanitizedFilename}`
     default:
-      return `uploads/${userId}/${timestamp}-${sanitizedFilename}`
+      return `uploads/${userId}/${hashPrefix}${timestamp}-${sanitizedFilename}`
   }
 }
 

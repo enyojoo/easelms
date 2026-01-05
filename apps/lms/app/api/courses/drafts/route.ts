@@ -132,11 +132,11 @@ export async function POST(request: Request) {
       const currentLessonIds = new Set<string>()
 
       courseData.lessons.forEach((lesson: any, index: number) => {
-        // Store resources, quiz, and estimatedDuration in content JSONB
+        // Store estimatedDuration in content JSONB (resources and quiz settings moved to normalized tables)
         const lessonContent = {
           ...(lesson.content || {}),
-          resources: lesson.resources || [],
-          quiz: lesson.quiz || null,
+          // resources: lesson.resources || [], // REMOVED - now in resources table
+          // quiz: lesson.quiz || null, // REMOVED - quiz settings now in quiz_settings table
           estimatedDuration: lesson.estimatedDuration || 0,
         }
 
@@ -265,16 +265,48 @@ export async function POST(request: Request) {
 
         const existingQuestionIds = new Set((existingQuestions || []).map((q: any) => q.id))
 
-        // Extract quiz questions from lesson data
+        // Extract quiz questions and settings from lesson data
         const quiz = lesson.quiz
-        if (!quiz || !quiz.enabled || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
-          // If no quiz or no questions, delete existing questions
+        const hasQuestions = quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0
+        const quizEnabled = quiz && quiz.enabled && hasQuestions
+
+        // Save or update quiz settings
+        const quizSettingsData = {
+          lesson_id: actualLessonId,
+          enabled: quizEnabled || false,
+          shuffle_quiz: quiz?.shuffleQuiz || false,
+          max_attempts: quiz?.maxAttempts || 3,
+          show_correct_answers: quiz?.showCorrectAnswers !== undefined ? quiz.showCorrectAnswers : true,
+          allow_multiple_attempts: quiz?.allowMultipleAttempts !== undefined ? quiz.allowMultipleAttempts : true,
+          time_limit: quiz?.timeLimit || null,
+          passing_score: quiz?.passingScore || null,
+          updated_at: new Date().toISOString(),
+        }
+
+        // Upsert quiz settings
+        const { error: settingsError } = await dbClient
+          .from("quiz_settings")
+          .upsert(quizSettingsData, {
+            onConflict: "lesson_id"
+          })
+
+        if (settingsError) {
+          console.error(`Error saving quiz settings for lesson ${actualLessonId}:`, settingsError)
+        }
+
+        if (!hasQuestions) {
+          // If no questions, delete existing questions and disable quiz
           if (existingQuestionIds.size > 0) {
             await dbClient
               .from("quiz_questions")
               .delete()
               .eq("lesson_id", actualLessonId)
           }
+          // Update settings to disabled
+          await dbClient
+            .from("quiz_settings")
+            .update({ enabled: false, updated_at: new Date().toISOString() })
+            .eq("lesson_id", actualLessonId)
           continue
         }
 
@@ -348,6 +380,164 @@ export async function POST(request: Request) {
             console.error(`Error inserting questions for lesson ${actualLessonId}:`, insertError)
           } else {
             console.log(`Successfully saved ${questionsToInsert.length} questions for lesson ${actualLessonId}`)
+          }
+        }
+      }
+
+      // Process resources for each lesson
+      for (let lessonIndex = 0; lessonIndex < courseData.lessons.length; lessonIndex++) {
+        const lesson = courseData.lessons[lessonIndex]
+        const actualLessonId = lessonIdMap.get(lessonIndex)
+        
+        if (!actualLessonId) {
+          // If we can't find the lesson ID, skip resource processing
+          continue
+        }
+
+        // Get existing resources for this lesson
+        const { data: existingLessonResources } = await dbClient
+          .from("lesson_resources")
+          .select("resource_id")
+          .eq("lesson_id", actualLessonId)
+
+        const existingResourceIds = new Set(
+          (existingLessonResources || []).map((lr: any) => lr.resource_id)
+        )
+
+        // Process resources from lesson data
+        const resources = lesson.resources || []
+        const currentResourceIds = new Set<number>()
+
+        for (let i = 0; i < resources.length; i++) {
+          const resource = resources[i]
+          
+          if (!resource.url) {
+            console.warn(`Resource in lesson ${actualLessonId} has no URL, skipping...`)
+            continue
+          }
+
+          // Check if resource already exists (by URL + user)
+          let resourceId: number | null = null
+          
+          const { data: existingResource, error: checkError } = await dbClient
+            .from("resources")
+            .select("id")
+            .eq("url", resource.url)
+            .eq("created_by", user.id)
+            .single()
+
+          if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error(`Error checking for existing resource:`, checkError)
+            continue
+          }
+
+          if (existingResource) {
+            resourceId = existingResource.id
+            // Update usage count if not already linked to this lesson
+            if (!existingResourceIds.has(resourceId)) {
+              // Get current usage count and increment
+              const { data: currentResource } = await dbClient
+                .from("resources")
+                .select("usage_count")
+                .eq("id", resourceId)
+                .single()
+              
+              if (currentResource) {
+                await dbClient
+                  .from("resources")
+                  .update({ usage_count: (currentResource.usage_count || 0) + 1 })
+                  .eq("id", resourceId)
+              }
+            }
+          } else {
+            // Create new resource
+            // Extract S3 key from URL
+            let s3Key: string | null = null
+            let fileHash: string | null = null
+            
+            if (resource.url.includes("s3.amazonaws.com") || resource.url.includes("cloudfront.net")) {
+              try {
+                const urlObj = new URL(resource.url)
+                s3Key = urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+              } catch (e) {
+                // Invalid URL, skip S3 key extraction
+              }
+            }
+            
+            // If resource has a hash (from deduplication), store it
+            if (resource.fileHash) {
+              fileHash = resource.fileHash
+            }
+            
+            const { data: newResource, error: resourceError } = await dbClient
+              .from("resources")
+              .insert({
+                title: resource.title || "Untitled Resource",
+                description: resource.description || null,
+                type: resource.type || "document",
+                url: resource.url,
+                file_size: resource.fileSize || null,
+                s3_key: s3Key,
+                file_hash: fileHash,
+                created_by: user.id,
+              })
+              .select("id")
+              .single()
+            
+            if (resourceError) {
+              console.error(`Error creating resource:`, resourceError)
+              continue
+            }
+            
+            resourceId = newResource.id
+          }
+          
+          currentResourceIds.add(resourceId)
+          
+          // Create or update lesson_resources junction
+          const { error: junctionError } = await dbClient
+            .from("lesson_resources")
+            .upsert({
+              lesson_id: actualLessonId,
+              resource_id: resourceId,
+              order_index: i,
+            }, {
+              onConflict: "lesson_id,resource_id"
+            })
+          
+          if (junctionError) {
+            console.error(`Error creating lesson_resource:`, junctionError)
+          }
+        }
+
+        // Delete lesson_resources that are no longer in the lesson
+        const resourcesToDelete = Array.from(existingResourceIds).filter(
+          (id) => !currentResourceIds.has(id)
+        )
+
+        if (resourcesToDelete.length > 0) {
+          await dbClient
+            .from("lesson_resources")
+            .delete()
+            .eq("lesson_id", actualLessonId)
+            .in("resource_id", resourcesToDelete)
+
+          // Decrement usage_count for deleted resources
+          for (const resourceId of resourcesToDelete) {
+            // Get current usage count and decrement
+            const { data: currentResource } = await dbClient
+              .from("resources")
+              .select("usage_count")
+              .eq("id", resourceId)
+              .single()
+            
+            if (currentResource) {
+              const newUsageCount = Math.max((currentResource.usage_count || 0) - 1, 0)
+              await dbClient
+                .from("resources")
+                .update({ usage_count: newUsageCount })
+                .eq("id", resourceId)
+            }
           }
         }
       }
@@ -428,12 +618,116 @@ export async function GET(request: Request) {
 
     // Transform lessons from database schema to frontend format
     if (data.lessons && Array.isArray(data.lessons)) {
+      // Fetch resources, quiz settings, and quiz questions for all lessons in parallel
+      const lessonIds = data.lessons.map((l: any) => l.id)
+      const [allLessonResources, allQuizSettings, allQuizQuestions] = await Promise.all([
+        dbClient
+          .from("lesson_resources")
+          .select(`
+            lesson_id,
+            order_index,
+            resources (
+              id,
+              title,
+              description,
+              type,
+              url,
+              file_size,
+              mime_type,
+              download_count
+            )
+          `)
+          .in("lesson_id", lessonIds)
+          .order("order_index", { ascending: true }),
+        dbClient
+          .from("quiz_settings")
+          .select("*")
+          .in("lesson_id", lessonIds),
+        dbClient
+          .from("quiz_questions")
+          .select("*")
+          .in("lesson_id", lessonIds)
+          .order("order_index", { ascending: true })
+      ])
+
+      // Group resources by lesson_id
+      const resourcesByLesson = new Map<number, any[]>()
+      if (allLessonResources.data) {
+        for (const lr of allLessonResources.data) {
+          if (!lr.lesson_id || !lr.resources) continue
+          if (!resourcesByLesson.has(lr.lesson_id)) {
+            resourcesByLesson.set(lr.lesson_id, [])
+          }
+          resourcesByLesson.get(lr.lesson_id)!.push({
+            id: lr.resources.id.toString(),
+            title: lr.resources.title,
+            description: lr.resources.description,
+            type: lr.resources.type,
+            url: lr.resources.url,
+            fileSize: lr.resources.file_size,
+            downloadCount: lr.resources.download_count,
+          })
+        }
+      }
+
+      // Group quiz settings and questions by lesson_id
+      const quizSettingsByLesson = new Map<number, any>()
+      if (allQuizSettings.data) {
+        for (const settings of allQuizSettings.data) {
+          quizSettingsByLesson.set(settings.lesson_id, {
+            enabled: settings.enabled || false,
+            shuffleQuiz: settings.shuffle_quiz || false,
+            maxAttempts: settings.max_attempts || 3,
+            showCorrectAnswers: settings.show_correct_answers !== undefined ? settings.show_correct_answers : true,
+            allowMultipleAttempts: settings.allow_multiple_attempts !== undefined ? settings.allow_multiple_attempts : true,
+            timeLimit: settings.time_limit || null,
+            passingScore: settings.passing_score || null,
+          })
+        }
+      }
+
+      // Group quiz questions by lesson_id and transform to frontend format
+      const quizQuestionsByLesson = new Map<number, any[]>()
+      if (allQuizQuestions.data) {
+        for (const q of allQuizQuestions.data) {
+          if (!quizQuestionsByLesson.has(q.lesson_id)) {
+            quizQuestionsByLesson.set(q.lesson_id, [])
+          }
+          
+          const questionData = q.question_data || {}
+          const question: any = {
+            id: q.id.toString(),
+            type: q.question_type || "multiple-choice",
+            text: q.question_text || "",
+            points: q.points || 1,
+            explanation: q.explanation || null,
+            difficulty: q.difficulty || null,
+            timeLimit: q.time_limit || null,
+            imageUrl: q.image_url || null,
+            ...questionData, // Include type-specific data
+          }
+          
+          quizQuestionsByLesson.get(q.lesson_id)!.push(question)
+        }
+      }
+
       data.lessons = data.lessons.map((lesson: any) => {
         const content = lesson.content || {}
         const settings = {
           isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
           videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
         }
+
+        // Get resources, quiz settings, and quiz questions from normalized tables
+        const resources = resourcesByLesson.get(lesson.id) || []
+        const quizSettings = quizSettingsByLesson.get(lesson.id)
+        const quizQuestions = quizQuestionsByLesson.get(lesson.id) || []
+
+        // Combine quiz settings and questions into quiz object
+        const quiz = quizSettings ? {
+          ...quizSettings,
+          questions: quizQuestions,
+        } : null
 
         return {
           id: lesson.id?.toString() || `lesson-${Date.now()}`,
@@ -442,10 +736,12 @@ export async function GET(request: Request) {
           content: {
             ...content,
             // Remove resources, quiz, estimatedDuration from content as they're separate
+            resources: undefined, // Don't include in content
+            quiz: undefined, // Don't include in content
           },
-          resources: content.resources || [],
+          resources: resources,
           settings: settings,
-          quiz: content.quiz || null,
+          quiz: quiz,
           estimatedDuration: content.estimatedDuration || 0,
         }
       })

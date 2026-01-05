@@ -247,10 +247,12 @@ export function useAutoSave<T>({
           content: {
             ...content,
             // Remove resources, quiz, estimatedDuration from content as they're separate
+            resources: undefined, // Don't include in content
           },
-          resources: content.resources || [],
+          // Resources and quiz come from normalized tables (via API)
+          resources: lesson.resources || [],
           settings: settings,
-          quiz: content.quiz || null,
+          quiz: lesson.quiz || null, // Quiz settings from quiz_settings table
           estimatedDuration: content.estimatedDuration || 0,
         }
       }),

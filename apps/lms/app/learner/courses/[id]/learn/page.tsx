@@ -996,8 +996,8 @@ export default function CourseLearningPage() {
       {/* Main Content - Scrollable container on mobile, fixed on desktop */}
       <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
         <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none min-h-0">
-          <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden rounded-none">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 rounded-none">
               {(() => {
                 const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
                 const hasVideo = !!(currentLesson as any).url
@@ -1054,7 +1054,7 @@ export default function CourseLearningPage() {
                   <>
                     {/* Video Tab - for video-only and mixed lessons */}
                     {(hasVideo && !isMixed) || isMixed ? (
-                      <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                      <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                         <div className="relative w-full h-full bg-black">
                           <VideoPlayer
                             key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
@@ -1074,7 +1074,7 @@ export default function CourseLearningPage() {
 
                     {/* Text Tab - for text-only and mixed lessons */}
                     {(hasText && !isMixed) || isMixed ? (
-                      <TabsContent value="text" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                      <TabsContent value="text" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                         {isMixed ? (
                           <TextContentWithTracking
                             content={(currentLesson as any).html || (currentLesson as any).text || ""}
@@ -1084,7 +1084,7 @@ export default function CourseLearningPage() {
                             textViewed={textViewed}
                           />
                         ) : (
-                          <ScrollArea className="w-full h-full flex-1 min-h-0">
+                          <div className="w-full h-full overflow-y-auto">
                             <div className="p-3 sm:p-4 md:p-6">
                               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
                                 {currentLesson.title}
@@ -1096,7 +1096,7 @@ export default function CourseLearningPage() {
                                 }}
                               />
                             </div>
-                          </ScrollArea>
+                          </div>
                         )}
                       </TabsContent>
                     ) : null}
@@ -1105,8 +1105,8 @@ export default function CourseLearningPage() {
               })()}
 
               {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
-                <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                  <ScrollArea className="w-full h-full flex-1 min-h-0">
+                <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
+                  <div className="w-full h-full overflow-y-auto">
                     <div className="p-3 sm:p-4 md:p-6">
                       <QuizComponent
                       quiz={{
@@ -1158,19 +1158,19 @@ export default function CourseLearningPage() {
                           initialScore={quizScores[currentLesson.id]}
                     />
                     </div>
-                  </ScrollArea>
+                  </div>
                 </TabsContent>
               )}
 
               {currentLesson.resources && currentLesson.resources.length > 0 && (
-                <TabsContent value="resources" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                  <ScrollArea className="w-full h-full flex-1 min-h-0">
+                <TabsContent value="resources" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
+                  <div className="w-full h-full overflow-y-auto">
                     <div className="p-3 sm:p-4 md:p-6">
                       <ResourcesPanel 
                         resources={currentLesson.resources || []} 
                       />
                     </div>
-                  </ScrollArea>
+                  </div>
                 </TabsContent>
               )}
             </Tabs>

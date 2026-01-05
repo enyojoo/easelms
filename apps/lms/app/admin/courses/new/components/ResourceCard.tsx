@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -71,6 +72,20 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
                 onChange={(e) => onUpdate({ title: e.target.value })}
                 placeholder="Enter resource title"
               />
+            </div>
+
+            <div className="space-y-2 w-full overflow-hidden">
+              <Label>Description (Optional)</Label>
+              <Textarea
+                value={resource.description || ""}
+                onChange={(e) => onUpdate({ description: e.target.value })}
+                placeholder="Enter a brief description of this resource..."
+                rows={3}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Provide additional context about this resource to help learners understand its purpose
+              </p>
             </div>
 
             {resource.type === "link" ? (

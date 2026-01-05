@@ -235,23 +235,37 @@ export async function GET(
             }
           })
           
-          // Get quiz settings from content (still stored there)
-          if (content.quiz) {
+          // Get quiz settings from normalized table
+          const { data: quizSettingsData, error: settingsError } = await supabaseClientForShuffle
+            .from("quiz_settings")
+            .select("*")
+            .eq("lesson_id", lesson.id)
+            .single()
+
+          if (settingsError && settingsError.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.warn("Error fetching quiz settings:", settingsError)
+          }
+
+          if (quizSettingsData) {
             quizSettings = {
-              enabled: content.quiz.enabled || false,
-              maxAttempts: content.quiz.maxAttempts || 1,
-              showCorrectAnswers: content.quiz.showCorrectAnswers || false,
-              allowMultipleAttempts: content.quiz.allowMultipleAttempts || false,
-              shuffleQuiz: content.quiz.shuffleQuiz || false,
+              enabled: quizSettingsData.enabled || false,
+              maxAttempts: quizSettingsData.max_attempts || 3,
+              showCorrectAnswers: quizSettingsData.show_correct_answers !== undefined ? quizSettingsData.show_correct_answers : true,
+              allowMultipleAttempts: quizSettingsData.allow_multiple_attempts !== undefined ? quizSettingsData.allow_multiple_attempts : true,
+              shuffleQuiz: quizSettingsData.shuffle_quiz || false,
+              timeLimit: quizSettingsData.time_limit || null,
+              passingScore: quizSettingsData.passing_score || null,
             }
           } else {
-            // Default settings if quiz is enabled
+            // Default settings if no settings record exists
             quizSettings = {
               enabled: quiz_questions.length > 0,
               maxAttempts: 3,
               showCorrectAnswers: true,
               allowMultipleAttempts: true,
               shuffleQuiz: false,
+              timeLimit: null,
+              passingScore: null,
             }
           }
           
@@ -351,9 +365,6 @@ export async function GET(
                     }
                   }
                 
-                // Use shuffled questions
-                quiz_questions = shuffledQuestions
-                
                   // Use shuffled questions
                   quiz_questions = shuffledQuestions
                   
@@ -390,17 +401,20 @@ export async function GET(
             questionsCount: quiz_questions.length,
             settings: quizSettings,
           })
-        } else if (content.quiz) {
-          // Fallback to JSONB storage (backward compatibility)
+        } else {
+          // No quiz settings found - use defaults
           quizSettings = {
-            enabled: content.quiz.enabled || false,
-            maxAttempts: content.quiz.maxAttempts || 1,
-            showCorrectAnswers: content.quiz.showCorrectAnswers || false,
-            allowMultipleAttempts: content.quiz.allowMultipleAttempts || false,
-            shuffleQuiz: content.quiz.shuffleQuiz || false,
+            enabled: quiz_questions.length > 0,
+            maxAttempts: 3,
+            showCorrectAnswers: true,
+            allowMultipleAttempts: true,
+            shuffleQuiz: false,
+            timeLimit: null,
+            passingScore: null,
           }
           
-          if (content.quiz.enabled && Array.isArray(content.quiz.questions)) {
+          // Fallback to JSONB for quiz questions only (if no data, this won't execute)
+          if (content.quiz && content.quiz.enabled && Array.isArray(content.quiz.questions)) {
             quiz_questions = content.quiz.questions.map((q: any) => ({
               id: q.id,
               question: q.text || q.question,
@@ -521,25 +535,51 @@ export async function GET(
           }
         }
         
-        let resources = []
-        if (Array.isArray(content.resources)) {
-          resources = content.resources.map((r: any) => ({
-            id: r.id,
-            type: r.type,
-            title: r.title,
-            url: r.url,
-            description: r.description,
-            fileSize: r.fileSize,
-          }))
-          console.log("Course API: Resources extracted for lesson", {
+        // Fetch resources from normalized table
+        let resources: any[] = []
+        const { data: lessonResources, error: resourcesError } = await supabaseClientForShuffle
+          .from("lesson_resources")
+          .select(`
+            order_index,
+            resources (
+              id,
+              title,
+              description,
+              type,
+              url,
+              file_size,
+              mime_type,
+              download_count
+            )
+          `)
+          .eq("lesson_id", lesson.id)
+          .order("order_index", { ascending: true })
+
+        if (resourcesError) {
+          console.warn("Error fetching resources from table:", resourcesError)
+        }
+
+        if (lessonResources && lessonResources.length > 0) {
+          resources = lessonResources
+            .filter((lr: any) => lr.resources) // Filter out any null resources
+            .map((lr: any) => ({
+              id: lr.resources.id.toString(),
+              title: lr.resources.title,
+              description: lr.resources.description,
+              type: lr.resources.type,
+              url: lr.resources.url,
+              fileSize: lr.resources.file_size,
+              downloadCount: lr.resources.download_count,
+            }))
+          console.log("Course API: Resources loaded from table for lesson", {
             lessonId: lesson.id,
             lessonTitle: lesson.title,
             resourcesCount: resources.length,
           })
         }
         
-        // Create a copy of content without quiz and resources (we'll add processed versions)
-        const { quiz, resources: contentResources, ...contentRest } = content
+        // Create a copy of content without resources (quiz settings moved to normalized table)
+        const { resources: contentResources, ...contentRest } = content
         
         const processedLesson = {
         id: lesson.id,
@@ -596,6 +636,240 @@ export async function GET(
     console.error("Unexpected error fetching course:", error)
     return NextResponse.json(
       { error: error?.message || "An unexpected error occurred while fetching course" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const slugOrId = id
+    
+    if (!slugOrId) {
+      return NextResponse.json({ error: "Course ID is required" }, { status: 400 })
+    }
+
+    // Extract actual ID from slug
+    const idStr = extractIdFromSlug(slugOrId)
+    const numericId = parseInt(idStr, 10)
+
+    if (isNaN(numericId)) {
+      return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
+    }
+
+    // Get authenticated user
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Check if user is admin
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "User profile not found" }, { status: 404 })
+    }
+
+    if (profile.user_type !== "admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 })
+    }
+
+    // Use service role client for deletion to bypass RLS
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    const serviceSupabase = createServiceRoleClient()
+
+    console.log("Deleting course and all related data:", numericId)
+
+    // Cleanup S3 files before deleting database records
+    try {
+      const { cleanupCourseFiles } = await import("@/lib/aws/s3-cleanup")
+      const cleanupResult = await cleanupCourseFiles(numericId)
+      console.log(`S3 cleanup: ${cleanupResult.deleted} files deleted, ${cleanupResult.errors} errors`)
+    } catch (cleanupError: any) {
+      console.error("Error during S3 cleanup (continuing with deletion):", cleanupError)
+      // Continue with deletion even if cleanup fails
+    }
+
+    // Get all lesson IDs for this course first
+    const { data: lessons, error: lessonsError } = await serviceSupabase
+      .from("lessons")
+      .select("id")
+      .eq("course_id", numericId)
+
+    if (lessonsError) {
+      console.error("Error fetching lessons:", lessonsError)
+      return NextResponse.json({ error: "Failed to fetch course lessons" }, { status: 500 })
+    }
+
+    const lessonIds = (lessons || []).map((l: any) => l.id)
+
+    // Delete in order to respect foreign key constraints:
+    // 1. Quiz results (references quiz_questions and quiz_attempts)
+    if (lessonIds.length > 0) {
+      const { error: quizResultsError } = await serviceSupabase
+        .from("quiz_results")
+        .delete()
+        .in("lesson_id", lessonIds)
+
+      if (quizResultsError) {
+        console.error("Error deleting quiz results:", quizResultsError)
+        // Continue even if this fails - might not exist
+      } else {
+        console.log(`Deleted quiz results for ${lessonIds.length} lessons`)
+      }
+    }
+
+    // 2. Quiz attempts (references lessons)
+    if (lessonIds.length > 0) {
+      const { error: quizAttemptsError } = await serviceSupabase
+        .from("quiz_attempts")
+        .delete()
+        .in("lesson_id", lessonIds)
+
+      if (quizAttemptsError) {
+        console.error("Error deleting quiz attempts:", quizAttemptsError)
+      } else {
+        console.log(`Deleted quiz attempts for ${lessonIds.length} lessons`)
+      }
+    }
+
+    // 3. Quiz questions (references lessons)
+    if (lessonIds.length > 0) {
+      const { error: quizQuestionsError } = await serviceSupabase
+        .from("quiz_questions")
+        .delete()
+        .in("lesson_id", lessonIds)
+
+      if (quizQuestionsError) {
+        console.error("Error deleting quiz questions:", quizQuestionsError)
+      } else {
+        console.log(`Deleted quiz questions for ${lessonIds.length} lessons`)
+      }
+    }
+
+    // 4. Progress (references course and lessons)
+    const { error: progressError } = await serviceSupabase
+      .from("progress")
+      .delete()
+      .eq("course_id", numericId)
+
+    if (progressError) {
+      console.error("Error deleting progress:", progressError)
+    } else {
+      console.log("Deleted progress records")
+    }
+
+    // 5. Enrollments (references course)
+    const { error: enrollmentsError } = await serviceSupabase
+      .from("enrollments")
+      .delete()
+      .eq("course_id", numericId)
+
+    if (enrollmentsError) {
+      console.error("Error deleting enrollments:", enrollmentsError)
+    } else {
+      console.log("Deleted enrollments")
+    }
+
+    // 6. Payments and Certificates are kept for historical/audit purposes
+    // We preserve these records even after course deletion for financial/legal history
+    // If foreign key constraints prevent deletion, we'll handle them gracefully
+    try {
+      // Try to set course_id to NULL for payments (if constraint allows)
+      const { error: paymentsUpdateError } = await serviceSupabase
+        .from("payments")
+        .update({ course_id: null })
+        .eq("course_id", numericId)
+
+      if (paymentsUpdateError) {
+        // If update fails (e.g., NOT NULL constraint), records will remain with course_id
+        // This is fine - they're preserved for history even if course is deleted
+        console.log("Note: Payments records preserved with course_id for historical purposes:", paymentsUpdateError.message)
+      } else {
+        console.log("Nullified course_id in payments (preserved for history)")
+      }
+    } catch (e: any) {
+      console.log("Payments records will remain with course_id for historical purposes:", e?.message)
+    }
+
+    try {
+      // Try to set course_id to NULL for certificates (if constraint allows)
+      const { error: certificatesUpdateError } = await serviceSupabase
+        .from("certificates")
+        .update({ course_id: null })
+        .eq("course_id", numericId)
+
+      if (certificatesUpdateError) {
+        // If update fails (e.g., NOT NULL constraint), records will remain with course_id
+        // This is fine - they're preserved for history even if course is deleted
+        console.log("Note: Certificate records preserved with course_id for historical purposes:", certificatesUpdateError.message)
+      } else {
+        console.log("Nullified course_id in certificates (preserved for history)")
+      }
+    } catch (e: any) {
+      console.log("Certificate records will remain with course_id for historical purposes:", e?.message)
+    }
+
+    // 7. Lessons (references course) - should cascade to quiz_questions, but we deleted them explicitly above
+    const { error: lessonsDeleteError } = await serviceSupabase
+      .from("lessons")
+      .delete()
+      .eq("course_id", numericId)
+
+    if (lessonsDeleteError) {
+      console.error("Error deleting lessons:", lessonsDeleteError)
+      return NextResponse.json({ error: "Failed to delete lessons" }, { status: 500 })
+    } else {
+      console.log(`Deleted ${lessonIds.length} lessons`)
+    }
+
+    // 8. Finally, delete the course itself
+    // Note: Payments and Certificates are preserved for historical/audit purposes
+    // If foreign key constraints prevent deletion, we'll provide a helpful error
+    const { error: courseDeleteError } = await serviceSupabase
+      .from("courses")
+      .delete()
+      .eq("id", numericId)
+
+    if (courseDeleteError) {
+      console.error("Error deleting course:", courseDeleteError)
+      
+      // Check if error is due to foreign key constraint from payments/certificates
+      const errorMessage = courseDeleteError.message || ""
+      if (errorMessage.includes("foreign key") && (errorMessage.includes("payments") || errorMessage.includes("certificates"))) {
+        // Foreign key constraint is preventing deletion
+        // This shouldn't happen if we set course_id to NULL, but if it does,
+        // we need to inform the admin that the database schema needs to be updated
+        return NextResponse.json({ 
+          error: "Cannot delete course: Database constraint prevents deletion. Payments and certificates are preserved for history, but the database schema may need to allow NULL course_id or use ON DELETE SET NULL.",
+          details: courseDeleteError.message,
+          suggestion: "Update the payments and certificates tables to allow NULL course_id or change foreign key constraint to ON DELETE SET NULL"
+        }, { status: 500 })
+      }
+      
+      return NextResponse.json({ 
+        error: "Failed to delete course",
+        details: courseDeleteError.message 
+      }, { status: 500 })
+    }
+
+    console.log("Course and all related data deleted successfully:", numericId)
+
+    return NextResponse.json({ message: "Course deleted successfully" })
+  } catch (error: any) {
+    console.error("Unexpected error deleting course:", error)
+    return NextResponse.json(
+      { error: error?.message || "An unexpected error occurred while deleting course" },
       { status: 500 }
     )
   }

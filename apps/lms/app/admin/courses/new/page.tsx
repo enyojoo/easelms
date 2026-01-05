@@ -171,21 +171,29 @@ function NewCourseContent() {
                     content: {
                       ...content,
                       // Remove resources, quiz, estimatedDuration from content as they're separate
+                      resources: undefined, // Don't include in content
                     },
-                    resources: content.resources || [],
+                    // Resources and quiz come from normalized tables (via API)
+                    resources: lesson.resources || [],
                     settings: settings,
-                    quiz: content.quiz ? {
-                      enabled: content.quiz.enabled ?? false,
-                      questions: content.quiz.questions || [],
-                      showCorrectAnswers: content.quiz.showCorrectAnswers ?? false,
-                      allowMultipleAttempts: content.quiz.allowMultipleAttempts ?? false,
-                      maxAttempts: content.quiz.maxAttempts ?? 3,
+                    quiz: lesson.quiz ? {
+                      enabled: lesson.quiz.enabled ?? false,
+                      questions: lesson.quiz.questions || [],
+                      showCorrectAnswers: lesson.quiz.showCorrectAnswers ?? false,
+                      allowMultipleAttempts: lesson.quiz.allowMultipleAttempts ?? false,
+                      maxAttempts: lesson.quiz.maxAttempts ?? 3,
+                      shuffleQuiz: lesson.quiz.shuffleQuiz ?? false,
+                      timeLimit: lesson.quiz.timeLimit || null,
+                      passingScore: lesson.quiz.passingScore || null,
                     } : {
                       enabled: false,
                       questions: [],
                       showCorrectAnswers: false,
                       allowMultipleAttempts: false,
                       maxAttempts: 3,
+                      shuffleQuiz: false,
+                      timeLimit: null,
+                      passingScore: null,
                     },
                     estimatedDuration: content.estimatedDuration || 0,
                   }

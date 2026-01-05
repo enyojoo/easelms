@@ -2,21 +2,84 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, Link, Download } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { 
+  FileText, 
+  Link as LinkIcon, 
+  Download, 
+  ExternalLink,
+  File,
+  FileImage,
+  FileVideo,
+  FileCode,
+  FileSpreadsheet,
+  FileArchive,
+  Loader2,
+  Info
+} from "lucide-react"
 import { useState } from "react"
+import { motion } from "framer-motion"
+
+interface Resource {
+  id?: string
+  type: "document" | "link"
+  title: string
+  url: string
+  description?: string
+  fileSize?: number
+}
 
 interface ResourcesPanelProps {
-  resources: {
-    type: "document" | "link"
-    title: string
-    url: string
-  }[]
+  resources: Resource[]
+}
+
+// Helper function to get file type icon
+const getFileIcon = (url: string, type: string) => {
+  if (type === "link") {
+    return LinkIcon
+  }
+
+  const extension = url.split('.').pop()?.toLowerCase() || ''
+  
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension)) {
+    return FileImage
+  } else if (['mp4', 'webm', 'mov', 'avi'].includes(extension)) {
+    return FileVideo
+  } else if (['pdf'].includes(extension)) {
+    return FileText
+  } else if (['xlsx', 'xls', 'csv'].includes(extension)) {
+    return FileSpreadsheet
+  } else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) {
+    return FileArchive
+  } else if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml'].includes(extension)) {
+    return FileCode
+  }
+  
+  return File
+}
+
+// Helper function to format file size
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return ""
+  
+  if (bytes < 1024) return bytes + " B"
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + " GB"
+}
+
+// Helper function to get file type badge
+const getFileTypeBadge = (url: string, type: string): string => {
+  if (type === "link") return "Link"
+  
+  const extension = url.split('.').pop()?.toUpperCase() || 'FILE'
+  return extension
 }
 
 export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
   const [downloadingIndex, setDownloadingIndex] = useState<number | null>(null)
 
-  const handleDownload = async (resource: { type: string; title: string; url: string }, index: number) => {
+  const handleDownload = async (resource: Resource, index: number) => {
     if (resource.type === "link") {
       // For links, just open in new tab
       window.open(resource.url, "_blank", "noopener,noreferrer")
@@ -27,7 +90,9 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
     setDownloadingIndex(index)
     try {
       // Check if URL is an S3 URL (needs to go through our API)
-      const isS3Url = resource.url.includes("s3.amazonaws.com") || resource.url.includes("amazonaws.com") || resource.url.includes("cloudfront.net")
+      const isS3Url = resource.url.includes("s3.amazonaws.com") || 
+                     resource.url.includes("amazonaws.com") || 
+                     resource.url.includes("cloudfront.net")
       
       let downloadUrl = resource.url
       if (isS3Url) {
@@ -90,38 +155,140 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
 
   if (!resources || resources.length === 0) {
     return (
-          <p className="text-center text-muted-foreground py-8">No resources available for this lesson.</p>
+      <div className="flex flex-col items-center justify-center py-12 px-4">
+        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+          <FileText className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <p className="text-center text-muted-foreground text-lg">No resources available for this lesson.</p>
+        <p className="text-center text-muted-foreground text-sm mt-2">Check back later for additional materials.</p>
+      </div>
     )
   }
 
   return (
-        <ul className="space-y-4">
-          {resources.map((resource, index) => (
-            <li key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg">
-              <span className="flex items-center text-text-primary mb-2 sm:mb-0">
-                {resource.type === "document" ? (
-                  <FileText className="mr-2 h-4 w-4 text-blue-400 flex-shrink-0" />
-                ) : (
-                  <Link className="mr-2 h-4 w-4 text-green-400 flex-shrink-0" />
-                )}
-                <span className="truncate">{resource.title}</span>
-              </span>
-          <button
-            onClick={() => handleDownload(resource, index)}
-            disabled={downloadingIndex === index}
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 w-full sm:w-auto mt-2 sm:mt-0"
-          >
-                  {resource.type === "document" ? (
-                    <>
-                      <Download className="mr-2 h-4 w-4" /> 
-                      {downloadingIndex === index ? "Downloading..." : "Download"}
-                    </>
-                  ) : (
-                    <>Open</>
-                  )}
-                </button>
-            </li>
-          ))}
-        </ul>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-2xl font-bold mb-1">Lesson Resources</h3>
+          <p className="text-sm text-muted-foreground">
+            {resources.length} {resources.length === 1 ? "resource" : "resources"} available
+          </p>
+        </div>
+      </div>
+
+      {/* Resources Grid */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {resources.map((resource, index) => {
+          const Icon = getFileIcon(resource.url, resource.type)
+          const fileType = getFileTypeBadge(resource.url, resource.type)
+          const fileSize = formatFileSize(resource.fileSize)
+          const isDownloading = downloadingIndex === index
+
+          return (
+            <motion.div
+              key={resource.id || index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: index * 0.05 }}
+            >
+              <Card className="hover:shadow-lg transition-shadow duration-200 border-2 hover:border-primary/50">
+                <CardContent className="p-5 md:p-6">
+                  <div className="flex items-start gap-4">
+                    {/* Icon */}
+                    <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
+                      resource.type === "link" 
+                        ? "bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
+                        : "bg-primary/10 text-primary"
+                    }`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 space-y-3">
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <h4 className="font-semibold text-base leading-tight line-clamp-2">
+                            {resource.title}
+                          </h4>
+                        </div>
+                        
+                        {/* Badges */}
+                        <div className="flex items-center gap-2 flex-wrap mt-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {fileType}
+                          </Badge>
+                          {fileSize && (
+                            <Badge variant="outline" className="text-xs">
+                              {fileSize}
+                            </Badge>
+                          )}
+                          {resource.type === "link" && (
+                            <Badge variant="outline" className="text-xs">
+                              External Link
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      {resource.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {resource.description}
+                        </p>
+                      )}
+
+                      {/* Action Button */}
+                      <div className="pt-2">
+                        <Button
+                          onClick={() => handleDownload(resource, index)}
+                          disabled={isDownloading}
+                          variant={resource.type === "link" ? "default" : "outline"}
+                          className="w-full sm:w-auto"
+                          size="sm"
+                        >
+                          {isDownloading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Downloading...
+                            </>
+                          ) : resource.type === "link" ? (
+                            <>
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open Link
+                            </>
+                          ) : (
+                            <>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )
+        })}
+      </div>
+
+      {/* Info Card */}
+      <Card className="bg-muted/50 border-muted">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground">
+                <strong>Tip:</strong> Resources are provided to supplement your learning. 
+                {resources.some(r => r.type === "document") && " Download documents to access them offline."}
+                {resources.some(r => r.type === "link") && " External links will open in a new tab."}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
