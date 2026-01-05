@@ -12,8 +12,12 @@ export async function POST(request: Request) {
 
   const formData = await request.formData()
   const file = formData.get("file") as File
-  const fileType = (formData.get("type") as string) || "document" // video, thumbnail, document, avatar, certificate
+  const fileType = (formData.get("type") as string) || "document" // video, thumbnail, document, avatar, certificate, quiz-image
   const additionalPath = (formData.get("additionalPath") as string) || undefined
+  const courseId = (formData.get("courseId") as string) || undefined
+  const lessonId = (formData.get("lessonId") as string) || undefined
+  const resourceId = (formData.get("resourceId") as string) || undefined
+  const fileId = (formData.get("fileId") as string) || undefined
 
   if (!file) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 })
@@ -21,7 +25,7 @@ export async function POST(request: Request) {
 
   try {
     // Determine file type and validate
-    let s3Type: "video" | "thumbnail" | "document" | "avatar" | "certificate"
+    let s3Type: "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image"
     let maxSize: number
     let isValid: boolean
 
@@ -33,6 +37,16 @@ export async function POST(request: Request) {
       if (!isValid) {
         return NextResponse.json(
           { error: "Invalid video file type. Supported formats: MP4, WebM, OGG" },
+          { status: 400 }
+        )
+      }
+    } else if (fileType === "quiz-image") {
+      s3Type = "quiz-image"
+      maxSize = getMaxImageSize()
+      isValid = isValidImageFile(file)
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Invalid quiz image file type. Supported formats: JPG, PNG, GIF, WebP" },
           { status: 400 }
         )
       }
@@ -80,12 +94,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // Generate S3 storage path
+    // Generate S3 storage path with proper folder structure
     const s3Path = getS3StoragePath(
       s3Type,
       user.id,
       file.name,
-      additionalPath
+      additionalPath,
+      undefined, // fileHash - will be calculated if needed
+      courseId,
+      lessonId,
+      resourceId,
+      fileId
     )
 
     // Upload to S3

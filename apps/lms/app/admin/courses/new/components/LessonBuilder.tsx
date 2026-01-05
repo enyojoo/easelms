@@ -43,6 +43,7 @@ interface LessonBuilderProps {
   lessons: Lesson[]
   onUpdate: (lessons: Lesson[]) => void
   minimumQuizScore?: number
+  courseId?: string | number
 }
 
 // Helper function to generate unique IDs
@@ -50,7 +51,7 @@ const generateUniqueId = (prefix: string): string => {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
-export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50 }: LessonBuilderProps) {
+export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50, courseId }: LessonBuilderProps) {
   const [localLessons, setLocalLessons] = useState<Lesson[]>(lessons)
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
@@ -236,6 +237,7 @@ export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50
                           onDuplicate={duplicateLesson}
                           dragHandleProps={provided.dragHandleProps}
                           minimumQuizScore={minimumQuizScore}
+                          courseId={courseId}
                         />
                       </div>
                     </div>

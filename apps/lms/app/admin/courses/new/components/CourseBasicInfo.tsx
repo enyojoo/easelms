@@ -24,9 +24,10 @@ interface CourseBasicInfoProps {
     price: string
   }
   onUpdate: (data: any) => void
+  courseId?: string | number
 }
 
-export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps) {
+export default function CourseBasicInfo({ data, onUpdate, courseId }: CourseBasicInfoProps) {
   // Initialize state from data prop (for draft restoration)
   const [thumbnail, setThumbnail] = useState(() => data.thumbnail || "")
   const [previewVideoInput, setPreviewVideoInput] = useState(() => data.previewVideo || "")
@@ -170,6 +171,7 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
             accept="image/*"
             maxSize={5 * 1024 * 1024} // 5MB
             multiple={false}
+            courseId={courseId}
             initialValue={data.thumbnail && data.thumbnail.trim() !== "" ? data.thumbnail : undefined}
             onUploadComplete={handleThumbnailUpload}
             onRemove={handleThumbnailRemove}
@@ -201,6 +203,7 @@ export default function CourseBasicInfo({ data, onUpdate }: CourseBasicInfoProps
             accept="video/mp4,video/webm,video/ogg"
             maxSize={2 * 1024 * 1024 * 1024} // 2GB
             multiple={false}
+            courseId={courseId}
             initialValue={data.previewVideo ? data.previewVideo : undefined}
             onUploadComplete={(files, urls) => {
               if (urls && urls.length > 0 && urls[0]) {

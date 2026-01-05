@@ -27,9 +27,10 @@ interface CourseSettingsProps {
     }
   }
   onUpdate: (settings: any) => void
+  courseId?: string | number
 }
 
-export default function CourseSettings({ settings, onUpdate }: CourseSettingsProps) {
+export default function CourseSettings({ settings, onUpdate, courseId }: CourseSettingsProps) {
   const handleSwitchChange = (field: string, checked: boolean) => {
     onUpdate({ ...settings, [field]: checked })
   }
@@ -99,6 +100,7 @@ export default function CourseSettings({ settings, onUpdate }: CourseSettingsPro
         <CourseCertificateSettings
           settings={settings.certificate}
           onUpdate={(data) => handleSectionUpdate("certificate", data)}
+          courseId={courseId}
         />
       </div>
     </div>

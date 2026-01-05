@@ -23,9 +23,10 @@ interface QuizBuilderProps {
   }
   onChange: (quiz: any) => void
   minimumQuizScore?: number
+  courseId?: string | number
 }
 
-export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: QuizBuilderProps) {
+export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50, courseId }: QuizBuilderProps) {
   const [previewMode, setPreviewMode] = useState(false)
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, any>>({})
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set())
@@ -242,6 +243,7 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50 }: Q
                                   <QuestionEditor
                                     question={question}
                                     onChange={(updated) => updateQuestion(qIndex, updated)}
+                                    courseId={courseId}
                                   />
                                 </CardContent>
                               </CollapsibleContent>

@@ -555,6 +555,7 @@ function NewCourseContent() {
               <CourseBasicInfo
                 data={courseData.basicInfo}
                 onUpdate={(data) => updateCourseData("basicInfo", data)}
+                courseId={currentCourseId || editCourseId}
               />
             </TabsContent>
 
@@ -563,6 +564,7 @@ function NewCourseContent() {
                 lessons={courseData.lessons} 
                 onUpdate={(lessons) => updateCourseData("lessons", lessons)}
                 minimumQuizScore={courseData.settings.minimumQuizScore}
+                courseId={currentCourseId || editCourseId}
               />
             </TabsContent>
 
@@ -570,6 +572,7 @@ function NewCourseContent() {
               <CourseSettings
                 settings={courseData.settings}
                 onUpdate={(settings) => updateCourseData("settings", settings)}
+                courseId={currentCourseId || editCourseId}
               />
             </TabsContent>
 

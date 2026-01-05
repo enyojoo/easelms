@@ -57,6 +57,7 @@ interface LessonCardProps {
   onDuplicate: (lesson: Lesson) => void
   dragHandleProps?: any
   minimumQuizScore?: number
+  courseId?: string | number
 }
 
 export default function LessonCard({
@@ -69,6 +70,7 @@ export default function LessonCard({
   onDuplicate,
   dragHandleProps,
   minimumQuizScore = 50,
+  courseId,
 }: LessonCardProps) {
   const [localLesson, setLocalLesson] = useState<Lesson>(lesson)
 
@@ -214,6 +216,8 @@ export default function LessonCard({
                   type={localLesson.type}
                   content={localLesson.content}
                   onChange={(content) => updateLesson({ content })}
+                  courseId={courseId}
+                  lessonId={localLesson.id}
                 />
               </CollapsibleContent>
             </Collapsible>
@@ -231,6 +235,7 @@ export default function LessonCard({
                   resources={localLesson.resources}
                   onChange={(resources) => updateLesson({ resources })}
                   lessonId={localLesson.id}
+                  courseId={courseId}
                 />
               </CollapsibleContent>
             </Collapsible>
@@ -248,6 +253,7 @@ export default function LessonCard({
                   quiz={localLesson.quiz}
                   onChange={(quiz) => updateLesson({ quiz })}
                   minimumQuizScore={minimumQuizScore}
+                  courseId={courseId}
                 />
               </CollapsibleContent>
             </Collapsible>

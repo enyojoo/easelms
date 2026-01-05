@@ -14,58 +14,125 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!
 
 /**
  * Generate S3 storage path for a file
- * Improved structure: courses/{courseId}/preview/ or courses/{courseId}/lessons/{lessonId}/video/
- * Uses hash-based naming for better organization and deduplication
+ * Structure: 
+ * - courses/course-{id}/thumbnail-{id}-{filename}
+ * - courses/course-{id}/preview-video-{id}-{filename}
+ * - courses/course-{id}/lessons/lesson-{id}/video-{id}-{filename}
+ * - courses/course-{id}/lessons/lesson-{id}/resources/resource-{id}-{filename}
+ * - courses/course-{id}/certificate/certificate-{id}-{filename}
+ * - courses/course-{id}/quiz-images/quiz-{id}-{filename}
+ * - profile/user-{id}/avatar-{id}-{filename}
  */
 export function getS3StoragePath(
-  type: "video" | "thumbnail" | "document" | "avatar" | "certificate",
+  type: "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image",
   userId: string,
   filename: string,
   additionalPath?: string,
-  fileHash?: string // Optional hash for deduplication
+  fileHash?: string, // Optional hash for deduplication
+  courseId?: string | number,
+  lessonId?: string | number,
+  resourceId?: string | number,
+  fileId?: string | number // Optional file ID for better identification
 ): string {
   const timestamp = Date.now()
   const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_")
-  const extension = filename.split(".").pop()?.toLowerCase() || ""
   
   // Use hash in filename if provided (for deduplication)
   const hashPrefix = fileHash ? `${fileHash.substring(0, 8)}-` : ""
   
+  // Generate file identifier: use fileId if provided, otherwise use timestamp
+  const fileIdentifier = fileId ? `${fileId}` : timestamp
+  
   switch (type) {
     case "video":
-      // Videos: courses/{courseId}/preview/video-{hash}-{filename} or courses/{courseId}/lessons/{lessonId}/video-{hash}-{filename}
+      // Videos: courses/course-{id}/preview-video-{id}-{filename} or courses/course-{id}/lessons/lesson-{id}/video-{id}-{filename}
+      if (courseId) {
+        if (lessonId) {
+          // Lesson video
+          return `courses/course-${courseId}/lessons/lesson-${lessonId}/video-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+        } else {
+          // Preview video
+          return `courses/course-${courseId}/preview-video-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+        }
+      }
+      // Fallback: use additionalPath for backward compatibility
       if (additionalPath) {
-        // Check if additionalPath contains lesson ID (format: courseId/lessons/lessonId)
-        if (additionalPath.includes("/lessons/")) {
-          const [courseId, , lessonId] = additionalPath.split("/")
-          return `courses/${courseId}/lessons/${lessonId}/video/${hashPrefix}${timestamp}-${sanitizedFilename}`
+        if (additionalPath.includes("/lessons/") || additionalPath.includes("lesson-")) {
+          const parts = additionalPath.split("/")
+          const lessonPart = parts.find(p => p.startsWith("lesson-")) || parts[parts.length - 1]
+          const coursePart = parts.find(p => p.startsWith("course-")) || parts[0]
+          const courseIdFromPath = coursePart.replace("course-", "")
+          const lessonIdFromPath = lessonPart.replace("lesson-", "")
+          return `courses/course-${courseIdFromPath}/lessons/lesson-${lessonIdFromPath}/video-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
         }
         // Preview video
-        return `courses/${additionalPath}/preview/video-${hashPrefix}${timestamp}-${sanitizedFilename}`
+        return `courses/course-${additionalPath}/preview-video-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
       }
-      return `courses/${userId}/videos/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      return `courses/temp-${userId}/videos/video-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
     case "thumbnail":
-      // Thumbnails: courses/{courseId}/preview/thumbnail-{hash}-{filename}
-      if (additionalPath) {
-        return `courses/${additionalPath}/preview/thumbnail-${hashPrefix}${timestamp}-${sanitizedFilename}`
+      // Thumbnails: courses/course-{id}/thumbnail-{id}-{filename}
+      if (courseId) {
+        return `courses/course-${courseId}/thumbnail-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
       }
-      return `courses/${userId}/preview/thumbnail-${hashPrefix}${timestamp}-${sanitizedFilename}`
+      // Fallback: use additionalPath for backward compatibility
+      if (additionalPath) {
+        return `courses/course-${additionalPath}/thumbnail-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/thumbnail-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
     case "document":
-      // Documents: courses/{courseId}/lessons/{lessonId}/resources/{hash}-{filename} or courses/{courseId}/resources/{hash}-{filename}
-      if (additionalPath) {
-        if (additionalPath.includes("/lessons/")) {
-          const [courseId, , lessonId] = additionalPath.split("/")
-          return `courses/${courseId}/lessons/${lessonId}/resources/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      // Documents: courses/course-{id}/lessons/lesson-{id}/resources/resource-{id}-{filename} or courses/course-{id}/resources/resource-{id}-{filename}
+      if (courseId) {
+        if (lessonId) {
+          // Lesson resource
+          const resourcePrefix = resourceId ? `resource-${resourceId}` : `resource-${fileIdentifier}`
+          return `courses/course-${courseId}/lessons/lesson-${lessonId}/resources/${resourcePrefix}-${hashPrefix}${sanitizedFilename}`
+        } else {
+          // Course-level resource
+          const resourcePrefix = resourceId ? `resource-${resourceId}` : `resource-${fileIdentifier}`
+          return `courses/course-${courseId}/resources/${resourcePrefix}-${hashPrefix}${sanitizedFilename}`
         }
-        return `courses/${additionalPath}/resources/${hashPrefix}${timestamp}-${sanitizedFilename}`
       }
-      return `courses/${userId}/resources/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      // Fallback: use additionalPath for backward compatibility
+      if (additionalPath) {
+        if (additionalPath.includes("/lessons/") || additionalPath.includes("lesson-")) {
+          const parts = additionalPath.split("/")
+          const lessonPart = parts.find(p => p.startsWith("lesson-")) || parts[parts.length - 1]
+          const coursePart = parts.find(p => p.startsWith("course-")) || parts[0]
+          const courseIdFromPath = coursePart.replace("course-", "")
+          const lessonIdFromPath = lessonPart.replace("lesson-", "")
+          const resourcePrefix = resourceId ? `resource-${resourceId}` : `resource-${fileIdentifier}`
+          return `courses/course-${courseIdFromPath}/lessons/lesson-${lessonIdFromPath}/resources/${resourcePrefix}-${hashPrefix}${sanitizedFilename}`
+        }
+        const resourcePrefix = resourceId ? `resource-${resourceId}` : `resource-${fileIdentifier}`
+        return `courses/course-${additionalPath}/resources/${resourcePrefix}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/resources/resource-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
+    case "quiz-image":
+      // Quiz images: courses/course-{id}/quiz-images/quiz-{id}-{filename}
+      if (courseId) {
+        const quizPrefix = fileId ? `quiz-${fileId}` : `quiz-${fileIdentifier}`
+        return `courses/course-${courseId}/quiz-images/${quizPrefix}-${hashPrefix}${sanitizedFilename}`
+      }
+      return `courses/temp-${userId}/quiz-images/quiz-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
     case "avatar":
-      return `users/${userId}/avatar/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      // Profile avatars: profile/user-{id}/avatar-{id}-{filename}
+      return `profile/user-${userId}/avatar-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
     case "certificate":
-      return `certificates/${userId}/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      // Certificates: courses/course-{id}/certificate/certificate-{id}-{filename}
+      if (courseId) {
+        const certPrefix = fileId ? `certificate-${fileId}` : `certificate-${fileIdentifier}`
+        return `courses/course-${courseId}/certificate/${certPrefix}-${hashPrefix}${sanitizedFilename}`
+      }
+      // Fallback for user certificates
+      return `profile/user-${userId}/certificate-${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
+      
     default:
-      return `uploads/${userId}/${hashPrefix}${timestamp}-${sanitizedFilename}`
+      return `uploads/temp-${userId}/${fileIdentifier}-${hashPrefix}${sanitizedFilename}`
   }
 }
 

@@ -20,9 +20,10 @@ interface CourseCertificateSettingsProps {
     certificateType: "completion" | "participation"
   }
   onUpdate: (settings: any) => void
+  courseId?: string | number
 }
 
-export default function CourseCertificateSettings({ settings, onUpdate }: CourseCertificateSettingsProps) {
+export default function CourseCertificateSettings({ settings, onUpdate, courseId }: CourseCertificateSettingsProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -58,6 +59,7 @@ export default function CourseCertificateSettings({ settings, onUpdate }: Course
                     accept="image/png,image/jpeg,image/jpg"
                     maxSize={1 * 1024 * 1024} // 1MB
                     multiple={false}
+                    courseId={courseId}
                     initialValue={settings.signatureImage ? [settings.signatureImage] : undefined}
                     onUploadComplete={(files, urls) => {
                       if (urls.length > 0) {

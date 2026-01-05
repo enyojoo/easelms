@@ -12,9 +12,10 @@ interface QuestionEditorProps {
   question: Question
   onChange: (question: Question) => void
   onDelete?: () => void
+  courseId?: string | number
 }
 
-export default function QuestionEditor({ question, onChange, onDelete }: QuestionEditorProps) {
+export default function QuestionEditor({ question, onChange, onDelete, courseId }: QuestionEditorProps) {
   const handleChange = (updatedQuestion: Question) => {
     onChange(updatedQuestion)
   }
@@ -26,6 +27,7 @@ export default function QuestionEditor({ question, onChange, onDelete }: Questio
           question={question}
           onChange={handleChange}
           onDelete={onDelete}
+          courseId={courseId}
         />
       )
     case "true-false":
@@ -34,6 +36,7 @@ export default function QuestionEditor({ question, onChange, onDelete }: Questio
           question={question}
           onChange={handleChange}
           onDelete={onDelete}
+          courseId={courseId}
         />
       )
     case "fill-blank":

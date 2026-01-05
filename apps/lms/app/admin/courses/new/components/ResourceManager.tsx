@@ -25,9 +25,10 @@ interface ResourceManagerProps {
   resources: Resource[]
   onChange: (resources: Resource[]) => void
   lessonId?: string
+  courseId?: string | number
 }
 
-export default function ResourceManager({ resources, onChange, lessonId }: ResourceManagerProps) {
+export default function ResourceManager({ resources, onChange, lessonId, courseId }: ResourceManagerProps) {
   const [newResourceType, setNewResourceType] = useState<"document" | "link">("link")
 
   const addResource = (type: "document" | "link") => {
@@ -82,6 +83,8 @@ export default function ResourceManager({ resources, onChange, lessonId }: Resou
             onUpdate={(updates) => updateResource(resource.id, updates)}
             onDelete={() => removeResource(resource.id)}
             lessonId={lessonId}
+            courseId={courseId}
+            resourceId={resource.id}
           />
         ))}
       </div>

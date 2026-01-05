@@ -12,10 +12,14 @@ interface FileUploadProps {
   multiple?: boolean
   onUploadComplete?: (files: File[], urls: string[]) => void
   onRemove?: () => void // Called when file is removed
-  type?: "image" | "video" | "document" | "all" | "thumbnail" | "avatar" | "certificate"
+  type?: "image" | "video" | "document" | "all" | "thumbnail" | "avatar" | "certificate" | "quiz-image"
   className?: string
   bucket?: "course-thumbnails" | "course-documents" | "user-avatars" | "certificates"
   additionalPath?: string
+  courseId?: string | number // Course ID for proper folder structure
+  lessonId?: string | number // Lesson ID for lesson-specific files
+  resourceId?: string | number // Resource ID for resource files
+  fileId?: string | number // File ID for better identification
   initialValue?: string | string[] // URL(s) to restore uploaded state
 }
 
@@ -29,6 +33,10 @@ export default function FileUpload({
   className,
   bucket,
   additionalPath,
+  courseId,
+  lessonId,
+  resourceId,
+  fileId,
   initialValue,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([])
@@ -183,6 +191,10 @@ export default function FileUpload({
                   fileType,
                   contentType: file.type,
                   additionalPath,
+                  courseId,
+                  lessonId,
+                  resourceId,
+                  fileId,
                 }),
               })
 
@@ -227,6 +239,18 @@ export default function FileUpload({
               }
               if (additionalPath) {
                 formData.append("additionalPath", additionalPath)
+              }
+              if (courseId) {
+                formData.append("courseId", String(courseId))
+              }
+              if (lessonId) {
+                formData.append("lessonId", String(lessonId))
+              }
+              if (resourceId) {
+                formData.append("resourceId", String(resourceId))
+              }
+              if (fileId) {
+                formData.append("fileId", String(fileId))
               }
 
               const response = await fetch("/api/upload", {

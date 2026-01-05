@@ -15,7 +15,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { filename, fileType, contentType, additionalPath } = await request.json()
+    const { 
+      filename, 
+      fileType, 
+      contentType, 
+      additionalPath,
+      courseId,
+      lessonId,
+      resourceId,
+      fileId
+    } = await request.json()
 
     if (!filename || !fileType || !contentType) {
       return NextResponse.json(
@@ -25,19 +34,24 @@ export async function POST(request: Request) {
     }
 
     // Validate file type
-    if (fileType !== "video" && fileType !== "document" && fileType !== "thumbnail" && fileType !== "avatar" && fileType !== "certificate") {
+    if (fileType !== "video" && fileType !== "document" && fileType !== "thumbnail" && fileType !== "avatar" && fileType !== "certificate" && fileType !== "quiz-image") {
       return NextResponse.json(
-        { error: "Invalid file type. Must be video, document, thumbnail, avatar, or certificate" },
+        { error: "Invalid file type. Must be video, document, thumbnail, avatar, certificate, or quiz-image" },
         { status: 400 }
       )
     }
 
-    // Generate S3 storage path
+    // Generate S3 storage path with proper folder structure
     const s3Key = getS3StoragePath(
-      fileType as "video" | "thumbnail" | "document" | "avatar" | "certificate",
+      fileType as "video" | "thumbnail" | "document" | "avatar" | "certificate" | "quiz-image",
       user.id,
       filename,
-      additionalPath
+      additionalPath,
+      undefined, // fileHash
+      courseId,
+      lessonId,
+      resourceId,
+      fileId
     )
 
     // Generate presigned PUT URL (expires in 1 hour)

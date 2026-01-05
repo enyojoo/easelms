@@ -9,9 +9,11 @@ interface LessonContentEditorProps {
   type: "video" | "text" | "mixed"
   content: any
   onChange: (content: any) => void
+  courseId?: string | number
+  lessonId?: string | number
 }
 
-export default function LessonContentEditor({ type, content, onChange }: LessonContentEditorProps) {
+export default function LessonContentEditor({ type, content, onChange, courseId, lessonId }: LessonContentEditorProps) {
   // Sync content.url with FileUpload component
   useEffect(() => {
     // If content.url exists but is empty, clear it
@@ -33,6 +35,8 @@ export default function LessonContentEditor({ type, content, onChange }: LessonC
             accept="video/mp4,video/webm,video/ogg"
             maxSize={2 * 1024 * 1024 * 1024} // 2GB
             multiple={false}
+            courseId={courseId}
+            lessonId={lessonId}
             initialValue={content.url ? [content.url] : undefined}
             onUploadComplete={(files, urls) => {
               if (urls.length > 0) {

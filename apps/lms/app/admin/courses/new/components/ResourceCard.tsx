@@ -17,9 +17,11 @@ interface ResourceCardProps {
   onUpdate: (updates: Partial<Resource>) => void
   onDelete: () => void
   lessonId?: string
+  courseId?: string | number
+  resourceId?: string | number
 }
 
-export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }: ResourceCardProps) {
+export default function ResourceCard({ resource, onUpdate, onDelete, lessonId, courseId, resourceId }: ResourceCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   const formatFileSize = (bytes?: number) => {
@@ -134,7 +136,9 @@ export default function ResourceCard({ resource, onUpdate, onDelete, lessonId }:
                     accept="application/pdf,.doc,.docx,.txt,.zip,image/*"
                     maxSize={50 * 1024 * 1024}
                     multiple={false}
-                    additionalPath={lessonId ? `lesson-${lessonId}` : undefined}
+                    courseId={courseId}
+                    lessonId={lessonId}
+                    resourceId={resourceId}
                     initialValue={resource.url || undefined}
                     onUploadComplete={(files, urls) => {
                       if (urls.length > 0) {
