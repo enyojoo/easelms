@@ -157,6 +157,10 @@ export async function GET(
     }
 
     // Process lessons with async operations (quiz shuffling, etc.)
+    // Capture variables in closure to avoid initialization issues
+    const courseIdForShuffle = numericId
+    const supabaseClientForShuffle = serviceSupabase
+    
     const processedLessons = await Promise.all(lessons.map(async (lesson: any) => {
         // Parse lesson content if it's a JSON string
         let content = lesson.content
@@ -180,7 +184,7 @@ export async function GET(
         let quizSettings = {}
         
         // Fetch questions from quiz_questions table
-        const { data: dbQuestions } = await serviceSupabase
+        const { data: dbQuestions } = await supabaseClientForShuffle
           .from("quiz_questions")
           .select("*")
           .eq("lesson_id", lesson.id)
@@ -260,78 +264,122 @@ export async function GET(
               const { data: { user } } = await userSupabase.auth.getUser()
               
               if (user) {
-                // Get or create quiz attempt record
-                const { data: existingAttempt } = await serviceSupabase
-                  .from("quiz_attempts")
-                  .select("*")
-                  .eq("user_id", user.id)
-                  .eq("lesson_id", lesson.id)
-                  .order("attempt_number", { ascending: false })
-                  .limit(1)
-                  .single()
-                
-                let attemptNumber = 1
-                let attemptId: number | null = null
-                
-                if (existingAttempt) {
-                  attemptNumber = (existingAttempt.attempt_number || 0) + 1
-                }
-                
-                // Generate seed for shuffling
-                const seed = generateSeed(user.id, lesson.id, attemptNumber)
-                
-                // Shuffle questions and answers
-                const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
-                
-                // Create or update quiz attempt record
-                if (existingAttempt && !existingAttempt.completed_at) {
-                  // Update existing incomplete attempt
-                  const { data: updatedAttempt } = await serviceSupabase
+                try {
+                  // Get or create quiz attempt record
+                  // On retry, we want to create a new attempt, so check for completed attempts
+                  const { data: existingAttempts, error: attemptError } = await supabaseClientForShuffle
                     .from("quiz_attempts")
-                    .update({
-                      question_order: questionOrder,
-                      answer_orders: answerOrders,
-                    })
-                    .eq("id", existingAttempt.id)
-                    .select()
-                    .single()
+                    .select("*")
+                    .eq("user_id", user.id)
+                    .eq("lesson_id", lesson.id)
+                    .order("attempt_number", { ascending: false })
+                    .limit(1)
                   
-                  if (updatedAttempt) {
-                    attemptId = updatedAttempt.id
-                    attemptNumber = updatedAttempt.attempt_number
+                  if (attemptError) {
+                    console.error("Error fetching quiz attempts:", attemptError)
+                    throw attemptError
                   }
-                } else {
-                  // Create new attempt
-                  const { data: newAttempt } = await serviceSupabase
-                    .from("quiz_attempts")
-                    .insert({
-                      user_id: user.id,
-                      lesson_id: lesson.id,
-                      course_id: numericId,
-                      attempt_number: attemptNumber,
-                      question_order: questionOrder,
-                      answer_orders: answerOrders,
-                    })
-                    .select()
-                    .single()
                   
-                  if (newAttempt) {
-                    attemptId = newAttempt.id
+                  const existingAttempt = existingAttempts && existingAttempts.length > 0 ? existingAttempts[0] : null
+                  
+                  let attemptNumber = 1
+                  let attemptId: number | null = null
+                  
+                  if (existingAttempt) {
+                    // If there's a completed attempt, increment for retry
+                    // If incomplete, reuse it
+                    if (existingAttempt.completed_at) {
+                      attemptNumber = (existingAttempt.attempt_number || 0) + 1
+                    } else {
+                      // Reuse incomplete attempt
+                      attemptNumber = existingAttempt.attempt_number || 1
+                      attemptId = existingAttempt.id
+                    }
                   }
-                }
+                  
+                  // Generate seed for shuffling
+                  const seed = generateSeed(user.id, lesson.id, attemptNumber)
+                  
+                  // Shuffle questions and answers
+                  const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
+                  
+                  // Create or update quiz attempt record
+                  if (existingAttempt && !existingAttempt.completed_at && attemptId) {
+                    // Update existing incomplete attempt
+                    const { data: updatedAttempt, error: updateError } = await supabaseClientForShuffle
+                      .from("quiz_attempts")
+                      .update({
+                        question_order: questionOrder,
+                        answer_orders: answerOrders,
+                        completed_at: null, // Reset completion on retry
+                      })
+                      .eq("id", existingAttempt.id)
+                      .select()
+                      .single()
+                    
+                    if (updateError) {
+                      console.error("Error updating quiz attempt:", updateError)
+                      throw updateError
+                    }
+                    
+                    if (updatedAttempt) {
+                      attemptId = updatedAttempt.id
+                      attemptNumber = updatedAttempt.attempt_number
+                    }
+                  } else {
+                    // Create new attempt (for retry or first attempt)
+                    const { data: newAttempt, error: insertError } = await supabaseClientForShuffle
+                      .from("quiz_attempts")
+                      .insert({
+                        user_id: user.id,
+                        lesson_id: lesson.id,
+                        course_id: courseIdForShuffle,
+                        attempt_number: attemptNumber,
+                        question_order: questionOrder,
+                        answer_orders: answerOrders,
+                      })
+                      .select()
+                      .single()
+                    
+                    if (insertError) {
+                      console.error("Error creating quiz attempt:", insertError)
+                      throw insertError
+                    }
+                    
+                    if (newAttempt) {
+                      attemptId = newAttempt.id
+                    }
+                  }
                 
                 // Use shuffled questions
                 quiz_questions = shuffledQuestions
                 
-                console.log("Course API: Quiz shuffled for lesson", {
-                  lessonId: lesson.id,
-                  attemptId,
-                  attemptNumber,
-                  questionsCount: quiz_questions.length,
-                })
+                  // Use shuffled questions
+                  quiz_questions = shuffledQuestions
+                  
+                  console.log("Course API: Quiz shuffled for lesson", {
+                    lessonId: lesson.id,
+                    attemptId,
+                    attemptNumber,
+                    questionsCount: quiz_questions.length,
+                  })
+                } catch (shuffleError: any) {
+                  console.error("Error in quiz shuffle process:", {
+                    error: shuffleError,
+                    message: shuffleError?.message,
+                    stack: shuffleError?.stack,
+                    lessonId: lesson.id,
+                  })
+                  // Continue with unshuffled questions if shuffle fails
+                }
               }
             } catch (shuffleError: any) {
-              console.error("Error shuffling quiz:", shuffleError)
+              console.error("Error shuffling quiz (outer catch):", {
+                error: shuffleError,
+                message: shuffleError?.message,
+                stack: shuffleError?.stack,
+                lessonId: lesson.id,
+              })
               // Continue with unshuffled questions if shuffle fails
             }
           }
@@ -374,57 +422,93 @@ export async function GET(
                 const { data: { user } } = await userSupabase.auth.getUser()
                 
                 if (user) {
-                  // Get or create quiz attempt record
-                  const { data: existingAttempt } = await serviceSupabase
-                    .from("quiz_attempts")
-                    .select("*")
-                    .eq("user_id", user.id)
-                    .eq("lesson_id", lesson.id)
-                    .order("attempt_number", { ascending: false })
-                    .limit(1)
-                    .single()
-                  
-                  let attemptNumber = 1
-                  
-                  if (existingAttempt) {
-                    attemptNumber = (existingAttempt.attempt_number || 0) + 1
-                  }
-                  
-                  // Generate seed for shuffling
-                  const seed = generateSeed(user.id, lesson.id, attemptNumber)
-                  
-                  // Shuffle questions and answers
-                  const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
-                  
-                  // Create or update quiz attempt record
-                  if (existingAttempt && !existingAttempt.completed_at) {
-                    // Update existing incomplete attempt
-                    await serviceSupabase
+                  try {
+                    // Get or create quiz attempt record
+                    const { data: existingAttempts, error: attemptError } = await supabaseClientForShuffle
                       .from("quiz_attempts")
-                      .update({
-                        question_order: questionOrder,
-                        answer_orders: answerOrders,
-                      })
-                      .eq("id", existingAttempt.id)
-                  } else {
-                    // Create new attempt
-                    await serviceSupabase
-                      .from("quiz_attempts")
-                      .insert({
-                        user_id: user.id,
-                        lesson_id: lesson.id,
-                        course_id: numericId,
-                        attempt_number: attemptNumber,
-                        question_order: questionOrder,
-                        answer_orders: answerOrders,
-                      })
+                      .select("*")
+                      .eq("user_id", user.id)
+                      .eq("lesson_id", lesson.id)
+                      .order("attempt_number", { ascending: false })
+                      .limit(1)
+                    
+                    if (attemptError) {
+                      console.error("Error fetching quiz attempts (JSONB):", attemptError)
+                      throw attemptError
+                    }
+                    
+                    const existingAttempt = existingAttempts && existingAttempts.length > 0 ? existingAttempts[0] : null
+                    
+                    let attemptNumber = 1
+                    
+                    if (existingAttempt) {
+                      if (existingAttempt.completed_at) {
+                        attemptNumber = (existingAttempt.attempt_number || 0) + 1
+                      } else {
+                        attemptNumber = existingAttempt.attempt_number || 1
+                      }
+                    }
+                    
+                    // Generate seed for shuffling
+                    const seed = generateSeed(user.id, lesson.id, attemptNumber)
+                    
+                    // Shuffle questions and answers
+                    const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
+                    
+                    // Create or update quiz attempt record
+                    if (existingAttempt && !existingAttempt.completed_at) {
+                      // Update existing incomplete attempt
+                      const { error: updateError } = await supabaseClientForShuffle
+                        .from("quiz_attempts")
+                        .update({
+                          question_order: questionOrder,
+                          answer_orders: answerOrders,
+                          completed_at: null,
+                        })
+                        .eq("id", existingAttempt.id)
+                      
+                      if (updateError) {
+                        console.error("Error updating quiz attempt (JSONB):", updateError)
+                        throw updateError
+                      }
+                    } else {
+                      // Create new attempt
+                      const { error: insertError } = await supabaseClientForShuffle
+                        .from("quiz_attempts")
+                        .insert({
+                          user_id: user.id,
+                          lesson_id: lesson.id,
+                          course_id: courseIdForShuffle,
+                          attempt_number: attemptNumber,
+                          question_order: questionOrder,
+                          answer_orders: answerOrders,
+                        })
+                      
+                      if (insertError) {
+                        console.error("Error creating quiz attempt (JSONB):", insertError)
+                        throw insertError
+                      }
+                    }
+                    
+                    // Use shuffled questions
+                    quiz_questions = shuffledQuestions
+                  } catch (shuffleError: any) {
+                    console.error("Error shuffling quiz (JSONB):", {
+                      error: shuffleError,
+                      message: shuffleError?.message,
+                      stack: shuffleError?.stack,
+                      lessonId: lesson.id,
+                    })
+                    // Continue with unshuffled questions if shuffle fails
                   }
-                  
-                  // Use shuffled questions
-                  quiz_questions = shuffledQuestions
                 }
               } catch (shuffleError: any) {
-                console.error("Error shuffling quiz (JSONB):", shuffleError)
+                console.error("Error shuffling quiz (JSONB outer catch):", {
+                  error: shuffleError,
+                  message: shuffleError?.message,
+                  stack: shuffleError?.stack,
+                  lessonId: lesson.id,
+                })
                 // Continue with unshuffled questions if shuffle fails
               }
             }

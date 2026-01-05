@@ -653,28 +653,51 @@ export default function CourseLearningPage() {
   }
 
   const clearQuizData = async (lessonId: number) => {
-    // Immediately remove quiz results for this lesson from cache for instant UI update
-    const currentData = queryClient.getQueryData<{ results: any[] }>(["quiz-results", id])
-    if (currentData?.results) {
-      const filteredResults = currentData.results.filter((r: any) => r.lesson_id !== lessonId)
-      queryClient.setQueryData(["quiz-results", id], { results: filteredResults })
-    }
-    
-    // Also update progress to remove quiz_score for this lesson
-    const currentProgress = queryClient.getQueryData<{ progress: any[] }>(["progress", id])
-    if (currentProgress?.progress) {
-      const updatedProgress = currentProgress.progress.map((p: any) => {
-        if (p.lesson_id === lessonId) {
-          return { ...p, quiz_score: null, quiz_attempts: null }
-        }
-        return p
+    try {
+      console.log("Clearing quiz data for lesson:", lessonId)
+      
+      // Immediately remove quiz results for this lesson from cache for instant UI update
+      const currentData = queryClient.getQueryData<{ results: any[] }>(["quiz-results", id])
+      if (currentData?.results) {
+        const filteredResults = currentData.results.filter((r: any) => r.lesson_id !== lessonId)
+        queryClient.setQueryData(["quiz-results", id], { results: filteredResults })
+      }
+      
+      // Also update progress to remove quiz_score for this lesson
+      const currentProgress = queryClient.getQueryData<{ progress: any[] }>(["progress", id])
+      if (currentProgress?.progress) {
+        const updatedProgress = currentProgress.progress.map((p: any) => {
+          if (p.lesson_id === lessonId) {
+            return { ...p, quiz_score: null, quiz_attempts: null }
+          }
+          return p
+        })
+        queryClient.setQueryData(["progress", id], { progress: updatedProgress })
+      }
+      
+      // Refetch course data to get fresh quiz questions (with new shuffle if enabled)
+      await queryClient.refetchQueries({ queryKey: ["course", id] })
+      
+      // Then refetch to get fresh data from server
+      await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
+      await queryClient.refetchQueries({ queryKey: ["progress", id] })
+      
+      console.log("Quiz data cleared successfully for lesson:", lessonId)
+    } catch (error: any) {
+      console.error("Error clearing quiz data:", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        lessonId,
+        courseId: id,
       })
-      queryClient.setQueryData(["progress", id], { progress: updatedProgress })
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to reset quiz. Please refresh the page.",
+        variant: "destructive",
+      })
+      throw error
     }
-    
-    // Then refetch to get fresh data from server
-    await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
-    await queryClient.refetchQueries({ queryKey: ["progress", id] })
   }
 
   const handleVideoProgressUpdate = async (progressPercentage: number) => {

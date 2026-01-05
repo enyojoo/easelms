@@ -177,8 +177,18 @@ export default function QuizComponent({
       const data = await response.json()
       console.log("Quiz results submitted successfully:", data)
     } catch (error: any) {
-      console.error("Error submitting quiz results:", error)
-      setSubmissionError(error.message || "Failed to save quiz results")
+      console.error("Error submitting quiz results:", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        courseId,
+        lessonId,
+        answersCount: answers.length,
+      })
+      const errorMessage = error?.message || error?.toString() || "Failed to save quiz results"
+      setSubmissionError(errorMessage)
+      // Show error to user
+      throw error // Re-throw to allow caller to handle
     } finally {
       setSubmitting(false)
     }
@@ -223,30 +233,60 @@ export default function QuizComponent({
   }
 
   const handleRetryQuiz = async () => {
-    // Check if multiple attempts are allowed
-    if (!quiz.allowMultipleAttempts && attemptCount > 0) {
-      return // Don't allow retry if multiple attempts are disabled
-    }
-    
-    // Check if max attempts limit has been reached
-    const maxAttempts = quiz.maxAttempts || 3
-    if (attemptCount >= maxAttempts) {
-      console.log(`Max attempts (${maxAttempts}) reached. Cannot retry.`)
-      return // Don't allow retry if max attempts reached
-    }
-    
-    // Reset completion flag for retry BEFORE clearing data
-    quizCompletedRef.current = false
-    
-    // Reset local state first to prevent flicker
-    setCurrentQuestion(0)
-    setSelectedAnswers([])
-    setShowResults(false)
-    setQuizStarted(false) // Reset quiz started state to show info card again
-    
-    // Clear old quiz data (this will trigger refetch, but we've already reset local state)
-    if (onRetry) {
-      await onRetry()
+    try {
+      console.log("Retrying quiz - attempt count:", attemptCount)
+      
+      // Check if multiple attempts are allowed
+      if (!quiz.allowMultipleAttempts && attemptCount > 0) {
+        console.warn("Multiple attempts not allowed")
+        return // Don't allow retry if multiple attempts is disabled
+      }
+      
+      // Check if max attempts limit has been reached
+      const maxAttempts = quiz.maxAttempts || 3
+      if (attemptCount >= maxAttempts) {
+        console.log(`Max attempts (${maxAttempts}) reached. Cannot retry.`)
+        return // Don't allow retry if max attempts reached
+      }
+      
+      // Reset completion flag for retry BEFORE clearing data
+      quizCompletedRef.current = false
+      
+      // Reset local state first to prevent flicker
+      setCurrentQuestion(0)
+      setSelectedAnswers([])
+      setShowResults(false)
+      setQuizStarted(false) // Reset quiz started state to show info card again
+      setSubmissionError(null) // Clear any previous errors
+      
+      // Clear old quiz data (this will trigger refetch with new shuffle if enabled)
+      if (onRetry) {
+        try {
+          await onRetry()
+          console.log("Quiz data cleared successfully, ready for retry")
+        } catch (retryError: any) {
+          console.error("Error in onRetry callback:", {
+            error: retryError,
+            message: retryError?.message,
+            stack: retryError?.stack,
+            lessonId,
+            courseId,
+          })
+          const errorMessage = retryError?.message || retryError?.toString() || "Failed to reset quiz. Please refresh the page."
+          setSubmissionError(errorMessage)
+          throw retryError
+        }
+      }
+    } catch (error: any) {
+      console.error("Error in handleRetryQuiz:", {
+        error,
+        message: error?.message,
+        stack: error?.stack,
+        lessonId,
+        courseId,
+      })
+      const errorMessage = error?.message || error?.toString() || "Failed to retry quiz. Please refresh the page."
+      setSubmissionError(errorMessage)
     }
   }
 
@@ -348,10 +388,19 @@ export default function QuizComponent({
               </div>
               
               {submissionError && (
-                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-                  <p className="text-sm text-destructive">
-                    Note: {submissionError} (Results may not be saved)
-                  </p>
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <div className="flex items-start gap-2">
+                    <XCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-destructive mb-1">Error</p>
+                      <p className="text-sm text-destructive/90">
+                        {submissionError}
+                      </p>
+                      <p className="text-xs text-destructive/70 mt-2">
+                        If this problem persists, please refresh the page or contact support.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
               {submitting && (
