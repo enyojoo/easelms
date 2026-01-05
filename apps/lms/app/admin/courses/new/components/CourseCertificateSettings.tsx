@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Card, CardContent } from "@/components/ui/card"
 import SafeImage from "@/components/SafeImage"
 import FileUpload from "@/components/FileUpload"
@@ -28,20 +27,7 @@ interface CourseCertificateSettingsProps {
 export default function CourseCertificateSettings({ settings, onUpdate, courseId }: CourseCertificateSettingsProps) {
   // Track if "optional" is selected to show custom title field
   const isOptionalSelected = settings.certificateTitle !== undefined && settings.certificateTitle !== null && settings.certificateTitle !== ""
-  const selectRef = useRef<HTMLButtonElement>(null)
-  const scrollPositionRef = useRef<number>(0)
-
-  // Store scroll position when dropdown opens
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
-      scrollPositionRef.current = window.scrollY
-    } else {
-      // Restore scroll position after dropdown closes
-      requestAnimationFrame(() => {
-        window.scrollTo(0, scrollPositionRef.current)
-      })
-    }
-  }
+  const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
 
   return (
     <div className="space-y-6">
@@ -100,8 +86,8 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Certificate Type</Label>
-              <Select
-                value={isOptionalSelected ? "optional" : (settings.certificateType || "completion")}
+              <RadioGroup
+                value={currentValue}
                 onValueChange={(value) => {
                   if (value === "optional") {
                     // When switching to optional, keep current type and show title input
@@ -119,33 +105,56 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
                     })
                   }
                 }}
-                onOpenChange={handleOpenChange}
+                className="space-y-3"
               >
-                <SelectTrigger ref={selectRef}>
-                  <SelectValue placeholder="Select certificate type" />
-                </SelectTrigger>
-                <SelectContent 
-                  onCloseAutoFocus={(e) => {
-                    // Prevent auto-focus from causing scroll to top
-                    e.preventDefault()
-                    // Restore scroll position
-                    requestAnimationFrame(() => {
-                      window.scrollTo(0, scrollPositionRef.current)
-                    })
-                  }}
-                >
-                  <SelectItem value="completion">Completion</SelectItem>
-                  <SelectItem value="participation">Participation</SelectItem>
-                  <SelectItem value="achievement">Achievement</SelectItem>
-                  <SelectItem value="optional">Custom Title (Optional)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-sm text-muted-foreground">
-                <strong>Completion:</strong> "Certificate of Completion" - "has successfully completed"<br />
-                <strong>Participation:</strong> "Certificate of Participation" - "has successfully participated in"<br />
-                <strong>Achievement:</strong> "Certificate of Achievement" - "has successfully achieved"<br />
-                <strong>Custom Title:</strong> Enter your own certificate title
-              </p>
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="completion" id="cert-completion" className="mt-1" />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="cert-completion" className="cursor-pointer font-normal">
+                      Completion
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      "Certificate of Completion" - "has successfully completed"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="participation" id="cert-participation" className="mt-1" />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="cert-participation" className="cursor-pointer font-normal">
+                      Participation
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      "Certificate of Participation" - "has successfully participated in"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="achievement" id="cert-achievement" className="mt-1" />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="cert-achievement" className="cursor-pointer font-normal">
+                      Achievement
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      "Certificate of Achievement" - "has successfully achieved"
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-2">
+                  <RadioGroupItem value="optional" id="cert-optional" className="mt-1" />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label htmlFor="cert-optional" className="cursor-pointer font-normal">
+                      Custom Title (Optional)
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Enter your own certificate title
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
             </div>
 
             {isOptionalSelected && (
