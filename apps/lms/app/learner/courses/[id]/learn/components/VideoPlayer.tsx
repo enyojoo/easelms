@@ -470,21 +470,13 @@ export default function VideoPlayer({
       />
       
       {showOverlay && (
-        <div 
-          className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center pointer-events-none"
-        >
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
           {showPauseButton ? (
-            <div 
-              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-auto cursor-pointer"
-              onClick={handleTogglePlay}
-            >
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
               <Pause className="h-10 w-10 fill-current" />
             </div>
           ) : (
-            <div 
-              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-auto cursor-pointer"
-              onClick={handleTogglePlay}
-            >
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
               <Play className="h-10 w-10 fill-current" />
             </div>
           )}
