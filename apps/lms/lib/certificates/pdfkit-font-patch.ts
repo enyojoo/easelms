@@ -59,8 +59,9 @@ export function patchPDFKitFonts() {
       
       // Intercept PDFKit font file reads
       // PDFKit reads fonts from paths like: /ROOT/node_modules/pdfkit/js/data/Helvetica.afm
-      // or: node_modules/pdfkit/js/data/Helvetica.afm
-      // or: /var/task/node_modules/pdfkit/js/data/Helvetica.afm
+      // The /ROOT/ path is a hardcoded path that PDFKit uses, but doesn't exist in Vercel
+      // In Vercel, the actual path is /var/task/, but PDFKit doesn't know this
+      // We intercept ALL pdfkit font reads and redirect them to our local fonts directory
       if (filePathStr.includes('pdfkit') && filePathStr.includes('data') && filePathStr.endsWith('.afm')) {
         const fontFileName = path.basename(filePathStr)
         const localFontPath = path.join(localFontsPath, fontFileName)
