@@ -10,6 +10,7 @@ import {
   VideoPlayerTimeDisplay,
   VideoPlayerTimeRange,
   VideoPlayerVolumeRange,
+  VideoPlayerFullscreenButton,
 } from "@/components/kibo-ui/video-player"
 import { Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -700,19 +701,24 @@ export default function ModernVideoPlayer({
       {controls && (
         <VideoPlayerControlBar>
           <VideoPlayerPlayButton />
-          <VideoPlayerTimeRange />
+          <VideoPlayerTimeRange 
+            // Ensure the time range is interactive and seekable
+            style={{ cursor: 'pointer' }}
+          />
           <VideoPlayerTimeDisplay showDuration />
           {/* Hide volume controls on mobile/tablet */}
           <div className="hidden lg:flex items-center">
             <VideoPlayerMuteButton />
             <VideoPlayerVolumeRange />
           </div>
+          {/* Fullscreen button - using custom implementation for better mobile support */}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleFullscreen}
-            className="p-2.5 h-auto w-auto"
+            className="p-2.5 h-auto w-auto hover:bg-accent"
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
             {isFullscreen ? (
               <Minimize className="h-5 w-5" />
