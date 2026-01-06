@@ -17,50 +17,50 @@ export async function GET(
     
     console.log("[Certificates API] Download request for certificate:", id)
     
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
 
     // Use service role client to bypass RLS and avoid infinite recursion
     const serviceSupabase = createServiceRoleClient()
     
     const { data: certificate, error } = await serviceSupabase
-      .from("certificates")
-      .select(`
-        *,
-        courses (
-          id,
-          title,
+    .from("certificates")
+    .select(`
+      *,
+      courses (
+        id,
+        title,
           certificate_enabled,
-          certificate_template,
-          certificate_title,
-          certificate_description,
-          signature_image,
-          signature_name,
-          signature_title,
-          additional_text,
-          certificate_type
-        ),
-        profiles (
-          id,
-          name
-        )
-      `)
+        certificate_template,
+        certificate_title,
+        certificate_description,
+        signature_image,
+        signature_name,
+        signature_title,
+        additional_text,
+        certificate_type
+      ),
+      profiles (
+        id,
+        name
+      )
+    `)
       .eq("id", id)
-      .single()
+    .single()
 
-    if (error) {
+  if (error) {
       console.error("[Certificates API] Error fetching certificate:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
-    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
-    if (!certificate) {
+  if (!certificate) {
       console.error("[Certificates API] Certificate not found for id:", id)
-      return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
-    }
+    return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
+  }
 
     console.log("[Certificates API] Certificate found:", {
       id: certificate.id,
@@ -88,19 +88,19 @@ export async function GET(
       )
     }
 
-    // Check if user owns this certificate or is admin
-    if (certificate.user_id !== user.id) {
+  // Check if user owns this certificate or is admin
+  if (certificate.user_id !== user.id) {
       // Use service role client to bypass RLS for admin check
       const { data: profile } = await serviceSupabase
-        .from("profiles")
-        .select("user_type")
-        .eq("id", user.id)
-        .single()
+      .from("profiles")
+      .select("user_type")
+      .eq("id", user.id)
+      .single()
 
-      if (profile?.user_type !== "admin") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
+    if (profile?.user_type !== "admin") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+  }
 
     // Check if PDF URL already exists (from previous generation)
     let pdfBuffer: Buffer
@@ -194,17 +194,17 @@ export async function GET(
 
     // Generate PDF certificate
     try {
-      pdfBuffer = await generateCertificatePDF({
-        certificateNumber: certificate.certificate_number,
-        learnerName: certificate.profiles?.name || "Student",
+    pdfBuffer = await generateCertificatePDF({
+      certificateNumber: certificate.certificate_number,
+      learnerName: certificate.profiles?.name || "Student",
         courseTitle: course.title || "Course",
-        issuedAt: certificate.issued_at,
+      issuedAt: certificate.issued_at,
         certificateType: (course.certificate_type as "completion" | "participation" | "achievement") || "completion",
         certificateTitle: course.certificate_title || undefined,
         certificateDescription: course.certificate_description || undefined,
         certificateTemplate: course.certificate_template || undefined,
-        organizationName,
-        logoUrl,
+      organizationName,
+      logoUrl,
         signatureImage: course.signature_image || undefined,
         signatureName: course.signature_name || undefined,
         signatureTitle: course.signature_title || undefined,

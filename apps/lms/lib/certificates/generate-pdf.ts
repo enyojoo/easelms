@@ -548,7 +548,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         enhancedError.stack = error.stack
         reject(enhancedError)
       } else {
-        reject(error)
+      reject(error)
       }
     }
   })

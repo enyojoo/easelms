@@ -191,6 +191,16 @@ export async function POST(
     logInfo("Received answers", { answersCount: answers.length, lessonId })
     logInfo("Question IDs in quiz", { questionIds: quizQuestions.map((q: any) => ({ id: q.id, dbId: q.dbId, type: typeof q.id })) })
 
+    // Fetch quiz settings to check if shuffle is enabled
+    const { data: quizSettingsData } = await serviceSupabase
+      .from("quiz_settings")
+      .select("shuffle_quiz, max_attempts")
+      .eq("lesson_id", lessonId)
+      .single()
+
+    const shuffleEnabled = quizSettingsData?.shuffle_quiz || false
+    const maxAttempts = quizSettingsData?.max_attempts || 3
+
     // Fetch quiz attempt to get shuffle mapping
     // Use .maybeSingle() instead of .single() to handle case where no attempt exists yet
     const { data: quizAttempt, error: attemptFetchError } = await serviceSupabase
@@ -216,13 +226,116 @@ export async function POST(
     const questionOrder = hasShuffle ? quizAttempt.question_order : null
     // Note: answerOrders is no longer used - answers are NOT shuffled, only questions are
     let attemptId = quizAttempt?.id || null
+    let attemptNumber = quizAttempt?.attempt_number || 1
+    
+    // Determine if this is a retry (previous attempt was completed)
+    const isRetry = quizAttempt && quizAttempt.completed_at
+    
+    // Handle retry: create new attempt if previous was completed and we haven't exceeded maxAttempts
+    if (isRetry) {
+      const nextAttemptNumber = (quizAttempt.attempt_number || 0) + 1
+      if (nextAttemptNumber <= maxAttempts) {
+        // Create new attempt for retry
+        attemptNumber = nextAttemptNumber
+        
+        // Generate shuffle for new attempt if shuffle is enabled
+        let newQuestionOrder: number[] | null = null
+        let newAnswerOrders: { [key: string]: number[] } = {}
+        
+        if (shuffleEnabled && quizQuestions.length > 0) {
+          const { shuffleQuiz, generateSeed } = await import("@/lib/quiz/shuffle")
+          const seed = generateSeed(user.id, lessonId, attemptNumber)
+          const shuffleResult = shuffleQuiz(quizQuestions, seed)
+          newQuestionOrder = shuffleResult.questionOrder
+          newAnswerOrders = shuffleResult.answerOrders
+        } else {
+          // No shuffle - use original order
+          newQuestionOrder = quizQuestions.map((q: any) => q.dbId || parseInt(String(q.id)) || 0)
+        }
+        
+        const { data: newAttempt, error: createError } = await serviceSupabase
+          .from("quiz_attempts")
+          .insert({
+            user_id: user.id,
+            lesson_id: lessonId,
+            course_id: courseId,
+            attempt_number: attemptNumber,
+            question_order: newQuestionOrder,
+            answer_orders: newAnswerOrders,
+            completed_at: null, // Will be set when quiz is submitted
+          })
+          .select()
+          .single()
+        
+        if (createError) {
+          logError("Error creating new attempt for retry", createError, {
+            component: "courses/[id]/quiz-results/route",
+            action: "POST",
+            lessonId,
+            attemptNumber,
+          })
+          // Continue with existing attempt if creation fails
+        } else if (newAttempt) {
+          attemptId = newAttempt.id
+          logInfo("New quiz attempt created for retry", {
+            attemptId: newAttempt.id,
+            attemptNumber,
+            lessonId,
+          })
+        }
+      } else {
+        // Max attempts exceeded - reuse last attempt
+        attemptNumber = quizAttempt.attempt_number || maxAttempts
+        logInfo("Max attempts exceeded, reusing last attempt", {
+          attemptId: quizAttempt.id,
+          attemptNumber,
+          maxAttempts,
+          lessonId,
+        })
+      }
+    } else if (!quizAttempt && shuffleEnabled && quizQuestions.length > 0) {
+      // No existing attempt and shuffle is enabled - create first attempt
+      const { shuffleQuiz, generateSeed } = await import("@/lib/quiz/shuffle")
+      const seed = generateSeed(user.id, lessonId, 1)
+      const shuffleResult = shuffleQuiz(quizQuestions, seed)
+      
+      const { data: newAttempt, error: createError } = await serviceSupabase
+        .from("quiz_attempts")
+        .insert({
+          user_id: user.id,
+          lesson_id: lessonId,
+          course_id: courseId,
+          attempt_number: 1,
+          question_order: shuffleResult.questionOrder,
+          answer_orders: shuffleResult.answerOrders,
+          completed_at: null, // Will be set when quiz is submitted
+        })
+        .select()
+        .single()
+      
+      if (createError) {
+        logError("Error creating first quiz attempt", createError, {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          lessonId,
+        })
+        // Continue without attempt if creation fails
+      } else if (newAttempt) {
+        attemptId = newAttempt.id
+        attemptNumber = 1
+        logInfo("First quiz attempt created", {
+          attemptId: newAttempt.id,
+          lessonId,
+        })
+      }
+    }
     
     // If attempt exists but is not completed, mark it as completed now
-    if (quizAttempt && !quizAttempt.completed_at) {
+    if (attemptId && quizAttempt && !quizAttempt.completed_at) {
       const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
         .from("quiz_attempts")
         .update({ completed_at: new Date().toISOString() })
-        .eq("id", quizAttempt.id)
+        .eq("id", attemptId)
         .select()
         .single()
       
@@ -237,17 +350,53 @@ export async function POST(
         logInfo("Quiz attempt marked as completed", { attemptId, lessonId })
         attemptId = updatedAttempt?.id || attemptId
       }
+    } else if (attemptId && !quizAttempt) {
+      // New attempt was just created - mark it as completed
+      const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
+        .from("quiz_attempts")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("id", attemptId)
+        .select()
+        .single()
+      
+      if (updateAttemptError) {
+        logWarning("Could not mark new quiz attempt as completed", {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          error: updateAttemptError,
+          attemptId,
+        })
+      } else {
+        logInfo("New quiz attempt marked as completed", { attemptId, lessonId })
+        attemptId = updatedAttempt?.id || attemptId
+      }
     }
-
+    
+    // Get final question order (from newly created attempt if needed)
+    let finalQuestionOrder = questionOrder
+    if (attemptId && !hasShuffle && shuffleEnabled && quizQuestions.length > 0) {
+      const { data: attemptData } = await serviceSupabase
+        .from("quiz_attempts")
+        .select("question_order")
+        .eq("id", attemptId)
+        .single()
+      if (attemptData?.question_order) {
+        finalQuestionOrder = attemptData.question_order
+      }
+    }
+    
     // If shuffled, we need to reconstruct the shuffled questions that user saw
     // NOTE: Only questions are shuffled, NOT answers - answers stay in original order
     let shuffledQuestionsForComparison: any[] = quizQuestions
     let originalQuestions: any[] = quizQuestions
     
-    if (hasShuffle && questionOrder) {
+    const effectiveQuestionOrder = finalQuestionOrder
+    const effectiveHasShuffle = effectiveQuestionOrder && Array.isArray(effectiveQuestionOrder) && effectiveQuestionOrder.length > 0
+    
+    if (effectiveHasShuffle && effectiveQuestionOrder) {
       // Reconstruct question order (questions are shuffled, but answers within each question are NOT)
       const questionMap = new Map(quizQuestions.map((q: any) => [q.dbId || parseInt(String(q.id)) || 0, q]))
-      originalQuestions = questionOrder.map((originalId: number) => questionMap.get(originalId)).filter(Boolean)
+      originalQuestions = effectiveQuestionOrder.map((originalId: number) => questionMap.get(originalId)).filter(Boolean)
       
       // Questions are in shuffled order, but answers within each question are NOT shuffled
       // So we just reorder the questions, keeping their original options and correctOption
@@ -266,11 +415,11 @@ export async function POST(
       let originalQuestion: any = null
       
       // If shuffled, questions are in shuffled order, so use index directly
-      if (hasShuffle && questionOrder && i < questionOrder.length && i < shuffledQuestionsForComparison.length) {
+      if (effectiveHasShuffle && effectiveQuestionOrder && i < effectiveQuestionOrder.length && i < shuffledQuestionsForComparison.length) {
         // Question at index i in shuffled order (with shuffled correctOption)
         question = shuffledQuestionsForComparison[i]
         // Find original question for mapping back
-        const shuffledQuestionId = questionOrder[i]
+        const shuffledQuestionId = effectiveQuestionOrder[i]
         originalQuestion = quizQuestions.find((q: any) => {
           const qId = q.dbId || parseInt(String(q.id)) || 0
           return qId === shuffledQuestionId

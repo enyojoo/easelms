@@ -168,17 +168,17 @@ export default function CoursePage() {
         title: "Course Instructor"
       }))
     : course?.creator ? [{
-        name: course.creator.name || "Instructor",
+    name: course.creator.name || "Instructor",
         profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
-        bio: course.creator.bio || "",
-        title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
-          ? "Course Instructor" 
-          : "Course Creator"
+    bio: course.creator.bio || "",
+    title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
+      ? "Course Instructor" 
+      : "Course Creator"
       }] : [{
-        name: "Instructor",
+    name: "Instructor",
         profileImage: "/placeholder.svg?height=200&width=200",
-        bio: "",
-        title: "Course Instructor"
+    bio: "",
+    title: "Course Instructor"
       }]
 
   // Get actual enrollment mode from course settings
@@ -437,10 +437,10 @@ export default function CoursePage() {
                 }
                 
                 return (
-                  <div className="flex items-center">
-                    <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <div className="flex items-center">
+                  <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
                     <span className="text-xs md:text-sm">{displayText}</span>
-                  </div>
+                </div>
                 )
               })()}
               <div className="flex items-center">
@@ -630,14 +630,14 @@ export default function CoursePage() {
           {instructors && instructors.length > 0 && (
             <div className="space-y-4">
               {instructors.map((instructor: any, index: number) => (
-                <InstructorCard
+            <InstructorCard
                   key={index}
-                  name={instructor.name}
-                  image={instructor.profileImage}
-                  bio={instructor.bio}
-                  title={instructor.title}
-                  className="mb-4"
-                />
+              name={instructor.name}
+              image={instructor.profileImage}
+              bio={instructor.bio}
+              title={instructor.title}
+              className="mb-4"
+            />
               ))}
             </div>
           )}
@@ -715,10 +715,10 @@ export default function CoursePage() {
                   }
                   
                   return (
-                    <div className="flex items-center">
-                      <Award className="w-5 h-5 mr-2 text-primary" />
+                  <div className="flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-primary" />
                       <span>{displayText}</span>
-                    </div>
+                  </div>
                   )
                 })()}
                 <div className="flex items-center">

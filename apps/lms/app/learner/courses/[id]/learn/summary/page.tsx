@@ -388,25 +388,25 @@ export default function CourseCompletionPage() {
                 const canDownload = !downloadingCertificate
                 
                 return (
-                  <Button
-                    onClick={handleDownloadCertificate}
-                    size="sm"
+              <Button
+                onClick={handleDownloadCertificate}
+                size="sm"
                     disabled={downloadingCertificate}
                     variant="default"
-                    className="flex-shrink-0"
-                  >
-                    {downloadingCertificate ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Downloading...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="mr-2 h-4 w-4" />
+                className="flex-shrink-0"
+              >
+                {downloadingCertificate ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="mr-2 h-4 w-4" />
                         Download Certificate
-                      </>
-                    )}
-                  </Button>
+                  </>
+                )}
+              </Button>
                 )
               })()}
             </div>
