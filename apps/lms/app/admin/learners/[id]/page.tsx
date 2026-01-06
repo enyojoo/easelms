@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,7 @@ import Link from "next/link"
 import { toast } from "sonner"
 import { createCourseSlug } from "@/lib/slug"
 import AdminLearnerDetailSkeleton from "@/components/AdminLearnerDetailSkeleton"
+import { useLearner, useRealtimeAdminStats } from "@/lib/react-query/hooks"
 
 interface Learner {
   id: string
@@ -66,72 +67,39 @@ function LearnerDetailsPage() {
   const params = useParams()
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [learner, setLearner] = useState<Learner | null>(null)
+  const learnerId = params.id as string
   const [courses, setCourses] = useState<Course[]>([])
   const [purchases, setPurchases] = useState<Purchase[]>([])
-  const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Use React Query hooks for data fetching with caching
+  const { data: learnerData, isPending: learnerPending, error: learnerError } = useLearner(learnerId)
+  
+  // Set up real-time subscription for learners (via admin stats)
+  useRealtimeAdminStats()
+
+  // Process learner data from React Query
+  const learner = useMemo<Learner | null>(() => {
+    if (!learnerData?.learner) return null
+    const l = learnerData.learner
+    return {
+      id: l.id,
+      name: l.name,
+      email: l.email,
+      profileImage: l.profileImage || l.profile_image || "/placeholder-user.jpg",
+      bio: l.bio,
+      currency: l.currency || "USD",
+      enrolledCourses: l.enrolledCourses || [],
+      completedCourses: l.completedCourses || [],
+      progress: l.progress || {},
+      created_at: l.created_at,
+    }
+  }, [learnerData])
 
   useEffect(() => {
     if (!authLoading && (!user || userType !== "admin")) {
       router.push("/auth/admin/login")
     }
   }, [user, userType, authLoading, router])
-
-  useEffect(() => {
-    const fetchLearner = async () => {
-      if (!mounted || authLoading || !user || userType !== "admin") return
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch(`/api/learners/${params.id}`)
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch learner")
-        }
-
-        const data = await response.json()
-        setLearner(data.learner)
-      } catch (err: any) {
-        console.error("Error fetching learner:", err)
-        setError(err.message || "Failed to load learner")
-        toast.error(err.message || "Failed to load learner")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchLearner()
-  }, [params.id, mounted, authLoading, user, userType])
-
-  // Refresh learner data periodically to catch enrollment status updates
-  useEffect(() => {
-    if (!mounted || authLoading || !user || !params.id) return
-    
-    const interval = setInterval(() => {
-      const fetchLearner = async () => {
-        try {
-          const response = await fetch(`/api/learners/${params.id}`)
-          if (response.ok) {
-            const data = await response.json()
-            setLearner(data.learner)
-          }
-        } catch (err: any) {
-          console.error("Error refreshing learner:", err)
-        }
-      }
-      fetchLearner()
-    }, 10000) // Refresh every 10 seconds
-
-    return () => clearInterval(interval)
-  }, [params.id, mounted, authLoading, user, userType])
 
   useEffect(() => {
     const fetchCoursesAndProgress = async () => {
@@ -221,18 +189,19 @@ function LearnerDetailsPage() {
   }, [params.id, mounted, authLoading, user])
 
   // Show skeleton ONLY on true initial load (no cached data exists)
-  const hasData = !!learner
-  const showSkeleton = (!mounted || authLoading || !user || userType !== "admin" || loading) && !hasData
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  const hasData = learnerData
+  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
 
   if (showSkeleton) {
     return <AdminLearnerDetailSkeleton />
   }
 
-  if (error || !learner) {
+  if (learnerError || !learner) {
     return (
       <div className="pt-4 md:pt-8">
         <div className="text-center py-8">
-          <p className="text-destructive mb-4">{error || "Learner not found"}</p>
+          <p className="text-destructive mb-4">{learnerError?.message || "Learner not found"}</p>
           <Link href="/admin/learners">
             <Button variant="outline" className="mt-4">
               <ArrowLeft className="mr-2 h-4 w-4" />

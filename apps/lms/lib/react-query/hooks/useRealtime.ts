@@ -283,6 +283,22 @@ export function useRealtimeAdminStats() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
+          queryClient.invalidateQueries({ queryKey: ["learners"] }) // Also invalidate learners when enrollments change
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "profiles",
+        },
+        (payload) => {
+          // Only invalidate if it's a user profile change (user_type = 'user')
+          if (payload.new && (payload.new as any).user_type === "user") {
+            queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
+            queryClient.invalidateQueries({ queryKey: ["learners"] })
+          }
         }
       )
       .on(
@@ -305,6 +321,7 @@ export function useRealtimeAdminStats() {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
+          queryClient.invalidateQueries({ queryKey: ["purchases"] }) // Also invalidate purchases cache
         }
       )
       .subscribe()

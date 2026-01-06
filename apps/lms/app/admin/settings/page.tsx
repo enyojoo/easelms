@@ -24,6 +24,7 @@ import { US } from "country-flag-icons/react/3x2"
 import AdminSettingsSkeleton from "@/components/AdminSettingsSkeleton"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
+import { useSettings, useUpdateSettings } from "@/lib/react-query/hooks"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -46,10 +47,12 @@ export default function SettingsPage() {
     userEmailNotifications: true,
     defaultCurrency: "USD",
   })
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const initialSettingsRef = useRef<typeof settings | null>(null)
+
+  // Use React Query hooks for data fetching with caching
+  const { data: settingsData, isPending: settingsPending, error: settingsError } = useSettings()
+  const updateSettingsMutation = useUpdateSettings()
 
   useEffect(() => {
     if (!authLoading) {
@@ -90,48 +93,24 @@ export default function SettingsPage() {
     })
   }, [authLoading, user, userType, queryClient])
 
-  // Fetch platform settings
+  // Process settings data from React Query
   useEffect(() => {
-    const fetchSettings = async () => {
-      if (authLoading || !user || userType !== "admin") return
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch("/api/settings")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch settings")
-        }
-
-        const data = await response.json()
-        const platformSettings = data.platformSettings
-
-        if (platformSettings) {
-          const loadedSettings = {
-            defaultCurrency: platformSettings.default_currency || "USD",
-            courseEnrollmentNotifications: platformSettings.course_enrollment_notifications ?? true,
-            courseCompletionNotifications: platformSettings.course_completion_notifications ?? true,
-            platformAnnouncements: platformSettings.platform_announcements ?? true,
-            userEmailNotifications: platformSettings.user_email_notifications ?? true,
-            emailNotifications: true, // Keep for compatibility
-          }
-          setSettings(loadedSettings)
-          initialSettingsRef.current = loadedSettings // Store initial settings for comparison
-        }
-        setInitialLoadComplete(true)
-      } catch (err: any) {
-        console.error("Error fetching settings:", err)
-        setError(err.message || "Failed to load settings")
-        toast.error(err.message || "Failed to load settings")
-      } finally {
-        setLoading(false)
+    if (settingsData?.platformSettings) {
+      const platformSettings = settingsData.platformSettings
+      const loadedSettings = {
+        defaultCurrency: platformSettings.default_currency || "USD",
+        courseEnrollmentNotifications: platformSettings.course_enrollment_notifications ?? true,
+        courseCompletionNotifications: platformSettings.course_completion_notifications ?? true,
+        platformAnnouncements: platformSettings.platform_announcements ?? true,
+        userEmailNotifications: platformSettings.user_email_notifications ?? true,
+        emailNotifications: true, // Keep for compatibility
+      }
+      setSettings(loadedSettings)
+      if (!initialSettingsRef.current) {
+        initialSettingsRef.current = loadedSettings // Store initial settings for comparison
       }
     }
-
-    fetchSettings()
-  }, [authLoading, user, userType])
+  }, [settingsData])
 
   const handleSwitchChange = (name: string) => (checked: boolean) => {
     setSettings((prev) => ({ ...prev, [name]: checked }))
@@ -140,7 +119,7 @@ export default function SettingsPage() {
   // Auto-save settings with debouncing (only when user actually changes settings)
   useEffect(() => {
     // Don't auto-save on initial load or if settings haven't changed
-    if (!initialLoadComplete || !user || userType !== "admin" || !initialSettingsRef.current) return
+    if (!settingsData || !user || userType !== "admin" || !initialSettingsRef.current) return
 
     const initialSettings = initialSettingsRef.current
 
@@ -169,20 +148,7 @@ export default function SettingsPage() {
           user_email_notifications: settings.userEmailNotifications,
         }
 
-        const response = await fetch("/api/settings", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            platformSettings,
-          }),
-        })
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to save settings")
-        }
+        await updateSettingsMutation.mutateAsync({ platformSettings })
 
         // Update initial settings to current values after successful save
         initialSettingsRef.current = {
@@ -199,11 +165,11 @@ export default function SettingsPage() {
     }, 1000) // 1 second debounce
 
     return () => clearTimeout(timeoutId)
-  }, [settings, initialLoadComplete, user, userType])
+  }, [settings, settingsData, user, userType, updateSettingsMutation])
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
-  const hasData = initialLoadComplete && initialSettingsRef.current
+  const hasData = settingsData
   const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
 
   return (

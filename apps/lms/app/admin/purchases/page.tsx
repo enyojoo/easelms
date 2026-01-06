@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import { useClientAuthState } from "@/utils/client-auth"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AdminPurchasesSkeleton from "@/components/AdminPurchasesSkeleton"
+import { usePurchases, useRealtimeAdminStats } from "@/lib/react-query/hooks"
 
 interface Purchase {
   id: string
@@ -38,50 +39,26 @@ interface Purchase {
 export default function AdminPurchasesPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [purchases, setPurchases] = useState<Purchase[]>([])
-  const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Use React Query hooks for data fetching with caching
+  const { data: purchasesData, isPending: purchasesPending, error: purchasesError } = usePurchases({ all: true })
+  
+  // Set up real-time subscription for purchases (via admin stats)
+  useRealtimeAdminStats()
+  
+  // Process purchases data from React Query
+  const purchases = useMemo(() => {
+    if (!purchasesData?.purchases) return []
+    return purchasesData.purchases
+  }, [purchasesData])
 
   useEffect(() => {
     if (!authLoading && (!user || userType !== "admin")) {
       router.push("/auth/admin/login")
     }
   }, [user, userType, authLoading, router])
-
-  useEffect(() => {
-    const fetchPurchases = async () => {
-      if (!mounted || authLoading || !user || userType !== "admin") return
-
-      try {
-        setLoading(true)
-
-        // Fetch all purchases for admin
-        const response = await fetch("/api/purchases?all=true")
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch purchases")
-        }
-
-        const data = await response.json()
-        setPurchases(data.purchases || [])
-      } catch (err: any) {
-        console.error("Error fetching purchases:", err)
-        setPurchases([])
-        toast.error(err.message || "Failed to load purchases")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchPurchases()
-  }, [mounted, authLoading, user, userType])
 
   const filteredPurchases = purchases.filter((purchase) => {
     const matchesSearch =
@@ -97,13 +74,20 @@ export default function AdminPurchasesPage() {
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
-  const hasData = purchases.length > 0
-  const showSkeleton = (!mounted || authLoading || !user || userType !== "admin" || loading) && !hasData
+  const hasData = purchasesData
+  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
 
   return (
     <div className="pt-4 md:pt-8">
       {showSkeleton ? (
         <AdminPurchasesSkeleton />
+      ) : purchasesError ? (
+        <div className="text-center py-12">
+          <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Error loading purchases</h3>
+          <p className="text-sm text-muted-foreground mb-4">{purchasesError.message || "Failed to load purchases"}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
       ) : (
         <>
           <div className="flex justify-between items-center mb-6">

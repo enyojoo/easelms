@@ -20,7 +20,7 @@ import CertificatePreview from "@/components/CertificatePreview"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { US } from "country-flag-icons/react/3x2"
-import { useProfile, useUpdateProfile } from "@/lib/react-query/hooks"
+import { useProfile, useUpdateProfile, useSettings } from "@/lib/react-query/hooks"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -52,6 +52,7 @@ export default function LearnerProfilePage() {
 
   // Use React Query hooks for data fetching
   const { data: profileData, isPending: profilePending } = useProfile()
+  const { data: settingsData } = useSettings()
   const updateProfileMutation = useUpdateProfile()
 
   const profile = profileData?.profile
@@ -78,25 +79,22 @@ export default function LearnerProfilePage() {
     }
   }, [profile])
 
-  // Load certificates and settings
+  // Load settings from React Query cache
   useEffect(() => {
-    const loadAdditionalData = async () => {
+    if (settingsData?.userSettings) {
+      setSettings({
+        emailNotifications: settingsData.userSettings.email_notifications ?? true,
+      })
+      setSelectedCurrency(settingsData.userSettings.currency || profile?.currency || "USD")
+    }
+  }, [settingsData, profile])
+
+  // Load certificates (no hook exists yet, so keep manual fetch)
+  useEffect(() => {
+    const loadCertificates = async () => {
       if (!authUser) return
 
       try {
-        // Fetch user settings
-        const settingsResponse = await fetch("/api/settings")
-        if (settingsResponse.ok) {
-          const settingsData = await settingsResponse.json()
-          if (settingsData.userSettings) {
-            setSettings({
-              emailNotifications: settingsData.userSettings.email_notifications ?? true,
-            })
-            setSelectedCurrency(settingsData.userSettings.currency || profile?.currency || "USD")
-          }
-        }
-
-        // Load certificates
         const certificatesResponse = await fetch("/api/certificates")
         if (certificatesResponse.ok) {
           const certificatesData = await certificatesResponse.json()
@@ -105,14 +103,15 @@ export default function LearnerProfilePage() {
           setCertificates([])
         }
       } catch (error) {
-        console.error("Error loading additional data:", error)
+        console.error("Error loading certificates:", error)
+        setCertificates([])
       }
     }
 
     if (authUser) {
-      loadAdditionalData()
+      loadCertificates()
     }
-  }, [authUser, profile])
+  }, [authUser])
 
   // Check scroll position for tabs arrows
   useEffect(() => {

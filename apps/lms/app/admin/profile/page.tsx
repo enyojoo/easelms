@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,119 +10,74 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { getClientAuthState } from "@/utils/client-auth"
+import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
-import { Upload } from "lucide-react"
+import { Upload, Loader2 } from "lucide-react"
 import AdminProfileSkeleton from "@/components/AdminProfileSkeleton"
+import { useProfile, useUpdateProfile } from "@/lib/react-query/hooks"
 
 export default function ProfilePage() {
   const router = useRouter()
-  const [user, setUser] = useState<User | null>(null)
+  const { user: authUser, loading: authLoading, userType } = useClientAuthState()
   const [isEditing, setIsEditing] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [imageError, setImageError] = useState(false)
-  const [mounted, setMounted] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     bio: "",
   })
 
-  // Track mount state to prevent flash of content
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Use React Query hooks for data fetching with caching
+  const { data: profileData, isPending: profilePending, error: profileError } = useProfile()
+  const updateProfileMutation = useUpdateProfile()
+
+  // Process profile data
+  const profile = profileData?.profile
+  const user = useMemo<User | null>(() => {
+    if (profile) {
+      return {
+        id: profile.id,
+        name: profile.name || "",
+        email: profile.email || "",
+        userType: "admin",
+        enrolledCourses: [],
+        progress: {},
+        completedCourses: [],
+        profileImage: profile.profile_image || "",
+        bio: profile.bio || "",
+      }
+    }
+    return authUser ? {
+      ...authUser,
+      userType: "admin",
+    } : null
+  }, [profile, authUser])
 
   useEffect(() => {
-    loadProfileData()
-  }, [router])
-
-  const loadProfileData = async () => {
-    const { isLoggedIn, userType, user: authUser } = getClientAuthState()
-    if (!isLoggedIn || userType !== "admin") {
+    if (!authLoading && (!authUser || userType !== "admin")) {
       router.push("/auth/admin/login")
-      return
     }
+  }, [authUser, userType, authLoading, router])
 
-    try {
-      setLoading(true)
-      setError(null)
-
-      // Load profile data
-      const profileResponse = await fetch("/api/profile")
-      
-      if (!profileResponse.ok) {
-        const errorData = await profileResponse.json()
-        console.error("Error loading profile:", errorData.error)
-        
-        // Use auth user data as fallback
-        if (authUser) {
-          setFormData({
-            name: authUser.name || "",
-            email: authUser.email || "",
-            bio: authUser.bio || "",
-          })
-          setUser(authUser)
-        } else {
-          setError("Failed to load profile. Please try refreshing the page.")
-        }
-        setLoading(false)
-        return
-      }
-
-      const profileData = await profileResponse.json()
-
-      if (profileData.profile) {
-        const profile = profileData.profile
-        setFormData({
-          name: profile.name || "",
-          email: profile.email || "",
-          bio: profile.bio || "",
-        })
-
-        // Set user data for display
-        setUser({
-          id: profile.id,
-          name: profile.name || "",
-          email: profile.email || "",
-          userType: "admin",
-          enrolledCourses: [],
-          progress: {},
-          completedCourses: [],
-          profileImage: profile.profile_image || "",
-          bio: profile.bio || "",
-        })
-        // Reset image error when profile loads
-        setImageError(false)
-      } else if (authUser) {
-        // Fallback to auth user if profile is empty
-        setFormData({
-          name: authUser.name || "",
-          email: authUser.email || "",
-          bio: authUser.bio || "",
-        })
-        setUser(authUser)
-      }
-    } catch (error) {
-      console.error("Error loading profile data:", error)
-      setError("An error occurred while loading your profile.")
-      
-      // Use auth user as fallback
-      if (authUser) {
-        setFormData({
-          name: authUser.name || "",
-          email: authUser.email || "",
-          bio: authUser.bio || "",
-        })
-        setUser(authUser)
-      }
-    } finally {
-      setLoading(false)
+  // Update form data when profile loads
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        bio: profile.bio || "",
+      })
+      setImageError(false)
+    } else if (authUser) {
+      setFormData({
+        name: authUser.name || "",
+        email: authUser.email || "",
+        bio: authUser.bio || "",
+      })
     }
-  }
+  }, [profile, authUser])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -133,33 +88,17 @@ export default function ProfilePage() {
     e.preventDefault()
 
     try {
-      setSaving(true)
-
-      const response = await fetch("/api/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          bio: formData.bio,
-        }),
+      await updateProfileMutation.mutateAsync({
+        name: formData.name,
+        bio: formData.bio,
       })
-
-      if (response.ok) {
-        setIsEditing(false)
-        // Reload profile data to reflect changes
-        await loadProfileData()
-        
-        // Dispatch event to refresh header
-        window.dispatchEvent(new CustomEvent("profileUpdated"))
-      } else {
-        console.error("Failed to update profile")
-      }
-    } catch (error) {
+      
+      setIsEditing(false)
+      // Dispatch event to refresh header
+      window.dispatchEvent(new CustomEvent("profileUpdated"))
+    } catch (error: any) {
       console.error("Error updating profile:", error)
-    } finally {
-      setSaving(false)
+      setError(error.message || "Failed to update profile")
     }
   }
 
@@ -201,28 +140,14 @@ export default function ProfilePage() {
       const data = await response.json()
 
       // Update profile with new image URL
-      const updateResponse = await fetch("/api/profile", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          profile_image: data.url,
-        }),
+      await updateProfileMutation.mutateAsync({
+        profile_image: data.url,
       })
-
-      if (updateResponse.ok) {
-        // Reset image error state when new image is uploaded
-        setImageError(false)
-        // Reload profile data to show new image
-        await loadProfileData()
-        
-        // Dispatch event to refresh header
-        window.dispatchEvent(new CustomEvent("profileUpdated"))
-      } else {
-        const errorData = await updateResponse.json()
-        throw new Error(errorData.error || "Failed to update profile with new image")
-      }
+      
+      // Reset image error state when new image is uploaded
+      setImageError(false)
+      // Dispatch event to refresh header
+      window.dispatchEvent(new CustomEvent("profileUpdated"))
     } catch (error: any) {
       console.error("Error uploading image:", error)
       setError(error.message || "Failed to upload image")
@@ -233,20 +158,30 @@ export default function ProfilePage() {
     }
   }
 
-  // Always render page structure, show skeleton for content if loading
-  const isLoading = !mounted || loading
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  const hasData = profileData || authUser
+  const showSkeleton = (authLoading || !authUser || userType !== "admin") && !hasData
 
-    return (
-      <div className="pt-4 md:pt-8">
-      {isLoading ? (
+  return (
+    <div className="pt-4 md:pt-8">
+      {showSkeleton ? (
         <AdminProfileSkeleton />
+      ) : profileError && !authUser ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <p className="text-destructive mb-4">
+              {profileError.message || "Failed to load profile. Please try refreshing the page."}
+            </p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
       ) : !user ? (
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <p className="text-destructive mb-4">
               {error || "Failed to load profile. Please try refreshing the page."}
             </p>
-            <Button onClick={() => loadProfileData()}>Retry</Button>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
           </div>
         </div>
       ) : (
@@ -300,8 +235,17 @@ export default function ProfilePage() {
                 </div>
                 {isEditing ? (
                   <div className="flex justify-end space-x-2">
-                    <Button type="submit">Save Changes</Button>
-                    <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                    <Button type="submit" disabled={updateProfileMutation.isPending}>
+                      {updateProfileMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Changes"
+                      )}
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setIsEditing(false)} disabled={updateProfileMutation.isPending}>
                       Cancel
                     </Button>
                   </div>

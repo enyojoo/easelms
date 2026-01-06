@@ -19,11 +19,14 @@ interface PurchasesResponse {
 }
 
 // Fetch user purchases
-export function usePurchases() {
+export function usePurchases(options?: { all?: boolean }) {
   return useQuery<PurchasesResponse>({
-    queryKey: ["purchases"],
+    queryKey: ["purchases", options],
     queryFn: async () => {
-      const response = await fetch("/api/purchases")
+      const params = new URLSearchParams()
+      if (options?.all) params.append("all", "true")
+      
+      const response = await fetch(`/api/purchases?${params.toString()}`)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch purchases")

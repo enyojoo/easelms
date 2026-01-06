@@ -38,6 +38,7 @@ export default function VideoPlayer({
   const containerRef = useRef<HTMLDivElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const wasPlayingBeforeFullscreenRef = useRef(false)
+  const wasPlayingBeforeSeekRef = useRef(false)
   const completedRef = useRef(false)
   const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
@@ -147,11 +148,6 @@ export default function VideoPlayer({
     }
 
     const handleCanPlay = async () => {
-      // Always start from beginning
-      if (video.currentTime > 0) {
-        video.currentTime = 0
-        setCurrentTime(0)
-      }
       if (autoPlay && isActive && video.paused) {
         try {
           await video.play()
@@ -168,11 +164,6 @@ export default function VideoPlayer({
     }
 
     const handleLoadedData = async () => {
-      // Always start from beginning
-      if (video.currentTime > 0) {
-        video.currentTime = 0
-        setCurrentTime(0)
-      }
       if (autoPlay && isActive && video.paused) {
         try {
           await video.play()
@@ -192,9 +183,6 @@ export default function VideoPlayer({
       if (video && video.duration && !isNaN(video.duration)) {
         setDuration(video.duration)
       }
-      // Always start from beginning
-      video.currentTime = 0
-      setCurrentTime(0)
       if (autoPlay && isActive && video.paused) {
         video.play().catch((error: any) => {
           // Ignore AbortError - video was removed/changed
@@ -221,11 +209,6 @@ export default function VideoPlayer({
     if (autoPlay && isActive) {
       const attemptPlay = () => {
         if (video.paused) {
-          // Reset to start before playing
-          if (video.currentTime > 0) {
-            video.currentTime = 0
-            setCurrentTime(0)
-          }
           video.play().catch((error: any) => {
             // Ignore AbortError - video was removed/changed
             if (error.name === 'AbortError') {
@@ -404,18 +387,28 @@ export default function VideoPlayer({
     const percentage = clickX / rect.width
     const newTime = percentage * duration
 
+    // Remember if video was playing before seeking
+    const wasPlaying = !video.paused
+    wasPlayingBeforeSeekRef.current = wasPlaying
+
     video.currentTime = newTime
     setCurrentTime(newTime)
-    
-    // Show controls when interacting with progress bar
-    setShowControls(true)
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current)
-    }
-    if (isPlaying) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000)
+
+    // Resume playing if it was playing before (after a small delay to ensure seek completes)
+    if (wasPlaying) {
+      // Use requestAnimationFrame to ensure the seek has completed
+      requestAnimationFrame(() => {
+        const currentVideo = videoRef.current
+        if (currentVideo && currentVideo.paused && wasPlayingBeforeSeekRef.current) {
+          currentVideo.play().catch((error: any) => {
+            // Ignore expected errors
+            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
+              console.error("Error resuming video after seek:", error)
+            }
+          })
+        }
+        wasPlayingBeforeSeekRef.current = false
+      })
     }
   }
 
@@ -426,18 +419,41 @@ export default function VideoPlayer({
     const newTime = (parseFloat(e.target.value) / 100) * duration
     video.currentTime = newTime
     setCurrentTime(newTime)
-    
-    // Show controls when seeking
-    setShowControls(true)
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current)
-    }
-    if (isPlaying) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000)
+  }
+
+  const handleSeekStart = () => {
+    setIsSeeking(true)
+    const video = videoRef.current
+    if (video) {
+      // Remember if video was playing before seeking starts
+      wasPlayingBeforeSeekRef.current = !video.paused
     }
   }
+
+  const handleSeekEnd = () => {
+    setIsSeeking(false)
+    const video = videoRef.current
+    
+    // Resume playing if it was playing before seeking (after a small delay to ensure seek completes)
+    if (video && wasPlayingBeforeSeekRef.current && video.paused) {
+      // Use requestAnimationFrame to ensure the seek has completed
+      requestAnimationFrame(() => {
+        const currentVideo = videoRef.current
+        if (currentVideo && currentVideo.paused && wasPlayingBeforeSeekRef.current) {
+          currentVideo.play().catch((error: any) => {
+            // Ignore expected errors
+            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
+              console.error("Error resuming video after seek:", error)
+            }
+          })
+        }
+        wasPlayingBeforeSeekRef.current = false
+      })
+    } else {
+      wasPlayingBeforeSeekRef.current = false
+    }
+  }
+
 
   if (!validVideoUrl) {
     return null
@@ -581,8 +597,10 @@ export default function VideoPlayer({
                 value={progress}
                 step="0.1"
                 onChange={handleProgressSeek}
-                onMouseDown={() => setIsSeeking(true)}
-                onMouseUp={() => setIsSeeking(false)}
+                onMouseDown={handleSeekStart}
+                onMouseUp={handleSeekEnd}
+                onTouchStart={handleSeekStart}
+                onTouchEnd={handleSeekEnd}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 style={{ zIndex: 10 }}
               />

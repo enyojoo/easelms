@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -29,6 +29,7 @@ import {
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { useClientAuthState } from "@/utils/client-auth"
+import { useLearners, useInvalidateLearners, useAdminStats, useRealtimeAdminStats, useCourses } from "@/lib/react-query/hooks"
 
 interface Learner {
   id: string
@@ -54,19 +55,29 @@ export default function LearnersPage() {
   const { user, loading: authLoading, userType } = useClientAuthState()
   const [searchTerm, setSearchTerm] = useState("")
   const [enrollmentFilter, setEnrollmentFilter] = useState<string>("all")
-  const [learners, setLearners] = useState<Learner[]>([])
-  const [courses, setCourses] = useState<Course[]>([])
-  const [filteredLearners, setFilteredLearners] = useState<Learner[]>([])
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Learner | null>(null)
   const [selectedCourse, setSelectedCourse] = useState<string>("")
   const [mounted, setMounted] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [statsLoading, setStatsLoading] = useState(true)
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [coursesLoading, setCoursesLoading] = useState(false)
   const [enrolling, setEnrolling] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  // Use React Query hooks for data fetching with caching
+  const { data: learnersData, isPending: learnersPending, error: learnersError } = useLearners({
+    search: searchTerm || undefined,
+    enrollmentFilter: enrollmentFilter !== "all" ? enrollmentFilter : undefined,
+  })
+  
+  const { data: stats, isPending: statsPending, error: statsError } = useAdminStats()
+  
+  // Set up real-time subscription for admin stats (which also affects learners)
+  useRealtimeAdminStats()
+  
+  // Get cache invalidation function
+  const invalidateLearners = useInvalidateLearners()
+  
+  // Fetch courses for enrollment dialog (only when dialog is open)
+  const { data: coursesData, isPending: coursesPending } = useCourses()
+  const courses = useMemo(() => coursesData?.courses || [], [coursesData])
 
   useEffect(() => {
     setMounted(true)
@@ -82,140 +93,22 @@ export default function LearnersPage() {
     }
   }, [user, userType, authLoading, router])
 
-  // Fetch stats (for total learners count)
-  useEffect(() => {
-    const fetchStats = async () => {
-      const isAdmin = userType === "admin"
-      const isInstructor = (userType as string) === "instructor"
-      if (!mounted || authLoading || !user || (!isAdmin && !isInstructor)) return
+  // Process learners data from React Query
+  const learners = useMemo(() => {
+    if (!learnersData?.learners) return []
+    return learnersData.learners.map((learner: any) => ({
+      id: learner.id,
+      name: learner.name,
+      email: learner.email,
+      profileImage: learner.profileImage || learner.profile_image || "/placeholder-user.jpg",
+      enrolledCourses: learner.enrolledCourses || [],
+      completedCourses: learner.completedCourses || [],
+      progress: learner.progress || {},
+    }))
+  }, [learnersData])
 
-      try {
-        setStatsLoading(true)
-        const response = await fetch("/api/admin/stats")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch stats")
-        }
-
-        const data = await response.json()
-        setStats({ totalLearners: data.totalLearners || 0 })
-      } catch (err: any) {
-        console.error("Error fetching stats:", err)
-        // Don't show error toast for stats, just log it
-      } finally {
-        setStatsLoading(false)
-      }
-    }
-
-    fetchStats()
-  }, [mounted, authLoading, user, userType])
-
-  // Fetch learners
-  useEffect(() => {
-    const fetchLearners = async () => {
-      const isAdmin = userType === "admin"
-      const isInstructor = (userType as string) === "instructor"
-      if (!mounted || authLoading || !user || (!isAdmin && !isInstructor)) return
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        const params = new URLSearchParams()
-        if (searchTerm) {
-          params.append("search", searchTerm)
-        }
-        if (enrollmentFilter !== "all") {
-          params.append("enrollmentFilter", enrollmentFilter)
-        }
-
-        const response = await fetch(`/api/learners?${params.toString()}`)
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch learners")
-        }
-
-        const data = await response.json()
-        setLearners(data.learners || [])
-      } catch (err: any) {
-        console.error("Error fetching learners:", err)
-        setError(err.message || "Failed to load learners")
-        toast.error(err.message || "Failed to load learners")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchLearners()
-  }, [mounted, authLoading, user, userType, searchTerm, enrollmentFilter])
-
-  // Refresh learners data periodically to catch enrollment status updates
-  useEffect(() => {
-    if (!mounted || authLoading || !user) return
-    
-    const interval = setInterval(() => {
-      const fetchLearners = async () => {
-        try {
-          const params = new URLSearchParams()
-          if (searchTerm) {
-            params.append("search", searchTerm)
-          }
-          if (enrollmentFilter !== "all") {
-            params.append("enrollmentFilter", enrollmentFilter)
-          }
-
-          const response = await fetch(`/api/learners?${params.toString()}`)
-          if (response.ok) {
-            const data = await response.json()
-            setLearners(data.learners || [])
-          }
-        } catch (err: any) {
-          console.error("Error refreshing learners:", err)
-        }
-      }
-      fetchLearners()
-    }, 10000) // Refresh every 10 seconds
-
-    return () => clearInterval(interval)
-  }, [mounted, authLoading, user, userType, searchTerm, enrollmentFilter])
-
-  // Fetch courses for enrollment dialog
-  useEffect(() => {
-    const fetchCourses = async () => {
-      if (!enrollDialogOpen) return
-
-      try {
-        setCoursesLoading(true)
-        const response = await fetch("/api/courses")
-        if (!response.ok) {
-          throw new Error("Failed to fetch courses")
-        }
-        const data = await response.json()
-        setCourses(data.courses || [])
-      } catch (err: any) {
-        console.error("Error fetching courses:", err)
-        toast.error("Failed to load courses")
-      } finally {
-        setCoursesLoading(false)
-      }
-    }
-
-    fetchCourses()
-  }, [enrollDialogOpen])
-
-  // Filter learners based on search and enrollment filter
-  useEffect(() => {
-    let filtered = [...learners]
-
-    // Apply enrollment filter (API already filters, but we do client-side for search)
-    if (enrollmentFilter === "enrolled") {
-      filtered = filtered.filter((learner) => learner.enrolledCourses.length > 0)
-    } else if (enrollmentFilter === "not-enrolled") {
-      filtered = filtered.filter((learner) => learner.enrolledCourses.length === 0)
-    }
-
-    setFilteredLearners(filtered)
-  }, [learners, enrollmentFilter])
+  // API already handles filtering, so filteredLearners is just the learners
+  const filteredLearners = learners
 
   const handleEnrollClick = (learner: Learner) => {
     setSelectedUser(learner)
@@ -248,20 +141,8 @@ export default function LearnersPage() {
       setSelectedUser(null)
       setSelectedCourse("")
 
-      // Refresh learners list
-      const params = new URLSearchParams()
-      if (searchTerm) {
-        params.append("search", searchTerm)
-      }
-      if (enrollmentFilter !== "all") {
-        params.append("enrollmentFilter", enrollmentFilter)
-      }
-
-      const refreshResponse = await fetch(`/api/learners?${params.toString()}`)
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json()
-        setLearners(refreshData.learners || [])
-      }
+      // Invalidate learners and stats cache to trigger refetch
+      invalidateLearners()
     } catch (err: any) {
       console.error("Error enrolling learner:", err)
       toast.error(err.message || "Failed to enroll learner")
@@ -285,8 +166,8 @@ export default function LearnersPage() {
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
-  const hasData = learners.length > 0 || stats
-  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
+  const hasData = learnersData || stats
+  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasData
 
   return (
     <div className="pt-4 md:pt-8">
@@ -312,10 +193,12 @@ export default function LearnersPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {statsLoading ? (
+            {statsPending ? (
               <div className="flex items-center">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>
+            ) : statsError ? (
+              <p className="text-sm text-destructive">Error loading stats</p>
             ) : (
               <p className="text-3xl font-bold">{getTotalEnrolled()}</p>
             )}
@@ -384,10 +267,10 @@ export default function LearnersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {error ? (
+                {learnersError ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-8 text-destructive">
-                      {error}
+                      {learnersError.message || "Failed to load learners"}
                     </TableCell>
                   </TableRow>
                 ) : filteredLearners.length === 0 ? (
@@ -455,7 +338,7 @@ export default function LearnersPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Course</label>
-              {coursesLoading ? (
+              {coursesPending ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
@@ -483,7 +366,7 @@ export default function LearnersPage() {
             <Button variant="outline" onClick={() => setEnrollDialogOpen(false)} disabled={enrolling}>
               Cancel
             </Button>
-            <Button onClick={handleEnrollConfirm} disabled={!selectedCourse || enrolling || coursesLoading}>
+            <Button onClick={handleEnrollConfirm} disabled={!selectedCourse || enrolling || coursesPending}>
               {enrolling ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

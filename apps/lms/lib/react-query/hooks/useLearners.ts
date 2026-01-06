@@ -31,6 +31,7 @@ export function useLearners(options?: { search?: string; enrollmentFilter?: stri
       return response.json()
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - learner list doesn't change frequently
+    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
   })
 }
 
