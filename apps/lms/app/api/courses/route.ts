@@ -149,23 +149,16 @@ export async function GET(request: Request) {
       const lessons = Array.isArray(course.lessons) ? course.lessons : []
       
       // Calculate total duration from lessons
-      // Duration is stored in lesson.content.estimatedDuration
+      // Duration is stored in lesson.estimated_duration column (NO JSONB)
       const totalDurationMinutes = lessons.reduce((total: number, lesson: any) => {
-        const estimatedDuration = lesson.content?.estimatedDuration || 0
+        const estimatedDuration = lesson.estimated_duration || 0
         return total + estimatedDuration
       }, 0)
       const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10 // Round to 1 decimal place
       
-      // Parse settings if it's a string (JSON stored as text)
-      let settings = course.settings
-      if (typeof settings === 'string') {
-        try {
-          settings = JSON.parse(settings)
-        } catch (e) {
-          console.warn("Failed to parse course settings:", e)
-          settings = {}
-        }
-      }
+      // Settings are now stored in dedicated columns, not JSONB
+      // Transform database columns to nested structure for frontend compatibility
+      const settings = {}
 
       return {
         ...course,
