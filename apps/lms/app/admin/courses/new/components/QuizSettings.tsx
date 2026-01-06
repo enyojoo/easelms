@@ -73,6 +73,7 @@ export default function QuizSettings({ quiz, onChange }: QuizSettingsProps) {
           <Switch
             checked={quiz.shuffleQuiz || false}
             onCheckedChange={(checked) => updateSetting("shuffleQuiz", checked)}
+            disabled={!quiz.enabled}
           />
         </div>
       </CardContent>

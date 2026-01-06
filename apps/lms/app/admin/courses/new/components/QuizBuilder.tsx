@@ -168,6 +168,7 @@ export default function QuizBuilder({ quiz, onChange, minimumQuizScore = 50, cou
                 allowMultipleAttempts: (quiz as any).allowMultipleAttempts,
                 maxAttempts: (quiz as any).maxAttempts,
                 showCorrectAnswers: (quiz as any).showCorrectAnswers,
+                shuffleQuiz: (quiz as any).shuffleQuiz, // Include shuffleQuiz setting
               }}
               onChange={(updatedQuiz) => {
                 onChange({
