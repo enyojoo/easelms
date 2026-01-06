@@ -70,6 +70,7 @@ export default function QuizComponent({
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [quizStarted, setQuizStarted] = useState(false) // Track if user has started the quiz
   const quizCompletedRef = useRef(false) // Track if quiz has been completed
+  const isRetryingRef = useRef(false) // Track if we're currently retrying (to prevent showResultsOnly from taking effect)
 
   // Answers are already in original order (no mapping needed)
   const mappedAnswersForReview = useMemo(() => {
@@ -82,6 +83,7 @@ export default function QuizComponent({
     if (lessonId !== undefined) {
       // Reset all state when lesson changes
       quizCompletedRef.current = false
+      isRetryingRef.current = false // Reset retry flag when lesson changes
       setCurrentQuestion(0)
       setSelectedAnswers([])
       setShowResults(false)
@@ -93,9 +95,22 @@ export default function QuizComponent({
     }
   }, [lessonId, showResultsOnly, initialAttemptCount])
 
+  // Clear retry flag when user starts the quiz (prevents flicker during retry)
+  useEffect(() => {
+    if (quizStarted && isRetryingRef.current) {
+      isRetryingRef.current = false
+      logInfo("Retry flag cleared - quiz started", { courseId, lessonId })
+    }
+  }, [quizStarted, courseId, lessonId])
+
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
+    // If we're in the middle of a retry, ignore showResultsOnly to prevent flicker
+    if (isRetryingRef.current) {
+      return
+    }
+    
     // If quiz was completed (showResultsOnly is true), show results screen
     // This takes priority over the retry check
     if (showResultsOnly) {
@@ -299,6 +314,8 @@ export default function QuizComponent({
       
       // Reset completion flag for retry BEFORE clearing data
       quizCompletedRef.current = false
+      // Set retry flag to prevent showResultsOnly from taking effect during refetch
+      isRetryingRef.current = true
       
       // Reset local state first to prevent flicker
       setCurrentQuestion(0)
@@ -306,12 +323,14 @@ export default function QuizComponent({
       setShowResults(false)
       setQuizStarted(false) // Reset quiz started state to show info card again
       setSubmissionError(null) // Clear any previous errors
+      setAttemptCount(0) // Reset attempt count for new attempt
       
       // Clear old quiz data (this will trigger refetch with new shuffle if enabled)
       if (onRetry) {
         try {
           await onRetry()
           logInfo("Quiz data cleared successfully, ready for retry")
+          // Retry flag will be cleared when user starts the quiz (when quizStarted becomes true)
         } catch (retryError: any) {
           logError("Error in onRetry callback", retryError, {
             component: "QuizComponent",
@@ -321,6 +340,7 @@ export default function QuizComponent({
           })
           const errorMessage = formatErrorMessage(retryError, "Failed to reset quiz. Please refresh the page.")
           setSubmissionError(errorMessage)
+          isRetryingRef.current = false // Reset retry flag on error
           throw retryError
         }
       }
@@ -609,8 +629,8 @@ export default function QuizComponent({
   const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
 
   // Show quiz info card before starting (when quiz hasn't been started yet AND not showing results)
-  // Don't show info card if showResultsOnly is true (quiz was already completed)
-  if (!showResultsOnly && !quizStarted && currentQuestion === 0 && selectedAnswers.length === 0 && !showResults) {
+  // Don't show info card if showResultsOnly is true (quiz was already completed), unless we're retrying
+  if ((!showResultsOnly || isRetryingRef.current) && !quizStarted && currentQuestion === 0 && selectedAnswers.length === 0 && !showResults) {
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
         <Card className="border-primary/20 bg-primary/5">

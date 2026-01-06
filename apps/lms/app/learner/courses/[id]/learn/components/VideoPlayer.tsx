@@ -44,12 +44,23 @@ export default function VideoPlayer({
   // Storage key for video progress
   const progressStorageKey = courseId && lessonId ? `course-${courseId}-lesson-${lessonId}-progress` : null
 
-  // Reset completion status when lesson changes
+  // Reset completion status and video state when lesson changes
   useEffect(() => {
     completedRef.current = false
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setShowControls(true)
+    const video = videoRef.current
+    if (video) {
+      video.currentTime = 0
+      video.pause()
+    }
   }, [lessonId])
 
-  // Load saved progress
+  // Load saved progress (only if videoProgression is enabled)
+  // Note: User wants videos to always start from beginning, so we'll skip loading saved progress
+  // If you want to restore saved progress later, uncomment this code
+  /*
   useEffect(() => {
     if (!videoProgression || !progressStorageKey) return
 
@@ -66,7 +77,7 @@ export default function VideoPlayer({
             if (video.readyState >= 2) {
               if (savedTime > 5 && savedTime < savedDuration) {
                 video.currentTime = savedTime
-          setCurrentTime(savedTime)
+                setCurrentTime(savedTime)
               }
             } else {
               video.addEventListener('loadeddata', loadProgress, { once: true })
@@ -79,6 +90,7 @@ export default function VideoPlayer({
       console.error("Error loading video progress", error)
     }
   }, [videoProgression, progressStorageKey, lessonId])
+  */
 
   // Save progress periodically
   useEffect(() => {
@@ -172,6 +184,11 @@ export default function VideoPlayer({
     }
 
     const handleCanPlay = async () => {
+      // Always start from beginning
+      if (video.currentTime > 0) {
+        video.currentTime = 0
+        setCurrentTime(0)
+      }
       if (autoPlay && isActive && video.paused) {
         try {
           await video.play()
@@ -184,6 +201,11 @@ export default function VideoPlayer({
     }
 
     const handleLoadedData = async () => {
+      // Always start from beginning
+      if (video.currentTime > 0) {
+        video.currentTime = 0
+        setCurrentTime(0)
+      }
       if (autoPlay && isActive && video.paused) {
         try {
           await video.play()
@@ -199,6 +221,9 @@ export default function VideoPlayer({
       if (video && video.duration && !isNaN(video.duration)) {
         setDuration(video.duration)
       }
+      // Always start from beginning
+      video.currentTime = 0
+      setCurrentTime(0)
       if (autoPlay && isActive && video.paused) {
         video.play().catch((error) => {
           if (error.name !== 'NotAllowedError') {
@@ -218,9 +243,15 @@ export default function VideoPlayer({
     video.addEventListener("loadeddata", handleLoadedData)
 
     // Try autoplay immediately if conditions are met
+    // Always ensure video starts from beginning before playing
     if (autoPlay && isActive) {
       const attemptPlay = () => {
         if (video.paused) {
+          // Reset to start before playing
+          if (video.currentTime > 0) {
+            video.currentTime = 0
+            setCurrentTime(0)
+          }
           video.play().catch((error) => {
             if (error.name !== 'NotAllowedError') {
               console.error("Error autoplaying video:", error)
@@ -366,20 +397,24 @@ export default function VideoPlayer({
   const handleTogglePlay = async (e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation()
+      e.preventDefault()
     }
     const video = videoRef.current
-    if (video) {
+    if (!video) return
+    
+    try {
       if (isPlaying) {
         video.pause()
-        // Don't set isPlaying here - let the pause event handler do it
       } else {
-        try {
-          await video.play()
-          // Don't set isPlaying here - let the play event handler do it
-        } catch (error) {
-          console.error("Error playing video:", error)
+        // Ensure video starts from beginning
+        if (video.currentTime > 0) {
+          video.currentTime = 0
+          setCurrentTime(0)
         }
+        await video.play()
       }
+    } catch (error) {
+      console.error("Error toggling play/pause:", error)
     }
   }
 
@@ -478,7 +513,13 @@ export default function VideoPlayer({
           }, 5000)
         }
       }}
-      onClick={handleTogglePlay}
+      onClick={(e) => {
+        // Only handle click if it's not on the controls
+        const target = e.target as HTMLElement
+        if (!target.closest('.pointer-events-auto')) {
+          handleTogglePlay(e)
+        }
+      }}
     >
       <video
         key={`lesson-${lessonId}`}
@@ -498,25 +539,41 @@ export default function VideoPlayer({
           style={{ zIndex: 1 }}
         >
           {showPauseButton ? (
-            <div 
-              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto"
+            <button
+              type="button"
+              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto border-0 outline-none focus:outline-none"
               onClick={(e) => {
                 e.stopPropagation()
-                handleTogglePlay(e)
+                e.preventDefault()
+                const video = videoRef.current
+                if (video) {
+                  video.pause()
+                }
               }}
             >
               <Pause className="h-10 w-10 fill-current" />
-            </div>
+            </button>
           ) : (
-            <div 
-              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto"
+            <button
+              type="button"
+              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto border-0 outline-none focus:outline-none"
               onClick={(e) => {
                 e.stopPropagation()
-                handleTogglePlay(e)
+                e.preventDefault()
+                const video = videoRef.current
+                if (video) {
+                  if (video.currentTime > 0) {
+                    video.currentTime = 0
+                    setCurrentTime(0)
+                  }
+                  video.play().catch((error) => {
+                    console.error("Error playing video:", error)
+                  })
+                }
               }}
             >
               <Play className="h-10 w-10 fill-current" />
-            </div>
+            </button>
           )}
         </div>
       )}
