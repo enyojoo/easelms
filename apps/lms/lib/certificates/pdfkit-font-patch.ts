@@ -2,9 +2,9 @@
  * Patch PDFKit to use fonts from our local directory
  * This ensures fonts are available in serverless environments
  * 
- * PDFKit looks for fonts in node_modules/pdfkit/js/data by default.
- * We've copied fonts to lib/certificates/fonts which is included in Next.js builds.
- * This patch redirects PDFKit's font loading to use our local fonts.
+ * PDFKit uses fs.readFileSync to read font files directly.
+ * We patch fs.readFileSync to intercept font file reads and redirect them
+ * to our local fonts directory which is included in the deployment.
  */
 
 import path from "path"
@@ -13,57 +13,70 @@ import fs from "fs"
 // Get the path to our local fonts directory
 function getLocalFontsPath(): string | null {
   const possiblePaths = [
+    // Vercel serverless environment
     path.join(process.cwd(), "apps/lms/lib/certificates/fonts"),
     path.join(process.cwd(), "lib/certificates/fonts"),
+    // Relative path from compiled code
     path.join(__dirname, "fonts"),
+    // Alternative paths
+    "/var/task/apps/lms/lib/certificates/fonts",
+    "/var/task/lib/certificates/fonts",
   ]
 
   for (const fontPath of possiblePaths) {
-    if (fs.existsSync(fontPath)) {
-      const fontFiles = fs.readdirSync(fontPath).filter(f => f.endsWith('.afm'))
-      if (fontFiles.length > 0) {
-        return fontPath
+    try {
+      if (fs.existsSync(fontPath)) {
+        const fontFiles = fs.readdirSync(fontPath).filter(f => f.endsWith('.afm'))
+        if (fontFiles.length > 0) {
+          return fontPath
+        }
       }
+    } catch (error) {
+      // Continue to next path
     }
   }
 
   return null
 }
 
-// Patch PDFKit's font loading by modifying the module's font path resolution
+// Patch PDFKit's font loading by intercepting fs.readFileSync
 export function patchPDFKitFonts() {
   try {
     const localFontsPath = getLocalFontsPath()
     
     if (!localFontsPath) {
-      console.warn("[PDFKit Font Patch] Local fonts directory not found, PDFKit will use default fonts")
+      console.warn("[PDFKit Font Patch] Local fonts directory not found, PDFKit will try default fonts")
       return false
     }
 
-    // PDFKit uses require.resolve internally to find font files
-    // We need to patch this before PDFKit is loaded
-    // Since we're importing this before PDFKit, we can patch Module._resolveFilename
-    const Module = require('module')
-    const originalResolveFilename = Module._resolveFilename
+    // PDFKit uses fs.readFileSync directly to read font files
+    // We need to patch fs.readFileSync to intercept font file reads
+    const originalReadFileSync = fs.readFileSync
 
-    Module._resolveFilename = function(request: string, parent: any, isMain: boolean, options: any) {
-      // Intercept PDFKit font file requests
-      // PDFKit requests fonts like: pdfkit/js/data/Helvetica.afm
-      if (typeof request === 'string' && request.includes('pdfkit') && request.includes('data') && request.endsWith('.afm')) {
-        const fontFileName = path.basename(request)
+    fs.readFileSync = function(filePath: string | number | Buffer | URL, options?: any): any {
+      const filePathStr = filePath.toString()
+      
+      // Intercept PDFKit font file reads
+      // PDFKit reads fonts from paths like: /ROOT/node_modules/pdfkit/js/data/Helvetica.afm
+      // or: node_modules/pdfkit/js/data/Helvetica.afm
+      if (filePathStr.includes('pdfkit') && filePathStr.includes('data') && filePathStr.endsWith('.afm')) {
+        const fontFileName = path.basename(filePathStr)
         const localFontPath = path.join(localFontsPath, fontFileName)
         
-        // If font exists in our local directory, return that path
+        // If font exists in our local directory, read from there instead
         if (fs.existsSync(localFontPath)) {
-          return localFontPath
+          console.log(`[PDFKit Font Patch] Redirecting font read: ${fontFileName} -> ${localFontPath}`)
+          return originalReadFileSync.call(this, localFontPath, options)
+        } else {
+          console.warn(`[PDFKit Font Patch] Font not found in local directory: ${fontFileName} (tried: ${localFontPath})`)
         }
       }
 
-      // Otherwise, use the original resolution
-      return originalResolveFilename.call(this, request, parent, isMain, options)
+      // For all other files, use the original readFileSync
+      return originalReadFileSync.call(this, filePath, options)
     }
 
-    console.log(`[PDFKit Font Patch] Successfully patched PDFKit to use fonts from ${localFontsPath}`)
+    console.log(`[PDFKit Font Patch] Successfully patched fs.readFileSync to use fonts from ${localFontsPath}`)
     return true
   } catch (error) {
     console.warn("[PDFKit Font Patch] Failed to patch PDFKit fonts:", error)
