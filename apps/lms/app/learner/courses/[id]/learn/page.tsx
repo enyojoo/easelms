@@ -18,6 +18,10 @@ import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProg
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
+import { useQuizData } from "./hooks/useQuizData"
+import { useCourseProgress } from "./hooks/useCourseProgress"
+import { logError, logInfo, formatErrorMessage, handleApiError } from "./utils/errorHandler"
+import ErrorState from "@/components/ErrorState"
 
 interface Course {
   id: number
@@ -73,42 +77,23 @@ export default function CourseLearningPage() {
 
   const course = courseData?.course
 
-  // Calculate progress from React Query data (matching learn page logic)
-  const { completedLessons, progress } = useMemo(() => {
-    if (!course || !progressData?.progress) {
-      return { completedLessons: [], progress: 0 }
-    }
+  // Calculate progress using custom hook
+  const { completedLessons, progress: progressPercent, allCompleted, videoProgress: videoProg } = useCourseProgress({
+    course,
+    progressData,
+  })
 
-    const progressList = progressData.progress
-    const completed: number[] = []
-    const videoProg: { [key: number]: number } = {}
-
-    progressList.forEach((p: any) => {
-      if (p.completed) {
-        const lessonIndex = course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
-        if (lessonIndex >= 0) {
-          completed.push(lessonIndex)
-        }
-      }
-      if (p.video_progress !== undefined && p.video_progress !== null) {
-        const lessonIndex = course.lessons?.findIndex((l: any) => l.id === p.lesson_id) ?? -1
-        if (lessonIndex >= 0) {
-          videoProg[lessonIndex] = p.video_progress
-        }
-      }
-    })
-
-    // Update video progress state
+  // Update video progress state when it changes
+  useEffect(() => {
     if (Object.keys(videoProg).length > 0) {
       setVideoProgress((prev) => ({ ...prev, ...videoProg }))
     }
+  }, [videoProg])
 
-    const progressPercent = course.lessons ? (completed.length / course.lessons.length) * 100 : 0
-    const allCompleted = course.lessons ? completed.length === course.lessons.length : false
+  // Update all lessons completed state
+  useEffect(() => {
     setAllLessonsCompleted(allCompleted)
-
-    return { completedLessons: completed, progress: progressPercent }
-  }, [course, progressData])
+  }, [allCompleted])
 
   // Track if we've already marked enrollment as completed to prevent duplicate calls
   const enrollmentMarkedRef = useRef(false)
@@ -124,7 +109,7 @@ export default function CourseLearningPage() {
       // Mark enrollment as completed
       const markEnrollmentCompleted = async () => {
         try {
-          console.log("🎯 Marking enrollment as completed:", { courseId: parseInt(id), allLessonsCompleted })
+          logInfo("Marking enrollment as completed", { courseId: parseInt(id), allLessonsCompleted })
           enrollmentMarkedRef.current = true
           
           const response = await fetch("/api/enrollments", {
@@ -137,19 +122,34 @@ export default function CourseLearningPage() {
           })
           
           if (response.ok) {
-            const data = await response.json()
-            console.log("✅ Enrollment marked as completed:", data)
-            // Refetch all related queries to update cache
             await queryClient.refetchQueries({ queryKey: ["enrollments"] })
             await queryClient.refetchQueries({ queryKey: ["progress", id] })
           } else {
-            const errorData = await response.json().catch(() => ({}))
-            console.error("❌ Failed to mark enrollment as completed:", errorData)
+            const error = await handleApiError(response)
+            logError("Failed to mark enrollment as completed", error, {
+              component: "CourseLearningPage",
+              action: "markEnrollmentCompleted",
+              courseId: parseInt(id),
+            })
             enrollmentMarkedRef.current = false // Reset on error so we can retry
+            toast({
+              title: "Error",
+              description: formatErrorMessage(error, "Failed to mark course as completed"),
+              variant: "destructive",
+            })
           }
         } catch (error) {
-          console.error("❌ Error marking course as completed:", error)
+          logError("Error marking course as completed", error, {
+            component: "CourseLearningPage",
+            action: "markEnrollmentCompleted",
+            courseId: parseInt(id),
+          })
           enrollmentMarkedRef.current = false // Reset on error so we can retry
+          toast({
+            title: "Error",
+            description: formatErrorMessage(error, "Failed to mark course as completed"),
+            variant: "destructive",
+          })
         }
       }
       markEnrollmentCompleted()
@@ -245,143 +245,12 @@ export default function CourseLearningPage() {
     })
   }, [currentLessonIndex])
 
-  // Process quiz data from React Query
-  const { completedQuizzes, quizScores, quizAnswers } = useMemo(() => {
-    const completedQuizzesMap: { [lessonId: number]: boolean } = {}
-    const answersMap: { [lessonId: number]: number[] } = {}
-    const scoresMap: { [lessonId: number]: number } = {}
-
-    // Defensive check: ensure data structures are fully initialized
-    if (!quizResultsData || !progressData) {
-      return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
-    }
-
-    // Ensure results and progress are arrays (defensive check for transitional states)
-    if (!Array.isArray(quizResultsData.results) || !Array.isArray(progressData.progress)) {
-      return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
-    }
-
-    // Process quiz results (answers)
-    const resultsByLesson: { [lessonId: number]: any[] } = {}
-    quizResultsData.results.forEach((result: any) => {
-      // Defensive check: ensure result has lesson_id
-      if (result && typeof result.lesson_id !== 'undefined' && result.lesson_id !== null) {
-        const lessonId = result.lesson_id
-        if (!resultsByLesson[lessonId]) {
-          resultsByLesson[lessonId] = []
-        }
-        resultsByLesson[lessonId].push(result)
-      }
-    })
-
-    Object.entries(resultsByLesson).forEach(([lessonId, results]: [string, any]) => {
-      const lessonIdNum = parseInt(lessonId)
-      if (!isNaN(lessonIdNum)) {
-        completedQuizzesMap[lessonIdNum] = true
-        // Defensive check: ensure results is an array
-        if (Array.isArray(results)) {
-          // Get current lesson's questions to match by ID
-          const currentLesson = course?.lessons?.find((l: any) => l.id === lessonIdNum)
-          const questions = currentLesson?.quiz_questions || []
-          
-          if (questions.length > 0) {
-            // Check if results have shuffle data (denormalized for instant display)
-            const firstResult = results[0]
-            const hasShuffle = firstResult?.shuffled_question_order && Array.isArray(firstResult.shuffled_question_order) && firstResult.shuffled_question_order.length > 0
-            const shuffledQuestionOrder = hasShuffle ? firstResult.shuffled_question_order : null
-            const shuffledAnswerOrders = hasShuffle ? (firstResult.shuffled_answer_orders || {}) : {}
-            
-            if (hasShuffle && shuffledQuestionOrder) {
-              // Results are shuffled - map back to shuffled order for display
-              // Questions from API are already in shuffled order, so we match by position
-              const answersArray: (number | null)[] = new Array(shuffledQuestionOrder.length).fill(null)
-              
-              // Create a map of question ID to result for quick lookup
-              const resultMap = new Map()
-              results.forEach((r: any) => {
-                const questionId = r.quiz_question_id?.toString()
-                if (questionId) {
-                  resultMap.set(questionId, r)
-                }
-              })
-              
-              // Map results to shuffled positions (matching the order questions appear in)
-              shuffledQuestionOrder.forEach((originalQuestionId: number, shuffledIndex: number) => {
-                const questionIdStr = String(originalQuestionId)
-                const result = resultMap.get(questionIdStr)
-                
-                if (result) {
-                  const originalAnswer = result.user_answer
-                  const answerOrder = shuffledAnswerOrders[questionIdStr]
-                  
-                  // Map answer from original position back to shuffled position
-                  let shuffledAnswer = originalAnswer
-                  if (answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0) {
-                    // Find the shuffled index of the original answer
-                    shuffledAnswer = answerOrder.indexOf(originalAnswer)
-                    if (shuffledAnswer < 0) {
-                      shuffledAnswer = originalAnswer // Fallback if not found
-                    }
-                  }
-                  
-                  const numericAnswer = typeof shuffledAnswer === 'string' ? parseInt(shuffledAnswer) : shuffledAnswer
-                  if (numericAnswer !== null && !isNaN(numericAnswer)) {
-                    answersArray[shuffledIndex] = numericAnswer
-                  }
-                }
-              })
-              
-              answersMap[lessonIdNum] = answersArray.filter((a: any) => a !== null && !isNaN(a)) as number[]
-            } else {
-              // Not shuffled - use original matching logic
-              const answersArray: (number | null)[] = new Array(questions.length).fill(null)
-              
-              results.forEach((r: any) => {
-                // Try to find matching question by ID
-                const questionIndex = questions.findIndex((q: any) => {
-                  const questionId = q.id?.toString()
-                  const resultQuestionId = r.quiz_question_id?.toString()
-                  // Match by exact ID (handles both string and number IDs)
-                  return questionId && resultQuestionId && 
-                         (questionId === resultQuestionId || 
-                          questionId === String(resultQuestionId) ||
-                          String(questionId) === resultQuestionId)
-                })
-                
-                if (questionIndex >= 0 && questionIndex < answersArray.length) {
-                  const answer = r?.user_answer
-                  // Convert answer to number if it's a string
-                  const numericAnswer = typeof answer === 'string' ? parseInt(answer) : answer
-                  if (numericAnswer !== null && !isNaN(numericAnswer)) {
-                    answersArray[questionIndex] = numericAnswer
-                  }
-                }
-              })
-              
-              // Filter out null values and ensure all are valid numbers
-              answersMap[lessonIdNum] = answersArray.filter((a: any) => a !== null && !isNaN(a)) as number[]
-            }
-          } else {
-            // Fallback: if no questions found, use old method (for backward compatibility)
-            answersMap[lessonIdNum] = results.map((r: any) => {
-              const answer = r?.user_answer
-              return typeof answer === 'string' ? parseInt(answer) : answer
-            }).filter((a: any) => a !== null && !isNaN(a))
-          }
-        }
-      }
-    })
-
-    // Process progress data (scores)
-    progressData.progress.forEach((p: any) => {
-      // Defensive check: ensure progress item has required fields
-      if (p && typeof p.lesson_id !== 'undefined' && p.lesson_id !== null && p.quiz_score !== null && p.quiz_score !== undefined) {
-        scoresMap[p.lesson_id] = p.quiz_score
-      }
-    })
-
-    return { completedQuizzes: completedQuizzesMap, quizScores: scoresMap, quizAnswers: answersMap }
-  }, [quizResultsData, progressData])
+  // Process quiz data using custom hook
+  const { completedQuizzes, quizScores, quizAnswers } = useQuizData({
+    quizResultsData,
+    progressData,
+    course,
+  })
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -933,11 +802,14 @@ export default function CourseLearningPage() {
   // Show error if course not found (only if no cached data exists)
   if (courseError && !course) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">{courseError?.message || "Course not found"}</p>
-          <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
-        </div>
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-4">
+        <ErrorState
+          title="Failed to Load Course"
+          message={formatErrorMessage(courseError, "Unable to load the course. Please try again.")}
+          onRetry={() => {
+            queryClient.refetchQueries({ queryKey: ["course", id] })
+          }}
+        />
       </div>
     )
   }
