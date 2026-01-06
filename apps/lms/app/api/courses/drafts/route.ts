@@ -718,23 +718,14 @@ export async function GET(request: Request) {
 
     // Use service client for database operations to bypass RLS
     const dbClient = serviceClient || supabase
+    
+    // Fetch course first (without lessons relation to avoid ordering issues)
     const { data, error } = await dbClient
       .from("courses")
-      .select(`
-        *,
-        lessons (*)
-      `)
+      .select("*")
       .eq("id", courseId)
       .eq("created_by", user.id) // Ensure user owns the course
       .single()
-
-    // Fetch prerequisites
-    const { data: prerequisitesData } = await dbClient
-      .from("course_prerequisites")
-      .select("prerequisite_course_id")
-      .eq("course_id", courseId)
-
-    const prerequisiteCourseIds = (prerequisitesData || []).map((p: any) => p.prerequisite_course_id)
 
     if (error) {
       console.error("Error fetching course draft:", error)
@@ -745,8 +736,37 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
     }
 
+    // Fetch lessons separately with proper ordering by order_index
+    const { data: lessonsData, error: lessonsError } = await dbClient
+      .from("lessons")
+      .select("*")
+      .eq("course_id", courseId)
+      .order("order_index", { ascending: true })
+    
+    if (lessonsError) {
+      console.error("Error fetching lessons for course draft:", lessonsError)
+      // Don't fail the entire request, but log the error
+    }
+    
+    // Attach lessons to course data (even if empty array)
+    const lessons = lessonsData || []
+    data.lessons = lessons
+    
+    console.log(`Drafts API: Fetched ${lessons.length} lessons for course ${courseId}`, {
+      lessonIds: lessons.map((l: any) => l.id),
+      orderIndices: lessons.map((l: any) => l.order_index),
+    })
+
+    // Fetch prerequisites
+    const { data: prerequisitesData } = await dbClient
+      .from("course_prerequisites")
+      .select("prerequisite_course_id")
+      .eq("course_id", courseId)
+
+    const prerequisiteCourseIds = (prerequisitesData || []).map((p: any) => p.prerequisite_course_id)
+
     // Transform lessons from database schema to frontend format
-    if (data.lessons && Array.isArray(data.lessons)) {
+    if (data.lessons && Array.isArray(data.lessons) && data.lessons.length > 0) {
       // Fetch resources, quiz settings, and quiz questions for all lessons in parallel
       const lessonIds = data.lessons.map((l: any) => l.id)
       const [allLessonResources, allQuizSettings, allQuizQuestions] = await Promise.all([
@@ -927,6 +947,10 @@ export async function GET(request: Request) {
           estimatedDuration: estimatedDuration,
         }
       })
+    } else {
+      // Ensure lessons array exists even if empty
+      data.lessons = []
+      console.log(`Drafts API: No lessons found for course ${courseId}`)
     }
 
     // Add prerequisites to course data
@@ -934,6 +958,18 @@ export async function GET(request: Request) {
       enabled: prerequisiteCourseIds.length > 0,
       courseIds: prerequisiteCourseIds,
     }
+    
+    // Ensure lessons array is always present (even if empty)
+    if (!data.lessons || !Array.isArray(data.lessons)) {
+      data.lessons = []
+    }
+    
+    // Log final response structure for debugging
+    console.log(`Drafts API: Returning course ${courseId} with ${data.lessons.length} lessons`, {
+      courseId: courseId,
+      lessonsCount: data.lessons.length,
+      lessonIds: data.lessons.map((l: any) => l.id),
+    })
 
     return NextResponse.json({ course: data })
   } catch (error: any) {

@@ -48,18 +48,38 @@ export async function GET(
       serviceSupabase = supabase
     }
 
-      // Fetch single course with lessons and creator profile
+      // Fetch single course with creator profile
     let { data: course, error } = await supabase
       .from("courses")
       .select(`
         *,
-        lessons (id, title, type, video_url, text_content, estimated_duration, is_required, video_progression),
         profiles!courses_created_by_fkey (
           *
         )
       `)
       .eq("id", numericId)
       .single()
+    
+    // Fetch lessons separately with proper ordering (always fetch, even if course query succeeded)
+    let lessons: any[] = []
+    if (course) {
+      const { data: lessonsData, error: lessonsError } = await supabase
+        .from("lessons")
+        .select("id, title, type, video_url, text_content, estimated_duration, is_required, video_progression, order_index")
+        .eq("course_id", numericId)
+        .order("order_index", { ascending: true })
+      
+      if (lessonsError) {
+        console.error("Error fetching lessons:", lessonsError)
+        // Don't fail the entire request if lessons can't be fetched
+      } else {
+        lessons = lessonsData || []
+        console.log(`Course API: Fetched ${lessons.length} lessons for course ${numericId}`)
+      }
+      
+      // Always attach lessons to course object (even if empty array)
+      course.lessons = lessons
+    }
 
     // Fetch prerequisites
     const { data: prerequisitesData } = await supabase
@@ -80,26 +100,40 @@ export async function GET(
       image: p.courses?.image || null,
     }))
 
-    // If error with lessons relation, try with simpler select
-    if (error) {
-      console.warn("Courses API: Error with lessons relation, trying with simpler select:", error.message)
+    // If error fetching course, try fallback (shouldn't happen with separate queries, but keep for safety)
+    if (error && !course) {
+      console.warn("Courses API: Error fetching course, trying fallback:", error.message)
       const { data: basicCourse, error: basicError } = await supabase
         .from("courses")
-        .select(`
-          *,
-          lessons (id, title, type, content, is_required, video_progression),
-          profiles!courses_created_by_fkey (
-            *
-          )
-        `)
+        .select("*")
         .eq("id", numericId)
         .single()
 
-      if (!basicError) {
+      if (!basicError && basicCourse) {
         course = basicCourse
+        // Fetch lessons separately
+        const { data: lessonsData } = await supabase
+          .from("lessons")
+          .select("id, title, type, video_url, text_content, estimated_duration, is_required, video_progression, order_index")
+          .eq("course_id", numericId)
+          .order("order_index", { ascending: true })
+        
+        course.lessons = lessonsData || []
+        
+        // Fetch profile separately
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", course.created_by)
+          .single()
+        
+        if (profileData) {
+          course.profiles = profileData
+        }
+        
         error = null
       } else {
-        error = basicError
+        error = basicError || error
       }
     }
 
@@ -128,11 +162,23 @@ export async function GET(
     // Process course to ensure proper structure
     let lessons = Array.isArray(course.lessons) ? course.lessons : []
     
+    // Ensure lessons are sorted by order_index (in case they weren't ordered properly)
+    lessons = lessons.sort((a: any, b: any) => {
+      const orderA = a.order_index ?? a.orderIndex ?? 999
+      const orderB = b.order_index ?? b.orderIndex ?? 999
+      return orderA - orderB
+    })
+    
     // Deduplicate lessons by ID (in case Supabase returns duplicates)
     const seenLessonIds = new Set<number>()
     lessons = lessons.filter((lesson: any) => {
+      if (!lesson || !lesson.id) {
+        console.warn("Course API: Skipping lesson without ID:", lesson)
+        return false
+      }
       const lessonId = lesson.id
       if (seenLessonIds.has(lessonId)) {
+        console.warn("Course API: Skipping duplicate lesson:", lessonId)
         return false
       }
       seenLessonIds.add(lessonId)
@@ -142,7 +188,8 @@ export async function GET(
     console.log("Course API: Processing lessons", {
       courseId: numericId,
       lessonsCount: lessons.length,
-      firstLesson: lessons[0],
+      lessonIds: lessons.map((l: any) => l.id),
+      firstLesson: lessons[0] ? { id: lessons[0].id, title: lessons[0].title, order_index: lessons[0].order_index } : null,
     })
     
     // Calculate total duration from lessons (using estimated_duration column)
@@ -639,7 +686,7 @@ export async function GET(
       ...course,
       image: course.image || course.thumbnail || null, // Explicitly ensure image field is included
       creator,
-      lessons: processedLessons,
+      lessons: processedLessons, // Always include lessons (even if empty array)
       totalDurationMinutes,
       totalHours,
       enrolledStudents: enrollmentCount || 0, // Total enrollment count
@@ -653,6 +700,14 @@ export async function GET(
         },
       },
     }
+    
+    // Log final course structure for debugging
+    console.log("Course API: Returning course", {
+      courseId: numericId,
+      title: processedCourse.title,
+      lessonsCount: processedLessons.length,
+      hasCreator: !!creator,
+    })
 
     return NextResponse.json({ course: processedCourse })
   } catch (error: any) {

@@ -297,7 +297,11 @@ export function useAutoSave<T>({
         certificate: {
           certificateEnabled: dbCourse.certificate_enabled || false,
           certificateTemplate: dbCourse.certificate_template || "",
-          certificateTitle: dbCourse.certificate_title || "",
+          // Only set certificateTitle if it's a non-empty string, otherwise undefined
+          // This ensures the certificate type selection is preserved correctly
+          certificateTitle: (dbCourse.certificate_title && dbCourse.certificate_title.trim() !== "") 
+            ? dbCourse.certificate_title.trim() 
+            : undefined,
           certificateDescription: dbCourse.certificate_description || "",
           signatureImage: dbCourse.signature_image || "",
           signatureName: dbCourse.signature_name || "",

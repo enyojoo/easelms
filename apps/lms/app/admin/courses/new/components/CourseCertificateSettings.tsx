@@ -27,8 +27,9 @@ interface CourseCertificateSettingsProps {
 
 export default function CourseCertificateSettings({ settings, onUpdate, courseId }: CourseCertificateSettingsProps) {
   // Track if "optional" is selected to show custom title field
-  // Check if certificateTitle is explicitly set (even if empty, it means optional mode is active)
-  const isOptionalSelected = settings.certificateTitle !== undefined
+  // Only consider "optional" selected if certificateTitle is a non-empty string
+  // If certificateTitle is undefined or empty string, use the certificateType
+  const isOptionalSelected = settings.certificateTitle !== undefined && settings.certificateTitle.trim() !== ""
   const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
 
   return (

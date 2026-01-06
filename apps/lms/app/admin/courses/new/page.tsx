@@ -246,7 +246,11 @@ function NewCourseContent() {
                   certificate: {
                     certificateEnabled: course.certificate_enabled || false,
                     certificateTemplate: course.certificate_template || "",
-                    certificateTitle: course.certificate_title || "",
+                    // Only set certificateTitle if it's a non-empty string, otherwise undefined
+                    // This ensures the certificate type selection is preserved correctly
+                    certificateTitle: (course.certificate_title && course.certificate_title.trim() !== "") 
+                      ? course.certificate_title.trim() 
+                      : undefined,
                     certificateDescription: course.certificate_description || "",
                     signatureImage: course.signature_image || "",
                     signatureName: course.signature_name || "",
