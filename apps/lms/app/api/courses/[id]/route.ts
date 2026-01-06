@@ -160,7 +160,8 @@ export async function GET(
     }
 
     // Process course to ensure proper structure
-    let lessons = Array.isArray(course.lessons) ? course.lessons : []
+    // Use lessons already fetched above, or fallback to course.lessons if available
+    lessons = Array.isArray(course.lessons) ? course.lessons : (lessons || [])
     
     // Ensure lessons are sorted by order_index (in case they weren't ordered properly)
     lessons = lessons.sort((a: any, b: any) => {
