@@ -215,7 +215,7 @@ export async function POST(
 
     const hasShuffle = quizAttempt && quizAttempt.question_order && Array.isArray(quizAttempt.question_order) && quizAttempt.question_order.length > 0
     const questionOrder = hasShuffle ? quizAttempt.question_order : null
-    const answerOrders = hasShuffle && quizAttempt.answer_orders ? (quizAttempt.answer_orders || {}) : {}
+    // Note: answerOrders is no longer used - answers are NOT shuffled, only questions are
     let attemptId = quizAttempt?.id || null
     
     // If attempt exists but is not completed, mark it as completed now
@@ -241,38 +241,18 @@ export async function POST(
     }
 
     // If shuffled, we need to reconstruct the shuffled questions that user saw
-    // The quizQuestions from DB are in original order, but user saw them shuffled with shuffled answers
-    // We need to re-shuffle to get the correct correctOption for comparison
+    // NOTE: Only questions are shuffled, NOT answers - answers stay in original order
     let shuffledQuestionsForComparison: any[] = quizQuestions
     let originalQuestions: any[] = quizQuestions
     
-    if (hasShuffle && questionOrder && answerOrders) {
-      // Reconstruct original question order (for mapping back)
+    if (hasShuffle && questionOrder) {
+      // Reconstruct question order (questions are shuffled, but answers within each question are NOT)
       const questionMap = new Map(quizQuestions.map((q: any) => [q.dbId || parseInt(String(q.id)) || 0, q]))
       originalQuestions = questionOrder.map((originalId: number) => questionMap.get(originalId)).filter(Boolean)
       
-      // Re-shuffle questions to get shuffled versions with updated correctOption
-      // This matches what the user saw during the quiz
-      shuffledQuestionsForComparison = originalQuestions.map((q: any) => {
-        const questionIdStr = String(q.dbId || q.id || 0)
-        const answerOrder = answerOrders[questionIdStr]
-        
-        if (answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0 && q.options && Array.isArray(q.options)) {
-          // Re-shuffle options using the stored answer order
-          const shuffledOptions = answerOrder.map((originalIndex: number) => q.options[originalIndex]).filter((opt: any) => opt !== undefined)
-          
-          // Find new correctOption position
-          const originalCorrectIndex = q.correctOption
-          const newCorrectIndex = answerOrder.indexOf(originalCorrectIndex)
-          
-          return {
-            ...q,
-            options: shuffledOptions,
-            correctOption: newCorrectIndex >= 0 ? newCorrectIndex : q.correctOption,
-          }
-        }
-        return q
-      })
+      // Questions are in shuffled order, but answers within each question are NOT shuffled
+      // So we just reorder the questions, keeping their original options and correctOption
+      shuffledQuestionsForComparison = originalQuestions
     }
 
     // Process and save each answer
@@ -329,8 +309,8 @@ export async function POST(
       const questionForMetadata = originalQuestion || question
 
       // Determine if answer is correct based on question type
-      // Note: If shuffled, answer.userAnswer is in shuffled position, so we compare directly
-      // The question's correctOption is already updated to shuffled position by shuffleAnswers function
+      // Note: If shuffled, only questions are shuffled, NOT answers
+      // Answers stay in original order, so we compare directly using original correctOption
       let isCorrect = false
       const qType = question.type || "multiple-choice" || "multiple_choice"
       
@@ -372,17 +352,7 @@ export async function POST(
       totalPoints += questionPoints
       pointsEarned += earnedPoints
 
-      // Map answer back to original position if shuffled
-      let originalUserAnswer = answer.userAnswer
-      const questionIdStr = String(questionForMetadata.dbId || questionForMetadata.id || answer.questionId)
-      const answerOrder = answerOrders[questionIdStr]
-      
-      if (hasShuffle && answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0) {
-        // Map shuffled answer index back to original position
-        // answer.userAnswer is the index in shuffled options, we need to map it back
-        originalUserAnswer = mapAnswerToOriginal(answer.userAnswer, answerOrder)
-      }
-      
+      // Answers are NOT shuffled - use answer directly (no mapping needed)
       // Use database ID (integer) for quiz_question_id - required for foreign key
       const questionDbId = questionForMetadata.dbId || (typeof questionForMetadata.id === 'number' ? questionForMetadata.id : parseInt(String(questionForMetadata.id || answer.questionId)) || null)
       
@@ -398,8 +368,9 @@ export async function POST(
       }
       
       // Convert user_answer to string for storage (database expects text)
-      const userAnswerText = originalUserAnswer !== null && originalUserAnswer !== undefined 
-        ? String(originalUserAnswer) 
+      // Answers are NOT shuffled, so use answer.userAnswer directly
+      const userAnswerText = answer.userAnswer !== null && answer.userAnswer !== undefined 
+        ? String(answer.userAnswer) 
         : null
       
       resultsToInsert.push({
@@ -409,7 +380,7 @@ export async function POST(
         quiz_question_id: questionDbId, // Must be integer (foreign key to quiz_questions.id)
         attempt_id: attemptId, // Reference to quiz_attempts
         shuffled_question_order: hasShuffle && questionOrder ? questionOrder : null, // Denormalized for instant display
-        shuffled_answer_orders: hasShuffle && answerOrders ? answerOrders : null, // Denormalized for instant display
+        shuffled_answer_orders: null, // Answers are NOT shuffled - always null
         user_answer: userAnswerText, // Mapped back to original position, stored as text
         is_correct: isCorrect,
         score: earnedPoints,

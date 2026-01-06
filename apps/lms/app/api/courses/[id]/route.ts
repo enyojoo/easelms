@@ -474,7 +474,7 @@ export async function GET(
                   // Generate seed for shuffling
                   const seed = generateSeed(user.id, lesson.id, attemptNumber)
                   
-                  // Shuffle questions and answers
+                  // Shuffle questions only (answers stay in original order)
                   const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
                   
                   // Create or update quiz attempt record

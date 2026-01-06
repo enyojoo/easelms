@@ -60,10 +60,10 @@ export function useQuizData({ quizResultsData, progressData, course }: UseQuizDa
           
           if (questions.length > 0) {
             // Check if results have shuffle data (denormalized for instant display)
+            // NOTE: Only questions are shuffled, NOT answers
             const firstResult = results[0]
             const hasShuffle = firstResult?.shuffled_question_order && Array.isArray(firstResult.shuffled_question_order) && firstResult.shuffled_question_order.length > 0
             const shuffledQuestionOrder = hasShuffle ? firstResult.shuffled_question_order : null
-            const shuffledAnswerOrders = hasShuffle ? (firstResult.shuffled_answer_orders || {}) : {}
             
             if (hasShuffle && shuffledQuestionOrder) {
               // Questions are shuffled - map answers to shuffled question order

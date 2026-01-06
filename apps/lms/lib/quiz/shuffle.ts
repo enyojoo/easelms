@@ -141,8 +141,9 @@ export function shuffleAnswers<T extends {
 }
 
 /**
- * Shuffle all questions and their answers
- * Returns fully shuffled quiz with all mappings
+ * Shuffle all questions (NOT answers - answers stay in original order)
+ * Returns shuffled questions with question order mapping
+ * NOTE: Answers are NOT shuffled - only question order is shuffled
  */
 export function shuffleQuiz<T extends {
   id: string | number
@@ -155,24 +156,17 @@ export function shuffleQuiz<T extends {
 ): {
   shuffledQuestions: T[]
   questionOrder: number[]
-  answerOrders: { [questionId: string]: number[] }
+  answerOrders: { [questionId: string]: number[] } // Empty object - answers are NOT shuffled
 } {
-  // First shuffle questions
+  // Only shuffle questions, NOT answers
   const { shuffled: shuffledQuestions, questionOrder } = shuffleQuestions(questions, seed)
 
-  // Then shuffle answers for each question
-  const answerOrders: { [questionId: string]: number[] } = {}
-  const fullyShuffled = shuffledQuestions.map((question) => {
-    const { shuffled, answerOrder } = shuffleAnswers(question, seed)
-    const questionId = String(question.id)
-    answerOrders[questionId] = answerOrder
-    return shuffled
-  })
-
+  // Answers are NOT shuffled - return empty answerOrders
+  // This maintains backward compatibility with existing code that expects answerOrders
   return {
-    shuffledQuestions: fullyShuffled,
+    shuffledQuestions, // Questions are shuffled but answers within each question are NOT
     questionOrder,
-    answerOrders,
+    answerOrders: {}, // Empty - answers are NOT shuffled
   }
 }
 

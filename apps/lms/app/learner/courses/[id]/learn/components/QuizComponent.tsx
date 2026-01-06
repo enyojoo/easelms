@@ -514,8 +514,8 @@ export default function QuizComponent({
               {/* Reorder questions and answers to match the order shown during quiz if shuffled */}
               {(() => {
                 // If shuffle data exists, reorder questions to match the order shown during quiz
+                // NOTE: Only questions are shuffled, NOT answers - answers stay in original order
                 const hasShuffle = shuffleData?.questionOrder && Array.isArray(shuffleData.questionOrder) && shuffleData.questionOrder.length > 0
-                const answerOrders = shuffleData?.answerOrders || {}
                 
                 // Create a map of question by original index (questionOrder contains original question IDs/indices)
                 const getQuestionsInShuffledOrder = () => {
