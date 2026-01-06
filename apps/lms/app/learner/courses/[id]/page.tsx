@@ -154,20 +154,32 @@ export default function CoursePage() {
 
   const videoUrl = course?.preview_video || ""
 
-  // Instructor information - use course creator's profile
-  const instructor = course?.creator ? {
-    name: course.creator.name || "Instructor",
-    bio: course.creator.bio || "",
-    profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
-    title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
-      ? "Course Instructor" 
-      : "Course Creator"
-  } : {
-    name: "Instructor",
-    bio: "",
-    profileImage: "/placeholder.svg?height=200&width=200",
-    title: "Course Instructor"
-  }
+  // Instructor information - use assigned instructors if available, otherwise fallback to creator
+  const hasInstructors = course?.instructors && course.instructors.length > 0
+  const instructorsEnabled = course?.settings?.instructor?.instructorEnabled || hasInstructors
+  
+  // If instructors are enabled and there are instructors, use them
+  // Otherwise, fallback to course creator
+  const instructors = hasInstructors && instructorsEnabled
+    ? course.instructors.map((inst: any) => ({
+        name: inst.name || "Instructor",
+        profileImage: inst.image || "/placeholder.svg?height=200&width=200",
+        bio: inst.bio || "",
+        title: "Course Instructor"
+      }))
+    : course?.creator ? [{
+        name: course.creator.name || "Instructor",
+        profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
+        bio: course.creator.bio || "",
+        title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
+          ? "Course Instructor" 
+          : "Course Creator"
+      }] : [{
+        name: "Instructor",
+        profileImage: "/placeholder.svg?height=200&width=200",
+        bio: "",
+        title: "Course Instructor"
+      }]
 
   // Get actual enrollment mode from course settings
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
@@ -614,15 +626,20 @@ export default function CoursePage() {
             </Card>
           )}
 
-          {/* Instructor Profile Card */}
-          {instructor && (
-            <InstructorCard
-              name={instructor.name}
-              image={instructor.profileImage}
-              bio={instructor.bio}
-              title={instructor.title}
-              className="mb-4"
-            />
+          {/* Instructor Profile Cards */}
+          {instructors && instructors.length > 0 && (
+            <div className="space-y-4">
+              {instructors.map((instructor: any, index: number) => (
+                <InstructorCard
+                  key={index}
+                  name={instructor.name}
+                  image={instructor.profileImage}
+                  bio={instructor.bio}
+                  title={instructor.title}
+                  className="mb-4"
+                />
+              ))}
+            </div>
           )}
         </div>
 

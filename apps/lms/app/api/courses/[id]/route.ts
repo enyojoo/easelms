@@ -109,6 +109,32 @@ export async function GET(
       image: p.courses?.image || null,
     }))
 
+    // Fetch course instructors
+    const { data: courseInstructorsData } = await supabase
+      .from("course_instructors")
+      .select(`
+        instructor_id,
+        order_index,
+        instructors (
+          id,
+          name,
+          image,
+          bio
+        )
+      `)
+      .eq("course_id", numericId)
+      .order("order_index", { ascending: true })
+
+    const instructors = (courseInstructorsData || [])
+      .map((ci: any) => ci.instructors)
+      .filter((instructor: any) => instructor !== null)
+      .map((instructor: any) => ({
+        id: instructor.id,
+        name: instructor.name,
+        image: instructor.image,
+        bio: instructor.bio,
+      }))
+
     // If error fetching course, try fallback (shouldn't happen with separate queries, but keep for safety)
     if (error && !course) {
       logWarning("Courses API: Error fetching course, trying fallback", {
@@ -715,6 +741,7 @@ export async function GET(
       totalHours,
       enrolledStudents: enrollmentCount || 0, // Total enrollment count
       prerequisites: prerequisites, // Add prerequisites
+      instructors: instructors, // Add instructors
       // Transform enrollment and certificate settings from database columns to nested structure
       settings: {
         enrollment: {
@@ -732,6 +759,10 @@ export async function GET(
           signatureTitle: course.signature_title || null,
           additionalText: course.additional_text || null,
           certificateType: course.certificate_type || null,
+        },
+        instructor: {
+          instructorEnabled: instructors.length > 0, // Enabled if there are instructors
+          instructorIds: instructors.map((i: any) => i.id),
         },
         minimumQuizScore: course.minimum_quiz_score || null,
         requiresSequentialProgress: course.requires_sequential_progress || false,

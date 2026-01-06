@@ -50,6 +50,7 @@ export async function POST(request: Request) {
     const enrollment = settings.enrollment || {}
     const certificate = settings.certificate || {}
     const prerequisites = settings.prerequisites || { enabled: false, courseIds: [] }
+    const instructor = settings.instructor || { instructorEnabled: false, instructorIds: [] }
     
     // Determine price - use enrollment price if available, otherwise basicInfo price
     const priceValue = enrollment.price !== undefined 
@@ -903,6 +904,114 @@ export async function POST(request: Request) {
           })
         }
       }
+
+      // Save instructors
+      if (result.id && instructor.instructorEnabled && Array.isArray(instructor.instructorIds)) {
+        // Get existing course instructors
+        const { data: existingCourseInstructors } = await dbClient
+          .from("course_instructors")
+          .select("instructor_id")
+          .eq("course_id", result.id)
+
+        const existingInstructorIds = new Set(
+          (existingCourseInstructors || []).map((ci: any) => ci.instructor_id)
+        )
+
+        const currentInstructorIds = new Set(instructor.instructorIds)
+
+        // Delete removed instructors
+        const instructorsToDelete = Array.from(existingInstructorIds).filter(
+          (id) => !currentInstructorIds.has(id)
+        )
+        if (instructorsToDelete.length > 0) {
+          const { error: deleteError } = await dbClient
+            .from("course_instructors")
+            .delete()
+            .eq("course_id", result.id)
+            .in("instructor_id", instructorsToDelete)
+
+          if (deleteError) {
+            logError("Error deleting course instructors", deleteError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              courseId: result.id,
+            })
+          }
+        }
+
+        // Insert new instructors with order_index
+        const instructorsToInsert = instructor.instructorIds
+          .filter((id) => !existingInstructorIds.has(id))
+          .map((instructorId: string, index: number) => {
+            // Find the order index in the full list
+            const orderIndex = instructor.instructorIds.indexOf(instructorId)
+            return {
+              course_id: result.id,
+              instructor_id: instructorId,
+              order_index: orderIndex,
+            }
+          })
+
+        if (instructorsToInsert.length > 0) {
+          const { error: insertError } = await dbClient
+            .from("course_instructors")
+            .insert(instructorsToInsert)
+
+          if (insertError) {
+            logError("Error inserting course instructors", insertError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              courseId: result.id,
+            })
+          } else {
+            logInfo(`Successfully saved ${instructorsToInsert.length} course instructors`, { courseId: result.id })
+          }
+        }
+
+        // Update order_index for existing instructors
+        const instructorsToUpdate = instructor.instructorIds
+          .filter((id) => existingInstructorIds.has(id))
+          .map((instructorId: string) => {
+            const orderIndex = instructor.instructorIds.indexOf(instructorId)
+            return {
+              instructor_id: instructorId,
+              order_index: orderIndex,
+            }
+          })
+
+        if (instructorsToUpdate.length > 0) {
+          for (const update of instructorsToUpdate) {
+            const { error: updateError } = await dbClient
+              .from("course_instructors")
+              .update({ order_index: update.order_index })
+              .eq("course_id", result.id)
+              .eq("instructor_id", update.instructor_id)
+
+            if (updateError) {
+              logError("Error updating course instructor order", updateError, {
+                component: "courses/drafts/route",
+                action: "POST",
+                courseId: result.id,
+                instructorId: update.instructor_id,
+              })
+            }
+          }
+        }
+      } else if (result.id && !instructor.instructorEnabled) {
+        // If instructors are disabled, delete all existing course instructors
+        const { error: deleteError } = await dbClient
+          .from("course_instructors")
+          .delete()
+          .eq("course_id", result.id)
+
+        if (deleteError) {
+          logError("Error deleting course instructors", deleteError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+          })
+        }
+      }
     }
 
     return NextResponse.json({ 
@@ -1224,6 +1333,20 @@ export async function GET(request: Request) {
     data.prerequisites = {
       enabled: prerequisiteCourseIds.length > 0,
       courseIds: prerequisiteCourseIds,
+    }
+
+    // Fetch course instructors
+    const { data: courseInstructorsData } = await dbClient
+      .from("course_instructors")
+      .select("instructor_id")
+      .eq("course_id", courseId)
+
+    const instructorIds = (courseInstructorsData || []).map((ci: any) => ci.instructor_id)
+
+    // Add instructor settings to course data
+    data.settings.instructor = {
+      instructorEnabled: instructorIds.length > 0,
+      instructorIds: instructorIds,
     }
     
     // Transform course settings from database columns to nested structure (for frontend compatibility)

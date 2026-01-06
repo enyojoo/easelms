@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import CourseEnrollmentSettings from "./CourseEnrollmentSettings"
 import CourseCertificateSettings from "./CourseCertificateSettings"
 import CoursePrerequisitesSettings from "./CoursePrerequisitesSettings"
+import CourseInstructorSettings from "./CourseInstructorSettings"
 
 interface CourseSettingsProps {
   settings: {
@@ -31,6 +32,10 @@ interface CourseSettingsProps {
       enabled: boolean
       courseIds: number[]
     }
+    instructor?: {
+      instructorEnabled: boolean
+      instructorIds: string[]
+    }
   }
   onUpdate: (settings: any) => void
   courseId?: string | number
@@ -45,7 +50,7 @@ export default function CourseSettings({ settings, onUpdate, courseId }: CourseS
     onUpdate({ ...settings, [field]: value })
   }
 
-  const handleSectionUpdate = (section: "enrollment" | "certificate" | "prerequisites", data: any) => {
+  const handleSectionUpdate = (section: "enrollment" | "certificate" | "prerequisites" | "instructor", data: any) => {
     onUpdate({
       ...settings,
       [section]: { ...settings[section], ...data },
@@ -126,6 +131,15 @@ export default function CourseSettings({ settings, onUpdate, courseId }: CourseS
         <CourseCertificateSettings
           settings={settings.certificate}
           onUpdate={(data) => handleSectionUpdate("certificate", data)}
+          courseId={courseId}
+        />
+      </div>
+
+      <div className="space-y-6">
+        <h3 className="text-lg font-semibold">Instructor Settings</h3>
+        <CourseInstructorSettings
+          settings={settings.instructor || { instructorEnabled: false, instructorIds: [] }}
+          onUpdate={(data) => handleSectionUpdate("instructor", data)}
           courseId={courseId}
         />
       </div>
