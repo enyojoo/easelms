@@ -2,6 +2,9 @@ import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
+// Ensure this route is dynamic
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient()
@@ -124,15 +127,20 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    console.log("[Certificates API] POST request received")
+    
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.log("[Certificates API] Unauthorized:", authError?.message)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
     const { courseId } = body
+
+    console.log("[Certificates API] Request body:", { courseId, courseIdType: typeof courseId })
 
     if (!courseId) {
       return NextResponse.json({ error: "courseId is required" }, { status: 400 })
@@ -142,8 +150,11 @@ export async function POST(request: Request) {
     const numericCourseId = typeof courseId === "string" ? parseInt(courseId, 10) : courseId
     
     if (isNaN(numericCourseId)) {
+      console.log("[Certificates API] Invalid courseId format:", courseId)
       return NextResponse.json({ error: "Invalid courseId format" }, { status: 400 })
     }
+
+    console.log("[Certificates API] Creating certificate for:", { userId: user.id, courseId: numericCourseId })
 
     logInfo("Certificates API POST: Creating certificate", {
       userId: user.id,
@@ -154,22 +165,63 @@ export async function POST(request: Request) {
     const serviceSupabase = createServiceRoleClient()
 
     // Get course details first to verify it exists
-    const { data: course, error: courseError } = await serviceSupabase
-      .from("courses")
-      .select("id, title, settings, certificate_enabled, certificate_type, certificate_title")
-      .eq("id", numericCourseId)
-      .single()
-
-    if (courseError || !course) {
-      logError("Certificates API POST: Course not found", courseError || new Error("Course not found"), {
+    // Try with service role client first, fallback to regular client if needed
+    let course, courseError
+    try {
+      const { data: courseData, error: courseErr } = await serviceSupabase
+        .from("courses")
+        .select("id, title, settings, certificate_enabled, certificate_type, certificate_title")
+        .eq("id", numericCourseId)
+        .single()
+      
+      course = courseData
+      courseError = courseErr
+    } catch (err: any) {
+      courseError = err
+      logError("Certificates API POST: Exception querying course", err, {
         component: "certificates/route",
         action: "POST",
         userId: user.id,
         courseId: numericCourseId,
-        courseError: courseError?.message,
+      })
+    }
+
+    if (courseError) {
+      console.error("[Certificates API] Course query error:", {
+        courseId: numericCourseId,
+        error: courseError,
+        code: (courseError as any)?.code,
+        message: (courseError as any)?.message,
+        details: (courseError as any)?.details,
+      })
+      logError("Certificates API POST: Course query error", courseError, {
+        component: "certificates/route",
+        action: "POST",
+        userId: user.id,
+        courseId: numericCourseId,
+        courseIdType: typeof numericCourseId,
+        courseErrorCode: (courseError as any)?.code,
+        courseErrorMessage: (courseError as any)?.message,
+        courseErrorDetails: (courseError as any)?.details,
+      })
+      return NextResponse.json({ 
+        error: "Course not found",
+        details: (courseError as any)?.message || "Unable to fetch course information"
+      }, { status: 404 })
+    }
+
+    if (!course) {
+      console.error("[Certificates API] Course not found (null result) for courseId:", numericCourseId)
+      logError("Certificates API POST: Course not found (null result)", new Error("Course query returned null"), {
+        component: "certificates/route",
+        action: "POST",
+        userId: user.id,
+        courseId: numericCourseId,
       })
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
     }
+
+    console.log("[Certificates API] Course found:", { courseId: course.id, title: course.title })
 
     // Check if certificate already exists
     const { data: existingCert } = await serviceSupabase
