@@ -487,37 +487,25 @@ export async function GET(
                   const maxAttempts = quizSettings.maxAttempts || 3
                   
                   if (existingAttempt) {
-                    // If there's a completed attempt, increment for retry
-                    // If incomplete, reuse it
-                    if (existingAttempt.completed_at) {
-                      const nextAttemptNumber = (existingAttempt.attempt_number || 0) + 1
-                      // Don't create attempts beyond maxAttempts - reuse the last attempt
-                      if (nextAttemptNumber > maxAttempts) {
-                        // Max attempts reached - reuse the last completed attempt
-                        attemptNumber = existingAttempt.attempt_number || maxAttempts
-                        attemptId = existingAttempt.id
-                        logInfo("Max attempts reached, reusing last attempt", {
-                          lessonId: lesson.id,
-                          attemptNumber,
-                          maxAttempts,
-                        })
-                      } else {
-                        attemptNumber = nextAttemptNumber
-                      }
-                    } else {
-                      // Reuse incomplete attempt
-                      attemptNumber = existingAttempt.attempt_number || 1
-                      attemptId = existingAttempt.id
-                    }
-                  }
-                  
-                  // Ensure attemptNumber doesn't exceed maxAttempts
-                  if (attemptNumber > maxAttempts) {
-                    attemptNumber = maxAttempts
-                    logWarning("Attempt number exceeds maxAttempts, capping at maxAttempts", {
+                    // Use existing attempt - don't create new ones on page load
+                    // New attempts should only be created when user actually submits quiz (in quiz-results POST route)
+                    attemptNumber = existingAttempt.attempt_number || 1
+                    attemptId = existingAttempt.id
+                    
+                    logInfo("Using existing quiz attempt for shuffle", {
                       lessonId: lesson.id,
+                      attemptId,
                       attemptNumber,
-                      maxAttempts,
+                      isCompleted: !!existingAttempt.completed_at,
+                      note: "New attempts are created only when quiz is submitted, not on page load",
+                    })
+                  } else {
+                    // No existing attempt - will be created when quiz is submitted
+                    // For now, just use attempt number 1 for shuffle generation
+                    attemptNumber = 1
+                    logInfo("No existing quiz attempt - shuffle will be generated but attempt created on submission", {
+                      lessonId: lesson.id,
+                      note: "Attempt will be created in quiz-results POST route when user submits",
                     })
                   }
                   
@@ -525,75 +513,55 @@ export async function GET(
                   const seed = generateSeed(user.id, lesson.id, attemptNumber)
                   
                   // Shuffle questions only (answers stay in original order)
-                  const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
+                  // Use let so we can reassign if using existing attempt's order
+                  let { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
                   
-                  // Create or update quiz attempt record
-                  if (existingAttempt && !existingAttempt.completed_at && attemptId) {
-                    // Update existing incomplete attempt
-                    const { data: updatedAttempt, error: updateError } = await supabaseClientForShuffle
-                      .from("quiz_attempts")
-                      .update({
-                        question_order: questionOrder,
-                        answer_orders: answerOrders,
-                        completed_at: null, // Reset completion on retry
-                      })
-                      .eq("id", existingAttempt.id)
-                      .select()
-                      .single()
+                  // Use existing attempt if available, but DON'T create new attempts on page load
+                  // Attempts should only be created when user actually submits quiz (in quiz-results POST route)
+                  // This prevents creating attempts on every page load/reload
+                  
+                  if (existingAttempt) {
+                    // Use existing attempt (completed or incomplete)
+                    attemptId = existingAttempt.id
+                    attemptNumber = existingAttempt.attempt_number || 1
                     
-                    if (updateError) {
-                      logError("Error updating quiz attempt", updateError, {
-                        component: "courses/[id]/route",
-                        action: "GET",
-                        lessonId: lesson.id,
-                        attemptId: existingAttempt.id,
-                      })
-                      throw updateError
+                    // If incomplete attempt exists, use its shuffle data
+                    if (!existingAttempt.completed_at && existingAttempt.question_order) {
+                      // Use existing shuffle order from incomplete attempt
+                      const existingQuestionOrder = existingAttempt.question_order
+                      if (Array.isArray(existingQuestionOrder) && existingQuestionOrder.length > 0) {
+                        // Reconstruct shuffled questions using existing order
+                        const questionMap = new Map(quiz_questions.map((q: any) => [q.id, q]))
+                        shuffledQuestions = existingQuestionOrder
+                          .map((qId: number) => questionMap.get(qId))
+                          .filter(Boolean)
+                        questionOrder = existingQuestionOrder
+                      }
+                    } else if (existingAttempt.completed_at && existingAttempt.question_order) {
+                      // For completed attempts, use the order from that attempt for review
+                      const existingQuestionOrder = existingAttempt.question_order
+                      if (Array.isArray(existingQuestionOrder) && existingQuestionOrder.length > 0) {
+                        const questionMap = new Map(quiz_questions.map((q: any) => [q.id, q]))
+                        shuffledQuestions = existingQuestionOrder
+                          .map((qId: number) => questionMap.get(qId))
+                          .filter(Boolean)
+                        questionOrder = existingQuestionOrder
+                      }
                     }
                     
-                    if (updatedAttempt) {
-                      attemptId = updatedAttempt.id
-                      attemptNumber = updatedAttempt.attempt_number
-                    }
-                  } else if (attemptNumber <= maxAttempts) {
-                    // Only create new attempt if we haven't exceeded maxAttempts
-                    // Create new attempt (for retry or first attempt)
-                    const { data: newAttempt, error: insertError } = await supabaseClientForShuffle
-                      .from("quiz_attempts")
-                      .insert({
-                        user_id: user.id,
-                        lesson_id: lesson.id,
-                        course_id: courseIdForShuffle,
-                        attempt_number: attemptNumber,
-                        question_order: questionOrder,
-                        answer_orders: answerOrders,
-                      })
-                      .select()
-                      .single()
-                    
-                    if (insertError) {
-                      logError("Error creating quiz attempt", insertError, {
-                        component: "courses/[id]/route",
-                        action: "GET",
-                        lessonId: lesson.id,
-                      })
-                      throw insertError
-                    }
-                    
-                    if (newAttempt) {
-                      attemptId = newAttempt.id
-                    }
+                    logInfo("Using existing quiz attempt for shuffle", {
+                      lessonId: lesson.id,
+                      attemptId,
+                      attemptNumber,
+                      isCompleted: !!existingAttempt.completed_at,
+                    })
                   } else {
-                    // Max attempts exceeded - reuse the last attempt
-                    if (existingAttempt) {
-                      attemptId = existingAttempt.id
-                      attemptNumber = existingAttempt.attempt_number || maxAttempts
-                      logInfo("Max attempts exceeded, reusing last attempt", {
-                        lessonId: lesson.id,
-                        attemptNumber,
-                        maxAttempts,
-                      })
-                    }
+                    // No existing attempt - generate shuffle but don't create attempt yet
+                    // Attempt will be created when user submits quiz in quiz-results POST route
+                    logInfo("No existing quiz attempt - shuffle generated but attempt not created yet", {
+                      lessonId: lesson.id,
+                      note: "Attempt will be created when quiz is submitted",
+                    })
                   }
                 
                   // Use shuffled questions
