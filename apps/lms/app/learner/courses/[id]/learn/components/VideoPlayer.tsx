@@ -44,6 +44,9 @@ export default function VideoPlayer({
   // Storage key for video progress
   const progressStorageKey = courseId && lessonId ? `course-${courseId}-lesson-${lessonId}-progress` : null
 
+  // Ensure videoUrl is a valid string URL
+  const validVideoUrl = videoUrl && typeof videoUrl === 'string' && videoUrl.trim() ? videoUrl.trim() : null
+
   // Reset completion status and video state when lesson changes
   useEffect(() => {
     completedRef.current = false
@@ -96,9 +99,13 @@ export default function VideoPlayer({
   // Sync video state with isPlaying and handle autoplay
   useEffect(() => {
     const video = videoRef.current
-    if (!video) return
+    if (!video || !validVideoUrl) return
+
+    // Track if this effect is still valid (video hasn't been removed)
+    let isEffectActive = true
 
     const handlePlay = () => {
+      if (!isEffectActive) return
       setIsPlaying(true)
       // Show controls then hide after 5 seconds
       setShowControls(true)
@@ -106,11 +113,14 @@ export default function VideoPlayer({
         clearTimeout(controlsTimeoutRef.current)
       }
       controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
+        if (isEffectActive) {
+          setShowControls(false)
+        }
       }, 5000)
     }
 
     const handlePause = () => {
+      if (!isEffectActive) return
       setIsPlaying(false)
       // Show controls when paused
       setShowControls(true)
@@ -120,6 +130,7 @@ export default function VideoPlayer({
     }
 
     const handleEnded = () => {
+      if (!isEffectActive) return
       setIsPlaying(false)
       setCurrentTime(0)
       if (!completedRef.current) {
@@ -129,21 +140,24 @@ export default function VideoPlayer({
     }
 
     const handleTimeUpdate = () => {
-      if (video && !isSeeking) {
-        const current = video.currentTime
-        const dur = video.duration && !isNaN(video.duration) ? video.duration : 0
-        setCurrentTime(current)
-        if (dur > 0) {
-          setDuration(dur)
-          // Call progress update callback
-          if (onProgressUpdate && dur > 0) {
-            onProgressUpdate((current / dur) * 100)
-          }
+      if (!isEffectActive || !video || isSeeking) return
+      const current = video.currentTime
+      const dur = video.duration && !isNaN(video.duration) ? video.duration : 0
+      setCurrentTime(current)
+      if (dur > 0) {
+        setDuration(dur)
+        // Call progress update callback
+        if (onProgressUpdate && dur > 0) {
+          onProgressUpdate((current / dur) * 100)
         }
       }
     }
 
     const handleCanPlay = async () => {
+      if (!isEffectActive || !video) return
+      // Verify video src matches current URL before playing
+      if (video.src !== validVideoUrl) return
+      
       // Always start from beginning
       if (video.currentTime > 0) {
         video.currentTime = 0
@@ -152,7 +166,11 @@ export default function VideoPlayer({
       if (autoPlay && isActive && video.paused) {
         try {
           await video.play()
-        } catch (error) {
+        } catch (error: any) {
+          // Ignore AbortError - video was removed/changed
+          if (error.name === 'AbortError') {
+            return
+          }
           if (error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video:", error)
           }
@@ -161,6 +179,10 @@ export default function VideoPlayer({
     }
 
     const handleLoadedData = async () => {
+      if (!isEffectActive || !video) return
+      // Verify video src matches current URL before playing
+      if (video.src !== validVideoUrl) return
+      
       // Always start from beginning
       if (video.currentTime > 0) {
         video.currentTime = 0
@@ -169,7 +191,11 @@ export default function VideoPlayer({
       if (autoPlay && isActive && video.paused) {
         try {
           await video.play()
-        } catch (error) {
+        } catch (error: any) {
+          // Ignore AbortError - video was removed/changed
+          if (error.name === 'AbortError') {
+            return
+          }
           if (error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video on load:", error)
           }
@@ -178,6 +204,10 @@ export default function VideoPlayer({
     }
 
     const handleLoadedMetadata = () => {
+      if (!isEffectActive || !video) return
+      // Verify video src matches current URL
+      if (video.src !== validVideoUrl) return
+      
       if (video && video.duration && !isNaN(video.duration)) {
         setDuration(video.duration)
       }
@@ -185,7 +215,11 @@ export default function VideoPlayer({
       video.currentTime = 0
       setCurrentTime(0)
       if (autoPlay && isActive && video.paused) {
-        video.play().catch((error) => {
+        video.play().catch((error: any) => {
+          // Ignore AbortError - video was removed/changed
+          if (error.name === 'AbortError') {
+            return
+          }
           if (error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video on metadata:", error)
           }
@@ -204,15 +238,20 @@ export default function VideoPlayer({
 
     // Try autoplay immediately if conditions are met
     // Always ensure video starts from beginning before playing
-    if (autoPlay && isActive) {
+    if (autoPlay && isActive && video.src === validVideoUrl) {
       const attemptPlay = () => {
+        if (!isEffectActive || !video || video.src !== validVideoUrl) return
         if (video.paused) {
           // Reset to start before playing
           if (video.currentTime > 0) {
             video.currentTime = 0
             setCurrentTime(0)
           }
-          video.play().catch((error) => {
+          video.play().catch((error: any) => {
+            // Ignore AbortError - video was removed/changed
+            if (error.name === 'AbortError') {
+              return
+            }
             if (error.name !== 'NotAllowedError') {
               console.error("Error autoplaying video:", error)
             }
@@ -226,6 +265,7 @@ export default function VideoPlayer({
     }
 
     return () => {
+      isEffectActive = false
       video.removeEventListener("play", handlePlay)
       video.removeEventListener("playing", handlePlay)
       video.removeEventListener("pause", handlePause)
@@ -238,7 +278,7 @@ export default function VideoPlayer({
         clearTimeout(controlsTimeoutRef.current)
       }
     }
-  }, [autoPlay, isActive, onComplete, onProgressUpdate, isSeeking])
+  }, [autoPlay, isActive, onComplete, onProgressUpdate, isSeeking, validVideoUrl])
 
   // Handle fullscreen changes
   useEffect(() => {
@@ -420,9 +460,6 @@ export default function VideoPlayer({
       }, 5000)
     }
   }
-
-  // Ensure videoUrl is a valid string URL
-  const validVideoUrl = videoUrl && typeof videoUrl === 'string' && videoUrl.trim() ? videoUrl.trim() : null
 
   if (!validVideoUrl) {
     return null
