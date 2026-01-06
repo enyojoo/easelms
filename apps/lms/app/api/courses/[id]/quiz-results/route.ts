@@ -244,15 +244,16 @@ export async function POST(
       
       // Calculate the attempt number - use the highest completed attempt + 1
       // This ensures attempts only count when "Finish Quiz" is clicked
-      const calculatedAttemptNumber = completedAttempts?.attempt_number 
-        ? (completedAttempts.attempt_number + 1) 
-        : 1
+      // The incomplete attempt might have the same attempt_number as the last completed attempt
+      // (from when it was created on retry), so we always calculate based on completed attempts
+      const highestCompletedAttemptNumber = completedAttempts?.attempt_number || 0
+      const finalAttemptNumber = highestCompletedAttemptNumber + 1
       
       const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
         .from("quiz_attempts")
         .update({ 
           completed_at: new Date().toISOString(),
-          attempt_number: calculatedAttemptNumber, // Increment attempt number when completing
+          attempt_number: finalAttemptNumber, // Set correct attempt number when completing
         })
         .eq("id", quizAttempt.id)
         .select()
@@ -268,12 +269,13 @@ export async function POST(
       } else {
         logInfo("Quiz attempt marked as completed - this attempt now counts toward max attempts", { 
           attemptId, 
-          attemptNumber: calculatedAttemptNumber,
+          attemptNumber: finalAttemptNumber,
           previousAttemptNumber: quizAttempt.attempt_number,
+          highestCompletedAttemptNumber,
           lessonId 
         })
         attemptId = updatedAttempt?.id || attemptId
-        attemptNumber = calculatedAttemptNumber
+        attemptNumber = finalAttemptNumber
       }
     } else if (!quizAttempt) {
       // No attempt exists - this means "Finish Quiz" was clicked on first attempt
