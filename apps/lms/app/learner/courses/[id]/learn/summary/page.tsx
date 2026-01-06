@@ -236,7 +236,16 @@ export default function CourseCompletionPage() {
       setDownloadingCertificate(true)
       
       // Check if certificate is enabled for this course
-      const certificateEnabled = course.settings?.certificate?.certificateEnabled || false
+      // The course API transforms flat columns into settings.certificate for frontend
+      // But we should also check the flat column directly as fallback
+      const certificateEnabled = course.settings?.certificate?.certificateEnabled ?? false
+      
+      console.log("[Summary Page] Certificate enabled check:", {
+        fromSettings: course.settings?.certificate?.certificateEnabled,
+        finalValue: certificateEnabled,
+        courseId: course?.id,
+      })
+      
       if (!certificateEnabled) {
         alert("Certificate is not enabled for this course.")
         setDownloadingCertificate(false)
@@ -280,10 +289,14 @@ export default function CourseCompletionPage() {
       }
 
       // Download the certificate
+      console.log("[Summary Page] Downloading certificate:", certId)
       const response = await fetch(`/api/certificates/${certId}/download`)
       
       if (!response.ok) {
-        throw new Error("Failed to download certificate")
+        const errorData = await response.json().catch(() => ({}))
+        const errorMessage = errorData.error || errorData.details || `Failed to download certificate (${response.status})`
+        console.error("[Summary Page] Certificate download error:", errorData)
+        throw new Error(errorMessage)
       }
 
       // Get PDF blob
