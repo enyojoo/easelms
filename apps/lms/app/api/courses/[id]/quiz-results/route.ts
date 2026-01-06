@@ -189,19 +189,42 @@ export async function POST(
     console.log("Question IDs in quiz:", quizQuestions.map((q: any) => ({ id: q.id, dbId: q.dbId, type: typeof q.id })))
 
     // Fetch quiz attempt to get shuffle mapping
-    const { data: quizAttempt } = await serviceSupabase
+    // Use .maybeSingle() instead of .single() to handle case where no attempt exists yet
+    const { data: quizAttempt, error: attemptFetchError } = await serviceSupabase
       .from("quiz_attempts")
       .select("*")
       .eq("user_id", user.id)
       .eq("lesson_id", lessonId)
       .order("attempt_number", { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    const hasShuffle = quizAttempt && quizAttempt.question_order && quizAttempt.question_order.length > 0
+    if (attemptFetchError && attemptFetchError.code !== 'PGRST116') {
+      // PGRST116 = no rows returned (expected if no attempt exists)
+      console.warn("Error fetching quiz attempt:", attemptFetchError)
+    }
+
+    const hasShuffle = quizAttempt && quizAttempt.question_order && Array.isArray(quizAttempt.question_order) && quizAttempt.question_order.length > 0
     const questionOrder = hasShuffle ? quizAttempt.question_order : null
-    const answerOrders = hasShuffle ? (quizAttempt.answer_orders || {}) : {}
-    const attemptId = quizAttempt?.id || null
+    const answerOrders = hasShuffle && quizAttempt.answer_orders ? (quizAttempt.answer_orders || {}) : {}
+    let attemptId = quizAttempt?.id || null
+    
+    // If attempt exists but is not completed, mark it as completed now
+    if (quizAttempt && !quizAttempt.completed_at) {
+      const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
+        .from("quiz_attempts")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("id", quizAttempt.id)
+        .select()
+        .single()
+      
+      if (updateAttemptError) {
+        console.warn("Warning: Could not mark quiz attempt as completed:", updateAttemptError)
+      } else {
+        console.log("Quiz attempt marked as completed")
+        attemptId = updatedAttempt?.id || attemptId
+      }
+    }
 
     // If shuffled, we need to reconstruct the shuffled questions that user saw
     // The quizQuestions from DB are in original order, but user saw them shuffled with shuffled answers
@@ -331,28 +354,41 @@ export async function POST(
 
       // Map answer back to original position if shuffled
       let originalUserAnswer = answer.userAnswer
-      const questionIdStr = String(question.id || question.dbId || answer.questionId)
+      const questionIdStr = String(questionForMetadata.dbId || questionForMetadata.id || answer.questionId)
       const answerOrder = answerOrders[questionIdStr]
       
       if (hasShuffle && answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0) {
         // Map shuffled answer index back to original position
+        // answer.userAnswer is the index in shuffled options, we need to map it back
         originalUserAnswer = mapAnswerToOriginal(answer.userAnswer, answerOrder)
       }
       
-      // Use database ID if available (integer), otherwise use string ID
-      const questionDbId = question.dbId || (typeof question.id === 'number' ? question.id : null)
-      const questionIdForResult = questionDbId || question.id || answer.questionId
+      // Use database ID (integer) for quiz_question_id - required for foreign key
+      const questionDbId = questionForMetadata.dbId || (typeof questionForMetadata.id === 'number' ? questionForMetadata.id : parseInt(String(questionForMetadata.id || answer.questionId)) || null)
+      
+      if (!questionDbId) {
+        console.error(`Cannot determine database ID for question:`, {
+          questionId: answer.questionId,
+          question: questionForMetadata,
+          answerIndex: i,
+        })
+        continue // Skip this result if we can't determine the question ID
+      }
+      
+      // Convert user_answer to string for storage (database expects text)
+      const userAnswerText = originalUserAnswer !== null && originalUserAnswer !== undefined 
+        ? String(originalUserAnswer) 
+        : null
       
       resultsToInsert.push({
         user_id: user.id,
         course_id: courseId,
         lesson_id: lessonId,
-        quiz_question_id: questionIdForResult, // Will be integer if from table, string if from JSONB
-        quiz_question_id_new: questionDbId, // Always integer if available
+        quiz_question_id: questionDbId, // Must be integer (foreign key to quiz_questions.id)
         attempt_id: attemptId, // Reference to quiz_attempts
-        shuffled_question_order: hasShuffle ? questionOrder : null, // Denormalized for instant display
-        shuffled_answer_orders: hasShuffle ? answerOrders : null, // Denormalized for instant display
-        user_answer: originalUserAnswer, // Mapped back to original position
+        shuffled_question_order: hasShuffle && questionOrder ? questionOrder : null, // Denormalized for instant display
+        shuffled_answer_orders: hasShuffle && answerOrders ? answerOrders : null, // Denormalized for instant display
+        user_answer: userAnswerText, // Mapped back to original position, stored as text
         is_correct: isCorrect,
         score: earnedPoints,
       })
@@ -372,17 +408,41 @@ export async function POST(
     }
 
     // Insert all quiz results using service role to bypass RLS
+    if (resultsToInsert.length === 0) {
+      console.warn("No quiz results to insert - all questions may have been skipped")
+      return NextResponse.json({
+        error: "No valid quiz results to save",
+        message: "Could not process quiz answers"
+      }, { status: 400 })
+    }
+
     const { data: insertedResults, error: insertError } = await serviceSupabase
       .from("quiz_results")
       .insert(resultsToInsert)
       .select()
 
     if (insertError) {
-      console.error("Error inserting quiz results:", insertError)
-      // Don't fail if insertion fails - still return the score
-      console.warn("Quiz results not saved to database, but score calculated")
+      console.error("Error inserting quiz results:", {
+        error: insertError,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        code: insertError.code,
+        resultsToInsertCount: resultsToInsert.length,
+        firstResult: resultsToInsert[0],
+      })
+      return NextResponse.json({
+        error: "Failed to save quiz results",
+        message: insertError.message || "Database error occurred",
+        details: insertError.details,
+      }, { status: 500 })
     } else {
-      console.log("Quiz results saved successfully:", insertedResults?.length, "records")
+      console.log("✅ Quiz results saved successfully:", {
+        recordsCount: insertedResults?.length || 0,
+        lessonId: lessonId,
+        courseId: courseId,
+        userId: user.id,
+      })
     }
 
     // Calculate overall score based on points

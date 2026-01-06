@@ -59,9 +59,13 @@ export function seededShuffle<T>(array: T[], seed: string): {
   // Fisher-Yates shuffle
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = rng.nextInt(i + 1)
-    // Swap elements
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-    ;[order[i], order[j]] = [order[j], order[i]]
+    // Swap elements (using temporary variables to avoid destructuring issues)
+    const tempShuffled = shuffled[i]
+    const tempOrder = order[i]
+    shuffled[i] = shuffled[j]
+    order[i] = order[j]
+    shuffled[j] = tempShuffled
+    order[j] = tempOrder
   }
 
   return { shuffled, order }

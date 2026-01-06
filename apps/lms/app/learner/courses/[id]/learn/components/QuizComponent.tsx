@@ -207,15 +207,26 @@ export default function QuizComponent({
       setOriginalAnswers([...selectedAnswers])
       
       // Submit quiz results to API
-      await submitQuizResults()
+      try {
+        await submitQuizResults()
+      } catch (error: any) {
+        // Log error but still show results screen
+        console.error("Error submitting quiz results:", error)
+        setSubmissionError(error?.message || "Failed to save quiz results, but your answers are recorded locally")
+        // Continue to show results even if submission failed
+      }
       
-      // Always show results screen after quiz completion
+      // Always show results screen after quiz completion (even if submission failed)
       setShowResults(true)
       setAttemptCount((prev) => prev + 1)
       
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
-      onComplete(selectedAnswers, questions, attemptCount + 1)
+      try {
+        onComplete(selectedAnswers, questions, attemptCount + 1)
+      } catch (error: any) {
+        console.error("Error in onComplete callback:", error)
+      }
     }
   }
 
