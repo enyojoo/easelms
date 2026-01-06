@@ -53,7 +53,8 @@ export function patchPDFKitFonts() {
     // We need to patch fs.readFileSync to intercept font file reads
     const originalReadFileSync = fs.readFileSync
 
-    fs.readFileSync = function(filePath: string | number | Buffer | URL, options?: any): any {
+    // Store the patched function reference to avoid infinite recursion
+    const patchedReadFileSync = function(filePath: string | number | Buffer | URL, options?: any): any {
       const filePathStr = filePath.toString()
       
       // Intercept PDFKit font file reads
@@ -78,12 +79,16 @@ export function patchPDFKitFonts() {
             const availableFonts = fs.readdirSync(localFontsPath).filter(f => f.endsWith('.afm'))
             console.warn(`[PDFKit Font Patch] Available fonts: ${availableFonts.join(', ')}`)
           }
+          // Don't throw error, let it try the original path (will fail but we'll see the error)
         }
       }
 
       // For all other files, use the original readFileSync
       return originalReadFileSync.call(this, filePath, options)
     }
+    
+    // Replace fs.readFileSync with our patched version
+    fs.readFileSync = patchedReadFileSync as typeof fs.readFileSync
 
     console.log(`[PDFKit Font Patch] Successfully patched fs.readFileSync to use fonts from ${localFontsPath}`)
     return true
