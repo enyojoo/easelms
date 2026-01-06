@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from "react"
 import { Play, Pause, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
 interface VideoPlayerProps {
   lessonTitle: string
@@ -105,7 +104,7 @@ export default function VideoPlayer({
 
     const handlePlay = () => {
       setIsPlaying(true)
-      // Show controls then hide after 5 seconds
+      // Show controls then hide after 5 seconds if no interaction
       setShowControls(true)
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
@@ -153,10 +152,6 @@ export default function VideoPlayer({
         try {
           await video.play()
         } catch (error: any) {
-          // Ignore AbortError - video was removed/changed
-          if (error.name === 'AbortError') {
-            return
-          }
           if (error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video:", error)
           }
@@ -169,10 +164,6 @@ export default function VideoPlayer({
         try {
           await video.play()
         } catch (error: any) {
-          // Ignore AbortError - video was removed/changed
-          if (error.name === 'AbortError') {
-            return
-          }
           if (error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video on load:", error)
           }
@@ -186,10 +177,6 @@ export default function VideoPlayer({
       }
       if (autoPlay && isActive && video.paused) {
         video.play().catch((error: any) => {
-          // Ignore AbortError - video was removed/changed
-          if (error.name === 'AbortError') {
-            return
-          }
           if (error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video on metadata:", error)
           }
@@ -211,10 +198,6 @@ export default function VideoPlayer({
       const attemptPlay = () => {
         if (video.paused) {
           video.play().catch((error: any) => {
-            // Ignore AbortError - video was removed/changed
-            if (error.name === 'AbortError') {
-              return
-            }
             if (error.name !== 'NotAllowedError') {
               console.error("Error autoplaying video:", error)
             }
@@ -375,6 +358,17 @@ export default function VideoPlayer({
     } else {
       setIsPlaying(!isPlaying)
     }
+    
+    // Show controls on interaction and reset timeout
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    if (video && !video.paused) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 5000)
+    }
   }
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -397,12 +391,10 @@ export default function VideoPlayer({
 
     // Resume playing if it was playing before (after a small delay to ensure seek completes)
     if (wasPlaying) {
-      // Use requestAnimationFrame to ensure the seek has completed
       requestAnimationFrame(() => {
         const currentVideo = videoRef.current
         if (currentVideo && currentVideo.paused && wasPlayingBeforeSeekRef.current) {
           currentVideo.play().catch((error: any) => {
-            // Ignore expected errors
             if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
               console.error("Error resuming video after seek:", error)
             }
@@ -410,6 +402,17 @@ export default function VideoPlayer({
         }
         wasPlayingBeforeSeekRef.current = false
       })
+    }
+    
+    // Show controls on interaction and reset timeout
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    if (wasPlaying) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 5000)
     }
   }
 
@@ -426,7 +429,6 @@ export default function VideoPlayer({
     setIsSeeking(true)
     const video = videoRef.current
     if (video) {
-      // Remember if video was playing before seeking starts
       wasPlayingBeforeSeekRef.current = !video.paused
     }
   }
@@ -437,12 +439,10 @@ export default function VideoPlayer({
     
     // Resume playing if it was playing before seeking (after a small delay to ensure seek completes)
     if (video && wasPlayingBeforeSeekRef.current && video.paused) {
-      // Use requestAnimationFrame to ensure the seek has completed
       requestAnimationFrame(() => {
         const currentVideo = videoRef.current
         if (currentVideo && currentVideo.paused && wasPlayingBeforeSeekRef.current) {
           currentVideo.play().catch((error: any) => {
-            // Ignore expected errors
             if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
               console.error("Error resuming video after seek:", error)
             }
@@ -453,8 +453,18 @@ export default function VideoPlayer({
     } else {
       wasPlayingBeforeSeekRef.current = false
     }
+    
+    // Show controls on interaction and reset timeout
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    if (video && !video.paused) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 5000)
+    }
   }
-
 
   if (!validVideoUrl) {
     return null
@@ -479,14 +489,15 @@ export default function VideoPlayer({
     <div 
       ref={containerRef}
       className="relative w-full h-full bg-black overflow-hidden cursor-pointer group"
-      onClick={handleTogglePlay}
       onMouseEnter={() => {
         setIsHovered(true)
+        // Show controls on hover
+        setShowControls(true)
+        if (controlsTimeoutRef.current) {
+          clearTimeout(controlsTimeoutRef.current)
+        }
+        // Hide after 5 seconds if no interaction (even if still hovering)
         if (isPlaying) {
-          setShowControls(true)
-          if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current)
-          }
           controlsTimeoutRef.current = setTimeout(() => {
             setShowControls(false)
           }, 5000)
@@ -502,6 +513,17 @@ export default function VideoPlayer({
           }
         }
       }}
+      onMouseMove={() => {
+        // Reset timeout on mouse movement (interaction) - works better in fullscreen
+        if (isPlaying && showControls) {
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current)
+          }
+          controlsTimeoutRef.current = setTimeout(() => {
+            setShowControls(false)
+          }, 5000)
+        }
+      }}
       onTouchStart={() => {
         if (isPlaying) {
           setShowControls(true)
@@ -515,6 +537,7 @@ export default function VideoPlayer({
           }, 5000)
         }
       }}
+      onClick={handleTogglePlay}
     >
       <video
         key={`lesson-${lessonId}`}
@@ -563,9 +586,20 @@ export default function VideoPlayer({
             }
           }}
           onMouseEnter={() => {
-            // Show controls when hovering over controls area
+            // Show controls on hover and reset timeout
+            setShowControls(true)
+            if (controlsTimeoutRef.current) {
+              clearTimeout(controlsTimeoutRef.current)
+            }
             if (isPlaying) {
-              setShowControls(true)
+              controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false)
+              }, 5000)
+            }
+          }}
+          onMouseMove={() => {
+            // Reset timeout on mouse movement (interaction)
+            if (isPlaying && showControls) {
               if (controlsTimeoutRef.current) {
                 clearTimeout(controlsTimeoutRef.current)
               }
