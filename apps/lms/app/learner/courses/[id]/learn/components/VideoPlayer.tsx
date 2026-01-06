@@ -342,21 +342,21 @@ export default function VideoPlayer({
 
   const handleTogglePlay = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    e.preventDefault()
     const video = videoRef.current
     if (video) {
-      if (isPlaying) {
-        video.pause()
-        setIsPlaying(false)
-      } else {
+      // Check actual video state, not React state
+      if (video.paused) {
         try {
           await video.play()
-          setIsPlaying(true)
+          // State will be updated by event handlers
         } catch (error) {
           console.error("Error playing video:", error)
         }
+      } else {
+        video.pause()
+        // State will be updated by event handlers
       }
-    } else {
-      setIsPlaying(!isPlaying)
     }
     
     // Show controls on interaction and reset timeout
@@ -617,18 +617,8 @@ export default function VideoPlayer({
               size="icon"
               onClick={(e) => {
                 e.stopPropagation()
+                e.preventDefault()
                 handleTogglePlay(e)
-                // Show controls when clicking play/pause
-                setShowControls(true)
-                if (controlsTimeoutRef.current) {
-                  clearTimeout(controlsTimeoutRef.current)
-                }
-                const video = videoRef.current
-                if (video && !video.paused) {
-                  controlsTimeoutRef.current = setTimeout(() => {
-                    setShowControls(false)
-                  }, 5000)
-                }
               }}
               className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
               aria-label={isPlaying ? "Pause" : "Play"}
