@@ -86,6 +86,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-webcam": "latest",
     "recharts": "latest",
+    "server-only": "^0.0.1",
     "socket.io": "latest",
     "socket.io-client": "latest",
     "sonner": "latest",
