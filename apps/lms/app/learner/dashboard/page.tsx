@@ -58,7 +58,10 @@ export default function LearnerDashboard() {
       const shuffled = [...recommendedData.courses]
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+        // Use temporary variable to avoid destructuring initialization issues
+        const temp = shuffled[i]
+        shuffled[i] = shuffled[j]
+        shuffled[j] = temp
       }
       
       // Take only 2 courses and update state
