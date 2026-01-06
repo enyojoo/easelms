@@ -1101,7 +1101,7 @@ export default function CourseLearningPage() {
                     if (allLessonsCompleted && !isCourseCompleted) {
                       // Mark enrollment as completed before navigating
                       try {
-                        console.log("🎯 Complete Course clicked - updating enrollment status to completed")
+                        logInfo("Complete Course clicked - updating enrollment status", { courseId: parseInt(id) })
                         const response = await fetch("/api/enrollments", {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
@@ -1112,27 +1112,33 @@ export default function CourseLearningPage() {
                         })
                         
                         if (response.ok) {
-                          const data = await response.json()
-                          console.log("✅ Enrollment updated to completed:", data)
                           // Refetch all related queries to update cache
                           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
                           await queryClient.refetchQueries({ queryKey: ["progress", id] })
                           // Navigate to summary page
                           router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
                         } else {
-                          const errorData = await response.json().catch(() => ({}))
-                          console.error("❌ Failed to update enrollment:", errorData)
+                          const error = await handleApiError(response)
+                          logError("Failed to update enrollment", error, {
+                            component: "CourseLearningPage",
+                            action: "completeCourse",
+                            courseId: parseInt(id),
+                          })
                           toast({
                             title: "Error",
-                            description: "Failed to mark course as completed. Please try again.",
+                            description: formatErrorMessage(error, "Failed to mark course as completed. Please try again."),
                             variant: "destructive",
                           })
                         }
                       } catch (error) {
-                        console.error("❌ Error marking course as completed:", error)
+                        logError("Error marking course as completed", error, {
+                          component: "CourseLearningPage",
+                          action: "completeCourse",
+                          courseId: parseInt(id),
+                        })
                         toast({
                           title: "Error",
-                          description: "An error occurred while completing the course. Please try again.",
+                          description: formatErrorMessage(error, "An error occurred while completing the course. Please try again."),
                           variant: "destructive",
                         })
                       }
