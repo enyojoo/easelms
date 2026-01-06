@@ -41,6 +41,9 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
 export async function generateCertificatePDF(data: CertificateData): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
+      // Initialize PDFDocument
+      // Note: PDFKit requires font files to be available. In serverless environments,
+      // ensure pdfkit font files are included in the deployment (node_modules/pdfkit/js/data/*.afm)
       const doc = new PDFDocument({
         size: "LETTER",
         layout: "landscape",
@@ -442,8 +445,20 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .stroke()
 
       doc.end()
-    } catch (error) {
-      reject(error)
+    } catch (error: any) {
+      // Provide more context for font loading errors
+      if (error?.code === "ENOENT" && error?.path?.includes("pdfkit") && error?.path?.includes(".afm")) {
+        const enhancedError = new Error(
+          `PDFKit font file not found: ${error.path}. ` +
+          `This is likely a deployment issue. PDFKit requires font files to be available. ` +
+          `Ensure pdfkit font files (node_modules/pdfkit/js/data/*.afm) are included in your deployment. ` +
+          `Original error: ${error.message}`
+        )
+        enhancedError.stack = error.stack
+        reject(enhancedError)
+      } else {
+        reject(error)
+      }
     }
   })
 }

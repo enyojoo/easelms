@@ -8,9 +8,12 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Extract id early to ensure it's in scope for error handling
+  let certificateId: string = "unknown"
   try {
     // Await params since it's a Promise in Next.js 16
     const { id } = await params
+    certificateId = id
     
     console.log("[Certificates API] Download request for certificate:", id)
     
@@ -126,7 +129,7 @@ export async function GET(
         }
       } catch (error) {
         // If fetch fails, regenerate PDF
-        logInfo("Failed to fetch existing PDF, regenerating", { error: error instanceof Error ? error.message : String(error), certificateId: id })
+        logInfo("Failed to fetch existing PDF, regenerating", { error: error instanceof Error ? error.message : String(error), certificateId: certificateId })
       }
     }
 
@@ -148,7 +151,7 @@ export async function GET(
         logError("Error fetching course for certificate", courseError, {
           component: "certificates/[id]/download/route",
           action: "GET",
-          certificateId: id,
+          certificateId: certificateId,
           courseId: certificate.course_id,
         })
         return NextResponse.json(
@@ -160,7 +163,7 @@ export async function GET(
     }
 
     if (!course) {
-      console.error("[Certificates API] Course data not found for certificate:", id, "courseId:", certificate.course_id)
+      console.error("[Certificates API] Course data not found for certificate:", certificateId, "courseId:", certificate.course_id)
       return NextResponse.json(
         { error: "Course data not found for this certificate" },
         { status: 500 }
@@ -213,7 +216,7 @@ export async function GET(
       logError("Error generating certificate PDF", pdfError, {
         component: "certificates/[id]/download/route",
         action: "generatePDF",
-        certificateId: id,
+        certificateId: certificateId,
         errorMessage: pdfError?.message,
         errorStack: pdfError?.stack,
       })
@@ -226,7 +229,7 @@ export async function GET(
     const s3Key = getS3StoragePath("certificate", certificate.user_id, filename, undefined, undefined, courseId)
     
     console.log("[Certificates API] Uploading PDF to S3:", {
-      certificateId: id,
+      certificateId: certificateId,
       courseId,
       s3Key,
       filename,
@@ -246,14 +249,14 @@ export async function GET(
       const { error: updateError } = await serviceSupabase
         .from("certificates")
         .update({ certificate_url: url })
-        .eq("id", id)
+        .eq("id", certificateId)
 
       if (updateError) {
         console.error("[Certificates API] Error updating certificate_url in database:", updateError)
         logError("Error updating certificate_url in database", updateError, {
           component: "certificates/[id]/download/route",
           action: "GET",
-          certificateId: id,
+          certificateId: certificateId,
           url,
         })
         // Don't fail the request, but log the error
@@ -265,7 +268,7 @@ export async function GET(
       logError("Error uploading certificate PDF to S3", uploadError, {
         component: "certificates/[id]/download/route",
         action: "GET",
-        certificateId: id,
+        certificateId: certificateId,
         userId: certificate.user_id,
         courseId,
         s3Key,
@@ -289,12 +292,12 @@ export async function GET(
       error: error,
       message: error?.message,
       stack: error?.stack,
-      certificateId: id || "unknown",
+      certificateId: certificateId,
     })
     logError("Error in certificate download route", error, {
       component: "certificates/[id]/download/route",
       action: "GET",
-      certificateId: id || "unknown",
+      certificateId: certificateId,
       errorMessage: error?.message,
       errorStack: error?.stack,
       errorName: error?.name,
