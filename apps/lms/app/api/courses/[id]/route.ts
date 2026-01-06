@@ -458,17 +458,41 @@ export async function GET(
                   
                   let attemptNumber = 1
                   let attemptId: number | null = null
+                  const maxAttempts = quizSettings.maxAttempts || 3
                   
                   if (existingAttempt) {
                     // If there's a completed attempt, increment for retry
                     // If incomplete, reuse it
                     if (existingAttempt.completed_at) {
-                      attemptNumber = (existingAttempt.attempt_number || 0) + 1
+                      const nextAttemptNumber = (existingAttempt.attempt_number || 0) + 1
+                      // Don't create attempts beyond maxAttempts - reuse the last attempt
+                      if (nextAttemptNumber > maxAttempts) {
+                        // Max attempts reached - reuse the last completed attempt
+                        attemptNumber = existingAttempt.attempt_number || maxAttempts
+                        attemptId = existingAttempt.id
+                        logInfo("Max attempts reached, reusing last attempt", {
+                          lessonId: lesson.id,
+                          attemptNumber,
+                          maxAttempts,
+                        })
+                      } else {
+                        attemptNumber = nextAttemptNumber
+                      }
                     } else {
                       // Reuse incomplete attempt
                       attemptNumber = existingAttempt.attempt_number || 1
                       attemptId = existingAttempt.id
                     }
+                  }
+                  
+                  // Ensure attemptNumber doesn't exceed maxAttempts
+                  if (attemptNumber > maxAttempts) {
+                    attemptNumber = maxAttempts
+                    logWarning("Attempt number exceeds maxAttempts, capping at maxAttempts", {
+                      lessonId: lesson.id,
+                      attemptNumber,
+                      maxAttempts,
+                    })
                   }
                   
                   // Generate seed for shuffling
@@ -496,7 +520,7 @@ export async function GET(
                         component: "courses/[id]/route",
                         action: "GET",
                         lessonId: lesson.id,
-                        attemptId: attempt.id,
+                        attemptId: existingAttempt.id,
                       })
                       throw updateError
                     }
@@ -505,7 +529,8 @@ export async function GET(
                       attemptId = updatedAttempt.id
                       attemptNumber = updatedAttempt.attempt_number
                     }
-                  } else {
+                  } else if (attemptNumber <= maxAttempts) {
+                    // Only create new attempt if we haven't exceeded maxAttempts
                     // Create new attempt (for retry or first attempt)
                     const { data: newAttempt, error: insertError } = await supabaseClientForShuffle
                       .from("quiz_attempts")
@@ -531,6 +556,17 @@ export async function GET(
                     
                     if (newAttempt) {
                       attemptId = newAttempt.id
+                    }
+                  } else {
+                    // Max attempts exceeded - reuse the last attempt
+                    if (existingAttempt) {
+                      attemptId = existingAttempt.id
+                      attemptNumber = existingAttempt.attempt_number || maxAttempts
+                      logInfo("Max attempts exceeded, reusing last attempt", {
+                        lessonId: lesson.id,
+                        attemptNumber,
+                        maxAttempts,
+                      })
                     }
                   }
                 

@@ -83,8 +83,11 @@ export default function QuizComponent({
   // Fetch current quiz attempt from database
   const { data: quizAttemptData } = useQuizAttempt(courseId || null, lessonId || null)
   const currentAttemptNumber = quizAttemptData?.attemptNumber || 0
+  const maxAttempts = quiz.maxAttempts || 3
   // Use database attempt number if available, otherwise use local state
-  const displayAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber : (attemptCount > 0 ? attemptCount : 1)
+  // Cap at maxAttempts to prevent showing "4 of 3" etc.
+  const rawDisplayAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber : (attemptCount > 0 ? attemptCount : 1)
+  const displayAttemptNumber = Math.min(rawDisplayAttemptNumber, maxAttempts)
 
   // Answers are already in original order (no mapping needed)
   const mappedAnswersForReview = useMemo(() => {
@@ -468,9 +471,11 @@ export default function QuizComponent({
     // Calculate minimum points needed - must be calculated before use in JSX
     const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
     // Use database attempt number if available, otherwise use initialAttemptCount or local attemptCount
-    const currentAttemptCount = currentAttemptNumber > 0 
+    // Cap the attempt count at maxAttempts to prevent showing "4 of 3" etc.
+    const rawAttemptCount = currentAttemptNumber > 0 
       ? currentAttemptNumber 
       : (showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : attemptCount)
+    const currentAttemptCount = Math.min(rawAttemptCount, maxAttempts)
     // Cannot retry if:
     // - Quiz is disabled
     // - Multiple attempts are not allowed

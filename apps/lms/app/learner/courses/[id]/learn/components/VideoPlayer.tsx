@@ -363,11 +363,6 @@ export default function VideoPlayer({
         video.pause()
         setIsPlaying(false)
       } else {
-        // Always start from beginning
-        if (video.currentTime > 0) {
-          video.currentTime = 0
-          setCurrentTime(0)
-        }
         try {
           await video.play()
           setIsPlaying(true)
@@ -375,6 +370,8 @@ export default function VideoPlayer({
           console.error("Error playing video:", error)
         }
       }
+    } else {
+      setIsPlaying(!isPlaying)
     }
   }
 
@@ -391,6 +388,17 @@ export default function VideoPlayer({
 
     video.currentTime = newTime
     setCurrentTime(newTime)
+    
+    // Show controls when interacting with progress bar
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    if (isPlaying) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 5000)
+    }
   }
 
   const handleProgressSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,6 +408,17 @@ export default function VideoPlayer({
     const newTime = (parseFloat(e.target.value) / 100) * duration
     video.currentTime = newTime
     setCurrentTime(newTime)
+    
+    // Show controls when seeking
+    setShowControls(true)
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current)
+    }
+    if (isPlaying) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false)
+      }, 5000)
+    }
   }
 
   // Ensure videoUrl is a valid string URL
@@ -494,8 +513,34 @@ export default function VideoPlayer({
       {/* Progress bar and controls at the bottom */}
       {duration > 0 && (
         <div 
-          className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 sm:p-3"
-          onClick={(e) => e.stopPropagation()}
+          className={`absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 sm:p-3 transition-opacity duration-300 ${
+            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={(e) => {
+            e.stopPropagation()
+            // Show controls when clicking on controls area
+            setShowControls(true)
+            if (controlsTimeoutRef.current) {
+              clearTimeout(controlsTimeoutRef.current)
+            }
+            if (isPlaying) {
+              controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false)
+              }, 5000)
+            }
+          }}
+          onMouseEnter={() => {
+            // Show controls when hovering over controls area
+            if (isPlaying) {
+              setShowControls(true)
+              if (controlsTimeoutRef.current) {
+                clearTimeout(controlsTimeoutRef.current)
+              }
+              controlsTimeoutRef.current = setTimeout(() => {
+                setShowControls(false)
+              }, 5000)
+            }
+          }}
         >
           {/* Controls row: timer - progressbar - total time | fullscreen */}
           <div className="flex items-center gap-2 sm:gap-3">
@@ -540,6 +585,16 @@ export default function VideoPlayer({
               onClick={(e) => {
                 e.stopPropagation()
                 toggleFullscreen()
+                // Show controls when clicking fullscreen button
+                setShowControls(true)
+                if (controlsTimeoutRef.current) {
+                  clearTimeout(controlsTimeoutRef.current)
+                }
+                if (isPlaying) {
+                  controlsTimeoutRef.current = setTimeout(() => {
+                    setShowControls(false)
+                  }, 5000)
+                }
               }}
               className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
