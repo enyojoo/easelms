@@ -16,11 +16,6 @@ if (typeof window !== 'undefined') {
   throw new Error('shuffle.ts is a server-only module and cannot be imported in client components')
 }
 
-// Additional runtime check to prevent client-side execution
-if (typeof window !== 'undefined') {
-  throw new Error('This module can only be used on the server. Do not import it in client components.')
-}
-
 /**
  * Seeded random number generator
  * Uses a simple LCG (Linear Congruential Generator) for deterministic randomness
