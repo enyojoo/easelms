@@ -78,7 +78,7 @@ export default function CourseLearningPage() {
   const course = courseData?.course
 
   // Calculate progress using custom hook
-  const { completedLessons, progress: progressPercent, allCompleted, videoProgress: videoProg } = useCourseProgress({
+  const { completedLessons, progress, allCompleted, videoProgress: videoProg } = useCourseProgress({
     course,
     progressData,
   })
