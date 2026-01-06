@@ -155,11 +155,27 @@ export function useQuizData({ quizResultsData, progressData, course }: UseQuizDa
       })
     }
 
+    // Extract shuffle data for each lesson (for proper review display)
+    const shuffleDataMap: { [lessonId: number]: { questionOrder?: number[], answerOrders?: { [questionId: string]: number[] } } } = {}
+    Object.entries(resultsByLesson).forEach(([lessonId, results]: [string, any]) => {
+      const lessonIdNum = parseInt(lessonId)
+      if (!isNaN(lessonIdNum) && Array.isArray(results) && results.length > 0) {
+        const firstResult = results[0]
+        if (firstResult?.shuffled_question_order && Array.isArray(firstResult.shuffled_question_order)) {
+          shuffleDataMap[lessonIdNum] = {
+            questionOrder: firstResult.shuffled_question_order,
+            answerOrders: firstResult.shuffled_answer_orders || {},
+          }
+        }
+      }
+    })
+
     return {
       completedQuizzes: completedQuizzesMap,
       quizScores: scoresMap,
       quizAnswers: answersMap,
       quizAttemptCounts: attemptCountsMap,
+      shuffleData: shuffleDataMap,
     }
   }, [quizResultsData, progressData, course])
 }

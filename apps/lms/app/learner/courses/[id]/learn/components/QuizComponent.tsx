@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Loader2, Info, ArrowRight, RotateCcw } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 import { logError, logInfo, logWarning, formatErrorMessage, handleApiError } from "../utils/errorHandler"
+import { toast } from "@/components/ui/use-toast"
 
 interface QuizQuestion {
   question: string
@@ -37,6 +38,7 @@ interface QuizProps {
   onRetry?: () => void
   initialScore?: number
   initialAttemptCount?: number // Attempt count from database when showing results for already-completed quiz
+  shuffleData?: { questionOrder?: number[], answerOrders?: { [questionId: string]: number[] } } // Shuffle data for proper review display
   previewMode?: boolean // If true, skip API calls (for admin preview)
   disabled?: boolean // If true, quiz is disabled and cannot be retaken
 }
@@ -53,6 +55,7 @@ export default function QuizComponent({
   onRetry,
   initialScore,
   initialAttemptCount,
+  shuffleData,
   previewMode = false,
   disabled = false,
 }: QuizProps) {
@@ -308,9 +311,16 @@ export default function QuizComponent({
       }
       
       // Check if max attempts limit has been reached
+      // Use initialAttemptCount if available (from database), otherwise use local attemptCount
+      const currentAttemptCount = initialAttemptCount !== undefined ? initialAttemptCount : attemptCount
       const maxAttempts = quiz.maxAttempts || 3
-      if (attemptCount >= maxAttempts) {
-        logInfo(`Max attempts (${maxAttempts}) reached. Cannot retry.`, { attemptCount, maxAttempts })
+      if (currentAttemptCount >= maxAttempts) {
+        logInfo(`Max attempts (${maxAttempts}) reached. Cannot retry.`, { currentAttemptCount, maxAttempts })
+        toast({
+          title: "Max Attempts Reached",
+          description: `You have reached the maximum number of attempts (${maxAttempts}) for this quiz.`,
+          variant: "destructive",
+        })
         return // Don't allow retry if max attempts reached
       }
       
@@ -384,8 +394,10 @@ export default function QuizComponent({
     const maxAttempts = quiz.maxAttempts || 3
     // Calculate minimum points needed - must be calculated before use in JSX
     const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
-    // Cannot retry if quiz is disabled
-    const canRetry = !disabled && (quiz.allowMultipleAttempts !== false) && (attemptCount < maxAttempts)
+    // Use initialAttemptCount if available (from database), otherwise use local attemptCount
+    const currentAttemptCount = showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : attemptCount
+    // Cannot retry if quiz is disabled or max attempts reached
+    const canRetry = !disabled && (quiz.allowMultipleAttempts !== false) && (currentAttemptCount < maxAttempts)
 
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
@@ -395,9 +407,9 @@ export default function QuizComponent({
             <div className="text-center space-y-6">
               <div>
                 <h3 className="text-2xl md:text-3xl font-bold mb-2">Quiz Results</h3>
-                {attemptCount > 0 && (
+                {currentAttemptCount > 0 && (
                   <Badge variant="secondary" className="text-xs">
-                    Attempt {attemptCount} of {maxAttempts}
+                    Attempt {currentAttemptCount} of {maxAttempts}
                   </Badge>
                 )}
               </div>
@@ -492,32 +504,76 @@ export default function QuizComponent({
           <Card className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-semibold text-lg">Review Your Answers</h4>
-              {attemptCount > 0 && (
+              {currentAttemptCount > 0 && (
                 <Badge variant="secondary" className="ml-auto">
-                  Attempt {attemptCount} of {maxAttempts}
+                  Attempt {currentAttemptCount} of {maxAttempts}
                 </Badge>
               )}
             </div>
             <div className="space-y-4">
-              {/* Questions always in original order */}
-              {questions.map((question, index) => {
-                // Get user answer for this question
-                const userAnswer = showResultsOnly 
-                  ? mappedAnswersForReview[index] 
-                  : originalAnswers[index]
+              {/* Reorder questions and answers to match the order shown during quiz if shuffled */}
+              {(() => {
+                // If shuffle data exists, reorder questions to match the order shown during quiz
+                const hasShuffle = shuffleData?.questionOrder && Array.isArray(shuffleData.questionOrder) && shuffleData.questionOrder.length > 0
+                const answerOrders = shuffleData?.answerOrders || {}
                 
-                // Use question's correct answer (for calculation only, not displayed)
-                const correctAnswerIndex = question.correctAnswer
+                // Create a map of question by original index (questionOrder contains original question IDs/indices)
+                const getQuestionsInShuffledOrder = () => {
+                  if (!hasShuffle || !shuffleData.questionOrder) {
+                    return questions.map((q, idx) => ({ question: q, originalIndex: idx, shuffledIndex: idx }))
+                  }
+                  
+                  // Map original question indices to shuffled positions
+                  return shuffleData.questionOrder.map((originalQuestionId: number, shuffledIndex: number) => {
+                    // originalQuestionId is the original question ID or index
+                    // Find the question - try by ID first, then by index
+                    let question = questions.find((q) => String(q.id) === String(originalQuestionId))
+                    let originalIndex = -1
+                    
+                    if (!question) {
+                      // Try by index
+                      originalIndex = originalQuestionId
+                      question = questions[originalIndex]
+                    } else {
+                      originalIndex = questions.findIndex((q) => String(q.id) === String(originalQuestionId))
+                    }
+                    
+                    return question ? { question, originalIndex, shuffledIndex } : null
+                  }).filter(Boolean) as Array<{ question: QuizQuestion, originalIndex: number, shuffledIndex: number }>
+                }
                 
-                const isCorrect = userAnswer === correctAnswerIndex
+                const questionsToReview = getQuestionsInShuffledOrder()
                 
-                return (
-                  <Card key={index} className={`${isCorrect ? "border-green-500/50 bg-green-50/30 dark:bg-green-950/10" : "border-red-500/50 bg-red-50/30 dark:bg-red-950/10"}`}>
-                    <CardContent className="p-4 md:p-6 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="font-semibold text-base">Question {index + 1}</p>
+                // Get answers - prefilledAnswers are already in shuffled order if shuffled
+                const answersToReview = showResultsOnly ? prefilledAnswers : originalAnswers
+                
+                return questionsToReview.map(({ question, originalIndex, shuffledIndex }, reviewIndex) => {
+                  // Get user answer for this question (answers are in shuffled order)
+                  const userAnswer = answersToReview[shuffledIndex] !== undefined ? answersToReview[shuffledIndex] : answersToReview[reviewIndex]
+                  
+                  // Get correct answer index - need to account for shuffled answer order
+                  let correctAnswerIndex = question.correctAnswer
+                  const questionIdStr = String(question.id || originalIndex)
+                  
+                  // If answers were shuffled, map the correct answer to the shuffled position
+                  if (hasShuffle && answerOrders[questionIdStr] && Array.isArray(answerOrders[questionIdStr])) {
+                    const answerOrder = answerOrders[questionIdStr]
+                    // Find where the original correct answer is in the shuffled order
+                    const shuffledCorrectIndex = answerOrder.indexOf(correctAnswerIndex)
+                    if (shuffledCorrectIndex >= 0) {
+                      correctAnswerIndex = shuffledCorrectIndex
+                    }
+                  }
+                  
+                  const isCorrect = userAnswer !== undefined && userAnswer !== null && userAnswer === correctAnswerIndex
+                  
+                  return (
+                    <Card key={reviewIndex} className={`${isCorrect ? "border-green-500/50 bg-green-50/30 dark:bg-green-950/10" : "border-red-500/50 bg-red-50/30 dark:bg-red-950/10"}`}>
+                      <CardContent className="p-4 md:p-6 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="font-semibold text-base">Question {reviewIndex + 1}</p>
                             {question.points && question.points > 0 && (
                               <Badge variant="outline" className="text-xs">
                                 {question.points} {question.points === 1 ? "point" : "points"}
@@ -535,60 +591,80 @@ export default function QuizComponent({
                         </div>
                       </div>
                       
-                      {/* Question Image */}
-                      {question.imageUrl && (
-                        <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border bg-muted">
-                          <SafeImage 
-                            src={question.imageUrl} 
-                            alt={`Question ${index + 1} image`} 
-                            fill 
-                            className="object-contain" 
-                          />
-                        </div>
-                      )}
-                    <div className="space-y-1">
-                      {question.options.map((option, optIndex) => {
-                        const isUserAnswer = userAnswer === optIndex
-                        const showUserCorrectAnswer = isUserAnswer && isCorrect
-                        const showWrongAnswer = isUserAnswer && !isCorrect
-                        
-                        return (
-                          <div
-                            key={optIndex}
-                            className={`p-3 md:p-4 rounded-lg text-sm md:text-base transition-colors ${
-                              showUserCorrectAnswer
-                                ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-500"
-                                : showWrongAnswer
-                                ? "bg-red-100 dark:bg-red-900/40 border-2 border-red-500"
-                                : "bg-muted/50 border border-border"
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {showUserCorrectAnswer && (
-                                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                              )}
-                              {showWrongAnswer && (
-                                <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
-                              )}
-                              <span className="flex-1">{option}</span>
-                              {isUserAnswer && (
-                                <Badge variant="secondary" className={`text-xs ${
-                                  showUserCorrectAnswer
-                                    ? "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200"
-                                    : "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
-                                }`}>
-                                  Your Answer
-                                </Badge>
-                              )}
-                            </div>
+                        {/* Question Image */}
+                        {question.imageUrl && (
+                          <div className="relative w-full max-w-2xl mx-auto aspect-video rounded-lg overflow-hidden border bg-muted">
+                            <SafeImage 
+                              src={question.imageUrl} 
+                              alt={`Question ${reviewIndex + 1} image`} 
+                              fill 
+                              className="object-contain" 
+                            />
                           </div>
-                        )
-                      })}
-                    </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
+                        )}
+                        <div className="space-y-1">
+                          {/* If answers were shuffled, reorder options to match what user saw */}
+                          {(() => {
+                            const answerOrder = hasShuffle && answerOrders[questionIdStr] && Array.isArray(answerOrders[questionIdStr])
+                              ? answerOrders[questionIdStr]
+                              : question.options.map((_, idx) => idx)
+                            
+                            return answerOrder.map((originalOptIndex: number, shuffledOptIndex: number) => {
+                              const option = question.options[originalOptIndex]
+                              const isUserAnswer = userAnswer === shuffledOptIndex
+                              const showUserCorrectAnswer = isUserAnswer && isCorrect
+                              const showWrongAnswer = isUserAnswer && !isCorrect
+                              const isCorrectAnswer = shuffledOptIndex === correctAnswerIndex
+                              
+                              return (
+                                <div
+                                  key={shuffledOptIndex}
+                                  className={`p-3 md:p-4 rounded-lg text-sm md:text-base transition-colors ${
+                                    showUserCorrectAnswer
+                                      ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-500"
+                                      : showWrongAnswer
+                                      ? "bg-red-100 dark:bg-red-900/40 border-2 border-red-500"
+                                      : isCorrectAnswer
+                                      ? "bg-blue-50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-800"
+                                      : "bg-muted/50 border border-border"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {showUserCorrectAnswer && (
+                                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                    )}
+                                    {showWrongAnswer && (
+                                      <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                                    )}
+                                    {isCorrectAnswer && !isUserAnswer && (
+                                      <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                    )}
+                                    <span className="flex-1">{option}</span>
+                                    {isUserAnswer && (
+                                      <Badge variant="secondary" className={`text-xs ${
+                                        showUserCorrectAnswer
+                                          ? "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                          : "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
+                                      }`}>
+                                        Your Answer
+                                      </Badge>
+                                    )}
+                                    {isCorrectAnswer && !isUserAnswer && (
+                                      <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                        Correct Answer
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })
+                          })()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })
+              })()}
             </div>
           </Card>
         )}
