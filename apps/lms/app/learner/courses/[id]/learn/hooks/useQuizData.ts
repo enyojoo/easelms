@@ -145,10 +145,21 @@ export function useQuizData({ quizResultsData, progressData, course }: UseQuizDa
       }
     })
 
+    // Extract quiz attempt counts from progress data
+    const attemptCountsMap: { [lessonId: number]: number } = {}
+    if (progressData?.progress && Array.isArray(progressData.progress)) {
+      progressData.progress.forEach((p: any) => {
+        if (p.lesson_id && p.quiz_attempts !== null && p.quiz_attempts !== undefined) {
+          attemptCountsMap[p.lesson_id] = p.quiz_attempts
+        }
+      })
+    }
+
     return {
       completedQuizzes: completedQuizzesMap,
       quizScores: scoresMap,
       quizAnswers: answersMap,
+      quizAttemptCounts: attemptCountsMap,
     }
   }, [quizResultsData, progressData, course])
 }

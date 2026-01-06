@@ -246,7 +246,7 @@ export default function CourseLearningPage() {
   }, [currentLessonIndex])
 
   // Process quiz data using custom hook
-  const { completedQuizzes, quizScores, quizAnswers } = useQuizData({
+  const { completedQuizzes, quizScores, quizAnswers, quizAttemptCounts } = useQuizData({
     quizResultsData,
     progressData,
     course,
@@ -1057,6 +1057,7 @@ export default function CourseLearningPage() {
                           showResultsOnly={completedQuizzes[currentLesson.id]}
                           prefilledAnswers={quizAnswers[currentLesson.id] || []}
                           initialScore={quizScores[currentLesson.id]}
+                          initialAttemptCount={quizAttemptCounts[currentLesson.id]}
                     />
                     </div>
                   </div>

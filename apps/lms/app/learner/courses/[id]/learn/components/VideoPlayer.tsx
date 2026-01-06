@@ -363,17 +363,19 @@ export default function VideoPlayer({
     }
   }
 
-  const handleTogglePlay = async (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleTogglePlay = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation()
+    }
     const video = videoRef.current
     if (video) {
       if (isPlaying) {
         video.pause()
-        setIsPlaying(false)
+        // Don't set isPlaying here - let the pause event handler do it
       } else {
         try {
           await video.play()
-          setIsPlaying(true)
+          // Don't set isPlaying here - let the play event handler do it
         } catch (error) {
           console.error("Error playing video:", error)
         }
@@ -491,13 +493,28 @@ export default function VideoPlayer({
       />
       
       {showOverlay && (
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+        <div 
+          className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center pointer-events-none"
+          style={{ zIndex: 1 }}
+        >
           {showPauseButton ? (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div 
+              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleTogglePlay(e)
+              }}
+            >
               <Pause className="h-10 w-10 fill-current" />
             </div>
           ) : (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div 
+              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleTogglePlay(e)
+              }}
+            >
               <Play className="h-10 w-10 fill-current" />
             </div>
           )}

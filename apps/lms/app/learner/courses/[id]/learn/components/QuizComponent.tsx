@@ -36,6 +36,7 @@ interface QuizProps {
   showResultsOnly?: boolean
   onRetry?: () => void
   initialScore?: number
+  initialAttemptCount?: number // Attempt count from database when showing results for already-completed quiz
   previewMode?: boolean // If true, skip API calls (for admin preview)
   disabled?: boolean // If true, quiz is disabled and cannot be retaken
 }
@@ -51,6 +52,7 @@ export default function QuizComponent({
   showResultsOnly = false,
   onRetry,
   initialScore,
+  initialAttemptCount,
   previewMode = false,
   disabled = false,
 }: QuizProps) {
@@ -84,11 +86,12 @@ export default function QuizComponent({
       setSelectedAnswers([])
       setShowResults(false)
       setQuizStarted(false)
-      setAttemptCount(0)
+      // If showing results for already-completed quiz, use initial attempt count, otherwise reset to 0
+      setAttemptCount(showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : 0)
       setOriginalAnswers([])
       setSubmissionError(null)
     }
-  }, [lessonId])
+  }, [lessonId, showResultsOnly, initialAttemptCount])
 
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
@@ -99,6 +102,10 @@ export default function QuizComponent({
       quizCompletedRef.current = true
       setCurrentQuestion(0)
       setShowResults(true) // Always show results when showResultsOnly is true
+      // Set attempt count from database if available
+      if (initialAttemptCount !== undefined) {
+        setAttemptCount(initialAttemptCount)
+      }
       if (prefilledAnswers.length > 0) {
         setSelectedAnswers(mappedAnswersForReview)
         setOriginalAnswers(mappedAnswersForReview)
@@ -353,6 +360,8 @@ export default function QuizComponent({
       : totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0
     const passed = percentage >= minimumQuizScore
     const maxAttempts = quiz.maxAttempts || 3
+    // Calculate minimum points needed - must be calculated before use in JSX
+    const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
     // Cannot retry if quiz is disabled
     const canRetry = !disabled && (quiz.allowMultipleAttempts !== false) && (attemptCount < maxAttempts)
 
