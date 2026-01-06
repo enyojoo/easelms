@@ -167,12 +167,24 @@ export async function POST(request: Request) {
     const serviceSupabase = createServiceRoleClient()
 
     // Get course details first to verify it exists
-    // Try with service role client first, fallback to regular client if needed
+    // Query flat columns only (database doesn't have settings JSONB column)
     let course, courseError
     try {
       const { data: courseData, error: courseErr } = await serviceSupabase
         .from("courses")
-        .select("id, title, settings, certificate_enabled, certificate_type, certificate_title")
+        .select(`
+          id, 
+          title, 
+          certificate_enabled,
+          certificate_type,
+          certificate_title,
+          certificate_description,
+          certificate_template,
+          signature_image,
+          signature_name,
+          signature_title,
+          additional_text
+        `)
         .eq("id", numericCourseId)
         .single()
       
@@ -264,8 +276,8 @@ export async function POST(request: Request) {
     }
 
     // Check if certificate is enabled for this course
-    const courseSettings = course.settings as any
-    const certificateEnabled = course.certificate_enabled || courseSettings?.certificate?.certificateEnabled
+    // Use flat column directly (database stores as certificate_enabled, not in settings JSONB)
+    const certificateEnabled = course.certificate_enabled || false
 
     if (!certificateEnabled) {
       return NextResponse.json({ 
@@ -277,13 +289,14 @@ export async function POST(request: Request) {
     const certificateNumber = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
 
     // Create certificate
+    // Note: certificate_type is stored in courses table, not certificates table
     const { data: certificate, error: insertError } = await serviceSupabase
       .from("certificates")
       .insert({
         user_id: user.id,
         course_id: numericCourseId,
+        course_title: course.title, // Required field in certificates table
         certificate_number: certificateNumber,
-        certificate_type: course.certificate_type || courseSettings?.certificate?.certificateType || "completion",
         issued_at: enrollment.completed_at || new Date().toISOString(),
       })
       .select()

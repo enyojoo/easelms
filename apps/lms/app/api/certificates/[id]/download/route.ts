@@ -22,7 +22,6 @@ export async function GET(
       courses (
         id,
         title,
-        settings,
         certificate_template,
         certificate_title,
         certificate_description,
@@ -64,7 +63,7 @@ export async function GET(
   try {
     // Check if PDF URL already exists (from previous generation)
     let pdfBuffer: Buffer
-    let pdfUrl: string | null = certificate.pdf_url || null
+    let pdfUrl: string | null = certificate.certificate_url || null
 
     // If PDF URL exists and is an S3 URL, try to fetch it
     // Otherwise, regenerate (since we're migrating from Supabase Storage)
@@ -94,9 +93,8 @@ export async function GET(
     }
 
     // PDF doesn't exist or failed to download, generate new one
-    // Get course certificate settings
-    const courseSettings = certificate.courses?.settings as any
-    const certificateSettings = courseSettings?.certificate || {}
+    // Use flat columns directly (database doesn't have settings JSONB column)
+    const course = certificate.courses
 
     // Use black logo URL for certificates (white background) - same as Logo component
     const logoUrl = "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk.svg"
@@ -108,18 +106,18 @@ export async function GET(
     pdfBuffer = await generateCertificatePDF({
       certificateNumber: certificate.certificate_number,
       learnerName: certificate.profiles?.name || "Student",
-      courseTitle: certificate.courses?.title || "Course",
+      courseTitle: course?.title || "Course",
       issuedAt: certificate.issued_at,
-      certificateType: certificate.certificate_type || certificateSettings.certificateType || "completion",
-      certificateTitle: certificateSettings.certificateTitle || certificate.courses?.certificate_title || undefined,
-      certificateDescription: certificateSettings.certificateDescription || certificate.courses?.certificate_description || undefined,
-      certificateTemplate: certificateSettings.certificateTemplate || certificate.courses?.certificate_template || undefined,
+      certificateType: course?.certificate_type || "completion", // certificate_type is in courses table, not certificates table
+      certificateTitle: course?.certificate_title || undefined,
+      certificateDescription: course?.certificate_description || undefined,
+      certificateTemplate: course?.certificate_template || undefined,
       organizationName,
       logoUrl,
-      signatureImage: certificateSettings.signatureImage || certificate.courses?.signature_image || undefined,
-      signatureName: certificateSettings.signatureName || certificate.courses?.signature_name || undefined,
-      signatureTitle: certificateSettings.signatureTitle || certificate.courses?.signature_title || undefined,
-      additionalText: certificateSettings.additionalText,
+      signatureImage: course?.signature_image || undefined,
+      signatureName: course?.signature_name || undefined,
+      signatureTitle: course?.signature_title || undefined,
+      additionalText: course?.additional_text || undefined,
     })
 
     // Upload PDF to S3
@@ -136,7 +134,7 @@ export async function GET(
       // Save PDF URL to database
       await supabase
         .from("certificates")
-        .update({ pdf_url: url })
+        .update({ certificate_url: url })
         .eq("id", params.id)
     } catch (uploadError) {
       logError("Error uploading certificate PDF to S3", uploadError, {
