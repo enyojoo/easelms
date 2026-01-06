@@ -358,21 +358,23 @@ export default function VideoPlayer({
 
   const handleTogglePlay = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    e.preventDefault()
     const video = videoRef.current
-    if (video) {
-      if (isPlaying) {
-        video.pause()
-        setIsPlaying(false)
-      } else {
-        try {
-          await video.play()
-          setIsPlaying(true)
-        } catch (error) {
-          console.error("Error playing video:", error)
-        }
+    if (!video) return
+    
+    // Check actual video state, not React state
+    if (video.paused) {
+      // Video is paused, play it
+      try {
+        await video.play()
+        // Don't set state here - let the play event handler do it
+      } catch (error) {
+        console.error("Error playing video:", error)
       }
     } else {
-      setIsPlaying(!isPlaying)
+      // Video is playing, pause it
+      video.pause()
+      // Don't set state here - let the pause event handler do it
     }
   }
 
