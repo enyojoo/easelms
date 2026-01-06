@@ -124,12 +124,17 @@ export default function VideoPlayer({
     const handlePlay = () => {
       setIsPlaying(true)
       // Show controls then hide after 5 seconds
-      setShowControls(true)
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
+        controlsTimeoutRef.current = null
       }
+      setShowControls(true)
       controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
+        const currentVideo = videoRef.current
+        if (currentVideo && !currentVideo.paused) {
+          setShowControls(false)
+        }
+        controlsTimeoutRef.current = null
       }, 5000)
     }
 
@@ -161,9 +166,9 @@ export default function VideoPlayer({
                   // Call progress update callback
                   if (onProgressUpdate && dur > 0) {
                     onProgressUpdate((current / dur) * 100)
-                  }
-                }
-              }
+          }
+        }
+      }
     }
 
     const handleCanPlay = async () => {
@@ -238,9 +243,8 @@ export default function VideoPlayer({
       video.removeEventListener("loadedmetadata", handleLoadedMetadata)
       video.removeEventListener("canplay", handleCanPlay)
       video.removeEventListener("loadeddata", handleLoadedData)
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current)
-      }
+      // Don't clear timeout on cleanup - let it run to hide controls
+      // The timeout will check if video is still playing before hiding
     }
   }, [autoPlay, isActive, onComplete, onProgressUpdate, isSeeking])
 
@@ -419,6 +423,8 @@ export default function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
+  // Show play button when not playing and controls are visible
+  // Show pause button when playing and controls are visible
   const showPlayButton = !isPlaying && showControls
   const showPauseButton = isPlaying && showControls
   const showOverlay = showPlayButton || showPauseButton
@@ -429,18 +435,33 @@ export default function VideoPlayer({
       className="relative w-full h-full bg-black overflow-hidden cursor-pointer group"
       onMouseEnter={() => {
         setIsHovered(true)
+        // Show controls on hover when playing (desktop only)
         if (isPlaying) {
-          setShowControls(true)
           if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current)
+            controlsTimeoutRef.current = null
           }
+          setShowControls(true)
+          // Hide again after 5 seconds if still playing
           controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false)
+            const currentVideo = videoRef.current
+            if (currentVideo && !currentVideo.paused) {
+              setShowControls(false)
+            }
+            controlsTimeoutRef.current = null
           }, 5000)
         }
       }}
       onMouseLeave={() => {
         setIsHovered(false)
+        // Hide controls immediately when mouse leaves if playing
+        if (isPlaying) {
+          if (controlsTimeoutRef.current) {
+            clearTimeout(controlsTimeoutRef.current)
+            controlsTimeoutRef.current = null
+          }
+          setShowControls(false)
+        }
       }}
       onTouchStart={() => {
         if (isPlaying) {
