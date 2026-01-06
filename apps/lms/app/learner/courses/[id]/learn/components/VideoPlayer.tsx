@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Play, Pause, Maximize, Minimize } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface VideoPlayerProps {
   lessonTitle: string
@@ -472,10 +473,6 @@ export default function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  const showPlayButton = !isPlaying && showControls
-  const showPauseButton = isPlaying && showControls
-  const showOverlay = showPlayButton || showPauseButton
-
   return (
     <div 
       ref={containerRef}
@@ -515,7 +512,6 @@ export default function VideoPlayer({
           }, 5000)
         }
       }}
-      onClick={handleTogglePlay}
     >
       <video
         key={`lesson-${lessonId}`}
@@ -527,25 +523,7 @@ export default function VideoPlayer({
         playsInline
         crossOrigin="anonymous"
         loop={false}
-        onClick={(e) => {
-          e.stopPropagation()
-          handleTogglePlay(e as any)
-        }}
       />
-      
-      {showOverlay && (
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-          {showPauseButton ? (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
-              <Pause className="h-10 w-10 fill-current" />
-            </div>
-          ) : (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
-              <Play className="h-10 w-10 fill-current" />
-            </div>
-          )}
-        </div>
-      )}
       
       {/* Progress bar and controls at the bottom */}
       {duration > 0 && (
@@ -580,8 +558,38 @@ export default function VideoPlayer({
             }
           }}
         >
-          {/* Controls row: timer - progressbar - total time | fullscreen */}
+          {/* Controls row: play/pause - timer - progressbar - total time - fullscreen */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Play/Pause button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleTogglePlay(e)
+                // Show controls when clicking play/pause
+                setShowControls(true)
+                if (controlsTimeoutRef.current) {
+                  clearTimeout(controlsTimeoutRef.current)
+                }
+                const video = videoRef.current
+                if (video && !video.paused) {
+                  controlsTimeoutRef.current = setTimeout(() => {
+                    setShowControls(false)
+                  }, 5000)
+                }
+              }}
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
+              aria-label={isPlaying ? "Pause" : "Play"}
+              title={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <Pause className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
+              ) : (
+                <Play className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
+              )}
+            </Button>
+            
             {/* Current time */}
             <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
               {formatTime(currentTime)}
