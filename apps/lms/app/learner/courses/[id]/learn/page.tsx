@@ -1104,7 +1104,9 @@ export default function CourseLearningPage() {
                 )
               })()}
 
-              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false && (
+              {/* Show quiz tab if: quiz is enabled OR (quiz has questions AND user has results) */}
+              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && 
+               (currentLesson.quiz?.enabled !== false || completedQuizzes[currentLesson.id]) && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <div className="w-full h-full overflow-y-auto">
                     <div className="p-3 sm:p-4 md:p-6">
@@ -1143,9 +1145,12 @@ export default function CourseLearningPage() {
                           }
                         }),
                             showResultsImmediately: currentLesson.quiz?.showCorrectAnswers || true,
-                            allowMultipleAttempts: currentLesson.quiz?.allowMultipleAttempts || true,
+                            // If quiz is disabled, prevent multiple attempts
+                            allowMultipleAttempts: currentLesson.quiz?.enabled !== false && (currentLesson.quiz?.allowMultipleAttempts !== false),
                             showCorrectAnswers: currentLesson.quiz?.showCorrectAnswers || true,
                             maxAttempts: currentLesson.quiz?.maxAttempts || 3,
+                            // Mark quiz as disabled if it's disabled (prevents retake)
+                            disabled: currentLesson.quiz?.enabled === false,
                       }}
                       onComplete={handleQuizComplete}
                           onContinue={handleContinueFromQuiz}

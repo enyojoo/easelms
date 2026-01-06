@@ -36,6 +36,7 @@ interface QuizProps {
   onRetry?: () => void
   initialScore?: number
   previewMode?: boolean // If true, skip API calls (for admin preview)
+  disabled?: boolean // If true, quiz is disabled and cannot be retaken
 }
 
 export default function QuizComponent({
@@ -50,6 +51,7 @@ export default function QuizComponent({
   onRetry,
   initialScore,
   previewMode = false,
+  disabled = false,
 }: QuizProps) {
   // Use questions in original order (no shuffling)
   const questions = useMemo(() => {
@@ -234,6 +236,12 @@ export default function QuizComponent({
 
   const handleRetryQuiz = async () => {
     try {
+      // Prevent retry if quiz is disabled
+      if (disabled) {
+        console.log("Quiz is disabled, cannot retry")
+        return
+      }
+
       console.log("Retrying quiz - attempt count:", attemptCount)
       
       // Check if multiple attempts are allowed
@@ -311,7 +319,8 @@ export default function QuizComponent({
       : totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0
     const passed = percentage >= minimumQuizScore
     const maxAttempts = quiz.maxAttempts || 3
-    const canRetry = (quiz.allowMultipleAttempts !== false) && (attemptCount < maxAttempts)
+    // Cannot retry if quiz is disabled
+    const canRetry = !disabled && (quiz.allowMultipleAttempts !== false) && (attemptCount < maxAttempts)
 
     return (
       <div className="space-y-6 max-w-3xl mx-auto">

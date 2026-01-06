@@ -339,14 +339,51 @@ export async function GET(
             }
           }
           
-          // Only include quiz questions if quiz is enabled
-          // If disabled, set quiz_questions to empty array to hide from learners
-          if (!quizSettings.enabled) {
-            quiz_questions = []
-            console.log("Course API: Quiz disabled for lesson, hiding from learners", {
-              lessonId: lesson.id,
-              lessonTitle: lesson.title,
-            })
+          // If quiz is disabled, we still need to return questions if user has results
+          // This allows showing quiz results even when quiz is disabled
+          // The frontend will check quiz.enabled and user results to determine behavior
+          // We'll fetch user results here to decide if we should return questions
+          let shouldReturnQuestions = quizSettings.enabled
+          
+          if (!quizSettings.enabled && quiz_questions.length > 0) {
+            // Check if current user has quiz results for this lesson
+            try {
+              const { createClient: createUserClient } = await import("@/lib/supabase/server")
+              const userSupabase = await createUserClient()
+              const { data: { user } } = await userSupabase.auth.getUser()
+              
+              if (user) {
+                const { data: userResults } = await supabaseClientForShuffle
+                  .from("quiz_results")
+                  .select("id")
+                  .eq("user_id", user.id)
+                  .eq("lesson_id", lesson.id)
+                  .limit(1)
+                
+                // If user has results, return questions so they can see their results
+                if (userResults && userResults.length > 0) {
+                  shouldReturnQuestions = true
+                  console.log("Course API: Quiz disabled but user has results, returning questions for display", {
+                    lessonId: lesson.id,
+                    lessonTitle: lesson.title,
+                  })
+                } else {
+                  // No results, hide quiz completely
+                  quiz_questions = []
+                  console.log("Course API: Quiz disabled and no user results, hiding quiz", {
+                    lessonId: lesson.id,
+                    lessonTitle: lesson.title,
+                  })
+                }
+              } else {
+                // No user, hide quiz
+                quiz_questions = []
+              }
+            } catch (error) {
+              // If we can't check user results, hide quiz to be safe
+              console.warn("Error checking user quiz results:", error)
+              quiz_questions = []
+            }
           }
           
           // Handle quiz shuffling if enabled
