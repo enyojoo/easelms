@@ -216,7 +216,6 @@ export async function POST(
     const questionOrder = hasShuffle ? quizAttempt.question_order : null
     // Note: answerOrders is no longer used - answers are NOT shuffled, only questions are
     let attemptId = quizAttempt?.id || null
-    let attemptNumber = quizAttempt?.attempt_number || 1
     
     // If attempt exists but is not completed, mark it as completed now
     if (quizAttempt && !quizAttempt.completed_at) {
@@ -237,53 +236,6 @@ export async function POST(
       } else {
         logInfo("Quiz attempt marked as completed", { attemptId, lessonId })
         attemptId = updatedAttempt?.id || attemptId
-        attemptNumber = updatedAttempt?.attempt_number || attemptNumber
-      }
-    } else if (!quizAttempt) {
-      // No attempt exists - create one now (this is the first submission)
-      // This should only happen if quiz was not shuffled, or if this is the first time submitting
-      // For shuffled quizzes, attempt should have been created when questions were shuffled
-      // But if it wasn't (e.g., shuffle was disabled initially), create it now
-      
-      // Get quiz settings to check if shuffle is enabled
-      const { data: quizSettingsData } = await serviceSupabase
-        .from("quiz_settings")
-        .select("shuffle_quiz, max_attempts")
-        .eq("lesson_id", lessonId)
-        .single()
-      
-      const maxAttempts = quizSettingsData?.max_attempts || 3
-      const shuffleEnabled = quizSettingsData?.shuffle_quiz || false
-      
-      // Create attempt with question order (even if not shuffled, store original order)
-      const questionOrderArray = quizQuestions.map((q: any) => q.dbId || parseInt(String(q.id)) || 0)
-      
-      const { data: newAttempt, error: createAttemptError } = await serviceSupabase
-        .from("quiz_attempts")
-        .insert({
-          user_id: user.id,
-          lesson_id: lessonId,
-          course_id: courseId,
-          attempt_number: 1,
-          question_order: questionOrderArray,
-          answer_orders: {},
-          completed_at: new Date().toISOString(), // Mark as completed immediately since we're submitting
-        })
-        .select()
-        .single()
-      
-      if (createAttemptError) {
-        logWarning("Could not create quiz attempt", {
-          component: "courses/[id]/quiz-results/route",
-          action: "POST",
-          error: createAttemptError,
-          lessonId,
-        })
-        // Continue without attempt ID - quiz results can still be saved
-      } else {
-        attemptId = newAttempt?.id || null
-        attemptNumber = newAttempt?.attempt_number || 1
-        logInfo("Created quiz attempt on first submission", { attemptId, lessonId, attemptNumber })
       }
     }
 
