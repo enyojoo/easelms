@@ -228,16 +228,61 @@ export async function POST(request: Request) {
 
       // Delete lessons that exist in database but not in current lessons array
       const lessonsToDelete = Array.from(existingLessonIds).filter(id => !currentLessonIds.has(id))
+      
+      console.log(`Lesson deletion check for course ${result.id}:`, {
+        existingLessonIds: Array.from(existingLessonIds),
+        currentLessonIds: Array.from(currentLessonIds),
+        lessonsToDelete: lessonsToDelete,
+      })
+      
       if (lessonsToDelete.length > 0) {
+        // First, delete all related data for these lessons (quiz questions, quiz settings, resources, etc.)
+        const lessonIdsToDelete = lessonsToDelete.map(id => Number(id))
+        
+        // Delete quiz questions for deleted lessons
+        const { error: quizQuestionsDeleteError } = await dbClient
+          .from("quiz_questions")
+          .delete()
+          .in("lesson_id", lessonIdsToDelete)
+        
+        if (quizQuestionsDeleteError) {
+          console.error("Error deleting quiz questions for removed lessons:", quizQuestionsDeleteError)
+        } else {
+          console.log(`Deleted quiz questions for ${lessonsToDelete.length} removed lessons`)
+        }
+        
+        // Delete quiz settings for deleted lessons
+        const { error: quizSettingsDeleteError } = await dbClient
+          .from("quiz_settings")
+          .delete()
+          .in("lesson_id", lessonIdsToDelete)
+        
+        if (quizSettingsDeleteError) {
+          console.error("Error deleting quiz settings for removed lessons:", quizSettingsDeleteError)
+        }
+        
+        // Delete lesson_resources for deleted lessons
+        const { error: lessonResourcesDeleteError } = await dbClient
+          .from("lesson_resources")
+          .delete()
+          .in("lesson_id", lessonIdsToDelete)
+        
+        if (lessonResourcesDeleteError) {
+          console.error("Error deleting lesson_resources for removed lessons:", lessonResourcesDeleteError)
+        }
+        
+        // Finally, delete the lessons themselves
         const { error: deleteError } = await dbClient
           .from("lessons")
           .delete()
-          .in("id", lessonsToDelete.map(id => Number(id)))
+          .in("id", lessonIdsToDelete)
 
         if (deleteError) {
           console.error("Error deleting removed lessons:", deleteError)
         } else {
-          console.log(`Successfully deleted ${lessonsToDelete.length} removed lessons for course ${result.id}`)
+          console.log(`✅ Successfully deleted ${lessonsToDelete.length} removed lessons for course ${result.id}`, {
+            deletedLessonIds: lessonsToDelete,
+          })
         }
       }
 
@@ -288,7 +333,16 @@ export async function POST(request: Request) {
         // Extract quiz questions and settings from lesson data
         const quiz = lesson.quiz
         const hasQuestions = quiz && Array.isArray(quiz.questions) && quiz.questions.length > 0
-        const quizEnabled = quiz && quiz.enabled && hasQuestions
+        // Quiz is enabled only if: quiz exists, enabled is true, AND has questions
+        const quizEnabled = quiz && quiz.enabled === true && hasQuestions
+        
+        console.log(`Processing quiz for lesson ${actualLessonId}:`, {
+          hasQuiz: !!quiz,
+          quizEnabled: quiz?.enabled,
+          hasQuestions: hasQuestions,
+          questionsCount: quiz?.questions?.length || 0,
+          finalQuizEnabled: quizEnabled,
+        })
 
         // Save or update quiz settings
         const quizSettingsData = {
@@ -314,13 +368,20 @@ export async function POST(request: Request) {
           console.error(`Error saving quiz settings for lesson ${actualLessonId}:`, settingsError)
         }
 
-        if (!hasQuestions) {
-          // If no questions, delete existing questions and disable quiz
+        // If quiz is disabled OR has no questions, delete all existing questions
+        if (!quizEnabled || !hasQuestions) {
+          // Delete all existing questions for this lesson
           if (existingQuestionIds.size > 0) {
-            await dbClient
+            const { error: deleteAllError } = await dbClient
               .from("quiz_questions")
               .delete()
               .eq("lesson_id", actualLessonId)
+            
+            if (deleteAllError) {
+              console.error(`Error deleting all questions for disabled quiz (lesson ${actualLessonId}):`, deleteAllError)
+            } else {
+              console.log(`Successfully deleted all ${existingQuestionIds.size} questions for disabled quiz (lesson ${actualLessonId})`)
+            }
           }
           // Update settings to disabled
           await dbClient
@@ -428,7 +489,21 @@ export async function POST(request: Request) {
         }
 
         // Delete questions that exist in database but not in current questions array
+        // This handles the case where questions are deleted from the UI
         const questionsToDelete = Array.from(existingQuestionIds).filter(id => !currentQuestionIds.has(id))
+        
+        console.log(`Quiz deletion check for lesson ${actualLessonId}:`, {
+          existingQuestionIds: Array.from(existingQuestionIds),
+          currentQuestionIds: Array.from(currentQuestionIds),
+          questionsToDelete: questionsToDelete,
+          questionsInArray: quiz.questions.map((q: any) => ({
+            id: q.id,
+            idType: typeof q.id,
+            isRealId: q.id && !q.id.toString().startsWith("q-") && !isNaN(Number(q.id)),
+            numericId: q.id && !isNaN(Number(q.id)) ? Number(q.id) : null,
+          })),
+        })
+        
         if (questionsToDelete.length > 0) {
           const { error: deleteError } = await dbClient
             .from("quiz_questions")
@@ -437,9 +512,46 @@ export async function POST(request: Request) {
             .in("id", questionsToDelete)
 
           if (deleteError) {
-            console.error(`Error deleting removed questions for lesson ${actualLessonId}:`, deleteError)
+            console.error(`Error deleting removed questions for lesson ${actualLessonId}:`, {
+              error: deleteError,
+              deletedIds: questionsToDelete,
+            })
           } else {
-            console.log(`Successfully deleted ${questionsToDelete.length} removed questions for lesson ${actualLessonId}`)
+            console.log(`✅ Successfully deleted ${questionsToDelete.length} removed questions for lesson ${actualLessonId}`, {
+              deletedIds: questionsToDelete,
+            })
+          }
+        } else if (existingQuestionIds.size > 0 && currentQuestionIds.size === 0 && quiz.questions.length > 0) {
+          // Edge case: All questions in array are new (no database IDs), but there are existing questions in DB
+          // This means all existing questions should be deleted and replaced with new ones
+          console.warn(`⚠️ Warning: Lesson ${actualLessonId} has ${existingQuestionIds.size} questions in DB but none match current questions array - deleting all existing questions`, {
+            existingIds: Array.from(existingQuestionIds),
+            currentQuestions: quiz.questions.map((q: any) => q.id),
+          })
+          
+          // Delete all existing questions since they don't match
+          const { error: deleteAllError } = await dbClient
+            .from("quiz_questions")
+            .delete()
+            .eq("lesson_id", actualLessonId)
+            
+          if (deleteAllError) {
+            console.error(`Error deleting all unmatched questions for lesson ${actualLessonId}:`, deleteAllError)
+          } else {
+            console.log(`✅ Deleted all ${existingQuestionIds.size} unmatched questions for lesson ${actualLessonId}`)
+          }
+        } else if (existingQuestionIds.size > 0 && quiz.questions.length === 0) {
+          // All questions were deleted from UI - delete all from DB
+          console.log(`All questions deleted from UI for lesson ${actualLessonId} - deleting all from database`)
+          const { error: deleteAllError } = await dbClient
+            .from("quiz_questions")
+            .delete()
+            .eq("lesson_id", actualLessonId)
+            
+          if (deleteAllError) {
+            console.error(`Error deleting all questions for lesson ${actualLessonId}:`, deleteAllError)
+          } else {
+            console.log(`✅ Successfully deleted all ${existingQuestionIds.size} questions for lesson ${actualLessonId}`)
           }
         }
       }
@@ -575,12 +687,30 @@ export async function POST(request: Request) {
           (id) => !currentResourceIds.has(id)
         )
 
+        console.log(`Resource deletion check for lesson ${actualLessonId}:`, {
+          existingResourceIds: Array.from(existingResourceIds),
+          currentResourceIds: Array.from(currentResourceIds),
+          resourcesToDelete: resourcesToDelete,
+          resourcesInArray: resources.map((r: any) => ({
+            id: r.id,
+            url: r.url,
+          })),
+        })
+
         if (resourcesToDelete.length > 0) {
-          await dbClient
+          const { error: deleteError } = await dbClient
             .from("lesson_resources")
             .delete()
             .eq("lesson_id", actualLessonId)
             .in("resource_id", resourcesToDelete)
+
+          if (deleteError) {
+            console.error(`Error deleting lesson_resources for lesson ${actualLessonId}:`, deleteError)
+          } else {
+            console.log(`✅ Successfully deleted ${resourcesToDelete.length} lesson_resources for lesson ${actualLessonId}`, {
+              deletedResourceIds: resourcesToDelete,
+            })
+          }
 
           // Decrement usage_count for deleted resources
           for (const resourceId of resourcesToDelete) {
@@ -593,10 +723,14 @@ export async function POST(request: Request) {
             
             if (currentResource) {
               const newUsageCount = Math.max((currentResource.usage_count || 0) - 1, 0)
-              await dbClient
+              const { error: updateError } = await dbClient
                 .from("resources")
                 .update({ usage_count: newUsageCount })
                 .eq("id", resourceId)
+              
+              if (updateError) {
+                console.error(`Error updating usage_count for resource ${resourceId}:`, updateError)
+              }
             }
           }
         }
