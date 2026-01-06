@@ -103,6 +103,11 @@ export default function VideoPlayer({
     if (!video || !validVideoUrl) return
 
     const handlePlay = () => {
+      // #region agent log
+      const logData8 = {location:'VideoPlayer.tsx:105',message:'handlePlay event fired',data:{videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      console.log('[DEBUG]', logData8);
+      fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData8)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+      // #endregion
       setIsPlaying(true)
       // Show controls then hide after 5 seconds if no interaction
       setShowControls(true)
@@ -115,6 +120,11 @@ export default function VideoPlayer({
     }
 
     const handlePause = () => {
+      // #region agent log
+      const logData9 = {location:'VideoPlayer.tsx:117',message:'handlePause event fired',data:{videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      console.log('[DEBUG]', logData9);
+      fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData9)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+      // #endregion
       setIsPlaying(false)
       // Show controls when paused
       setShowControls(true)
@@ -341,22 +351,58 @@ export default function VideoPlayer({
   }
 
   const handleTogglePlay = async (e: React.MouseEvent) => {
+    // #region agent log
+    const logData = {location:'VideoPlayer.tsx:343',message:'handleTogglePlay called',data:{isPlaying,hasVideo:!!videoRef.current,videoPaused:videoRef.current?.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+    console.log('[DEBUG]', logData);
+    fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+    // #endregion
     e.stopPropagation()
-    e.preventDefault()
     const video = videoRef.current
+    // #region agent log
+    const logData2 = {location:'VideoPlayer.tsx:346',message:'Before play/pause check',data:{isPlaying,videoPaused:video?.paused,videoReadyState:video?.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+    console.log('[DEBUG]', logData2);
+    fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+    // #endregion
     if (video) {
-      // Check actual video state, not React state
-      if (video.paused) {
+      // Use isPlaying state, not video.paused (matches VideoPreviewPlayer pattern)
+      if (isPlaying) {
+        // #region agent log
+        const logData3 = {location:'VideoPlayer.tsx:349',message:'Calling video.pause()',data:{isPlaying,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+        console.log('[DEBUG]', logData3);
+        fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+        // #endregion
+        video.pause()
+        setIsPlaying(false) // Set state immediately
+        // #region agent log
+        const logData4 = {location:'VideoPlayer.tsx:350',message:'After pause call',data:{isPlaying:false,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+        console.log('[DEBUG]', logData4);
+        fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+        // #endregion
+      } else {
         try {
+          // #region agent log
+          const logData5 = {location:'VideoPlayer.tsx:353',message:'Calling video.play()',data:{isPlaying,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+          console.log('[DEBUG]', logData5);
+          fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+          // #endregion
           await video.play()
-          // State will be updated by event handlers
+          setIsPlaying(true) // Set state immediately
+          // #region agent log
+          const logData6 = {location:'VideoPlayer.tsx:354',message:'After play call',data:{isPlaying:true,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+          console.log('[DEBUG]', logData6);
+          fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+          // #endregion
         } catch (error) {
+          // #region agent log
+          const logData7 = {location:'VideoPlayer.tsx:356',message:'Play error',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+          console.log('[DEBUG]', logData7);
+          fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData7)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+          // #endregion
           console.error("Error playing video:", error)
         }
-      } else {
-        video.pause()
-        // State will be updated by event handlers
       }
+    } else {
+      setIsPlaying(!isPlaying)
     }
     
     // Show controls on interaction and reset timeout
@@ -364,7 +410,8 @@ export default function VideoPlayer({
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current)
     }
-    if (video && !video.paused) {
+    const videoForTimeout = videoRef.current
+    if (videoForTimeout && !videoForTimeout.paused) {
       controlsTimeoutRef.current = setTimeout(() => {
         setShowControls(false)
       }, 5000)
@@ -484,6 +531,11 @@ export default function VideoPlayer({
   const showPlayButton = !isPlaying && showControls
   const showPauseButton = isPlaying && showControls
   const showOverlay = showPlayButton || showPauseButton
+  // #region agent log
+  const logData12 = {location:'VideoPlayer.tsx:515',message:'Render state',data:{isPlaying,showControls,showPlayButton,showPauseButton,showOverlay,videoPaused:videoRef.current?.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'};
+  console.log('[DEBUG]', logData12);
+  fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData12)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+  // #endregion
 
   return (
     <div 
@@ -537,7 +589,14 @@ export default function VideoPlayer({
           }, 5000)
         }
       }}
-      onClick={handleTogglePlay}
+      onClick={(e) => {
+        // #region agent log
+        const logData11 = {location:'VideoPlayer.tsx:569',message:'Container onClick (hover overlay)',data:{isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+        console.log('[DEBUG]', logData11);
+        fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData11)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+        // #endregion
+        handleTogglePlay(e)
+      }}
     >
       <video
         key={`lesson-${lessonId}`}
@@ -552,13 +611,13 @@ export default function VideoPlayer({
       />
       
       {showOverlay && (
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center pointer-events-none">
           {showPauseButton ? (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
               <Pause className="h-10 w-10 fill-current" />
             </div>
           ) : (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
               <Play className="h-10 w-10 fill-current" />
             </div>
           )}
@@ -616,8 +675,12 @@ export default function VideoPlayer({
               variant="ghost"
               size="icon"
               onClick={(e) => {
+                // #region agent log
+                const logData10 = {location:'VideoPlayer.tsx:647',message:'Control bar button clicked',data:{isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
+                console.log('[DEBUG]', logData10);
+                fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData10)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
+                // #endregion
                 e.stopPropagation()
-                e.preventDefault()
                 handleTogglePlay(e)
               }}
               className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
