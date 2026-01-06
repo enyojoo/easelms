@@ -339,6 +339,16 @@ export async function GET(
             }
           }
           
+          // Only include quiz questions if quiz is enabled
+          // If disabled, set quiz_questions to empty array to hide from learners
+          if (!quizSettings.enabled) {
+            quiz_questions = []
+            console.log("Course API: Quiz disabled for lesson, hiding from learners", {
+              lessonId: lesson.id,
+              lessonTitle: lesson.title,
+            })
+          }
+          
           // Handle quiz shuffling if enabled
           if (quizSettings.shuffleQuiz && quizSettings.enabled && quiz_questions.length > 0) {
             try {

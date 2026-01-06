@@ -166,7 +166,7 @@ export default function AdminCourseLearningPage() {
   const handleLessonComplete = async () => {
     if (!course || completedLessons.includes(currentLessonIndex)) {
       const currentLesson = course.lessons[currentLessonIndex]
-      if (currentLesson?.quiz_questions && currentLesson.quiz_questions.length > 0) {
+      if (currentLesson?.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false) {
         setActiveTab("quiz")
       } else if (currentLesson?.resources && currentLesson.resources.length > 0) {
         setActiveTab("resources")
@@ -349,7 +349,7 @@ export default function AdminCourseLearningPage() {
       }
       
       // Navigate to next available tab: quiz -> resources -> next lesson
-      const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
+      const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false
       const hasResources = currentLesson.resources && currentLesson.resources.length > 0
       
       if (hasQuiz) {
@@ -477,7 +477,7 @@ export default function AdminCourseLearningPage() {
                 const hasVideo = !!(currentLesson as any).url
                 const hasText = !!((currentLesson as any).html || (currentLesson as any).text)
                 const isMixed = lessonType === "mixed" && hasVideo && hasText
-                const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0
+                const hasQuiz = currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false
                 const hasResources = currentLesson.resources && currentLesson.resources.length > 0
 
                 // Determine which tabs to show based on lesson type
@@ -570,7 +570,7 @@ export default function AdminCourseLearningPage() {
                 )
               })()}
 
-              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
+              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
                   <ScrollArea className="w-full h-full flex-1 min-h-0">
                     <div className="p-3 sm:p-4 md:p-6">

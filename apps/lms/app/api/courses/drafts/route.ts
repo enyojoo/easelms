@@ -368,27 +368,24 @@ export async function POST(request: Request) {
           console.error(`Error saving quiz settings for lesson ${actualLessonId}:`, settingsError)
         }
 
-        // If quiz is disabled OR has no questions, delete all existing questions
-        if (!quizEnabled || !hasQuestions) {
-          // Delete all existing questions for this lesson
-          if (existingQuestionIds.size > 0) {
-            const { error: deleteAllError } = await dbClient
-              .from("quiz_questions")
-              .delete()
-              .eq("lesson_id", actualLessonId)
-            
-            if (deleteAllError) {
-              console.error(`Error deleting all questions for disabled quiz (lesson ${actualLessonId}):`, deleteAllError)
-            } else {
-              console.log(`Successfully deleted all ${existingQuestionIds.size} questions for disabled quiz (lesson ${actualLessonId})`)
-            }
-          }
-          // Update settings to disabled
+        // If quiz has no questions, we still need to save settings (but keep existing questions)
+        // Only delete questions if they're explicitly removed from the array, not when quiz is disabled
+        if (!hasQuestions) {
+          // Update settings to disabled (but keep questions in database)
           await dbClient
             .from("quiz_settings")
             .update({ enabled: false, updated_at: new Date().toISOString() })
             .eq("lesson_id", actualLessonId)
-          continue
+          
+          // If there are no questions in the array but there are questions in DB,
+          // we should still process deletions below (questions were explicitly removed)
+          // But if quiz is just disabled (hasQuestions = false but questions exist in DB),
+          // we should NOT delete them - just continue to save settings
+          if (existingQuestionIds.size === 0) {
+            // No questions in DB and no questions in array - nothing to do
+            continue
+          }
+          // Otherwise, continue to deletion logic below to handle explicitly removed questions
         }
 
         // Separate questions into updates and inserts

@@ -1104,7 +1104,7 @@ export default function CourseLearningPage() {
                 )
               })()}
 
-              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && (
+              {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <div className="w-full h-full overflow-y-auto">
                     <div className="p-3 sm:p-4 md:p-6">
