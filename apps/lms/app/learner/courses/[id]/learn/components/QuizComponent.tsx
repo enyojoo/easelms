@@ -762,7 +762,6 @@ export default function QuizComponent({
   }
 
   const question = questions[currentQuestion]
-  const maxAttempts = quiz.maxAttempts || 3
   const totalPoints = calculateTotalPoints()
   const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
 
