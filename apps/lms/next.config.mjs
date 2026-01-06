@@ -6,6 +6,17 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Ensure PDFKit fonts are included in the Vercel serverless bundle
+  // This tells Vercel to include these files in the serverless function bundle
+  // The fonts are copied to lib/certificates/fonts during postinstall
+  // and also included from node_modules as a fallback
+  outputFileTracingIncludes: {
+    '/api/certificates/**': [
+      './lib/certificates/fonts/**/*.afm',
+      './node_modules/pdfkit/js/data/**/*.afm',
+      '../../node_modules/pdfkit/js/data/**/*.afm',
+    ],
+  },
 }
 
 export default nextConfig

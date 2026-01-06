@@ -1,5 +1,9 @@
+// Import font patch before PDFKit to ensure fonts are patched
+import "./pdfkit-font-patch"
 import PDFDocument from "pdfkit"
 import { Readable } from "stream"
+import path from "path"
+import fs from "fs"
 
 interface CertificateData {
   certificateNumber: string
@@ -16,6 +20,34 @@ interface CertificateData {
   signatureName?: string // Name of the signer (e.g., "John Doe")
   signatureTitle?: string // Title of the signer (e.g., "Director of Education")
   additionalText?: string // Additional text to display on certificate
+}
+
+// Helper function to get the font directory path
+// Works in both local development and Vercel serverless environments
+function getFontDirectory(): string {
+  // Try multiple possible locations for fonts
+  const possiblePaths = [
+    // Local fonts directory (for development and bundled in production)
+    path.join(process.cwd(), "lib/certificates/fonts"),
+    // Next.js build output (for Vercel serverless)
+    path.join(process.cwd(), ".next/server/app/lib/certificates/fonts"),
+    // Fallback to node_modules (if fonts are available there)
+    path.join(process.cwd(), "node_modules/pdfkit/js/data"),
+    // Alternative node_modules path (monorepo structure)
+    path.join(process.cwd(), "../../node_modules/pdfkit/js/data"),
+  ]
+
+  for (const fontPath of possiblePaths) {
+    if (fs.existsSync(fontPath)) {
+      const fontFiles = fs.readdirSync(fontPath).filter(f => f.endsWith('.afm'))
+      if (fontFiles.length > 0) {
+        return fontPath
+      }
+    }
+  }
+
+  // Default fallback - PDFKit expects fonts here
+  return path.join(process.cwd(), "node_modules/pdfkit/js/data")
 }
 
 // Helper function to fetch image from URL or data URL and return as buffer
@@ -41,9 +73,14 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
 export async function generateCertificatePDF(data: CertificateData): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
+      // PDFKit looks for fonts in node_modules/pdfkit/js/data by default
+      // For Vercel, we've configured outputFileTracingIncludes to ensure
+      // these fonts are included in the serverless bundle
+      // The fonts are also copied to lib/certificates/fonts as a backup
+      
       // Initialize PDFDocument
-      // Note: PDFKit requires font files to be available. In serverless environments,
-      // ensure pdfkit font files are included in the deployment (node_modules/pdfkit/js/data/*.afm)
+      // PDFKit will automatically find fonts in node_modules/pdfkit/js/data
+      // which should be included in the Vercel deployment bundle
       const doc = new PDFDocument({
         size: "LETTER",
         layout: "landscape",
