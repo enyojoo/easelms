@@ -259,6 +259,17 @@ export function useAutoSave<T>({
           frontendContent.text = textContent
         }
 
+        // Ensure quiz questions preserve their database IDs
+        const quizQuestions = (lesson.quiz?.questions || []).map((q: any) => {
+          // Preserve the database ID if it exists (numeric string)
+          // If it's a temporary ID (starts with "q-"), keep it as is
+          const questionId = q.id?.toString() || `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          return {
+            ...q,
+            id: questionId, // Preserve database ID or use temporary ID
+          }
+        })
+
         return {
           id: lesson.id?.toString() || `lesson-${Date.now()}`,
           title: lesson.title || "",
@@ -267,7 +278,10 @@ export function useAutoSave<T>({
           // Resources and quiz come from normalized tables (via API)
           resources: lesson.resources || [],
           settings: settings,
-          quiz: lesson.quiz || null, // Quiz settings from quiz_settings table
+          quiz: lesson.quiz ? {
+            ...lesson.quiz,
+            questions: quizQuestions,
+          } : null, // Quiz settings from quiz_settings table
           estimatedDuration: estimatedDuration,
         }
       }),

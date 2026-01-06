@@ -330,8 +330,10 @@ export async function POST(request: Request) {
           continue
         }
 
-        // Prepare questions to insert
+        // Separate questions into updates and inserts
+        const questionsToUpdate: any[] = []
         const questionsToInsert: any[] = []
+        const currentQuestionIds = new Set<number>()
 
         quiz.questions.forEach((question: any, index: number) => {
           // Extract question data based on type
@@ -374,22 +376,42 @@ export async function POST(request: Request) {
             order_index: index,
           }
 
-          // Check if question has a database ID (from quiz_questions table)
-          // Question IDs from frontend are temporary strings, so we always insert new
-          // unless we can match by some criteria (for now, we'll insert new and clean up old)
-          questionsToInsert.push(questionRecord)
+          // Check if question has a real database ID (numeric, not temporary like "q-123456-abc")
+          const questionId = question.id?.toString()
+          // Real database IDs are numeric strings, temporary IDs start with "q-" or contain non-numeric characters
+          const isRealDatabaseId = questionId && 
+            !questionId.startsWith("q-") && 
+            !isNaN(Number(questionId)) && 
+            Number(questionId) > 0 &&
+            existingQuestionIds.has(Number(questionId))
+
+          if (isRealDatabaseId) {
+            // Update existing question
+            questionsToUpdate.push({
+              id: Number(questionId),
+              ...questionRecord,
+            })
+            currentQuestionIds.add(Number(questionId))
+          } else {
+            // Insert new question
+            questionsToInsert.push(questionRecord)
+          }
         })
 
-        // Delete existing questions for this lesson (we'll recreate them)
-        if (existingQuestionIds.size > 0) {
-          const { error: deleteError } = await dbClient
-            .from("quiz_questions")
-            .delete()
-            .eq("lesson_id", actualLessonId)
+        // Update existing questions
+        if (questionsToUpdate.length > 0) {
+          for (const questionUpdate of questionsToUpdate) {
+            const { id, ...updateData } = questionUpdate
+            const { error: updateError } = await dbClient
+              .from("quiz_questions")
+              .update(updateData)
+              .eq("id", id)
 
-          if (deleteError) {
-            console.error(`Error deleting questions for lesson ${actualLessonId}:`, deleteError)
+            if (updateError) {
+              console.error(`Error updating question ${id}:`, updateError)
+            }
           }
+          console.log(`Successfully updated ${questionsToUpdate.length} questions for lesson ${actualLessonId}`)
         }
 
         // Insert new questions
@@ -401,7 +423,23 @@ export async function POST(request: Request) {
           if (insertError) {
             console.error(`Error inserting questions for lesson ${actualLessonId}:`, insertError)
           } else {
-            console.log(`Successfully saved ${questionsToInsert.length} questions for lesson ${actualLessonId}`)
+            console.log(`Successfully inserted ${questionsToInsert.length} new questions for lesson ${actualLessonId}`)
+          }
+        }
+
+        // Delete questions that exist in database but not in current questions array
+        const questionsToDelete = Array.from(existingQuestionIds).filter(id => !currentQuestionIds.has(id))
+        if (questionsToDelete.length > 0) {
+          const { error: deleteError } = await dbClient
+            .from("quiz_questions")
+            .delete()
+            .eq("lesson_id", actualLessonId)
+            .in("id", questionsToDelete)
+
+          if (deleteError) {
+            console.error(`Error deleting removed questions for lesson ${actualLessonId}:`, deleteError)
+          } else {
+            console.log(`Successfully deleted ${questionsToDelete.length} removed questions for lesson ${actualLessonId}`)
           }
         }
       }
@@ -795,7 +833,26 @@ export async function GET(request: Request) {
             difficulty: q.difficulty || null,
             timeLimit: q.time_limit || null,
             imageUrl: q.image_url || null,
-            ...questionData, // Include type-specific data
+            // Include type-specific data from question_data
+            // This includes: options, correctOption, correctAnswer, correctAnswers, etc.
+            ...questionData,
+          }
+          
+          // Ensure required fields exist for each question type
+          if (question.type === "multiple-choice" && !question.options) {
+            question.options = []
+          }
+          if (question.type === "multiple-choice" && question.correctOption === undefined) {
+            question.correctOption = 0
+          }
+          if (question.type === "true-false" && question.correctAnswer === undefined) {
+            question.correctAnswer = true
+          }
+          if (question.type === "fill-blank" && !question.correctAnswers) {
+            question.correctAnswers = []
+          }
+          if (question.type === "short-answer" && !question.correctKeywords) {
+            question.correctKeywords = []
           }
           
           quizQuestionsByLesson.get(q.lesson_id)!.push(question)
@@ -823,12 +880,33 @@ export async function GET(request: Request) {
         const resources = resourcesByLesson.get(lesson.id) || []
         const quizSettings = quizSettingsByLesson.get(lesson.id)
         const quizQuestions = quizQuestionsByLesson.get(lesson.id) || []
+        
+        // Log for debugging - helps verify data is loaded correctly
+        console.log(`Loading lesson ${lesson.id}:`, {
+          title: lesson.title,
+          hasVideoUrl: !!videoUrl,
+          hasTextContent: !!textContent,
+          resourcesCount: resources.length,
+          quizQuestionsCount: quizQuestions.length,
+          hasQuizSettings: !!quizSettings,
+        })
 
         // Combine quiz settings and questions into quiz object
-        const quiz = quizSettings ? {
-          ...quizSettings,
+        // If there are questions but no settings, create default settings
+        // If there are no questions, return null (quiz disabled)
+        const quiz = quizQuestions.length > 0 ? {
+          enabled: quizSettings?.enabled ?? (quizQuestions.length > 0),
+          shuffleQuiz: quizSettings?.shuffleQuiz ?? false,
+          maxAttempts: quizSettings?.maxAttempts ?? 3,
+          showCorrectAnswers: quizSettings?.showCorrectAnswers ?? true,
+          allowMultipleAttempts: quizSettings?.allowMultipleAttempts ?? true,
+          timeLimit: quizSettings?.timeLimit ?? null,
+          passingScore: quizSettings?.passingScore ?? null,
           questions: quizQuestions,
-        } : null
+        } : (quizSettings ? {
+          ...quizSettings,
+          questions: [],
+        } : null)
 
         // Build content object for frontend compatibility (but data comes from columns)
         const content: any = {}

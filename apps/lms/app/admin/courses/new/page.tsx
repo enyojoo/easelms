@@ -193,6 +193,17 @@ function NewCourseContent() {
                     frontendContent.text = textContent
                   }
 
+                  // Ensure quiz questions preserve their database IDs
+                  const quizQuestions = (lesson.quiz?.questions || []).map((q: any) => {
+                    // Preserve the database ID if it exists (numeric string)
+                    // If it's a temporary ID (starts with "q-"), keep it as is
+                    const questionId = q.id?.toString() || `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                    return {
+                      ...q,
+                      id: questionId, // Preserve database ID or use temporary ID
+                    }
+                  })
+
                   return {
                     id: lesson.id?.toString() || `lesson-${Date.now()}`,
                     title: lesson.title || "",
@@ -203,7 +214,7 @@ function NewCourseContent() {
                     settings: settings,
                     quiz: lesson.quiz ? {
                       enabled: lesson.quiz.enabled ?? false,
-                      questions: lesson.quiz.questions || [],
+                      questions: quizQuestions,
                       showCorrectAnswers: lesson.quiz.showCorrectAnswers ?? false,
                       allowMultipleAttempts: lesson.quiz.allowMultipleAttempts ?? false,
                       maxAttempts: lesson.quiz.maxAttempts ?? 3,
@@ -249,6 +260,15 @@ function NewCourseContent() {
               })
               // Ensure currentCourseId is set so auto-save uses the correct localStorage key
               setCurrentCourseId(editCourseId)
+              
+              // Clear any stale localStorage data for this course to ensure we use fresh database data
+              // The auto-save hook will create a new localStorage entry with the fresh data
+              try {
+                const storageKey = `course-draft-${editCourseId}`
+                localStorage.removeItem(storageKey)
+              } catch (error) {
+                console.warn("Failed to clear localStorage:", error)
+              }
             } else {
               console.warn("Course data not found in response:", result)
             }
