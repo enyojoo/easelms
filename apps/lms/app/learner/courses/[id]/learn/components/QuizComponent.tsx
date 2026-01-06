@@ -143,11 +143,16 @@ export default function QuizComponent({
       return
     }
     
+    // Skip if quiz is already showing results (completed) - don't reset during submission
+    if (showResults) {
+      return
+    }
+    
     // Quiz hasn't been completed yet - reset to initial state
     setCurrentQuestion(0)
     setSelectedAnswers([])
     setShowResults(false)
-  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview])
+  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview, showResults])
 
   const handleAnswerSelect = (answerIndex: number) => {
     const newSelectedAnswers = [...selectedAnswers]
@@ -238,7 +243,12 @@ export default function QuizComponent({
       // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
       
-      // Submit quiz results to API
+      // Show results screen IMMEDIATELY to prevent flash of question
+      // This ensures smooth UX - user sees results right away while submission happens in background
+      setShowResults(true)
+      setAttemptCount((prev) => prev + 1)
+      
+      // Submit quiz results to API (in background - don't block UI)
       try {
         await submitQuizResults()
       } catch (error: any) {
@@ -252,10 +262,6 @@ export default function QuizComponent({
         setSubmissionError(formatErrorMessage(error, "Failed to save quiz results, but your answers are recorded locally"))
         // Continue to show results even if submission failed
       }
-      
-      // Always show results screen after quiz completion (even if submission failed)
-      setShowResults(true)
-      setAttemptCount((prev) => prev + 1)
       
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
