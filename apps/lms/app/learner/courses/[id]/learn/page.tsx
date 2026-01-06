@@ -331,7 +331,12 @@ export default function CourseLearningPage() {
 
         await saveProgressMutation.mutateAsync(progressPayload)
       } catch (error) {
-        console.error("Error saving progress:", error)
+        logError("Error saving progress", error, {
+          component: "CourseLearningPage",
+          action: "saveProgress",
+          lessonId,
+          courseId: parseInt(id),
+        })
       }
     }, 1000) // Debounce by 1 second
   }
@@ -473,7 +478,12 @@ export default function CourseLearningPage() {
         }
         await saveProgressMutation.mutateAsync(progressPayload)
       } catch (error) {
-        console.error("Error saving progress:", error)
+        logError("Error saving progress", error, {
+          component: "CourseLearningPage",
+          action: "handleVideoComplete",
+          lessonId: lesson.id,
+          courseId: parseInt(id),
+        })
       }
       // Navigate to quiz tab (for video-only lessons after video completes)
       setActiveTab("quiz")
@@ -495,7 +505,12 @@ export default function CourseLearningPage() {
         // Refetch progress cache to refresh the UI
         await queryClient.refetchQueries({ queryKey: ["progress", id] })
       } catch (error) {
-        console.error("Error saving lesson completion:", error)
+        logError("Error saving lesson completion", error, {
+          component: "CourseLearningPage",
+          action: "proceedWithLessonCompletion",
+          lessonId: lesson.id,
+          courseId: parseInt(id),
+        })
       }
     }
     // No auto-navigation - user navigates manually via buttons/tabs
@@ -513,7 +528,11 @@ export default function CourseLearningPage() {
     
     // For mixed lessons, this should not be called directly - use handleVideoComplete/handleTextComplete
     if (isMixedLesson) {
-      console.warn("handleLessonComplete called for mixed lesson - this should not happen")
+      logWarning("handleLessonComplete called for mixed lesson - this should not happen", {
+        component: "CourseLearningPage",
+        action: "handleLessonComplete",
+        lessonId: lesson.id,
+      })
       return
     }
 
@@ -523,7 +542,7 @@ export default function CourseLearningPage() {
 
   const clearQuizData = async (lessonId: number) => {
     try {
-      console.log("Clearing quiz data for lesson:", lessonId)
+      logInfo("Clearing quiz data for lesson", { lessonId })
       
       // Immediately remove quiz results for this lesson from cache for instant UI update
       const currentData = queryClient.getQueryData<{ results: any[] }>(["quiz-results", id])
@@ -550,13 +569,10 @@ export default function CourseLearningPage() {
       // Then refetch to get fresh data from server
       await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
       await queryClient.refetchQueries({ queryKey: ["progress", id] })
-      
-      console.log("Quiz data cleared successfully for lesson:", lessonId)
     } catch (error: any) {
-      console.error("Error clearing quiz data:", {
-        error,
-        message: error?.message,
-        stack: error?.stack,
+      logError("Error clearing quiz data", error, {
+        component: "CourseLearningPage",
+        action: "clearQuizData",
         lessonId,
         courseId: id,
       })
@@ -591,14 +607,11 @@ export default function CourseLearningPage() {
       let totalPoints = 0
       
       // Calculate points earned and total points
-      console.log("Score calculation - Answers and questions:")
       for (let i = 0; i < answers.length; i++) {
         const question = questions[i]
         const userAnswer = answers[i]
         const isCorrect = question && userAnswer === question.correctAnswer
         const questionPoints = (question as any)?.points || 1
-        
-        console.log(`Q${i+1}: User answer=${userAnswer}, Correct answer=${question?.correctAnswer}, Match=${isCorrect}, Points=${questionPoints}`)
         
         totalPoints += questionPoints
         if (isCorrect) {
@@ -610,9 +623,15 @@ export default function CourseLearningPage() {
       const minimumScore = course?.settings?.minimumQuizScore || 50
       quizPassed = scorePercentage >= minimumScore
 
-      console.log(`Quiz score: ${scorePercentage.toFixed(0)}% (${pointsEarned}/${totalPoints} points), Minimum: ${minimumScore}%, Passed: ${quizPassed}`)
+      logInfo("Quiz score calculated", {
+        scorePercentage: scorePercentage.toFixed(0),
+        pointsEarned,
+        totalPoints,
+        minimumScore,
+        passed: quizPassed,
+      })
     } else {
-      console.warn("Cannot calculate score - missing answers or questions", { answers, questions })
+      logWarning("Cannot calculate score - missing answers or questions", { answers, questions })
     }
 
     // Quiz results are saved by QuizComponent via API
@@ -630,29 +649,33 @@ export default function CourseLearningPage() {
         quiz_attempts: attemptCount !== undefined ? attemptCount : null,
       }
 
-      console.log("📤 Saving quiz progress to database:", progressPayload)
       // Save immediately (no debounce) for quiz completion
       await saveProgressMutation.mutateAsync(progressPayload)
-      console.log("✅ Quiz progress saved successfully")
       
       // Use refetchQueries instead of invalidateQueries to avoid race conditions
       // This ensures data is fetched after mutation completes
       await queryClient.refetchQueries({ queryKey: ["progress", id] })
       await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
     } catch (error) {
-      console.error("❌ Error saving quiz progress:", error)
+      logError("Error saving quiz progress", error, {
+        component: "CourseLearningPage",
+        action: "handleQuizComplete",
+        lessonId: lesson.id,
+        courseId: parseInt(id),
+      })
+      toast({
+        title: "Error",
+        description: formatErrorMessage(error, "Failed to save quiz progress"),
+        variant: "destructive",
+      })
     }
 
     // Mark lesson as completed ONLY if quiz was passed
-    console.log(`Checking lesson completion: quizPassed=${quizPassed}, currentLessonIndex=${currentLessonIndex}`)
-    
-    // Don't check completedLessons here as it might be stale during refetch
-    // The progress data will be updated via the mutation and cache invalidation
-    if (quizPassed) {
-      console.log("✅ Lesson marked as completed in course content", { lessonId: lesson.id, currentLessonIndex })
-    } else {
-      console.log("❌ Quiz not passed - lesson will not be marked as completed")
-    }
+    logInfo("Checking lesson completion", {
+      quizPassed,
+      currentLessonIndex,
+      lessonId: lesson.id,
+    })
     
     // Don't auto-navigate - keep user on quiz results screen
   }
@@ -827,9 +850,10 @@ export default function CourseLearningPage() {
   const currentLesson = course.lessons[currentLessonIndex]
   
   if (!currentLesson) {
-    console.error("Learn page: No current lesson found", { 
+    logError("No current lesson found", new Error("Current lesson is undefined"), {
+      component: "CourseLearningPage",
       currentLessonIndex,
-      lessonsCount: course.lessons.length,
+      lessonsCount: course?.lessons?.length || 0,
       lessons: course.lessons
     })
     return (
