@@ -122,7 +122,16 @@ export async function GET(
 
     // Upload PDF to S3
     const filename = `certificate-${certificate.certificate_number}.pdf`
-    const s3Key = getS3StoragePath("certificate", certificate.user_id, filename)
+    const courseId = certificate.course_id
+    const s3Key = getS3StoragePath("certificate", certificate.user_id, filename, undefined, undefined, courseId)
+    
+    console.log("[Certificates API] Uploading PDF to S3:", {
+      certificateId: params.id,
+      courseId,
+      s3Key,
+      filename,
+      bufferSize: pdfBuffer.length,
+    })
     
     try {
       const { key, url } = await uploadFileToS3(
@@ -131,17 +140,35 @@ export async function GET(
         "application/pdf"
       )
 
+      console.log("[Certificates API] PDF uploaded successfully:", { key, url })
+
       // Save PDF URL to database
-      await supabase
+      const { error: updateError } = await supabase
         .from("certificates")
         .update({ certificate_url: url })
         .eq("id", params.id)
+
+      if (updateError) {
+        console.error("[Certificates API] Error updating certificate_url in database:", updateError)
+        logError("Error updating certificate_url in database", updateError, {
+          component: "certificates/[id]/download/route",
+          action: "GET",
+          certificateId: params.id,
+          url,
+        })
+      } else {
+        console.log("[Certificates API] certificate_url updated in database:", url)
+      }
     } catch (uploadError) {
+      console.error("[Certificates API] Error uploading certificate PDF to S3:", uploadError)
       logError("Error uploading certificate PDF to S3", uploadError, {
         component: "certificates/[id]/download/route",
         action: "GET",
         certificateId: params.id,
         userId: certificate.user_id,
+        courseId,
+        s3Key,
+        error: uploadError instanceof Error ? uploadError.message : String(uploadError),
       })
       // Continue to return PDF even if upload fails
     }
