@@ -95,13 +95,15 @@ export default function QuizComponent({
     }
   }, [lessonId, showResultsOnly, initialAttemptCount])
 
-  // Clear retry flag when user starts the quiz (prevents flicker during retry)
+  // Clear retry flag when user actually starts answering questions (not just when they click "Start Quiz")
+  // This prevents flicker - keep flag active until user is actively taking the quiz
   useEffect(() => {
-    if (quizStarted && isRetryingRef.current) {
+    // Only clear retry flag if user has selected at least one answer (actively taking quiz)
+    if (selectedAnswers.length > 0 && isRetryingRef.current) {
       isRetryingRef.current = false
-      logInfo("Retry flag cleared - quiz started", { courseId, lessonId })
+      logInfo("Retry flag cleared - user started answering questions", { courseId, lessonId })
     }
-  }, [quizStarted, courseId, lessonId])
+  }, [selectedAnswers.length, courseId, lessonId])
 
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)

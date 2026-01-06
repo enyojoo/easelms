@@ -40,7 +40,7 @@ export default function VideoPlayer({
   const wasPlayingBeforeFullscreenRef = useRef(false)
   const completedRef = useRef(false)
   const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null)
-
+  
   // Storage key for video progress
   const progressStorageKey = courseId && lessonId ? `course-${courseId}-lesson-${lessonId}-progress` : null
 
@@ -56,41 +56,6 @@ export default function VideoPlayer({
       video.pause()
     }
   }, [lessonId])
-
-  // Load saved progress (only if videoProgression is enabled)
-  // Note: User wants videos to always start from beginning, so we'll skip loading saved progress
-  // If you want to restore saved progress later, uncomment this code
-  /*
-  useEffect(() => {
-    if (!videoProgression || !progressStorageKey) return
-
-    const video = videoRef.current
-    if (!video) return
-
-    try {
-      const savedProgress = localStorage.getItem(progressStorageKey)
-      if (savedProgress) {
-        const { currentTime: savedTime, duration: savedDuration } = JSON.parse(savedProgress)
-        if (savedTime > 0 && savedDuration > 0) {
-          // Wait for video to be ready
-          const loadProgress = () => {
-            if (video.readyState >= 2) {
-              if (savedTime > 5 && savedTime < savedDuration) {
-                video.currentTime = savedTime
-                setCurrentTime(savedTime)
-              }
-            } else {
-              video.addEventListener('loadeddata', loadProgress, { once: true })
-            }
-          }
-          loadProgress()
-        }
-      }
-    } catch (error) {
-      console.error("Error loading video progress", error)
-    }
-  }, [videoProgression, progressStorageKey, lessonId])
-  */
 
   // Save progress periodically
   useEffect(() => {
@@ -136,17 +101,12 @@ export default function VideoPlayer({
     const handlePlay = () => {
       setIsPlaying(true)
       // Show controls then hide after 5 seconds
+      setShowControls(true)
       if (controlsTimeoutRef.current) {
         clearTimeout(controlsTimeoutRef.current)
-        controlsTimeoutRef.current = null
       }
-      setShowControls(true)
       controlsTimeoutRef.current = setTimeout(() => {
-        const currentVideo = videoRef.current
-        if (currentVideo && !currentVideo.paused) {
-          setShowControls(false)
-        }
-        controlsTimeoutRef.current = null
+        setShowControls(false)
       }, 5000)
     }
 
@@ -175,9 +135,9 @@ export default function VideoPlayer({
         setCurrentTime(current)
         if (dur > 0) {
           setDuration(dur)
-                  // Call progress update callback
-                  if (onProgressUpdate && dur > 0) {
-                    onProgressUpdate((current / dur) * 100)
+          // Call progress update callback
+          if (onProgressUpdate && dur > 0) {
+            onProgressUpdate((current / dur) * 100)
           }
         }
       }
@@ -274,8 +234,9 @@ export default function VideoPlayer({
       video.removeEventListener("loadedmetadata", handleLoadedMetadata)
       video.removeEventListener("canplay", handleCanPlay)
       video.removeEventListener("loadeddata", handleLoadedData)
-      // Don't clear timeout on cleanup - let it run to hide controls
-      // The timeout will check if video is still playing before hiding
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current)
+      }
     }
   }, [autoPlay, isActive, onComplete, onProgressUpdate, isSeeking])
 
@@ -394,27 +355,26 @@ export default function VideoPlayer({
     }
   }
 
-  const handleTogglePlay = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation()
-      e.preventDefault()
-    }
+  const handleTogglePlay = async (e: React.MouseEvent) => {
+    e.stopPropagation()
     const video = videoRef.current
-    if (!video) return
-    
-    try {
+    if (video) {
       if (isPlaying) {
         video.pause()
+        setIsPlaying(false)
       } else {
-        // Ensure video starts from beginning
+        // Always start from beginning
         if (video.currentTime > 0) {
           video.currentTime = 0
           setCurrentTime(0)
         }
-        await video.play()
+        try {
+          await video.play()
+          setIsPlaying(true)
+        } catch (error) {
+          console.error("Error playing video:", error)
+        }
       }
-    } catch (error) {
-      console.error("Error toggling play/pause:", error)
     }
   }
 
@@ -460,8 +420,6 @@ export default function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  // Show play button when not playing and controls are visible
-  // Show pause button when playing and controls are visible
   const showPlayButton = !isPlaying && showControls
   const showPauseButton = isPlaying && showControls
   const showOverlay = showPlayButton || showPauseButton
@@ -472,20 +430,13 @@ export default function VideoPlayer({
       className="relative w-full h-full bg-black overflow-hidden cursor-pointer group"
       onMouseEnter={() => {
         setIsHovered(true)
-        // Show controls on hover when playing (desktop only)
         if (isPlaying) {
+          setShowControls(true)
           if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current)
-            controlsTimeoutRef.current = null
           }
-          setShowControls(true)
-          // Hide again after 5 seconds if still playing
           controlsTimeoutRef.current = setTimeout(() => {
-            const currentVideo = videoRef.current
-            if (currentVideo && !currentVideo.paused) {
-              setShowControls(false)
-            }
-            controlsTimeoutRef.current = null
+            setShowControls(false)
           }, 5000)
         }
       }}
@@ -493,11 +444,10 @@ export default function VideoPlayer({
         setIsHovered(false)
         // Hide controls immediately when mouse leaves if playing
         if (isPlaying) {
+          setShowControls(false)
           if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current)
-            controlsTimeoutRef.current = null
           }
-          setShowControls(false)
         }
       }}
       onTouchStart={() => {
@@ -513,13 +463,7 @@ export default function VideoPlayer({
           }, 5000)
         }
       }}
-      onClick={(e) => {
-        // Only handle click if it's not on the controls
-        const target = e.target as HTMLElement
-        if (!target.closest('.pointer-events-auto')) {
-          handleTogglePlay(e)
-        }
-      }}
+      onClick={handleTogglePlay}
     >
       <video
         key={`lesson-${lessonId}`}
@@ -534,46 +478,15 @@ export default function VideoPlayer({
       />
       
       {showOverlay && (
-        <div 
-          className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center pointer-events-none"
-          style={{ zIndex: 1 }}
-        >
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
           {showPauseButton ? (
-            <button
-              type="button"
-              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto border-0 outline-none focus:outline-none"
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                const video = videoRef.current
-                if (video) {
-                  video.pause()
-                }
-              }}
-            >
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
               <Pause className="h-10 w-10 fill-current" />
-            </button>
+            </div>
           ) : (
-            <button
-              type="button"
-              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg cursor-pointer pointer-events-auto border-0 outline-none focus:outline-none"
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                const video = videoRef.current
-                if (video) {
-                  if (video.currentTime > 0) {
-                    video.currentTime = 0
-                    setCurrentTime(0)
-                  }
-                  video.play().catch((error) => {
-                    console.error("Error playing video:", error)
-                  })
-                }
-              }}
-            >
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
               <Play className="h-10 w-10 fill-current" />
-            </button>
+            </div>
           )}
         </div>
       )}
