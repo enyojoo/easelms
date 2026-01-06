@@ -1,6 +1,8 @@
 /**
  * Quiz Shuffle Utilities
  * Provides seeded shuffling for questions and answers to prevent answer sharing
+ * 
+ * NOTE: This module is server-only and should NOT be imported in client components
  */
 
 /**

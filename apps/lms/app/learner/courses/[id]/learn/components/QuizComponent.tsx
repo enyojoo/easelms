@@ -222,10 +222,12 @@ export default function QuizComponent({
       
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
+      // Wrap in try-catch to prevent errors from breaking the UI
       try {
         onComplete(selectedAnswers, questions, attemptCount + 1)
       } catch (error: any) {
         console.error("Error in onComplete callback:", error)
+        // Don't throw - allow UI to continue showing results
       }
     }
   }
