@@ -20,7 +20,7 @@ import { toast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { useQuizData } from "./hooks/useQuizData"
 import { useCourseProgress } from "./hooks/useCourseProgress"
-import { logError, logInfo, formatErrorMessage, handleApiError } from "./utils/errorHandler"
+import { logError, logInfo, logWarning, formatErrorMessage, handleApiError } from "./utils/errorHandler"
 import ErrorState from "@/components/ErrorState"
 
 interface Course {
