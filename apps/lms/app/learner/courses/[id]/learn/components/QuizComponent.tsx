@@ -551,19 +551,9 @@ export default function QuizComponent({
                   // Get user answer for this question (answers are in shuffled order)
                   const userAnswer = answersToReview[shuffledIndex] !== undefined ? answersToReview[shuffledIndex] : answersToReview[reviewIndex]
                   
-                  // Get correct answer index - need to account for shuffled answer order
-                  let correctAnswerIndex = question.correctAnswer
-                  const questionIdStr = String(question.id || originalIndex)
-                  
-                  // If answers were shuffled, map the correct answer to the shuffled position
-                  if (hasShuffle && answerOrders[questionIdStr] && Array.isArray(answerOrders[questionIdStr])) {
-                    const answerOrder = answerOrders[questionIdStr]
-                    // Find where the original correct answer is in the shuffled order
-                    const shuffledCorrectIndex = answerOrder.indexOf(correctAnswerIndex)
-                    if (shuffledCorrectIndex >= 0) {
-                      correctAnswerIndex = shuffledCorrectIndex
-                    }
-                  }
+                  // Get correct answer index - answers are NOT shuffled, only questions are shuffled
+                  // So we use the original correctAnswer index directly
+                  const correctAnswerIndex = question.correctAnswer
                   
                   const isCorrect = userAnswer !== undefined && userAnswer !== null && userAnswer === correctAnswerIndex
                   
@@ -603,62 +593,44 @@ export default function QuizComponent({
                           </div>
                         )}
                         <div className="space-y-1">
-                          {/* If answers were shuffled, reorder options to match what user saw */}
-                          {(() => {
-                            const answerOrder = hasShuffle && answerOrders[questionIdStr] && Array.isArray(answerOrders[questionIdStr])
-                              ? answerOrders[questionIdStr]
-                              : question.options.map((_, idx) => idx)
+                          {/* Answers are NOT shuffled - only questions are shuffled */}
+                          {question.options.map((option, optIndex) => {
+                            const isUserAnswer = userAnswer === optIndex
+                            const showUserCorrectAnswer = isUserAnswer && isCorrect
+                            const showWrongAnswer = isUserAnswer && !isCorrect
                             
-                            return answerOrder.map((originalOptIndex: number, shuffledOptIndex: number) => {
-                              const option = question.options[originalOptIndex]
-                              const isUserAnswer = userAnswer === shuffledOptIndex
-                              const showUserCorrectAnswer = isUserAnswer && isCorrect
-                              const showWrongAnswer = isUserAnswer && !isCorrect
-                              const isCorrectAnswer = shuffledOptIndex === correctAnswerIndex
-                              
-                              return (
-                                <div
-                                  key={shuffledOptIndex}
-                                  className={`p-3 md:p-4 rounded-lg text-sm md:text-base transition-colors ${
-                                    showUserCorrectAnswer
-                                      ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-500"
-                                      : showWrongAnswer
-                                      ? "bg-red-100 dark:bg-red-900/40 border-2 border-red-500"
-                                      : isCorrectAnswer
-                                      ? "bg-blue-50 dark:bg-blue-950/20 border border-blue-300 dark:border-blue-800"
-                                      : "bg-muted/50 border border-border"
-                                  }`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    {showUserCorrectAnswer && (
-                                      <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                                    )}
-                                    {showWrongAnswer && (
-                                      <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
-                                    )}
-                                    {isCorrectAnswer && !isUserAnswer && (
-                                      <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                                    )}
-                                    <span className="flex-1">{option}</span>
-                                    {isUserAnswer && (
-                                      <Badge variant="secondary" className={`text-xs ${
-                                        showUserCorrectAnswer
-                                          ? "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200"
-                                          : "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
-                                      }`}>
-                                        Your Answer
-                                      </Badge>
-                                    )}
-                                    {isCorrectAnswer && !isUserAnswer && (
-                                      <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                                        Correct Answer
-                                      </Badge>
-                                    )}
-                                  </div>
+                            return (
+                              <div
+                                key={optIndex}
+                                className={`p-3 md:p-4 rounded-lg text-sm md:text-base transition-colors ${
+                                  showUserCorrectAnswer
+                                    ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-500"
+                                    : showWrongAnswer
+                                    ? "bg-red-100 dark:bg-red-900/40 border-2 border-red-500"
+                                    : "bg-muted/50 border border-border"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  {showUserCorrectAnswer && (
+                                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                  )}
+                                  {showWrongAnswer && (
+                                    <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                                  )}
+                                  <span className="flex-1">{option}</span>
+                                  {isUserAnswer && (
+                                    <Badge variant="secondary" className={`text-xs ${
+                                      showUserCorrectAnswer
+                                        ? "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-200"
+                                        : "bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200"
+                                    }`}>
+                                      Your Answer
+                                    </Badge>
+                                  )}
                                 </div>
-                              )
-                            })
-                          })()}
+                              </div>
+                            )
+                          })}
                         </div>
                       </CardContent>
                     </Card>

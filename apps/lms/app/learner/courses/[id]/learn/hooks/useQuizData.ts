@@ -66,8 +66,8 @@ export function useQuizData({ quizResultsData, progressData, course }: UseQuizDa
             const shuffledAnswerOrders = hasShuffle ? (firstResult.shuffled_answer_orders || {}) : {}
             
             if (hasShuffle && shuffledQuestionOrder) {
-              // Results are shuffled - map back to shuffled order for display
-              // Questions from API are already in shuffled order, so we match by position
+              // Questions are shuffled - map answers to shuffled question order
+              // NOTE: Answers themselves are NOT shuffled, only question order is shuffled
               const answersArray: (number | null)[] = new Array(shuffledQuestionOrder.length).fill(null)
               
               // Create a map of question ID to result for quick lookup
@@ -79,26 +79,16 @@ export function useQuizData({ quizResultsData, progressData, course }: UseQuizDa
                 }
               })
               
-              // Map results to shuffled positions (matching the order questions appear in)
+              // Map results to shuffled question positions
+              // Answers stay in original order (not shuffled)
               shuffledQuestionOrder.forEach((originalQuestionId: number, shuffledIndex: number) => {
                 const questionIdStr = String(originalQuestionId)
                 const result = resultMap.get(questionIdStr)
                 
                 if (result) {
+                  // Answer index is in original order (answers are NOT shuffled)
                   const originalAnswer = result.user_answer
-                  const answerOrder = shuffledAnswerOrders[questionIdStr]
-                  
-                  // Map answer from original position back to shuffled position
-                  let shuffledAnswer = originalAnswer
-                  if (answerOrder && Array.isArray(answerOrder) && answerOrder.length > 0) {
-                    // Find the shuffled index of the original answer
-                    shuffledAnswer = answerOrder.indexOf(originalAnswer)
-                    if (shuffledAnswer < 0) {
-                      shuffledAnswer = originalAnswer // Fallback if not found
-                    }
-                  }
-                  
-                  const numericAnswer = typeof shuffledAnswer === 'string' ? parseInt(shuffledAnswer) : shuffledAnswer
+                  const numericAnswer = typeof originalAnswer === 'string' ? parseInt(originalAnswer) : originalAnswer
                   if (numericAnswer !== null && !isNaN(numericAnswer)) {
                     answersArray[shuffledIndex] = numericAnswer
                   }
