@@ -359,23 +359,21 @@ export default function VideoPlayer({
 
   const handleTogglePlay = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    e.preventDefault()
     const video = videoRef.current
-    if (!video) return
-    
-    // Check actual video state, not React state
-    if (video.paused) {
-      // Video is paused, play it
-      try {
-        await video.play()
-        // Don't set state here - let the play event handler do it
-      } catch (error) {
-        console.error("Error playing video:", error)
+    if (video) {
+      if (isPlaying) {
+        video.pause()
+        setIsPlaying(false)
+      } else {
+        try {
+          await video.play()
+          setIsPlaying(true)
+        } catch (error) {
+          console.error("Error playing video:", error)
+        }
       }
     } else {
-      // Video is playing, pause it
-      video.pause()
-      // Don't set state here - let the pause event handler do it
+      setIsPlaying(!isPlaying)
     }
   }
 
@@ -473,10 +471,15 @@ export default function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
+  const showPlayButton = !isPlaying && showControls
+  const showPauseButton = isPlaying && showControls
+  const showOverlay = showPlayButton || showPauseButton
+
   return (
     <div 
       ref={containerRef}
       className="relative w-full h-full bg-black overflow-hidden cursor-pointer group"
+      onClick={handleTogglePlay}
       onMouseEnter={() => {
         setIsHovered(true)
         if (isPlaying) {
@@ -524,6 +527,20 @@ export default function VideoPlayer({
         crossOrigin="anonymous"
         loop={false}
       />
+      
+      {showOverlay && (
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+          {showPauseButton ? (
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+              <Pause className="h-10 w-10 fill-current" />
+            </div>
+          ) : (
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+              <Play className="h-10 w-10 fill-current" />
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Progress bar and controls at the bottom */}
       {duration > 0 && (
