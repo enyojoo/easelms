@@ -460,31 +460,26 @@ export async function GET(
                   let attemptId: number | null = null
                   
                   if (existingAttempt) {
-                    // If there's a completed attempt, we need to create a new incomplete attempt for retry
-                    // But we'll use the same attempt_number until "Finish Quiz" is clicked
-                    // The attempt_number will only increment when the quiz is actually submitted
+                    // If there's a completed attempt, increment for retry
+                    // If incomplete, reuse it
                     if (existingAttempt.completed_at) {
-                      // For retry after completion, reuse the same attempt_number
-                      // The attempt_number will be incremented when "Finish Quiz" is clicked
-                      attemptNumber = existingAttempt.attempt_number || 1
+                      attemptNumber = (existingAttempt.attempt_number || 0) + 1
                     } else {
-                      // Reuse incomplete attempt - this attempt was started but not finished
+                      // Reuse incomplete attempt
                       attemptNumber = existingAttempt.attempt_number || 1
                       attemptId = existingAttempt.id
                     }
                   }
                   
-                  // Generate seed for shuffling using the attempt number
-                  // Note: For retries, we use the same attempt_number until submission
+                  // Generate seed for shuffling
                   const seed = generateSeed(user.id, lesson.id, attemptNumber)
                   
                   // Shuffle questions only (answers stay in original order)
                   const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
                   
-                  // Update existing incomplete attempt or create a new incomplete attempt for retry
-                  // The attempt_number will only increment when "Finish Quiz" is clicked (in quiz-results POST)
+                  // Create or update quiz attempt record
                   if (existingAttempt && !existingAttempt.completed_at && attemptId) {
-                    // Update existing incomplete attempt with new shuffle order
+                    // Update existing incomplete attempt
                     const { data: updatedAttempt, error: updateError } = await supabaseClientForShuffle
                       .from("quiz_attempts")
                       .update({
@@ -501,7 +496,7 @@ export async function GET(
                         component: "courses/[id]/route",
                         action: "GET",
                         lessonId: lesson.id,
-                        attemptId: existingAttempt.id,
+                        attemptId: attempt.id,
                       })
                       throw updateError
                     }
@@ -510,47 +505,17 @@ export async function GET(
                       attemptId = updatedAttempt.id
                       attemptNumber = updatedAttempt.attempt_number
                     }
-                  } else if (existingAttempt && existingAttempt.completed_at) {
-                    // Retry after completion - create a new incomplete attempt with the same attempt_number
-                    // The attempt_number will be incremented when "Finish Quiz" is clicked
-                    const { data: newAttempt, error: insertError } = await supabaseClientForShuffle
-                      .from("quiz_attempts")
-                      .insert({
-                        user_id: user.id,
-                        lesson_id: lesson.id,
-                        course_id: courseIdForShuffle,
-                        attempt_number: attemptNumber, // Same number until submission
-                        question_order: questionOrder,
-                        answer_orders: answerOrders,
-                        completed_at: null, // Incomplete until "Finish Quiz" is clicked
-                      })
-                      .select()
-                      .single()
-                    
-                    if (insertError) {
-                      logError("Error creating quiz attempt for retry", insertError, {
-                        component: "courses/[id]/route",
-                        action: "GET",
-                        lessonId: lesson.id,
-                      })
-                      throw insertError
-                    }
-                    
-                    if (newAttempt) {
-                      attemptId = newAttempt.id
-                    }
                   } else {
-                    // First attempt - create incomplete attempt
+                    // Create new attempt (for retry or first attempt)
                     const { data: newAttempt, error: insertError } = await supabaseClientForShuffle
                       .from("quiz_attempts")
                       .insert({
                         user_id: user.id,
                         lesson_id: lesson.id,
                         course_id: courseIdForShuffle,
-                        attempt_number: 1,
+                        attempt_number: attemptNumber,
                         question_order: questionOrder,
                         answer_orders: answerOrders,
-                        completed_at: null, // Incomplete until "Finish Quiz" is clicked
                       })
                       .select()
                       .single()
@@ -566,7 +531,6 @@ export async function GET(
                     
                     if (newAttempt) {
                       attemptId = newAttempt.id
-                      attemptNumber = 1
                     }
                   }
                 

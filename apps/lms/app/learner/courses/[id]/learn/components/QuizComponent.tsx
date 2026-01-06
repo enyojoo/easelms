@@ -123,13 +123,13 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
+    // If we just submitted and results are now showing, clear the flag
+    if (justSubmittedRef.current && showResults) {
+      justSubmittedRef.current = false
+    }
+    
     // If we just submitted, don't reset anything - keep showing results
-    // Only clear justSubmittedRef when showResultsOnly becomes true (quiz confirmed completed in database)
     if (justSubmittedRef.current) {
-      // Clear the flag only when quiz is confirmed completed in database
-      if (showResultsOnly) {
-        justSubmittedRef.current = false
-      }
       // Ensure results are shown
       if (!showResults) {
         setShowResults(true)
@@ -299,9 +299,10 @@ export default function QuizComponent({
         // IMPORTANT: Set showResults to true BEFORE setting submitting to false
         // This prevents the quiz info screen from briefly showing
         setShowResults(true)
-        // Don't update attempt count here - wait for database query to refetch
-        // The attempt query will be invalidated and refetched, and currentAttemptNumber will update
-        // The attempt count will be calculated from currentAttemptNumber in the results screen
+        // Update attempt count - use database attempt number if available, otherwise increment
+        // Note: The database query will be invalidated and refetched, so currentAttemptNumber will update
+        const nextAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber + 1 : (attemptCount > 0 ? attemptCount + 1 : 1)
+        setAttemptCount(nextAttemptNumber)
         // Set submitting to false - showResults is already true, so results screen will show
         setSubmitting(false)
       }
@@ -466,12 +467,10 @@ export default function QuizComponent({
     const maxAttempts = quiz.maxAttempts || 3
     // Calculate minimum points needed - must be calculated before use in JSX
     const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
-    // Use database attempt number if available (prioritize this as it's the source of truth)
-    // Otherwise use initialAttemptCount (from props) or local attemptCount as fallback
-    // After submission, currentAttemptNumber will be updated from the refetched query
+    // Use database attempt number if available, otherwise use initialAttemptCount or local attemptCount
     const currentAttemptCount = currentAttemptNumber > 0 
       ? currentAttemptNumber 
-      : (showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : (attemptCount > 0 ? attemptCount : 1))
+      : (showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : attemptCount)
     // Cannot retry if:
     // - Quiz is disabled
     // - Multiple attempts are not allowed
@@ -767,14 +766,12 @@ export default function QuizComponent({
   // - showResultsOnly is true (quiz was already completed), unless we're retrying
   // - We just submitted (to prevent flicker after submission)
   // - showResults is true (results are being shown)
-  // - submitting is true (quiz is being submitted)
   if ((!showResultsOnly || isRetryingRef.current) && 
       !justSubmittedRef.current && 
       !quizStarted && 
       currentQuestion === 0 && 
       selectedAnswers.length === 0 && 
-      !showResults &&
-      !submitting) {
+      !showResults) {
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
         <Card className="border-primary/20 bg-primary/5">
