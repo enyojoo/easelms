@@ -527,22 +527,20 @@ export default function VideoPlayer({
         playsInline
         crossOrigin="anonymous"
         loop={false}
+        onClick={(e) => {
+          e.stopPropagation()
+          handleTogglePlay(e as any)
+        }}
       />
       
       {showOverlay && (
-        <div 
-          className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center z-10"
-          onClick={(e) => {
-            e.stopPropagation()
-            handleTogglePlay(e)
-          }}
-        >
+        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
           {showPauseButton ? (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
               <Pause className="h-10 w-10 fill-current" />
             </div>
           ) : (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
               <Play className="h-10 w-10 fill-current" />
             </div>
           )}
@@ -555,6 +553,7 @@ export default function VideoPlayer({
           className={`absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 sm:p-3 transition-opacity duration-300 ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
+          style={{ zIndex: 2 }}
           onClick={(e) => {
             e.stopPropagation()
             // Show controls when clicking on controls area
