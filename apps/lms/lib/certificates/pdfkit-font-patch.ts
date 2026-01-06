@@ -92,6 +92,13 @@ export function patchPDFKitFonts() {
     fs.readFileSync = patchedReadFileSync as typeof fs.readFileSync
 
     console.log(`[PDFKit Font Patch] Successfully patched fs.readFileSync to use fonts from ${localFontsPath}`)
+    
+    // Verify the patch is actually applied
+    if (fs.readFileSync !== patchedReadFileSync) {
+      console.error("[PDFKit Font Patch] ERROR: Patch was not applied correctly!")
+      return false
+    }
+    
     return true
   } catch (error) {
     console.warn("[PDFKit Font Patch] Failed to patch PDFKit fonts:", error)
