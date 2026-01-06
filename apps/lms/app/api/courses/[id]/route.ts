@@ -739,13 +739,27 @@ export async function GET(
       totalHours,
       enrolledStudents: enrollmentCount || 0, // Total enrollment count
       prerequisites: prerequisites, // Add prerequisites
-      // Transform enrollment settings from database columns to nested structure
+      // Transform enrollment and certificate settings from database columns to nested structure
       settings: {
         enrollment: {
           enrollmentMode: course.enrollment_mode || "free",
           price: course.price || undefined,
           recurringPrice: course.recurring_price || undefined,
         },
+        certificate: {
+          certificateEnabled: course.certificate_enabled || false,
+          certificateTemplate: course.certificate_template || null,
+          certificateTitle: course.certificate_title || null,
+          certificateDescription: course.certificate_description || null,
+          signatureImage: course.signature_image || null,
+          signatureName: course.signature_name || null,
+          signatureTitle: course.signature_title || null,
+          additionalText: course.additional_text || null,
+          certificateType: course.certificate_type || null,
+        },
+        minimumQuizScore: course.minimum_quiz_score || null,
+        requiresSequentialProgress: course.requires_sequential_progress || false,
+        currency: course.currency || "USD",
       },
     }
     

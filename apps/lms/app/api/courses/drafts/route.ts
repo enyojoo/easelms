@@ -1106,6 +1106,30 @@ export async function GET(request: Request) {
       courseIds: prerequisiteCourseIds,
     }
     
+    // Transform course settings from database columns to nested structure (for frontend compatibility)
+    data.settings = {
+      enrollment: {
+        enrollmentMode: data.enrollment_mode || "free",
+        price: data.price || undefined,
+        recurringPrice: data.recurring_price || undefined,
+      },
+      certificate: {
+        certificateEnabled: data.certificate_enabled || false,
+        certificateTemplate: data.certificate_template || null,
+        certificateTitle: data.certificate_title || null,
+        certificateDescription: data.certificate_description || null,
+        signatureImage: data.signature_image || null,
+        signatureName: data.signature_name || null,
+        signatureTitle: data.signature_title || null,
+        additionalText: data.additional_text || null,
+        certificateType: data.certificate_type || null,
+      },
+      minimumQuizScore: data.minimum_quiz_score || null,
+      requiresSequentialProgress: data.requires_sequential_progress || false,
+      currency: data.currency || "USD",
+      isPublished: data.is_published || false,
+    }
+    
     // Ensure lessons array is always present (even if empty)
     if (!data.lessons || !Array.isArray(data.lessons)) {
       data.lessons = []
