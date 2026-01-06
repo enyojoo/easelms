@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useRef } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -10,6 +11,7 @@ import { CheckCircle2, XCircle, Loader2, Info, ArrowRight, RotateCcw } from "luc
 import SafeImage from "@/components/SafeImage"
 import { logError, logInfo, logWarning, formatErrorMessage, handleApiError } from "../utils/errorHandler"
 import { toast } from "@/components/ui/use-toast"
+import { useQuizAttempt } from "@/lib/react-query/hooks/useQuizAttempts"
 
 interface QuizQuestion {
   question: string
@@ -74,6 +76,14 @@ export default function QuizComponent({
   const [quizStarted, setQuizStarted] = useState(false) // Track if user has started the quiz
   const quizCompletedRef = useRef(false) // Track if quiz has been completed
   const isRetryingRef = useRef(false) // Track if we're currently retrying (to prevent showResultsOnly from taking effect)
+  
+  const queryClient = useQueryClient()
+  
+  // Fetch current quiz attempt from database
+  const { data: quizAttemptData } = useQuizAttempt(courseId || null, lessonId || null)
+  const currentAttemptNumber = quizAttemptData?.attemptNumber || 0
+  // Use database attempt number if available, otherwise use local state
+  const displayAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber : (attemptCount > 0 ? attemptCount : 1)
 
   // Answers are already in original order (no mapping needed)
   const mappedAnswersForReview = useMemo(() => {
@@ -122,8 +132,10 @@ export default function QuizComponent({
       quizCompletedRef.current = true
       setCurrentQuestion(0)
       setShowResults(true) // Always show results when showResultsOnly is true
-      // Set attempt count from database if available
-      if (initialAttemptCount !== undefined) {
+      // Set attempt count from database if available (prioritize database over initialAttemptCount prop)
+      if (currentAttemptNumber > 0) {
+        setAttemptCount(currentAttemptNumber)
+      } else if (initialAttemptCount !== undefined) {
         setAttemptCount(initialAttemptCount)
       }
       if (prefilledAnswers.length > 0) {
@@ -152,7 +164,7 @@ export default function QuizComponent({
     setCurrentQuestion(0)
     setSelectedAnswers([])
     setShowResults(false)
-  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview, showResults])
+  }, [questions, showResultsOnly, prefilledAnswers, mappedAnswersForReview, showResults, currentAttemptNumber, initialAttemptCount])
 
   const handleAnswerSelect = (answerIndex: number) => {
     const newSelectedAnswers = [...selectedAnswers]
@@ -216,6 +228,11 @@ export default function QuizComponent({
 
       // Quiz results submitted successfully
       logInfo("Quiz results submitted successfully")
+      
+      // Invalidate quiz attempt query to refetch the new attempt number
+      if (courseId && lessonId) {
+        queryClient.invalidateQueries({ queryKey: ["quiz-attempt", courseId, lessonId] })
+      }
     } catch (error: any) {
       logError("Error submitting quiz results", error, {
         component: "QuizComponent",
@@ -243,12 +260,10 @@ export default function QuizComponent({
       // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
       
-      // Show results screen IMMEDIATELY to prevent flash of question
-      // This ensures smooth UX - user sees results right away while submission happens in background
-      setShowResults(true)
-      setAttemptCount((prev) => prev + 1)
+      // Set submitting state to show "Submitting..." instead of results
+      setSubmitting(true)
       
-      // Submit quiz results to API (in background - don't block UI)
+      // Submit quiz results to API first
       try {
         await submitQuizResults()
       } catch (error: any) {
@@ -261,13 +276,21 @@ export default function QuizComponent({
         })
         setSubmissionError(formatErrorMessage(error, "Failed to save quiz results, but your answers are recorded locally"))
         // Continue to show results even if submission failed
+      } finally {
+        // After submission completes, show results screen
+        setSubmitting(false)
+        setShowResults(true)
+        // Update attempt count - use database attempt number if available, otherwise increment
+        const nextAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber + 1 : attemptCount + 1
+        setAttemptCount(nextAttemptNumber)
       }
       
       // Call onComplete to save progress and mark lesson as completed
       // This must be called to save to progress table and complete the lesson
       // Wrap in try-catch to prevent errors from breaking the UI
       try {
-        onComplete(selectedAnswers, questions, attemptCount + 1)
+        const nextAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber + 1 : attemptCount + 1
+        onComplete(selectedAnswers, questions, nextAttemptNumber)
       } catch (error: any) {
         logError("Error in onComplete callback", error, {
           component: "QuizComponent",
@@ -317,8 +340,8 @@ export default function QuizComponent({
       }
       
       // Check if max attempts limit has been reached
-      // Use initialAttemptCount if available (from database), otherwise use local attemptCount
-      const currentAttemptCount = initialAttemptCount !== undefined ? initialAttemptCount : attemptCount
+      // Use database attempt number if available, otherwise use local state
+      const currentAttemptCount = currentAttemptNumber > 0 ? currentAttemptNumber : (initialAttemptCount !== undefined ? initialAttemptCount : attemptCount)
       const maxAttempts = quiz.maxAttempts || 3
       if (currentAttemptCount >= maxAttempts) {
         logInfo(`Max attempts (${maxAttempts}) reached. Cannot retry.`, { currentAttemptCount, maxAttempts })
@@ -339,9 +362,10 @@ export default function QuizComponent({
       setCurrentQuestion(0)
       setSelectedAnswers([])
       setShowResults(false)
+      setSubmitting(false) // Make sure submitting is false
       setQuizStarted(false) // Reset quiz started state to show info card again
       setSubmissionError(null) // Clear any previous errors
-      setAttemptCount(0) // Reset attempt count for new attempt
+      // Don't reset attempt count - let the database handle it when the new attempt is created
       
       // Clear old quiz data (this will trigger refetch with new shuffle if enabled)
       if (onRetry) {
@@ -385,6 +409,23 @@ export default function QuizComponent({
     )
   }
 
+  // Show submitting state when quiz is being submitted
+  if (submitting && !showResults && !showResultsOnly) {
+    return (
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <Card>
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col items-center justify-center space-y-4 py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-lg font-semibold">Submitting...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we save your quiz results.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Show results if showResultsOnly is true (quiz was already completed) OR if showResults state is true (just completed)
   if (showResultsOnly || showResults) {
     // If showing results for a previously completed quiz, use initialScore if available
@@ -400,8 +441,10 @@ export default function QuizComponent({
     const maxAttempts = quiz.maxAttempts || 3
     // Calculate minimum points needed - must be calculated before use in JSX
     const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
-    // Use initialAttemptCount if available (from database), otherwise use local attemptCount
-    const currentAttemptCount = showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : attemptCount
+    // Use database attempt number if available, otherwise use initialAttemptCount or local attemptCount
+    const currentAttemptCount = currentAttemptNumber > 0 
+      ? currentAttemptNumber 
+      : (showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : attemptCount)
     // Cannot retry if quiz is disabled or max attempts reached
     const canRetry = !disabled && (quiz.allowMultipleAttempts !== false) && (currentAttemptCount < maxAttempts)
 
@@ -713,10 +756,20 @@ export default function QuizComponent({
                     <span className="font-semibold text-primary">{minimumPointsNeeded} / {totalPoints}</span>
                   </div>
                   {maxAttempts > 1 && (
-                    <div className="flex items-center justify-between">
-                      <span>Attempts Allowed:</span>
-                      <span className="font-medium text-foreground">{maxAttempts}</span>
-                    </div>
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span>Attempts Allowed:</span>
+                        <span className="font-medium text-foreground">{maxAttempts}</span>
+                      </div>
+                      {displayAttemptNumber > 0 && (
+                        <div className="flex items-center justify-between border-t pt-2 mt-2">
+                          <span>Current Attempt:</span>
+                          <Badge variant="secondary" className="font-semibold">
+                            Attempt {displayAttemptNumber} of {maxAttempts}
+                          </Badge>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -751,9 +804,9 @@ export default function QuizComponent({
                   {question.points} {question.points === 1 ? "point" : "points"}
                 </Badge>
               )}
-              {attemptCount > 0 && (
+              {displayAttemptNumber > 0 && (
                 <Badge variant="secondary" className="text-sm">
-                  Attempt {attemptCount} of {maxAttempts}
+                  Attempt {displayAttemptNumber} of {maxAttempts}
                 </Badge>
               )}
             </div>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { extractIdFromSlug } from "@/lib/slug"
-import { mapAnswerToOriginal } from "@/lib/quiz/shuffle"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(

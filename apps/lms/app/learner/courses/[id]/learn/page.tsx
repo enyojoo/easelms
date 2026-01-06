@@ -566,6 +566,9 @@ export default function CourseLearningPage() {
       // Refetch course data to get fresh quiz questions (with new shuffle if enabled)
       await queryClient.refetchQueries({ queryKey: ["course", id] })
       
+      // Invalidate quiz attempt query to refetch the new attempt number
+      queryClient.invalidateQueries({ queryKey: ["quiz-attempt", id, lessonId] })
+      
       // DON'T refetch quiz-results and progress - keep them cleared in cache
       // This prevents showResultsOnly from becoming true again during retry
       // They will be refetched automatically when the user completes the quiz again
