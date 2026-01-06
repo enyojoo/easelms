@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -14,7 +15,11 @@ export async function GET(request: Request) {
   try {
     serviceClient = createServiceRoleClient()
   } catch (serviceError: any) {
-    console.warn("Service role key not available, using regular client:", serviceError.message)
+    logWarning("Service role key not available, using regular client", {
+      component: "learners/route",
+      action: "GET",
+      error: serviceError.message,
+    })
     serviceClient = null
   }
 
@@ -44,7 +49,11 @@ export async function GET(request: Request) {
   }
 
   if (profileError) {
-    console.error("Error fetching profile for admin check:", profileError)
+    logError("Error fetching profile for admin check", profileError, {
+      component: "learners/route",
+      action: "GET",
+      userId: user.id,
+    })
     return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
   }
 

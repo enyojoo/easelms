@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
   try {
@@ -63,7 +64,12 @@ export async function GET(request: Request) {
 
     // If error with courses relation, try without it
     if (error) {
-      console.warn("Certificates API: Error with courses relation, trying without:", error.message)
+      logWarning("Certificates API: Error with courses relation, trying without", {
+        component: "certificates/route",
+        action: "GET",
+        error: error.message,
+        userId: targetUserId,
+      })
       const { data: certsData, error: certsError } = await clientToUse
         .from("certificates")
         .select("*")
@@ -79,12 +85,13 @@ export async function GET(request: Request) {
     }
 
     if (error) {
-      console.error("Certificates API: Database error", {
-        error: error,
+      logError("Certificates API: Database error", error, {
+        component: "certificates/route",
+        action: "GET",
         code: error.code,
-        message: error.message,
         details: error.details,
         hint: error.hint,
+        userId: targetUserId,
       })
       return NextResponse.json({ 
         error: error.message,
@@ -105,9 +112,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ certificates: formattedCertificates })
   } catch (error: any) {
-    console.error("Certificates API: Unexpected error", {
-      message: error?.message,
-      stack: error?.stack,
+    logError("Certificates API: Unexpected error", error, {
+      component: "certificates/route",
+      action: "GET",
     })
     return NextResponse.json({ 
       error: error?.message || "An unexpected error occurred while fetching certificates",

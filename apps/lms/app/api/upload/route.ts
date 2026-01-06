@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { uploadFileToS3, getS3StoragePath, getPublicUrl, isValidVideoFile, isValidImageFile, isValidDocumentFile, getMaxVideoSize, getMaxImageSize, getMaxDocumentSize } from "@/lib/aws/s3"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -169,7 +170,12 @@ export async function POST(request: Request) {
       bucket: "s3",
     })
   } catch (error: any) {
-    console.error("Upload error:", error)
+    logError("Upload error", error, {
+      component: "upload/route",
+      action: "POST",
+      userId: user.id,
+      fileType,
+    })
     return NextResponse.json(
       { error: error.message || "Failed to upload file" },
       { status: 500 }

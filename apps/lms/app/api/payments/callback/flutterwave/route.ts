@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { verifyTransaction } from "@/lib/payments/flutterwave"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -45,7 +46,11 @@ export async function GET(request: Request) {
       // Note: This is a simplified check - in production, you might want to store
       // the expected amount in the transaction currency for more accurate comparison
       if (!userId || !courseId) {
-        console.error("Missing metadata in Flutterwave response")
+        logError("Missing metadata in Flutterwave response", new Error("Missing metadata"), {
+          component: "payments/callback/flutterwave/route",
+          action: "GET",
+          transactionId,
+        })
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
 
@@ -65,7 +70,13 @@ export async function GET(request: Request) {
       })
 
       if (paymentError) {
-        console.error("Error creating payment record:", paymentError)
+        logError("Error creating payment record", paymentError, {
+          component: "payments/callback/flutterwave/route",
+          action: "GET",
+          transactionId,
+          userId,
+          courseId,
+        })
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
 
@@ -78,7 +89,13 @@ export async function GET(request: Request) {
       })
 
       if (enrollmentError) {
-        console.error("Error creating enrollment:", enrollmentError)
+        logError("Error creating enrollment", enrollmentError, {
+          component: "payments/callback/flutterwave/route",
+          action: "GET",
+          transactionId,
+          userId,
+          courseId,
+        })
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
 
@@ -97,11 +114,20 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${baseUrl}/learner/courses/${courseSlug}/learn?payment=success`)
     } else {
       // Verification failed or transaction not successful
-      console.error("Transaction verification failed:", verification)
+      logError("Transaction verification failed", new Error("Transaction verification failed"), {
+        component: "payments/callback/flutterwave/route",
+        action: "GET",
+        transactionId,
+        verification,
+      })
       return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
     }
   } catch (error) {
-    console.error("Flutterwave verification error:", error)
+    logError("Flutterwave verification error", error, {
+      component: "payments/callback/flutterwave/route",
+      action: "GET",
+      transactionId,
+    })
     return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
   }
 }

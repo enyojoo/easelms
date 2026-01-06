@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET() {
   try {
@@ -16,7 +17,11 @@ export async function GET() {
     try {
       serviceClient = createServiceRoleClient()
     } catch (serviceError: any) {
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "settings/route",
+        action: "GET",
+        error: serviceError.message,
+      })
       serviceClient = null
     }
 
@@ -33,7 +38,12 @@ export async function GET() {
         
         profile = data
         if (profileError && profileError.code !== "PGRST116") {
-          console.warn("Error fetching profile with service client:", profileError.message)
+          logWarning("Error fetching profile with service client", {
+            component: "settings/route",
+            action: "GET",
+            error: profileError.message,
+            userId: user.id,
+          })
         }
       } else {
         // Fallback to regular client
@@ -45,7 +55,12 @@ export async function GET() {
         
         profile = data
         if (profileError && profileError.code !== "PGRST116") {
-          console.warn("Error fetching profile:", profileError.message)
+          logWarning("Error fetching profile", {
+            component: "settings/route",
+            action: "GET",
+            error: profileError.message,
+            userId: user.id,
+          })
         }
       }
 
@@ -67,11 +82,20 @@ export async function GET() {
           userSettings = settings
         } else {
           // Log other errors but don't fail
-          console.warn("Error fetching user_settings:", userSettingsError.message)
+          logWarning("Error fetching user_settings", {
+            component: "settings/route",
+            action: "GET",
+            error: userSettingsError.message,
+            userId: user.id,
+          })
         }
       } catch (tableError: any) {
         // Table might not exist, that's okay
-        console.warn("user_settings table might not exist:", tableError.message)
+        logWarning("user_settings table might not exist", {
+          component: "settings/route",
+          action: "GET",
+          error: tableError.message,
+        })
       }
 
       // Get platform settings (for admin only)
@@ -88,7 +112,11 @@ export async function GET() {
         } catch (platformError: any) {
           // Platform settings table might not exist, that's okay
           if (platformError.code !== "PGRST116") {
-            console.warn("platform_settings error:", platformError.message)
+            logWarning("platform_settings error", {
+              component: "settings/route",
+              action: "GET",
+              error: platformError.message,
+            })
           }
         }
       }
@@ -102,7 +130,11 @@ export async function GET() {
         platformSettings,
       })
     } catch (profileError: any) {
-      console.error("Error fetching profile:", profileError)
+      logError("Error fetching profile", profileError, {
+        component: "settings/route",
+        action: "GET",
+        userId: user.id,
+      })
       // Return defaults if profile fetch fails
       return NextResponse.json({
         userSettings: {
@@ -113,7 +145,10 @@ export async function GET() {
       })
     }
   } catch (error: any) {
-    console.error("Settings API error:", error)
+    logError("Settings API error", error, {
+      component: "settings/route",
+      action: "GET",
+    })
     return NextResponse.json(
       { error: error.message || "Failed to fetch settings" },
       { status: 500 }
@@ -148,9 +183,17 @@ export async function PUT(request: Request) {
           // If table doesn't exist, that's okay - settings are optional
           if (userSettingsError.code === "42P01") {
             // Table doesn't exist
-            console.warn("user_settings table doesn't exist, skipping update")
+            logWarning("user_settings table doesn't exist, skipping update", {
+              component: "settings/route",
+              action: "PUT",
+              userId: user.id,
+            })
           } else {
-            console.error("Error updating user_settings:", userSettingsError)
+            logError("Error updating user_settings", userSettingsError, {
+              component: "settings/route",
+              action: "PUT",
+              userId: user.id,
+            })
             return NextResponse.json(
               { error: userSettingsError.message },
               { status: 500 }
@@ -159,7 +202,11 @@ export async function PUT(request: Request) {
         }
       } catch (tableError: any) {
         // Table might not exist, that's okay
-        console.warn("user_settings table might not exist:", tableError.message)
+        logWarning("user_settings table might not exist", {
+          component: "settings/route",
+          action: "GET",
+          error: tableError.message,
+        })
       }
     }
 
@@ -171,7 +218,11 @@ export async function PUT(request: Request) {
         try {
           serviceClient = createServiceRoleClient()
         } catch (serviceError: any) {
-          console.warn("Service role key not available:", serviceError.message)
+          logWarning("Service role key not available", {
+            component: "settings/route",
+            action: "PUT",
+            error: serviceError.message,
+          })
           serviceClient = null
         }
 
@@ -197,10 +248,18 @@ export async function PUT(request: Request) {
         if (platformError) {
           // If table doesn't exist, that's okay - just log and continue
           if (platformError.code === "42P01" || platformError.code === "PGRST116" || platformError.message?.includes("schema cache")) {
-            console.warn("platform_settings table doesn't exist, skipping update")
+            logWarning("platform_settings table doesn't exist, skipping update", {
+              component: "settings/route",
+              action: "PUT",
+              userId: user.id,
+            })
             // Don't return error, just skip the update
           } else {
-            console.error("Error updating platform_settings:", platformError)
+            logError("Error updating platform_settings", platformError, {
+              component: "settings/route",
+              action: "PUT",
+              userId: user.id,
+            })
             // Don't fail the request if platform_settings table doesn't exist
             if (!platformError.message?.includes("schema cache")) {
               return NextResponse.json(
@@ -211,13 +270,20 @@ export async function PUT(request: Request) {
           }
         }
       } catch (platformTableError: any) {
-        console.warn("platform_settings table might not exist:", platformTableError.message)
+        logWarning("platform_settings table might not exist", {
+          component: "settings/route",
+          action: "PUT",
+          error: platformTableError.message,
+        })
       }
     }
 
     return NextResponse.json({ message: "Settings updated successfully" })
   } catch (error: any) {
-    console.error("Settings API PUT error:", error)
+    logError("Settings API PUT error", error, {
+      component: "settings/route",
+      action: "PUT",
+    })
     return NextResponse.json(
       { error: error.message || "Failed to update settings" },
       { status: 500 }

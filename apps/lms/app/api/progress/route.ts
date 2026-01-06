@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
   const supabase = await createClient() // For user authentication
@@ -27,7 +28,12 @@ export async function GET(request: Request) {
   const { data, error } = await query
 
   if (error) {
-    console.error("Progress API GET: Supabase error", error)
+    logError("Progress API GET: Supabase error", error, {
+      component: "progress/route",
+      action: "GET",
+      userId: user.id,
+      courseId,
+    })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
@@ -44,7 +50,7 @@ export async function POST(request: Request) {
 
   const progressData = await request.json()
 
-  console.log("Progress API POST: Received data", progressData, "for user", user.id)
+  logInfo("Progress API POST: Received data", { progressData, userId: user.id })
 
   // Use service role client for upsert to bypass RLS policies
   const serviceSupabase = createServiceRoleClient()
@@ -90,7 +96,12 @@ export async function POST(request: Request) {
   }
 
   if (error) {
-    console.error("Progress API POST: Supabase error", error)
+    logError("Progress API POST: Supabase error", error, {
+      component: "progress/route",
+      action: "POST",
+      userId: user.id,
+      lessonId: progressData.lesson_id,
+    })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

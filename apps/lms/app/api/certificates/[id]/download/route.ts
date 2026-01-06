@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateCertificatePDF } from "@/lib/certificates/generate-pdf"
 import { uploadFileToS3, getS3StoragePath, getPublicUrl } from "@/lib/aws/s3"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(
   request: Request,
@@ -88,7 +89,7 @@ export async function GET(
         }
       } catch (error) {
         // If fetch fails, regenerate PDF
-        console.log("Failed to fetch existing PDF, regenerating:", error)
+        logInfo("Failed to fetch existing PDF, regenerating", { error: error instanceof Error ? error.message : String(error), certificateId: params.id })
       }
     }
 
@@ -138,7 +139,12 @@ export async function GET(
         .update({ pdf_url: url })
         .eq("id", params.id)
     } catch (uploadError) {
-      console.error("Error uploading certificate PDF to S3:", uploadError)
+      logError("Error uploading certificate PDF to S3", uploadError, {
+        component: "certificates/[id]/download/route",
+        action: "GET",
+        certificateId: params.id,
+        userId: certificate.user_id,
+      })
       // Continue to return PDF even if upload fails
     }
 
@@ -151,7 +157,11 @@ export async function GET(
       },
     })
   } catch (error: any) {
-    console.error("Error generating certificate PDF:", error)
+    logError("Error generating certificate PDF", error, {
+      component: "certificates/[id]/download/route",
+      action: "GET",
+      certificateId: params.id,
+    })
     return NextResponse.json(
       { error: "Failed to generate certificate PDF", details: error.message },
       { status: 500 }

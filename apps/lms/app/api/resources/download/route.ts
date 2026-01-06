@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -50,7 +51,10 @@ function extractS3KeyFromUrl(url: string): string | null {
     
     return null
   } catch (error) {
-    console.error("Error parsing URL:", error)
+    logError("Error parsing URL", error instanceof Error ? error : new Error(String(error)), {
+      component: "resources/download/route",
+      action: "GET",
+    })
     return null
   }
 }
@@ -114,7 +118,11 @@ export async function GET(request: Request) {
       },
     })
   } catch (error: any) {
-    console.error("Error downloading file from S3:", error)
+    logError("Error downloading file from S3", error, {
+      component: "resources/download/route",
+      action: "GET",
+      fileUrl,
+    })
     
     // Handle specific S3 errors
     if (error.name === "NoSuchKey" || error.Code === "NoSuchKey") {

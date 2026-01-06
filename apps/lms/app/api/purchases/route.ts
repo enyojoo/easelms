@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
   try {
@@ -76,7 +77,12 @@ export async function GET(request: Request) {
 
     // If error with relations, try without them
     if (error) {
-      console.warn("Purchases API: Error with relations, trying without:", error.message)
+      logWarning("Purchases API: Error with relations, trying without", {
+        component: "purchases/route",
+        action: "GET",
+        error: error.message,
+        userId: targetUserId,
+      })
       let fallbackQuery = clientToUse
         .from("payments")
         .select("*")
@@ -97,12 +103,13 @@ export async function GET(request: Request) {
     }
 
     if (error) {
-      console.error("Purchases API: Database error", {
-        error: error,
+      logError("Purchases API: Database error", error, {
+        component: "purchases/route",
+        action: "GET",
         code: error.code,
-        message: error.message,
         details: error.details,
         hint: error.hint,
+        userId: targetUserId,
       })
       return NextResponse.json({ 
         error: error.message,
@@ -135,9 +142,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ purchases: formattedPurchases })
   } catch (error: any) {
-    console.error("Purchases API: Unexpected error", {
-      message: error?.message,
-      stack: error?.stack,
+    logError("Purchases API: Unexpected error", error, {
+      component: "purchases/route",
+      action: "GET",
     })
     return NextResponse.json({ 
       error: error?.message || "An unexpected error occurred while fetching purchases",

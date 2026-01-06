@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
   try {
@@ -30,7 +31,11 @@ export async function GET(request: Request) {
       try {
         serviceClient = createServiceRoleClient()
       } catch (serviceError: any) {
-        console.warn("Service role key not available, using regular client:", serviceError.message)
+        logWarning("Service role key not available, using regular client", {
+          component: "courses/route",
+          action: "GET",
+          error: serviceError.message,
+        })
         serviceClient = null
       }
 
@@ -57,7 +62,10 @@ export async function GET(request: Request) {
       } catch (serviceError: any) {
         // If service role not available, use regular client (might have RLS issues)
         supabase = await createClient()
-        console.warn("Courses API: Service role not available, using regular client")
+        logWarning("Courses API: Service role not available, using regular client", {
+          component: "courses/route",
+          action: "GET",
+        })
       }
     }
 
@@ -92,7 +100,11 @@ export async function GET(request: Request) {
 
     // If error with lessons relation, try with a simpler lessons selection
     if (error) {
-      console.warn("Courses API: Error with lessons relation, trying with simpler select:", error.message)
+      logWarning("Courses API: Error with lessons relation, trying with simpler select", {
+        component: "courses/route",
+        action: "GET",
+        error: error.message,
+      })
       let basicQuery = supabase
         .from("courses")
         .select(`
@@ -127,10 +139,10 @@ export async function GET(request: Request) {
     }
 
     if (error) {
-      console.error("Courses API: Database error", {
-        error: error,
+      logError("Courses API: Database error", error, {
+        component: "courses/route",
+        action: "GET",
         code: error.code,
-        message: error.message,
         details: error.details,
         hint: error.hint,
         recommended,
@@ -182,9 +194,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ courses: processedCourses })
   } catch (error: any) {
-    console.error("Courses API: Unexpected error", {
-      message: error?.message,
-      stack: error?.stack,
+    logError("Courses API: Unexpected error", error, {
+      component: "courses/route",
+      action: "GET",
     })
     return NextResponse.json({ 
       error: error?.message || "An unexpected error occurred while fetching courses",

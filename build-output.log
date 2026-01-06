@@ -1,0 +1,124 @@
+
+> elms-monorepo@0.1.0 build
+> turbo run build
+
+turbo 2.6.3
+
+• Packages in scope: elms, enthronement-university-website
+• Running build in 2 packages
+• Remote caching disabled
+elms:build: cache miss, executing 11e3a2b53624c9fe
+enthronement-university-website:build: cache hit, replaying logs 38f3f443c526f11a
+enthronement-university-website:build: 
+enthronement-university-website:build: > enthronement-university-website@0.1.0 build
+enthronement-university-website:build: > next build
+enthronement-university-website:build: 
+enthronement-university-website:build:    ▲ Next.js 16.0.10 (Turbopack)
+enthronement-university-website:build: 
+enthronement-university-website:build:    Creating an optimized production build ...
+enthronement-university-website:build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+enthronement-university-website:build:  ✓ Compiled successfully in 10.7s
+enthronement-university-website:build:    Skipping validation of types
+enthronement-university-website:build:    Collecting page data using 7 workers ...
+enthronement-university-website:build:    Generating static pages using 7 workers (0/3) ...
+enthronement-university-website:build:  ✓ Generating static pages using 7 workers (3/3) in 1105.4ms
+enthronement-university-website:build:    Finalizing page optimization ...
+enthronement-university-website:build: 
+enthronement-university-website:build: Route (app)
+enthronement-university-website:build: ┌ ○ /
+enthronement-university-website:build: └ ○ /_not-found
+enthronement-university-website:build: 
+enthronement-university-website:build: 
+enthronement-university-website:build: ○  (Static)  prerendered as static content
+enthronement-university-website:build: 
+elms:build: 
+elms:build: > elms@0.1.0 build
+elms:build: > next build
+elms:build: 
+elms:build:    ▲ Next.js 16.0.10 (Turbopack)
+elms:build: 
+elms:build:  ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+elms:build:    Creating an optimized production build ...
+elms:build: [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+elms:build:  ✓ Compiled successfully in 10.8s
+elms:build:    Skipping validation of types
+elms:build:    Collecting page data using 7 workers ...
+elms:build:    Generating static pages using 7 workers (0/45) ...
+elms:build:    Generating static pages using 7 workers (11/45) 
+elms:build:    Generating static pages using 7 workers (22/45) 
+elms:build:    Generating static pages using 7 workers (33/45) 
+elms:build:  ✓ Generating static pages using 7 workers (45/45) in 1189.0ms
+elms:build:    Finalizing page optimization ...
+elms:build: 
+elms:build: Route (app)
+elms:build: ┌ ○ /
+elms:build: ├ ○ /_not-found
+elms:build: ├ ○ /admin/courses
+elms:build: ├ ƒ /admin/courses/[id]/learn
+elms:build: ├ ƒ /admin/courses/[id]/preview-learn
+elms:build: ├ ○ /admin/courses/new
+elms:build: ├ ƒ /admin/courses/preview/[id]
+elms:build: ├ ○ /admin/dashboard
+elms:build: ├ ○ /admin/learners
+elms:build: ├ ƒ /admin/learners/[id]
+elms:build: ├ ○ /admin/profile
+elms:build: ├ ○ /admin/purchases
+elms:build: ├ ○ /admin/settings
+elms:build: ├ ƒ /api/admin/stats
+elms:build: ├ ƒ /api/auth/change-password
+elms:build: ├ ƒ /api/auth/login
+elms:build: ├ ƒ /api/auth/logout
+elms:build: ├ ƒ /api/auth/reset-password
+elms:build: ├ ƒ /api/auth/signup
+elms:build: ├ ƒ /api/certificates
+elms:build: ├ ƒ /api/certificates/[id]/download
+elms:build: ├ ƒ /api/courses
+elms:build: ├ ƒ /api/courses/[id]
+elms:build: ├ ƒ /api/courses/[id]/quiz-results
+elms:build: ├ ƒ /api/courses/drafts
+elms:build: ├ ƒ /api/enrollments
+elms:build: ├ ƒ /api/learners
+elms:build: ├ ƒ /api/learners/[id]
+elms:build: ├ ƒ /api/learners/[id]/progress
+elms:build: ├ ƒ /api/learners/[id]/purchases
+elms:build: ├ ƒ /api/lessons/[id]
+elms:build: ├ ƒ /api/payments/callback/flutterwave
+elms:build: ├ ƒ /api/payments/callback/stripe
+elms:build: ├ ƒ /api/payments/create-intent
+elms:build: ├ ƒ /api/payments/webhook/stripe
+elms:build: ├ ƒ /api/profile
+elms:build: ├ ƒ /api/progress
+elms:build: ├ ƒ /api/purchases
+elms:build: ├ ƒ /api/resources/download
+elms:build: ├ ƒ /api/settings
+elms:build: ├ ƒ /api/upload
+elms:build: ├ ƒ /api/upload/delete
+elms:build: ├ ƒ /api/upload/presigned-s3
+elms:build: ├ ƒ /api/users
+elms:build: ├ ƒ /api/users/[id]
+elms:build: ├ ○ /auth/admin/login
+elms:build: ├ ○ /auth/learner/login
+elms:build: ├ ○ /auth/learner/signup
+elms:build: ├ ○ /forgot-password
+elms:build: ├ ○ /forgot-password/code
+elms:build: ├ ○ /forgot-password/new-password
+elms:build: ├ ○ /learner/courses
+elms:build: ├ ƒ /learner/courses/[id]
+elms:build: ├ ƒ /learner/courses/[id]/learn
+elms:build: ├ ƒ /learner/courses/[id]/learn/summary
+elms:build: ├ ○ /learner/dashboard
+elms:build: ├ ○ /learner/profile
+elms:build: ├ ○ /learner/purchase
+elms:build: └ ○ /learner/support
+elms:build: 
+elms:build: 
+elms:build: ƒ Proxy (Middleware)
+elms:build: 
+elms:build: ○  (Static)   prerendered as static content
+elms:build: ƒ  (Dynamic)  server-rendered on demand
+elms:build: 
+
+ Tasks:    2 successful, 2 total
+Cached:    1 cached, 2 total
+  Time:    16.003s 
+

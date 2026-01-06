@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 import { extractIdFromSlug } from "@/lib/slug"
 import { shuffleQuiz, generateSeed } from "@/lib/quiz/shuffle"
 
@@ -11,7 +12,7 @@ export async function GET(
     const { id } = await params
     const slugOrId = id
     
-    console.log("Course API GET request:", { 
+    logInfo("Course API GET request", { 
       url: request.url,
       params,
       slugOrId,
@@ -19,8 +20,8 @@ export async function GET(
     })
     
     if (!slugOrId) {
-      console.error("Course API: No ID provided", { params })
-      return NextResponse.json({ error: "Course ID is required" }, { status: 400 })
+      logError("Course API: No ID provided", new Error("Course ID is required"), { params })
+      return NextResponse.json(createErrorResponse(new Error("Course ID is required"), 400), { status: 400 })
     }
 
     // Extract actual ID from slug (handles both "course-title-123" and "123" formats)
@@ -29,11 +30,11 @@ export async function GET(
 
     // Validate that we have a valid numeric ID
     if (isNaN(numericId)) {
-      console.error("Course API: Invalid course ID", { slugOrId, idStr, numericId })
-      return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
+      logError("Course API: Invalid course ID", new Error("Invalid course ID format"), { slugOrId, idStr, numericId })
+      return NextResponse.json(createErrorResponse(new Error("Invalid course ID format"), 400), { status: 400 })
     }
 
-    console.log("Course API: Fetching course", { slugOrId, idStr, numericId })
+    logInfo("Course API: Fetching course", { slugOrId, idStr, numericId })
 
     const { createServiceRoleClient } = await import("@/lib/supabase/server")
     
@@ -43,7 +44,11 @@ export async function GET(
       serviceSupabase = createServiceRoleClient()
       supabase = serviceSupabase
     } catch (serviceError: any) {
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "courses/[id]/route",
+        action: "GET",
+        error: serviceError.message,
+      })
       supabase = await createClient()
       serviceSupabase = supabase
     }
@@ -70,11 +75,15 @@ export async function GET(
         .order("order_index", { ascending: true })
       
       if (lessonsError) {
-        console.error("Error fetching lessons:", lessonsError)
+        logError("Error fetching lessons", lessonsError, {
+          component: "courses/[id]/route",
+          action: "GET",
+          courseId: numericId,
+        })
         // Don't fail the entire request if lessons can't be fetched
       } else {
         lessons = lessonsData || []
-        console.log(`Course API: Fetched ${lessons.length} lessons for course ${numericId}`)
+        logInfo(`Course API: Fetched ${lessons.length} lessons for course ${numericId}`, { courseId: numericId })
       }
       
       // Always attach lessons to course object (even if empty array)
@@ -102,7 +111,12 @@ export async function GET(
 
     // If error fetching course, try fallback (shouldn't happen with separate queries, but keep for safety)
     if (error && !course) {
-      console.warn("Courses API: Error fetching course, trying fallback:", error.message)
+      logWarning("Courses API: Error fetching course, trying fallback", {
+        component: "courses/[id]/route",
+        action: "GET",
+        error: error.message,
+        courseId: numericId,
+      })
       const { data: basicCourse, error: basicError } = await supabase
         .from("courses")
         .select("*")
@@ -138,10 +152,11 @@ export async function GET(
     }
 
     if (error) {
-      console.error("Course API: Database error", {
-        error: error,
+      logError("Course API: Database error", error, {
+        component: "courses/[id]/route",
+        action: "GET",
+        courseId: numericId,
         code: error.code,
-        message: error.message,
         details: error.details,
       })
       
@@ -174,19 +189,27 @@ export async function GET(
     const seenLessonIds = new Set<number>()
     lessons = lessons.filter((lesson: any) => {
       if (!lesson || !lesson.id) {
-        console.warn("Course API: Skipping lesson without ID:", lesson)
+        logWarning("Course API: Skipping lesson without ID", {
+          component: "courses/[id]/route",
+          action: "GET",
+          lesson: lesson,
+        })
         return false
       }
       const lessonId = lesson.id
       if (seenLessonIds.has(lessonId)) {
-        console.warn("Course API: Skipping duplicate lesson:", lessonId)
+        logWarning("Course API: Skipping duplicate lesson", {
+          component: "courses/[id]/route",
+          action: "GET",
+          lessonId: lessonId,
+        })
         return false
       }
       seenLessonIds.add(lessonId)
       return true
     })
     
-    console.log("Course API: Processing lessons", {
+    logInfo("Course API: Processing lessons", {
       courseId: numericId,
       lessonsCount: lessons.length,
       lessonIds: lessons.map((l: any) => l.id),
@@ -221,7 +244,12 @@ export async function GET(
       .eq("course_id", numericId)
 
     if (enrollmentCountError) {
-      console.warn("Course API: Error fetching enrollment count:", enrollmentCountError)
+      logWarning("Course API: Error fetching enrollment count", {
+        component: "courses/[id]/route",
+        action: "GET",
+        error: enrollmentCountError,
+        courseId: numericId,
+      })
     }
 
     // Process lessons with async operations (quiz shuffling, etc.)
@@ -313,7 +341,12 @@ export async function GET(
             .single()
 
           if (settingsError && settingsError.code !== 'PGRST116') { // PGRST116 = no rows returned
-            console.warn("Error fetching quiz settings:", settingsError)
+            logWarning("Error fetching quiz settings", {
+              component: "courses/[id]/route",
+              action: "GET",
+              error: settingsError,
+              lessonId: lesson.id,
+            })
           }
 
           if (quizSettingsData) {
@@ -363,14 +396,14 @@ export async function GET(
                 // If user has results, return questions so they can see their results
                 if (userResults && userResults.length > 0) {
                   shouldReturnQuestions = true
-                  console.log("Course API: Quiz disabled but user has results, returning questions for display", {
+                  logInfo("Course API: Quiz disabled but user has results, returning questions for display", {
                     lessonId: lesson.id,
                     lessonTitle: lesson.title,
                   })
                 } else {
                   // No results, hide quiz completely
                   quiz_questions = []
-                  console.log("Course API: Quiz disabled and no user results, hiding quiz", {
+                  logInfo("Course API: Quiz disabled and no user results, hiding quiz", {
                     lessonId: lesson.id,
                     lessonTitle: lesson.title,
                   })
@@ -381,7 +414,12 @@ export async function GET(
               }
             } catch (error) {
               // If we can't check user results, hide quiz to be safe
-              console.warn("Error checking user quiz results:", error)
+              logWarning("Error checking user quiz results", {
+                component: "courses/[id]/route",
+                action: "GET",
+                error: error,
+                lessonId: lesson.id,
+              })
               quiz_questions = []
             }
           }
@@ -407,7 +445,12 @@ export async function GET(
                     .limit(1)
                   
                   if (attemptError) {
-                    console.error("Error fetching quiz attempts:", attemptError)
+                    logError("Error fetching quiz attempts", attemptError, {
+                      component: "courses/[id]/route",
+                      action: "GET",
+                      lessonId: lesson.id,
+                      userId: user.id,
+                    })
                     throw attemptError
                   }
                   
@@ -449,7 +492,12 @@ export async function GET(
                       .single()
                     
                     if (updateError) {
-                      console.error("Error updating quiz attempt:", updateError)
+                      logError("Error updating quiz attempt", updateError, {
+                        component: "courses/[id]/route",
+                        action: "GET",
+                        lessonId: lesson.id,
+                        attemptId: attempt.id,
+                      })
                       throw updateError
                     }
                     
@@ -473,7 +521,11 @@ export async function GET(
                       .single()
                     
                     if (insertError) {
-                      console.error("Error creating quiz attempt:", insertError)
+                      logError("Error creating quiz attempt", insertError, {
+                        component: "courses/[id]/route",
+                        action: "GET",
+                        lessonId: lesson.id,
+                      })
                       throw insertError
                     }
                     
@@ -485,34 +537,32 @@ export async function GET(
                   // Use shuffled questions
                   quiz_questions = shuffledQuestions
                   
-                  console.log("Course API: Quiz shuffled for lesson", {
+                  logInfo("Course API: Quiz shuffled for lesson", {
                     lessonId: lesson.id,
                     attemptId,
                     attemptNumber,
                     questionsCount: quiz_questions.length,
                   })
                 } catch (shuffleError: any) {
-                  console.error("Error in quiz shuffle process:", {
-                    error: shuffleError,
-                    message: shuffleError?.message,
-                    stack: shuffleError?.stack,
+                  logError("Error in quiz shuffle process", shuffleError, {
+                    component: "courses/[id]/route",
+                    action: "GET",
                     lessonId: lesson.id,
                   })
                   // Continue with unshuffled questions if shuffle fails
                 }
               }
             } catch (shuffleError: any) {
-              console.error("Error shuffling quiz (outer catch):", {
-                error: shuffleError,
-                message: shuffleError?.message,
-                stack: shuffleError?.stack,
+              logError("Error shuffling quiz (outer catch)", shuffleError, {
+                component: "courses/[id]/route",
+                action: "GET",
                 lessonId: lesson.id,
               })
               // Continue with unshuffled questions if shuffle fails
             }
           }
           
-          console.log("Course API: Quiz loaded from table for lesson", {
+          logInfo("Course API: Quiz loaded from table for lesson", {
             lessonId: lesson.id,
             lessonTitle: lesson.title,
             questionsCount: quiz_questions.length,
@@ -531,7 +581,7 @@ export async function GET(
             passingScore: null,
           }
           
-          console.log("Course API: No quiz settings found for lesson, using defaults", {
+          logInfo("Course API: No quiz settings found for lesson, using defaults", {
             lessonId: lesson.id,
             lessonTitle: lesson.title,
             questionsCount: quiz_questions.length,
@@ -559,7 +609,12 @@ export async function GET(
           .order("order_index", { ascending: true })
 
         if (resourcesError) {
-          console.warn("Error fetching resources from table:", resourcesError)
+          logWarning("Error fetching resources from table", {
+            component: "courses/[id]/route",
+            action: "GET",
+            error: resourcesError,
+            lessonId: lesson.id,
+          })
         }
 
         if (lessonResources && lessonResources.length > 0) {
@@ -574,7 +629,7 @@ export async function GET(
               fileSize: lr.resources.file_size,
               downloadCount: lr.resources.download_count,
             }))
-          console.log("Course API: Resources loaded from table for lesson", {
+          logInfo("Course API: Resources loaded from table for lesson", {
             lessonId: lesson.id,
             lessonTitle: lesson.title,
             resourcesCount: resources.length,
@@ -600,7 +655,7 @@ export async function GET(
           quiz: quizSettings, // Include quiz settings for reference
         }
         
-        console.log("Course API: Processed lesson", {
+        logInfo("Course API: Processed lesson", {
           id: processedLesson.id,
           title: processedLesson.title,
           hasResources: resources.length > 0,
@@ -650,7 +705,7 @@ export async function GET(
     }
     
     // Log final course structure for debugging
-    console.log("Course API: Returning course", {
+    logInfo("Course API: Returning course", {
       courseId: numericId,
       title: processedCourse.title,
       lessonsCount: processedLessons.length,
@@ -659,7 +714,10 @@ export async function GET(
 
     return NextResponse.json({ course: processedCourse })
   } catch (error: any) {
-    console.error("Unexpected error fetching course:", error)
+    logError("Unexpected error fetching course", error, {
+      component: "courses/[id]/route",
+      action: "GET",
+    })
     return NextResponse.json(
       { error: error?.message || "An unexpected error occurred while fetching course" },
       { status: 500 }
@@ -701,7 +759,11 @@ export async function DELETE(
     try {
       serviceClient = createServiceRoleClient()
     } catch (serviceError: any) {
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "courses/[id]/route",
+        action: "GET",
+        error: serviceError.message,
+      })
       serviceClient = null
     }
 
@@ -714,7 +776,11 @@ export async function DELETE(
       .single()
 
     if (profileError || !profile) {
-      console.error("Error fetching user profile:", profileError)
+      logError("Error fetching user profile", profileError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        userId: user.id,
+      })
       return NextResponse.json({ error: "User profile not found" }, { status: 404 })
     }
 
@@ -725,15 +791,19 @@ export async function DELETE(
     // Use service role client for deletion to bypass RLS
     const serviceSupabase = serviceClient || createServiceRoleClient()
 
-    console.log("Deleting course and all related data:", numericId)
+    logInfo("Deleting course and all related data", { courseId: numericId })
 
     // Cleanup S3 files before deleting database records
     try {
       const { cleanupCourseFiles } = await import("@/lib/aws/s3-cleanup")
       const cleanupResult = await cleanupCourseFiles(numericId)
-      console.log(`S3 cleanup: ${cleanupResult.deleted} files deleted, ${cleanupResult.errors} errors`)
+      logInfo(`S3 cleanup: ${cleanupResult.deleted} files deleted, ${cleanupResult.errors} errors`, { courseId: numericId })
     } catch (cleanupError: any) {
-      console.error("Error during S3 cleanup (continuing with deletion):", cleanupError)
+      logError("Error during S3 cleanup (continuing with deletion)", cleanupError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        courseId: numericId,
+      })
       // Continue with deletion even if cleanup fails
     }
 
@@ -744,7 +814,11 @@ export async function DELETE(
       .eq("course_id", numericId)
 
     if (lessonsError) {
-      console.error("Error fetching lessons:", lessonsError)
+      logError("Error fetching lessons", lessonsError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        courseId: numericId,
+      })
       return NextResponse.json({ error: "Failed to fetch course lessons" }, { status: 500 })
     }
 
@@ -759,10 +833,15 @@ export async function DELETE(
         .in("lesson_id", lessonIds)
 
       if (quizResultsError) {
-        console.error("Error deleting quiz results:", quizResultsError)
+        logError("Error deleting quiz results", quizResultsError, {
+          component: "courses/[id]/route",
+          action: "DELETE",
+          courseId: numericId,
+          lessonIds,
+        })
         // Continue even if this fails - might not exist
       } else {
-        console.log(`Deleted quiz results for ${lessonIds.length} lessons`)
+        logInfo(`Deleted quiz results for ${lessonIds.length} lessons`, { courseId: numericId })
       }
     }
 
@@ -774,9 +853,14 @@ export async function DELETE(
         .in("lesson_id", lessonIds)
 
       if (quizAttemptsError) {
-        console.error("Error deleting quiz attempts:", quizAttemptsError)
+        logError("Error deleting quiz attempts", quizAttemptsError, {
+          component: "courses/[id]/route",
+          action: "DELETE",
+          courseId: numericId,
+          lessonIds,
+        })
       } else {
-        console.log(`Deleted quiz attempts for ${lessonIds.length} lessons`)
+        logInfo(`Deleted quiz attempts for ${lessonIds.length} lessons`, { courseId: numericId })
       }
     }
 
@@ -788,9 +872,14 @@ export async function DELETE(
         .in("lesson_id", lessonIds)
 
       if (quizQuestionsError) {
-        console.error("Error deleting quiz questions:", quizQuestionsError)
+        logError("Error deleting quiz questions", quizQuestionsError, {
+          component: "courses/[id]/route",
+          action: "DELETE",
+          courseId: numericId,
+          lessonIds,
+        })
       } else {
-        console.log(`Deleted quiz questions for ${lessonIds.length} lessons`)
+        logInfo(`Deleted quiz questions for ${lessonIds.length} lessons`, { courseId: numericId })
       }
     }
 
@@ -801,9 +890,13 @@ export async function DELETE(
       .eq("course_id", numericId)
 
     if (progressError) {
-      console.error("Error deleting progress:", progressError)
+      logError("Error deleting progress", progressError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        courseId: numericId,
+      })
     } else {
-      console.log("Deleted progress records")
+      logInfo("Deleted progress records", { courseId: numericId })
     }
 
     // 5. Enrollments (references course)
@@ -813,9 +906,13 @@ export async function DELETE(
       .eq("course_id", numericId)
 
     if (enrollmentsError) {
-      console.error("Error deleting enrollments:", enrollmentsError)
+      logError("Error deleting enrollments", enrollmentsError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        courseId: numericId,
+      })
     } else {
-      console.log("Deleted enrollments")
+      logInfo("Deleted enrollments", { courseId: numericId })
     }
 
     // 6. Payments and Certificates are kept for historical/audit purposes
@@ -831,12 +928,12 @@ export async function DELETE(
       if (paymentsUpdateError) {
         // If update fails (e.g., NOT NULL constraint), records will remain with course_id
         // This is fine - they're preserved for history even if course is deleted
-        console.log("Note: Payments records preserved with course_id for historical purposes:", paymentsUpdateError.message)
+        logInfo("Note: Payments records preserved with course_id for historical purposes", { message: paymentsUpdateError.message, courseId: numericId })
       } else {
-        console.log("Nullified course_id in payments (preserved for history)")
+        logInfo("Nullified course_id in payments (preserved for history)", { courseId: numericId })
       }
     } catch (e: any) {
-      console.log("Payments records will remain with course_id for historical purposes:", e?.message)
+      logInfo("Payments records will remain with course_id for historical purposes", { message: e?.message, courseId: numericId })
     }
 
     try {
@@ -849,12 +946,12 @@ export async function DELETE(
       if (certificatesUpdateError) {
         // If update fails (e.g., NOT NULL constraint), records will remain with course_id
         // This is fine - they're preserved for history even if course is deleted
-        console.log("Note: Certificate records preserved with course_id for historical purposes:", certificatesUpdateError.message)
+        logInfo("Note: Certificate records preserved with course_id for historical purposes", { message: certificatesUpdateError.message, courseId: numericId })
       } else {
-        console.log("Nullified course_id in certificates (preserved for history)")
+        logInfo("Nullified course_id in certificates (preserved for history)", { courseId: numericId })
       }
     } catch (e: any) {
-      console.log("Certificate records will remain with course_id for historical purposes:", e?.message)
+      logInfo("Certificate records will remain with course_id for historical purposes", { message: e?.message, courseId: numericId })
     }
 
     // 7. Lessons (references course) - should cascade to quiz_questions, but we deleted them explicitly above
@@ -864,10 +961,15 @@ export async function DELETE(
       .eq("course_id", numericId)
 
     if (lessonsDeleteError) {
-      console.error("Error deleting lessons:", lessonsDeleteError)
-      return NextResponse.json({ error: "Failed to delete lessons" }, { status: 500 })
+      logError("Error deleting lessons", lessonsDeleteError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        courseId: numericId,
+        lessonIds,
+      })
+      return NextResponse.json(createErrorResponse(lessonsDeleteError, 500, { courseId: numericId }), { status: 500 })
     } else {
-      console.log(`Deleted ${lessonIds.length} lessons`)
+      logInfo(`Deleted ${lessonIds.length} lessons`, { courseId: numericId })
     }
 
     // 8. Finally, delete the course itself
@@ -879,7 +981,11 @@ export async function DELETE(
       .eq("id", numericId)
 
     if (courseDeleteError) {
-      console.error("Error deleting course:", courseDeleteError)
+      logError("Error deleting course", courseDeleteError, {
+        component: "courses/[id]/route",
+        action: "DELETE",
+        courseId: numericId,
+      })
       
       // Check if error is due to foreign key constraint from payments/certificates
       const errorMessage = courseDeleteError.message || ""
@@ -900,11 +1006,14 @@ export async function DELETE(
       }, { status: 500 })
     }
 
-    console.log("Course and all related data deleted successfully:", numericId)
+    logInfo("Course and all related data deleted successfully", { courseId: numericId })
 
     return NextResponse.json({ message: "Course deleted successfully" })
   } catch (error: any) {
-    console.error("Unexpected error deleting course:", error)
+    logError("Unexpected error deleting course", error, {
+      component: "courses/[id]/route",
+      action: "DELETE",
+    })
     return NextResponse.json(
       { error: error?.message || "An unexpected error occurred while deleting course" },
       { status: 500 }

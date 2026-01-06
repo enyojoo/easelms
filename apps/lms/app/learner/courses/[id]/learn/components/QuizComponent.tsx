@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Loader2, Info, ArrowRight, RotateCcw } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
+import { logError, logInfo, logWarning, formatErrorMessage, handleApiError } from "../utils/errorHandler"
 
 interface QuizQuestion {
   question: string
@@ -130,12 +131,17 @@ export default function QuizComponent({
   const submitQuizResults = async () => {
     // Skip API call in preview mode
     if (previewMode) {
-      console.log("Preview mode: Skipping quiz results API call")
+      logInfo("Preview mode: Skipping quiz results API call")
       return
     }
 
     if (!courseId || !lessonId) {
-      console.warn("Cannot submit quiz results: courseId or lessonId missing")
+      logWarning("Cannot submit quiz results: courseId or lessonId missing", {
+        component: "QuizComponent",
+        action: "submitQuizResults",
+        courseId,
+        lessonId,
+      })
       return
     }
 
@@ -158,7 +164,7 @@ export default function QuizComponent({
         }
       })
       
-      console.log("Submitting quiz answers:", { lessonId, answers, questionsCount: questions.length })
+      logInfo("Submitting quiz answers", { lessonId, questionsCount: questions.length })
 
       const response = await fetch(`/api/courses/${courseId}/quiz-results`, {
         method: "POST",
@@ -172,22 +178,21 @@ export default function QuizComponent({
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to submit quiz results")
+        const error = await handleApiError(response)
+        throw error
       }
 
-      const data = await response.json()
-      console.log("Quiz results submitted successfully:", data)
+      // Quiz results submitted successfully
+      logInfo("Quiz results submitted successfully")
     } catch (error: any) {
-      console.error("Error submitting quiz results:", {
-        error,
-        message: error?.message,
-        stack: error?.stack,
+      logError("Error submitting quiz results", error, {
+        component: "QuizComponent",
+        action: "submitQuizResults",
         courseId,
         lessonId,
         answersCount: answers.length,
       })
-      const errorMessage = error?.message || error?.toString() || "Failed to save quiz results"
+      const errorMessage = formatErrorMessage(error, "Failed to save quiz results")
       setSubmissionError(errorMessage)
       // Show error to user
       throw error // Re-throw to allow caller to handle
@@ -211,8 +216,13 @@ export default function QuizComponent({
         await submitQuizResults()
       } catch (error: any) {
         // Log error but still show results screen
-        console.error("Error submitting quiz results:", error)
-        setSubmissionError(error?.message || "Failed to save quiz results, but your answers are recorded locally")
+        logError("Error submitting quiz results", error, {
+          component: "QuizComponent",
+          action: "handleNextQuestion",
+          courseId,
+          lessonId,
+        })
+        setSubmissionError(formatErrorMessage(error, "Failed to save quiz results, but your answers are recorded locally"))
         // Continue to show results even if submission failed
       }
       
@@ -226,7 +236,12 @@ export default function QuizComponent({
       try {
         onComplete(selectedAnswers, questions, attemptCount + 1)
       } catch (error: any) {
-        console.error("Error in onComplete callback:", error)
+        logError("Error in onComplete callback", error, {
+          component: "QuizComponent",
+          action: "onComplete",
+          courseId,
+          lessonId,
+        })
         // Don't throw - allow UI to continue showing results
       }
     }
@@ -251,22 +266,27 @@ export default function QuizComponent({
     try {
       // Prevent retry if quiz is disabled
       if (disabled) {
-        console.log("Quiz is disabled, cannot retry")
+        logInfo("Quiz is disabled, cannot retry", { courseId, lessonId })
         return
       }
 
-      console.log("Retrying quiz - attempt count:", attemptCount)
+      logInfo("Retrying quiz", { attemptCount, courseId, lessonId })
       
       // Check if multiple attempts are allowed
       if (!quiz.allowMultipleAttempts && attemptCount > 0) {
-        console.warn("Multiple attempts not allowed")
+        logWarning("Multiple attempts not allowed", {
+          component: "QuizComponent",
+          action: "handleRetryQuiz",
+          courseId,
+          lessonId,
+        })
         return // Don't allow retry if multiple attempts is disabled
       }
       
       // Check if max attempts limit has been reached
       const maxAttempts = quiz.maxAttempts || 3
       if (attemptCount >= maxAttempts) {
-        console.log(`Max attempts (${maxAttempts}) reached. Cannot retry.`)
+        logInfo(`Max attempts (${maxAttempts}) reached. Cannot retry.`, { attemptCount, maxAttempts })
         return // Don't allow retry if max attempts reached
       }
       
@@ -284,24 +304,25 @@ export default function QuizComponent({
       if (onRetry) {
         try {
           await onRetry()
-          console.log("Quiz data cleared successfully, ready for retry")
+          logInfo("Quiz data cleared successfully, ready for retry")
         } catch (retryError: any) {
-          console.error("Error in onRetry callback:", {
-            error: retryError,
-            message: retryError?.message,
-            stack: retryError?.stack,
+          logError("Error in onRetry callback", retryError, {
+            component: "QuizComponent",
+            action: "onRetry",
             lessonId,
             courseId,
           })
-          const errorMessage = retryError?.message || retryError?.toString() || "Failed to reset quiz. Please refresh the page."
+          const errorMessage = formatErrorMessage(retryError, "Failed to reset quiz. Please refresh the page.")
           setSubmissionError(errorMessage)
           throw retryError
         }
       }
     } catch (error: any) {
-      console.error("Error in handleRetryQuiz:", {
-        error,
-        message: error?.message,
+      logError("Error in handleRetryQuiz", error, {
+        component: "QuizComponent",
+        action: "handleRetryQuiz",
+        courseId,
+        lessonId,
         stack: error?.stack,
         lessonId,
         courseId,

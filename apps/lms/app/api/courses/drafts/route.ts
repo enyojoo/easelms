@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 // Save or update a course draft
 export async function POST(request: Request) {
@@ -17,7 +18,11 @@ export async function POST(request: Request) {
     try {
       serviceClient = createServiceRoleClient()
     } catch (serviceError: any) {
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "courses/drafts/route",
+        action: "POST",
+        error: serviceError.message,
+      })
       serviceClient = null
     }
 
@@ -102,8 +107,13 @@ export async function POST(request: Request) {
         .single()
 
       if (error) {
-        console.error("Error updating course draft:", error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        logError("Error updating course draft", error, {
+          component: "courses/drafts/route",
+          action: "POST",
+          courseId,
+          userId: user.id,
+        })
+        return NextResponse.json(createErrorResponse(error, 500, { courseId, userId: user.id }), { status: 500 })
       }
 
       result = data
@@ -119,8 +129,12 @@ export async function POST(request: Request) {
         .single()
 
       if (error) {
-        console.error("Error creating course draft:", error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        logError("Error creating course draft", error, {
+          component: "courses/drafts/route",
+          action: "POST",
+          userId: user.id,
+        })
+        return NextResponse.json(createErrorResponse(error, 500, { userId: user.id }), { status: 500 })
       }
 
       result = data
@@ -204,10 +218,15 @@ export async function POST(request: Request) {
             .eq("id", id)
 
           if (updateError) {
-            console.error(`Error updating lesson ${id}:`, updateError)
+            logError(`Error updating lesson ${id}`, updateError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: id,
+              courseId: result.id,
+            })
           }
         }
-        console.log(`Successfully updated ${lessonsToUpdate.length} lessons for course ${result.id}`)
+        logInfo(`Successfully updated ${lessonsToUpdate.length} lessons`, { courseId: result.id })
       }
 
       // Insert new lessons
@@ -219,17 +238,21 @@ export async function POST(request: Request) {
           .select("id")
 
         if (insertError) {
-          console.error("Error inserting new lessons:", insertError)
+          logError("Error inserting new lessons", insertError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+          })
         } else {
           insertedLessonIds = (insertedLessons || []).map((l: any) => l.id)
-          console.log(`Successfully inserted ${insertedLessonIds.length} new lessons for course ${result.id}`)
+          logInfo(`Successfully inserted ${insertedLessonIds.length} new lessons`, { courseId: result.id })
         }
       }
 
       // Delete lessons that exist in database but not in current lessons array
       const lessonsToDelete = Array.from(existingLessonIds).filter(id => !currentLessonIds.has(id))
       
-      console.log(`Lesson deletion check for course ${result.id}:`, {
+      logInfo(`Lesson deletion check for course ${result.id}`, {
         existingLessonIds: Array.from(existingLessonIds),
         currentLessonIds: Array.from(currentLessonIds),
         lessonsToDelete: lessonsToDelete,
@@ -246,9 +269,14 @@ export async function POST(request: Request) {
           .in("lesson_id", lessonIdsToDelete)
         
         if (quizQuestionsDeleteError) {
-          console.error("Error deleting quiz questions for removed lessons:", quizQuestionsDeleteError)
+          logError("Error deleting quiz questions for removed lessons", quizQuestionsDeleteError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+            lessonIds: lessonIdsToDelete,
+          })
         } else {
-          console.log(`Deleted quiz questions for ${lessonsToDelete.length} removed lessons`)
+          logInfo(`Deleted quiz questions for ${lessonsToDelete.length} removed lessons`, { courseId: result.id })
         }
         
         // Delete quiz settings for deleted lessons
@@ -258,7 +286,12 @@ export async function POST(request: Request) {
           .in("lesson_id", lessonIdsToDelete)
         
         if (quizSettingsDeleteError) {
-          console.error("Error deleting quiz settings for removed lessons:", quizSettingsDeleteError)
+          logError("Error deleting quiz settings for removed lessons", quizSettingsDeleteError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+            lessonIds: lessonIdsToDelete,
+          })
         }
         
         // Delete lesson_resources for deleted lessons
@@ -268,7 +301,12 @@ export async function POST(request: Request) {
           .in("lesson_id", lessonIdsToDelete)
         
         if (lessonResourcesDeleteError) {
-          console.error("Error deleting lesson_resources for removed lessons:", lessonResourcesDeleteError)
+          logError("Error deleting lesson_resources for removed lessons", lessonResourcesDeleteError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+            lessonIds: lessonIdsToDelete,
+          })
         }
         
         // Finally, delete the lessons themselves
@@ -278,9 +316,15 @@ export async function POST(request: Request) {
           .in("id", lessonIdsToDelete)
 
         if (deleteError) {
-          console.error("Error deleting removed lessons:", deleteError)
+          logError("Error deleting removed lessons", deleteError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+            lessonIds: lessonsToDelete,
+          })
         } else {
-          console.log(`✅ Successfully deleted ${lessonsToDelete.length} removed lessons for course ${result.id}`, {
+          logInfo(`Successfully deleted ${lessonsToDelete.length} removed lessons`, {
+            courseId: result.id,
             deletedLessonIds: lessonsToDelete,
           })
         }
@@ -336,7 +380,7 @@ export async function POST(request: Request) {
         // Quiz is enabled only if: quiz exists, enabled is true, AND has questions
         const quizEnabled = quiz && quiz.enabled === true && hasQuestions
         
-        console.log(`Processing quiz for lesson ${actualLessonId}:`, {
+        logInfo(`Processing quiz for lesson ${actualLessonId}`, {
           hasQuiz: !!quiz,
           quizEnabled: quiz?.enabled,
           hasQuestions: hasQuestions,
@@ -365,7 +409,11 @@ export async function POST(request: Request) {
           })
 
         if (settingsError) {
-          console.error(`Error saving quiz settings for lesson ${actualLessonId}:`, settingsError)
+          logError(`Error saving quiz settings for lesson ${actualLessonId}`, settingsError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            lessonId: actualLessonId,
+          })
         }
 
         // If quiz has no questions, we still need to save settings (but keep existing questions)
@@ -466,10 +514,15 @@ export async function POST(request: Request) {
               .eq("id", id)
 
             if (updateError) {
-              console.error(`Error updating question ${id}:`, updateError)
+              logError(`Error updating question ${id}`, updateError, {
+                component: "courses/drafts/route",
+                action: "POST",
+                questionId: id,
+                lessonId: actualLessonId,
+              })
             }
           }
-          console.log(`Successfully updated ${questionsToUpdate.length} questions for lesson ${actualLessonId}`)
+          logInfo(`Successfully updated ${questionsToUpdate.length} questions`, { lessonId: actualLessonId })
         }
 
         // Insert new questions
@@ -479,9 +532,13 @@ export async function POST(request: Request) {
             .insert(questionsToInsert)
 
           if (insertError) {
-            console.error(`Error inserting questions for lesson ${actualLessonId}:`, insertError)
+            logError(`Error inserting questions for lesson ${actualLessonId}`, insertError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+            })
           } else {
-            console.log(`Successfully inserted ${questionsToInsert.length} new questions for lesson ${actualLessonId}`)
+            logInfo(`Successfully inserted ${questionsToInsert.length} new questions`, { lessonId: actualLessonId })
           }
         }
 
@@ -489,7 +546,7 @@ export async function POST(request: Request) {
         // This handles the case where questions are deleted from the UI
         const questionsToDelete = Array.from(existingQuestionIds).filter(id => !currentQuestionIds.has(id))
         
-        console.log(`Quiz deletion check for lesson ${actualLessonId}:`, {
+        logInfo(`Quiz deletion check for lesson ${actualLessonId}`, {
           existingQuestionIds: Array.from(existingQuestionIds),
           currentQuestionIds: Array.from(currentQuestionIds),
           questionsToDelete: questionsToDelete,
@@ -509,19 +566,25 @@ export async function POST(request: Request) {
             .in("id", questionsToDelete)
 
           if (deleteError) {
-            console.error(`Error deleting removed questions for lesson ${actualLessonId}:`, {
-              error: deleteError,
+            logError(`Error deleting removed questions for lesson ${actualLessonId}`, deleteError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
               deletedIds: questionsToDelete,
             })
           } else {
-            console.log(`✅ Successfully deleted ${questionsToDelete.length} removed questions for lesson ${actualLessonId}`, {
+            logInfo(`Successfully deleted ${questionsToDelete.length} removed questions`, {
+              lessonId: actualLessonId,
               deletedIds: questionsToDelete,
             })
           }
         } else if (existingQuestionIds.size > 0 && currentQuestionIds.size === 0 && quiz.questions.length > 0) {
           // Edge case: All questions in array are new (no database IDs), but there are existing questions in DB
           // This means all existing questions should be deleted and replaced with new ones
-          console.warn(`⚠️ Warning: Lesson ${actualLessonId} has ${existingQuestionIds.size} questions in DB but none match current questions array - deleting all existing questions`, {
+          logWarning(`Lesson ${actualLessonId} has ${existingQuestionIds.size} questions in DB but none match current questions array - deleting all existing questions`, {
+            component: "courses/drafts/route",
+            action: "POST",
+            lessonId: actualLessonId,
             existingIds: Array.from(existingQuestionIds),
             currentQuestions: quiz.questions.map((q: any) => q.id),
           })
@@ -533,22 +596,30 @@ export async function POST(request: Request) {
             .eq("lesson_id", actualLessonId)
             
           if (deleteAllError) {
-            console.error(`Error deleting all unmatched questions for lesson ${actualLessonId}:`, deleteAllError)
+            logError(`Error deleting all unmatched questions for lesson ${actualLessonId}`, deleteAllError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+            })
           } else {
-            console.log(`✅ Deleted all ${existingQuestionIds.size} unmatched questions for lesson ${actualLessonId}`)
+            logInfo(`Deleted all ${existingQuestionIds.size} unmatched questions`, { lessonId: actualLessonId })
           }
         } else if (existingQuestionIds.size > 0 && quiz.questions.length === 0) {
           // All questions were deleted from UI - delete all from DB
-          console.log(`All questions deleted from UI for lesson ${actualLessonId} - deleting all from database`)
+          logInfo(`All questions deleted from UI for lesson ${actualLessonId} - deleting all from database`, { lessonId: actualLessonId })
           const { error: deleteAllError } = await dbClient
             .from("quiz_questions")
             .delete()
             .eq("lesson_id", actualLessonId)
             
           if (deleteAllError) {
-            console.error(`Error deleting all questions for lesson ${actualLessonId}:`, deleteAllError)
+            logError(`Error deleting all questions for lesson ${actualLessonId}`, deleteAllError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+            })
           } else {
-            console.log(`✅ Successfully deleted all ${existingQuestionIds.size} questions for lesson ${actualLessonId}`)
+            logInfo(`Successfully deleted all ${existingQuestionIds.size} questions`, { lessonId: actualLessonId })
           }
         }
       }
@@ -581,7 +652,11 @@ export async function POST(request: Request) {
           const resource = resources[i]
           
           if (!resource.url) {
-            console.warn(`Resource in lesson ${actualLessonId} has no URL, skipping...`)
+            logWarning(`Resource in lesson ${actualLessonId} has no URL, skipping`, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+            })
             continue
           }
 
@@ -596,7 +671,12 @@ export async function POST(request: Request) {
             .single()
 
           if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-            console.error(`Error checking for existing resource:`, checkError)
+            logError(`Error checking for existing resource`, checkError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+              resourceUrl: resource.url,
+            })
             continue
           }
 
@@ -654,7 +734,12 @@ export async function POST(request: Request) {
               .single()
             
             if (resourceError) {
-              console.error(`Error creating resource:`, resourceError)
+              logError(`Error creating resource`, resourceError, {
+                component: "courses/drafts/route",
+                action: "POST",
+                lessonId: actualLessonId,
+                resourceTitle: resource.title,
+              })
               continue
             }
             
@@ -675,7 +760,12 @@ export async function POST(request: Request) {
             })
           
           if (junctionError) {
-            console.error(`Error creating lesson_resource:`, junctionError)
+            logError(`Error creating lesson_resource`, junctionError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+              resourceId: resourceId,
+            })
           }
         }
 
@@ -684,7 +774,7 @@ export async function POST(request: Request) {
           (id) => !currentResourceIds.has(id)
         )
 
-        console.log(`Resource deletion check for lesson ${actualLessonId}:`, {
+        logInfo(`Resource deletion check for lesson ${actualLessonId}`, {
           existingResourceIds: Array.from(existingResourceIds),
           currentResourceIds: Array.from(currentResourceIds),
           resourcesToDelete: resourcesToDelete,
@@ -702,9 +792,14 @@ export async function POST(request: Request) {
             .in("resource_id", resourcesToDelete)
 
           if (deleteError) {
-            console.error(`Error deleting lesson_resources for lesson ${actualLessonId}:`, deleteError)
+            logError(`Error deleting lesson_resources for lesson ${actualLessonId}`, deleteError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              lessonId: actualLessonId,
+            })
           } else {
-            console.log(`✅ Successfully deleted ${resourcesToDelete.length} lesson_resources for lesson ${actualLessonId}`, {
+            logInfo(`Successfully deleted ${resourcesToDelete.length} lesson_resources`, {
+              lessonId: actualLessonId,
               deletedResourceIds: resourcesToDelete,
             })
           }
@@ -726,7 +821,11 @@ export async function POST(request: Request) {
                 .eq("id", resourceId)
               
               if (updateError) {
-                console.error(`Error updating usage_count for resource ${resourceId}:`, updateError)
+                logError(`Error updating usage_count for resource ${resourceId}`, updateError, {
+                  component: "courses/drafts/route",
+                  action: "POST",
+                  resourceId: resourceId,
+                })
               }
             }
           }
@@ -759,7 +858,11 @@ export async function POST(request: Request) {
             .in("prerequisite_course_id", prerequisitesToDelete)
 
           if (deleteError) {
-            console.error("Error deleting prerequisites:", deleteError)
+            logError("Error deleting prerequisites", deleteError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              courseId: result.id,
+            })
           }
         }
 
@@ -777,9 +880,13 @@ export async function POST(request: Request) {
             .insert(prerequisitesToInsert)
 
           if (insertError) {
-            console.error("Error inserting prerequisites:", insertError)
+            logError("Error inserting prerequisites", insertError, {
+              component: "courses/drafts/route",
+              action: "POST",
+              courseId: result.id,
+            })
           } else {
-            console.log(`Successfully saved ${prerequisitesToInsert.length} prerequisites for course ${result.id}`)
+            logInfo(`Successfully saved ${prerequisitesToInsert.length} prerequisites`, { courseId: result.id })
           }
         }
       } else if (result.id && !prerequisites.enabled) {
@@ -790,7 +897,11 @@ export async function POST(request: Request) {
           .eq("course_id", result.id)
 
         if (deleteError) {
-          console.error("Error deleting prerequisites:", deleteError)
+          logError("Error deleting prerequisites", deleteError, {
+            component: "courses/drafts/route",
+            action: "POST",
+            courseId: result.id,
+          })
         }
       }
     }
@@ -800,9 +911,12 @@ export async function POST(request: Request) {
       courseId: result.id 
     })
   } catch (error: any) {
-    console.error("Unexpected error saving draft:", error)
+    logError("Unexpected error saving draft", error, {
+      component: "courses/drafts/route",
+      action: "POST",
+    })
     return NextResponse.json(
-      { error: error?.message || "An unexpected error occurred while saving draft" },
+      createErrorResponse(error, 500, { component: "courses/drafts/route", action: "POST" }),
       { status: 500 }
     )
   }
@@ -824,7 +938,11 @@ export async function GET(request: Request) {
     try {
       serviceClient = createServiceRoleClient()
     } catch (serviceError: any) {
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "courses/drafts/route",
+        action: "POST",
+        error: serviceError.message,
+      })
       serviceClient = null
     }
 
@@ -859,8 +977,12 @@ export async function GET(request: Request) {
       .single()
 
     if (error) {
-      console.error("Error fetching course draft:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      logError("Error fetching course draft", error, {
+        component: "courses/drafts/route",
+        action: "GET",
+        courseId,
+      })
+      return NextResponse.json(createErrorResponse(error, 500, { courseId }), { status: 500 })
     }
 
     if (!data) {
@@ -871,7 +993,7 @@ export async function GET(request: Request) {
     // Convert courseId to number for the query
     const numericCourseId = typeof courseId === 'string' ? parseInt(courseId, 10) : courseId
     
-    console.log(`Drafts API: Fetching lessons for course ${courseId} (numeric: ${numericCourseId})`)
+    logInfo(`Drafts API: Fetching lessons for course ${courseId}`, { numericCourseId })
     
     const { data: lessonsData, error: lessonsError } = await dbClient
       .from("lessons")
@@ -880,11 +1002,11 @@ export async function GET(request: Request) {
       .order("order_index", { ascending: true })
     
     if (lessonsError) {
-      console.error("Error fetching lessons for course draft:", {
-        error: lessonsError,
+      logError("Error fetching lessons for course draft", lessonsError, {
+        component: "courses/drafts/route",
+        action: "GET",
         courseId: courseId,
         numericCourseId: numericCourseId,
-        message: lessonsError.message,
         code: lessonsError.code,
         details: lessonsError.details,
       })
@@ -895,7 +1017,7 @@ export async function GET(request: Request) {
     const lessons = lessonsData || []
     data.lessons = lessons
     
-    console.log(`Drafts API: Fetched ${lessons.length} lessons for course ${courseId}`, {
+    logInfo(`Drafts API: Fetched ${lessons.length} lessons for course ${courseId}`, {
       courseId: courseId,
       numericCourseId: numericCourseId,
       lessonIds: lessons.map((l: any) => l.id),
@@ -1049,7 +1171,7 @@ export async function GET(request: Request) {
         const quizQuestions = quizQuestionsByLesson.get(lesson.id) || []
         
         // Log for debugging - helps verify data is loaded correctly
-        console.log(`Loading lesson ${lesson.id}:`, {
+        logInfo(`Loading lesson ${lesson.id}`, {
           title: lesson.title,
           hasVideoUrl: !!videoUrl,
           hasTextContent: !!textContent,
@@ -1097,7 +1219,7 @@ export async function GET(request: Request) {
     } else {
       // Ensure lessons array exists even if empty
       data.lessons = []
-      console.log(`Drafts API: No lessons found for course ${courseId}`)
+      logInfo(`Drafts API: No lessons found for course ${courseId}`, { courseId })
     }
 
     // Add prerequisites to course data
@@ -1136,7 +1258,7 @@ export async function GET(request: Request) {
     }
     
     // Log final response structure for debugging
-    console.log(`Drafts API: Returning course ${courseId} with ${data.lessons.length} lessons`, {
+    logInfo(`Drafts API: Returning course ${courseId} with ${data.lessons.length} lessons`, {
       courseId: courseId,
       lessonsCount: data.lessons.length,
       lessonIds: data.lessons.map((l: any) => l.id),
@@ -1153,8 +1275,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ course: data })
   } catch (error: any) {
-    console.error("Unexpected error fetching draft:", error)
+    logError("Unexpected error fetching draft", error, {
+      component: "courses/drafts/route",
+      action: "GET",
+    })
     return NextResponse.json(
+      createErrorResponse(error, 500, { component: "courses/drafts/route", action: "GET" }),
       { error: error?.message || "An unexpected error occurred while fetching draft" },
       { status: 500 }
     )

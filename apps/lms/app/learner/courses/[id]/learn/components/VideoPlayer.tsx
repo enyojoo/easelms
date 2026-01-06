@@ -52,7 +52,12 @@ export default function VideoPlayer({
         }
       }
     } catch (error) {
-      console.error("Error loading video progress:", error)
+      logError("Error loading video progress", error, {
+        component: "VideoPlayer",
+        action: "loadVideoProgress",
+        courseId,
+        lessonId,
+      })
     }
   }, [videoProgression, progressStorageKey, lessonId])
 
@@ -83,7 +88,12 @@ export default function VideoPlayer({
           }
 
         } catch (error) {
-          console.error("Error saving video progress:", error)
+          logError("Error saving video progress", error, {
+            component: "VideoPlayer",
+            action: "saveVideoProgress",
+            courseId,
+            lessonId,
+          })
         }
       }
     }, 5000)
@@ -124,7 +134,12 @@ export default function VideoPlayer({
                       JSON.stringify({ currentTime: current, duration: dur })
                     )
                   } catch (error) {
-                    console.error("Error saving video progress:", error)
+                    logError("Error saving video progress", error, {
+            component: "VideoPlayer",
+            action: "saveVideoProgress",
+            courseId,
+            lessonId,
+          })
                   }
                   
                   // Call progress update callback
@@ -156,7 +171,12 @@ export default function VideoPlayer({
                   }
                 }
               } catch (error) {
-                console.error("Error loading video progress:", error)
+                logError("Error loading video progress", error, {
+        component: "VideoPlayer",
+        action: "loadVideoProgress",
+        courseId,
+        lessonId,
+      })
               }
             }
           }}

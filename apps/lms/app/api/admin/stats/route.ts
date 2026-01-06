@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET() {
   const supabase = await createClient()
@@ -15,7 +16,11 @@ export async function GET() {
   try {
     serviceClient = createServiceRoleClient()
   } catch (serviceError: any) {
-    console.warn("Service role key not available, using regular client:", serviceError.message)
+    logWarning("Service role key not available, using regular client", {
+      component: "admin/stats/route",
+      action: "GET",
+      error: serviceError.message,
+    })
     serviceClient = null
   }
 
@@ -45,7 +50,11 @@ export async function GET() {
   }
 
   if (error) {
-    console.error("Error fetching profile for admin check:", error)
+    logError("Error fetching profile for admin check", error, {
+      component: "admin/stats/route",
+      action: "GET",
+      userId: user.id,
+    })
     return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
   }
 
@@ -67,7 +76,10 @@ export async function GET() {
       .eq("is_published", true)
 
     if (coursesError) {
-      console.error("Error fetching courses:", coursesError)
+      logError("Error fetching courses", coursesError, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
       throw coursesError
     }
 
@@ -78,7 +90,10 @@ export async function GET() {
       .eq("user_type", "user")
 
     if (learnersError) {
-      console.error("Error fetching learners:", learnersError)
+      logError("Error fetching learners", learnersError, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
       throw learnersError
     }
 
@@ -89,7 +104,10 @@ export async function GET() {
       .eq("status", "completed")
 
     if (paymentsError) {
-      console.error("Error fetching payments:", paymentsError)
+      logError("Error fetching payments", paymentsError, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
       throw paymentsError
     }
 
@@ -105,7 +123,10 @@ export async function GET() {
       .eq("status", "completed")
 
     if (completedError) {
-      console.error("Error fetching completed enrollments:", completedError)
+      logError("Error fetching completed enrollments", completedError, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
       // Don't throw, just log the error and use 0 as default
     }
 
@@ -167,12 +188,18 @@ export async function GET() {
 
     // Check for errors in enrollments query
     if (enrollmentsData.error) {
-      console.error("Error fetching enrollments:", enrollmentsData.error)
+      logError("Error fetching enrollments", enrollmentsData.error, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
     }
 
     // Check for errors in completions query
     if (completionsData.error) {
-      console.error("Error fetching completions:", completionsData.error)
+      logError("Error fetching completions", completionsData.error, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
     }
 
     // Ensure we have valid enrollment data
@@ -185,7 +212,7 @@ export async function GET() {
     const enrollmentUserIds = (validEnrollmentsData.data || []).map((e: any) => e.user_id).filter(Boolean)
     const enrollmentCourseIds = (validEnrollmentsData.data || []).map((e: any) => e.course_id).filter(Boolean)
     
-    console.log("Enrollment IDs - Users:", enrollmentUserIds.length, "Courses:", enrollmentCourseIds.length)
+    logInfo("Enrollment IDs", { users: enrollmentUserIds.length, courses: enrollmentCourseIds.length })
     
     const [enrollmentUsers, enrollmentCourses] = await Promise.all([
       enrollmentUserIds.length > 0
@@ -204,10 +231,16 @@ export async function GET() {
 
     // Check for errors in user/course queries
     if (enrollmentUsers.error) {
-      console.error("Error fetching enrollment users:", enrollmentUsers.error)
+      logError("Error fetching enrollment users", enrollmentUsers.error, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
     }
     if (enrollmentCourses.error) {
-      console.error("Error fetching enrollment courses:", enrollmentCourses.error)
+      logError("Error fetching enrollment courses", enrollmentCourses.error, {
+        component: "admin/stats/route",
+        action: "GET",
+      })
     }
 
     // Create maps for quick lookup
@@ -223,7 +256,7 @@ export async function GET() {
       }))
     }
 
-    console.log("Mapped enrollments:", enrollments.data.length, "records")
+    logInfo("Mapped enrollments", { count: enrollments.data.length })
 
     // Fetch user names and course titles for completions
     const completionUserIds = (validCompletionsData.data || []).map(e => e.user_id).filter(Boolean)
@@ -257,7 +290,7 @@ export async function GET() {
       }))
     }
     
-    console.log("Completions data:", {
+    logInfo("Completions data", {
       rawCount: validCompletionsData.data?.length || 0,
       mappedCount: completions.data.length,
       sample: completions.data[0]
@@ -306,7 +339,7 @@ export async function GET() {
       timestamp: new Date(e.enrolled_at).getTime()
     }))
 
-    console.log("Enrollment activities created:", enrollmentActivities.length)
+    logInfo("Enrollment activities created", { count: enrollmentActivities.length })
 
     const recentActivity = [
       ...(recentSignups.data?.map(u => ({
@@ -340,7 +373,7 @@ export async function GET() {
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 5)
 
-    console.log("Total recent activity items:", recentActivity.length, "Enrollments:", enrollmentActivities.length)
+    logInfo("Total recent activity items", { total: recentActivity.length, enrollments: enrollmentActivities.length })
 
     return NextResponse.json({
       totalCourses: totalCourses || 0,
@@ -351,7 +384,10 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error("Error fetching admin stats:", error)
+    logError("Error fetching admin stats", error, {
+      component: "admin/stats/route",
+      action: "GET",
+    })
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 })
   }
 }

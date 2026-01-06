@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getS3StoragePath, getPresignedPutUrl, getPublicUrl } from "@/lib/aws/s3"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 /**
  * Generate a presigned URL for direct S3 upload (bypasses Next.js body size limits)
@@ -67,7 +68,11 @@ export async function POST(request: Request) {
       url: publicUrl,
     })
   } catch (error: any) {
-    console.error("Presigned URL generation error:", error)
+    logError("Presigned URL generation error", error, {
+      component: "upload/presigned-s3/route",
+      action: "POST",
+      userId: user.id,
+    })
     return NextResponse.json(
       { error: error.message || "Failed to generate presigned URL" },
       { status: 500 }

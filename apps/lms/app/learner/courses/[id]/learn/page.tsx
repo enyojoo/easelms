@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams, useSearchParams } from "next/navigation"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import { useClientAuthState } from "@/utils/client-auth"

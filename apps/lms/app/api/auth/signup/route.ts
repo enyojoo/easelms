@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function POST(request: Request) {
   const { email, password, name, userType = "user" } = await request.json()
@@ -11,7 +12,11 @@ export async function POST(request: Request) {
     if (trimmed === "user" || trimmed === "admin") {
       validatedUserType = trimmed
     } else {
-      console.warn(`Invalid userType "${userType}" in signup, defaulting to "user"`)
+      logWarning(`Invalid userType "${userType}" in signup, defaulting to "user"`, {
+        component: "auth/signup/route",
+        action: "POST",
+        providedUserType: userType,
+      })
     }
   }
 
@@ -53,18 +58,27 @@ export async function POST(request: Request) {
   try {
     serviceClient = createServiceRoleClient()
   } catch (serviceError: any) {
-    console.warn("Service role key not available for signup, using regular client:", serviceError.message)
+    logWarning("Service role key not available for signup, using regular client", {
+      component: "auth/signup/route",
+      action: "POST",
+      error: serviceError.message,
+    })
     serviceClient = null
   }
 
   const clientToUse = serviceClient || supabase
 
-  console.log("Signup: Creating profile with user_type:", profileData.user_type)
+  logInfo("Signup: Creating profile", { userType: profileData.user_type, email })
 
   const { error: profileError } = await clientToUse.from("profiles").insert(profileData)
 
   if (profileError) {
-    console.error("Error creating profile:", profileError)
+    logError("Error creating profile", profileError, {
+      component: "auth/signup/route",
+      action: "POST",
+      userId: authData.user.id,
+      email,
+    })
     // Note: We can't easily rollback the auth user without admin privileges
     // The user will need to contact support if this happens
     return NextResponse.json(

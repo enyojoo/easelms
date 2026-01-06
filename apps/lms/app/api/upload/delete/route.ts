@@ -1,6 +1,7 @@
 import { deleteFileFromS3 } from "@/lib/aws/s3"
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -57,7 +58,11 @@ export async function POST(request: Request) {
       throw s3Error
     }
   } catch (error: any) {
-    console.error("Delete error:", error)
+    logError("Delete error", error, {
+      component: "upload/delete/route",
+      action: "POST",
+      userId: user.id,
+    })
     return NextResponse.json(
       { error: error.message || "Failed to delete file" },
       { status: 500 }

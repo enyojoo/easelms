@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { extractIdFromSlug } from "@/lib/slug"
 import { mapAnswerToOriginal } from "@/lib/quiz/shuffle"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET(
   request: Request,
@@ -24,7 +25,7 @@ export async function GET(
     return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
   }
 
-  console.log("Quiz results GET - User:", user.id, "CourseId:", courseId)
+  logInfo("Quiz results GET", { userId: user.id, courseId })
 
   // Use service role to bypass RLS and get quiz results
   const serviceSupabase = createServiceRoleClient()
@@ -39,8 +40,13 @@ export async function GET(
     .order("created_at", { ascending: false })
 
   if (error) {
-    console.error("Error fetching quiz results:", error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    logError("Error fetching quiz results", error, {
+      component: "courses/[id]/quiz-results/route",
+      action: "GET",
+      userId: user.id,
+      courseId,
+    })
+    return NextResponse.json(createErrorResponse(error, 500, { userId: user.id, courseId }), { status: 500 })
   }
 
   // Return results grouped by lesson with shuffle data included
@@ -88,7 +94,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
   }
 
-  console.log("Quiz results POST - User:", user.id, "CourseId:", courseId, "ParamsId:", id)
+  logInfo("Quiz results POST", { userId: user.id, courseId, paramsId: id })
 
   // Check if user is enrolled in the course
   const { data: enrollment, error: enrollmentError } = await supabase
@@ -98,7 +104,7 @@ export async function POST(
     .eq("course_id", courseId)
     .single()
 
-  console.log("Enrollment check - Enrollment:", enrollment, "Error:", enrollmentError)
+  logInfo("Enrollment check", { enrollment: !!enrollment, error: enrollmentError?.message })
 
   if (!enrollment) {
     return NextResponse.json(
@@ -175,18 +181,16 @@ export async function POST(
         }
       })
       
-      console.log("Fetched quiz questions from table - Count:", quizQuestions.length)
+      logInfo("Fetched quiz questions from table", { count: quizQuestions.length, lessonId })
     } else {
       // NO JSONB fallback - only use normalized quiz_questions table
       // If no questions found in table, quiz is empty
       quizQuestions = []
-      console.log("No quiz questions found in normalized table for lesson", {
-        lessonId: lessonId,
-      })
+      logInfo("No quiz questions found in normalized table for lesson", { lessonId })
     }
     
-    console.log("Received answers:", answers)
-    console.log("Question IDs in quiz:", quizQuestions.map((q: any) => ({ id: q.id, dbId: q.dbId, type: typeof q.id })))
+    logInfo("Received answers", { answersCount: answers.length, lessonId })
+    logInfo("Question IDs in quiz", { questionIds: quizQuestions.map((q: any) => ({ id: q.id, dbId: q.dbId, type: typeof q.id })) })
 
     // Fetch quiz attempt to get shuffle mapping
     // Use .maybeSingle() instead of .single() to handle case where no attempt exists yet
@@ -201,7 +205,12 @@ export async function POST(
 
     if (attemptFetchError && attemptFetchError.code !== 'PGRST116') {
       // PGRST116 = no rows returned (expected if no attempt exists)
-      console.warn("Error fetching quiz attempt:", attemptFetchError)
+      logWarning("Error fetching quiz attempt", {
+        component: "courses/[id]/quiz-results/route",
+        action: "POST",
+        error: attemptFetchError,
+        lessonId,
+      })
     }
 
     const hasShuffle = quizAttempt && quizAttempt.question_order && Array.isArray(quizAttempt.question_order) && quizAttempt.question_order.length > 0
@@ -219,9 +228,14 @@ export async function POST(
         .single()
       
       if (updateAttemptError) {
-        console.warn("Warning: Could not mark quiz attempt as completed:", updateAttemptError)
+        logWarning("Could not mark quiz attempt as completed", {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          error: updateAttemptError,
+          attemptId,
+        })
       } else {
-        console.log("Quiz attempt marked as completed")
+        logInfo("Quiz attempt marked as completed", { attemptId, lessonId })
         attemptId = updatedAttempt?.id || attemptId
       }
     }
@@ -294,14 +308,20 @@ export async function POST(
         
         // Fallback to index
         if (!question && i < quizQuestions.length) {
-          console.log(`Question ID ${answer.questionId} not found, using index ${i} as fallback`)
+          logInfo(`Question ID ${answer.questionId} not found, using index ${i} as fallback`, { questionId: answer.questionId, index: i })
           question = quizQuestions[i]
           originalQuestion = question
         }
       }
       
       if (!question) {
-        console.error(`Question not found for answer ${i}:`, answer, "Available questions:", quizQuestions.length)
+        logError(`Question not found for answer ${i}`, new Error("Question not found"), {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          answerIndex: i,
+          answer,
+          availableQuestions: quizQuestions.length,
+        })
         continue
       }
       
@@ -318,7 +338,7 @@ export async function POST(
         // For multiple choice, compare with correctOption (already in shuffled position if shuffled)
         const correctAnswer = question.correctOption !== undefined ? question.correctOption : question.correct_answer
         isCorrect = correctAnswer === answer.userAnswer
-        console.log(`Question ${i} (multiple-choice): correctAnswer=${correctAnswer}, userAnswer=${answer.userAnswer}, isCorrect=${isCorrect}`)
+        logInfo(`Question ${i} (multiple-choice)`, { correctAnswer, userAnswer: answer.userAnswer, isCorrect })
       } else if (qType === "true-false" || qType === "true_false") {
         const correctAnswer = question.correctOption !== undefined ? question.correctOption : question.correct_answer
         isCorrect = correctAnswer === answer.userAnswer
@@ -367,7 +387,9 @@ export async function POST(
       const questionDbId = questionForMetadata.dbId || (typeof questionForMetadata.id === 'number' ? questionForMetadata.id : parseInt(String(questionForMetadata.id || answer.questionId)) || null)
       
       if (!questionDbId) {
-        console.error(`Cannot determine database ID for question:`, {
+        logError(`Cannot determine database ID for question`, new Error("Question ID not found"), {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
           questionId: answer.questionId,
           question: questionForMetadata,
           answerIndex: i,
@@ -402,14 +424,23 @@ export async function POST(
       .eq("lesson_id", lessonId)
 
     if (deleteError) {
-      console.warn("Warning: Could not delete old quiz results:", deleteError)
+      logWarning("Could not delete old quiz results", {
+        component: "courses/[id]/quiz-results/route",
+        action: "POST",
+        error: deleteError,
+        lessonId,
+      })
     } else {
-      console.log("Deleted previous quiz results for this lesson")
+      logInfo("Deleted previous quiz results for this lesson", { lessonId })
     }
 
     // Insert all quiz results using service role to bypass RLS
     if (resultsToInsert.length === 0) {
-      console.warn("No quiz results to insert - all questions may have been skipped")
+      logWarning("No quiz results to insert - all questions may have been skipped", {
+        component: "courses/[id]/quiz-results/route",
+        action: "POST",
+        lessonId,
+      })
       return NextResponse.json({
         error: "No valid quiz results to save",
         message: "Could not process quiz answers"
@@ -422,9 +453,11 @@ export async function POST(
       .select()
 
     if (insertError) {
-      console.error("Error inserting quiz results:", {
-        error: insertError,
-        message: insertError.message,
+      logError("Error inserting quiz results", insertError, {
+        component: "courses/[id]/quiz-results/route",
+        action: "POST",
+        lessonId,
+        resultsCount: resultsToInsert.length,
         details: insertError.details,
         hint: insertError.hint,
         code: insertError.code,
@@ -437,7 +470,7 @@ export async function POST(
         details: insertError.details,
       }, { status: 500 })
     } else {
-      console.log("✅ Quiz results saved successfully:", {
+      logInfo("Quiz results saved successfully", {
         recordsCount: insertedResults?.length || 0,
         lessonId: lessonId,
         courseId: courseId,
@@ -462,9 +495,12 @@ export async function POST(
       },
     })
   } catch (error: any) {
-    console.error("Error processing quiz results:", error)
+    logError("Error processing quiz results", error, {
+      component: "courses/[id]/quiz-results/route",
+      action: "POST",
+    })
     return NextResponse.json(
-      { error: error.message || "Failed to save quiz results" },
+      createErrorResponse(error, 500, { component: "courses/[id]/quiz-results/route", action: "POST" }),
       { status: 500 }
     )
   }

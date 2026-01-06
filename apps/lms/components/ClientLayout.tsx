@@ -12,6 +12,7 @@ import { PageTransition } from "./PageTransition"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
 import { Toaster } from "@/components/ui/sonner"
 import { QueryProvider } from "@/lib/react-query/QueryProvider"
+import { ErrorBoundary } from "./ErrorBoundary"
 
 export default function ClientLayout({
   children,
@@ -252,35 +253,37 @@ export default function ClientLayout({
       : "user"
 
   return (
-    <QueryProvider>
-    <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
-      {shouldShowLayout ? (
-        <div className="flex flex-col h-screen">
-          <div className="lg:hidden">
-            <MobileMenu userType={derivedUserType} user={user} />
-          </div>
-          <div className="hidden lg:flex h-screen">
-            <LeftSidebar userType={derivedUserType} />
-            <div className="flex flex-col flex-grow lg:ml-64">
-              <Header isLoggedIn={isLoggedIn} userType={derivedUserType === "instructor" ? "admin" : derivedUserType} user={user} />
-              <div className="flex-grow lg:pt-16 pb-8">
+    <ErrorBoundary>
+      <QueryProvider>
+        <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
+          {shouldShowLayout ? (
+            <div className="flex flex-col h-screen">
+              <div className="lg:hidden">
+                <MobileMenu userType={derivedUserType} user={user} />
+              </div>
+              <div className="hidden lg:flex h-screen">
+                <LeftSidebar userType={derivedUserType} />
+                <div className="flex flex-col flex-grow lg:ml-64">
+                  <Header isLoggedIn={isLoggedIn} userType={derivedUserType === "instructor" ? "admin" : derivedUserType} user={user} />
+                  <div className="flex-grow lg:pt-16 pb-8">
+                    <main className="container-fluid">
+                      {children}
+                    </main>
+                  </div>
+                </div>
+              </div>
+              <div className="lg:hidden flex-grow mt-16 mb-16 pb-4">
                 <main className="container-fluid">
                   {children}
                 </main>
               </div>
             </div>
-          </div>
-          <div className="lg:hidden flex-grow mt-16 mb-16 pb-4">
-            <main className="container-fluid">
-              {children}
-            </main>
-          </div>
-        </div>
-      ) : (
-        <PageTransition>{children}</PageTransition>
-      )}
-      <Toaster />
-    </ThemeProvider>
-    </QueryProvider>
+          ) : (
+            <PageTransition>{children}</PageTransition>
+          )}
+          <Toaster />
+        </ThemeProvider>
+      </QueryProvider>
+    </ErrorBoundary>
   )
 }

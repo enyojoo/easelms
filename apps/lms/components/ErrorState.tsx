@@ -25,7 +25,17 @@ export default function ErrorState({ title = "Something went wrong", message, on
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>{title}</AlertTitle>
         <AlertDescription className="mt-2">
-          {message}
+          <div className="space-y-2">
+            <p>{message}</p>
+            {process.env.NODE_ENV === 'development' && message.includes('Stack trace') && (
+              <details className="mt-2 text-xs font-mono bg-destructive/10 p-2 rounded border border-destructive/20">
+                <summary className="cursor-pointer font-semibold">Show Details (Dev Only)</summary>
+                <pre className="whitespace-pre-wrap break-words overflow-auto max-h-40 mt-2">
+                  {message.split('Stack trace:')[1] || message}
+                </pre>
+              </details>
+            )}
+          </div>
           {onRetry && (
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button

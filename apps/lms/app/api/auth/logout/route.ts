@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function POST() {
   const supabase = await createClient()
@@ -8,7 +9,10 @@ export async function POST() {
   const { error } = await supabase.auth.signOut()
 
   if (error) {
-    console.error("Error signing out:", error)
+    logError("Error signing out", error, {
+      component: "auth/logout/route",
+      action: "POST",
+    })
   }
 
   // Create response

@@ -146,7 +146,11 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
       // Clean up blob URL
       window.URL.revokeObjectURL(blobUrl)
     } catch (error: any) {
-      console.error("Error downloading file:", error)
+      logError("Error downloading file", error, {
+        component: "ResourcesPanel",
+        action: "handleDownload",
+        resourceId: resource.id,
+      })
       alert(error.message || "Failed to download file. Please try again.")
     } finally {
       setDownloadingIndex(null)

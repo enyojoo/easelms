@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET() {
   try {
@@ -7,7 +8,10 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError) {
-      console.error("Profile API: Auth error", authError)
+      logError("Profile API: Auth error", authError, {
+        component: "profile/route",
+        action: "GET",
+      })
       return NextResponse.json({ error: "Authentication failed" }, { status: 401 })
     }
 
@@ -21,7 +25,11 @@ export async function GET() {
       serviceClient = createServiceRoleClient()
     } catch (serviceError: any) {
       // If service role key is not set, fall back to regular client
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "profile/route",
+        action: "GET",
+        error: serviceError.message,
+      })
       serviceClient = null
     }
 
@@ -52,9 +60,10 @@ export async function GET() {
 
     // Log error details for debugging
     if (error) {
-      console.error("Profile API GET error:", {
+      logError("Profile API GET error", error, {
+        component: "profile/route",
+        action: "GET",
         code: error.code,
-        message: error.message,
         details: error.details,
         hint: error.hint,
         userId: user.id,
@@ -81,7 +90,7 @@ export async function GET() {
       
       if (existingProfile) {
         // Profile exists but might have invalid user_type - try to fix it
-        console.log("Profile exists but may have invalid user_type, attempting to fix:", existingProfile.user_type)
+        logInfo("Profile exists but may have invalid user_type, attempting to fix", { userType: existingProfile.user_type, userId: user.id })
         const { data: updatedProfile, error: updateError } = await serviceClient
           .from("profiles")
           .update({ user_type: "user" })
@@ -111,7 +120,7 @@ export async function GET() {
           bio: "",
         }
         
-        console.log("Profile API: Attempting to create profile", {
+        logInfo("Profile API: Attempting to create profile", {
           userId: user.id,
           email: user.email,
           payload: { ...insertPayload, id: insertPayload.id.substring(0, 8) + "..." },
@@ -131,7 +140,7 @@ export async function GET() {
         
         if (upsertErr) {
           // If UPSERT fails, try regular INSERT
-          console.log("UPSERT failed, trying INSERT:", upsertErr.message)
+          logInfo("UPSERT failed, trying INSERT", { error: upsertErr.message, userId: user.id })
           const { data: insertData, error: insertErr } = await createClient
             .from("profiles")
             .insert(insertPayload)
@@ -147,8 +156,9 @@ export async function GET() {
         if (createError) {
           // If it's a constraint violation on user_type, try to query what the constraint expects
           if (createError.message?.includes("profiles_user_type_check")) {
-            console.error("CRITICAL: Database constraint violation even with user_type='user'", {
-              error: createError,
+            logError("CRITICAL: Database constraint violation even with user_type='user'", createError, {
+              component: "profile/route",
+              action: "GET",
               payload: insertPayload,
             })
             
@@ -162,7 +172,11 @@ export async function GET() {
             }, { status: 500 })
           }
           
-          console.error("Error creating profile:", createError)
+          logError("Error creating profile", createError, {
+            component: "profile/route",
+            action: "GET",
+            userId: user.id,
+          })
           return NextResponse.json({ 
             error: createError.message,
             details: createError.details,
@@ -172,7 +186,11 @@ export async function GET() {
 
         return NextResponse.json({ profile: newProfile })
       } catch (serviceError: any) {
-        console.error("Error with service role client:", serviceError)
+        logError("Error with service role client", serviceError, {
+          component: "profile/route",
+          action: "GET",
+          userId: user.id,
+        })
         return NextResponse.json(
           { error: "Failed to create profile. Please ensure SUPABASE_SERVICE_ROLE_KEY is set in your environment." },
           { status: 500 }
@@ -181,11 +199,13 @@ export async function GET() {
     }
 
     if (error) {
-      console.error("Error fetching profile:", {
+      logError("Error fetching profile", error, {
+        component: "profile/route",
+        action: "GET",
         code: error.code,
-        message: error.message,
         details: error.details,
         hint: error.hint,
+        userId: user.id,
       })
       // Ensure we always return a proper error message
       const errorMessage = error.message || "Failed to fetch profile"
@@ -193,7 +213,11 @@ export async function GET() {
     }
 
     if (!profile) {
-      console.warn("Profile not found for user:", user.id)
+      logWarning("Profile not found for user", {
+        component: "profile/route",
+        action: "GET",
+        userId: user.id,
+      })
       // Try to create profile if it doesn't exist
       // This should have been handled above, but just in case
       return NextResponse.json({ error: "Profile not found" }, { status: 404 })
@@ -202,10 +226,9 @@ export async function GET() {
     return NextResponse.json({ profile })
   } catch (error: any) {
     // Catch any unhandled exceptions
-    console.error("Profile API GET: Unhandled error", {
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name,
+    logError("Profile API GET: Unhandled error", error, {
+      component: "profile/route",
+      action: "GET",
     })
     return NextResponse.json(
       { 
@@ -239,7 +262,11 @@ export async function PUT(request: Request) {
   try {
     serviceClient = createServiceRoleClient()
   } catch (serviceError: any) {
-    console.warn("Service role key not available, using regular client:", serviceError.message)
+    logWarning("Service role key not available, using regular client", {
+      component: "profile/route",
+      action: "PUT",
+      error: serviceError.message,
+    })
     serviceClient = null
   }
 
@@ -271,7 +298,11 @@ export async function PUT(request: Request) {
   }
 
   if (error) {
-    console.error("Error updating profile:", error)
+    logError("Error updating profile", error, {
+      component: "profile/route",
+      action: "PUT",
+      userId: user.id,
+    })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 

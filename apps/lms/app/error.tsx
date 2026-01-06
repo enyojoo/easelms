@@ -16,7 +16,16 @@ export default function Error({
 }) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error("Application error:", error)
+    // In development, show full error details
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Application error:", {
+        error,
+        message: error.message,
+        stack: error.stack,
+        digest: error.digest,
+      })
+    }
+    // TODO: In production, send to error tracking service (e.g., Sentry)
   }, [error])
 
   return (
@@ -27,7 +36,22 @@ export default function Error({
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Something went wrong!</AlertTitle>
             <AlertDescription className="mt-2">
-              {error.message || "An unexpected error occurred. Please try again."}
+              <div className="space-y-2">
+                <p>{error.message || "An unexpected error occurred. Please try again."}</p>
+                {process.env.NODE_ENV === 'development' && error.stack && (
+                  <details className="mt-4 text-xs font-mono bg-destructive/10 p-3 rounded border border-destructive/20">
+                    <summary className="cursor-pointer font-semibold mb-2">Stack Trace (Dev Only)</summary>
+                    <pre className="whitespace-pre-wrap break-words overflow-auto max-h-60">
+                      {error.stack}
+                    </pre>
+                  </details>
+                )}
+                {error.digest && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Error ID: {error.digest}
+                  </p>
+                )}
+              </div>
             </AlertDescription>
           </Alert>
           <div className="flex gap-2">

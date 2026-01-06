@@ -1,5 +1,6 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 
 export async function GET() {
   try {
@@ -7,7 +8,10 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError) {
-      console.error("Enrollments API: Auth error", authError)
+      logError("Enrollments API: Auth error", authError, {
+        component: "enrollments/route",
+        action: "GET",
+      })
       return NextResponse.json({ error: "Authentication failed" }, { status: 401 })
     }
 
@@ -20,7 +24,11 @@ export async function GET() {
     try {
       serviceClient = createServiceRoleClient()
     } catch (serviceError: any) {
-      console.warn("Service role key not available, using regular client:", serviceError.message)
+      logWarning("Service role key not available, using regular client", {
+        component: "enrollments/route",
+        action: "GET",
+        error: serviceError.message,
+      })
       serviceClient = null
     }
 
@@ -37,7 +45,12 @@ export async function GET() {
 
     // If error with courses relation, try without it (might be RLS issue even with service client)
     if (error) {
-      console.warn("Enrollments API: Error with courses relation, trying without:", error.message)
+      logWarning("Enrollments API: Error with courses relation, trying without", {
+        component: "enrollments/route",
+        action: "GET",
+        error: error.message,
+        userId: user.id,
+      })
       const { data: enrollmentsData, error: enrollmentsError } = await clientToUse
         .from("enrollments")
         .select("*")
@@ -47,10 +60,10 @@ export async function GET() {
         data = enrollmentsData
         error = null
       } else {
-        console.error("Enrollments API: Database error", {
-          error: enrollmentsError,
+        logError("Enrollments API: Database error", enrollmentsError, {
+          component: "enrollments/route",
+          action: "GET",
           code: enrollmentsError.code,
-          message: enrollmentsError.message,
           details: enrollmentsError.details,
           hint: enrollmentsError.hint,
           userId: user.id,
@@ -64,10 +77,10 @@ export async function GET() {
     }
 
     if (error) {
-      console.error("Enrollments API: Database error", {
-        error: error,
+      logError("Enrollments API: Database error", error, {
+        component: "enrollments/route",
+        action: "GET",
         code: error.code,
-        message: error.message,
         details: error.details,
         hint: error.hint,
         userId: user.id,
@@ -82,9 +95,9 @@ export async function GET() {
     // Return empty array if no enrollments (not an error)
     return NextResponse.json({ enrollments: data || [] })
   } catch (error: any) {
-    console.error("Enrollments API: Unexpected error", {
-      message: error?.message,
-      stack: error?.stack,
+    logError("Enrollments API: Unexpected error", error, {
+      component: "enrollments/route",
+      action: "GET",
     })
     return NextResponse.json({ 
       error: error?.message || "An unexpected error occurred while fetching enrollments",
@@ -217,7 +230,7 @@ export async function PATCH(request: Request) {
   // Use service role client to bypass RLS
   const serviceSupabase = createServiceRoleClient()
 
-  console.log("📝 Updating enrollment:", { userId: user.id, courseId, status })
+  logInfo("Updating enrollment", { userId: user.id, courseId, status })
 
   // First check if enrollment exists
   const { data: existingEnrollment, error: checkError } = await serviceSupabase
@@ -228,12 +241,22 @@ export async function PATCH(request: Request) {
     .single()
 
   if (checkError && checkError.code !== "PGRST116") { // PGRST116 = not found, which is ok
-    console.error("Error checking enrollment:", checkError)
+    logError("Error checking enrollment", checkError, {
+      component: "enrollments/route",
+      action: "PATCH",
+      userId: user.id,
+      courseId,
+    })
     return NextResponse.json({ error: checkError.message }, { status: 500 })
   }
 
   if (!existingEnrollment) {
-    console.error("Enrollment not found for user:", user.id, "course:", courseId)
+    logError("Enrollment not found for user", new Error("Enrollment not found"), {
+      component: "enrollments/route",
+      action: "PATCH",
+      userId: user.id,
+      courseId,
+    })
     return NextResponse.json({ error: "Enrollment not found" }, { status: 404 })
   }
 
@@ -259,10 +282,15 @@ export async function PATCH(request: Request) {
     .single()
 
   if (error) {
-    console.error("❌ Error updating enrollment:", error)
+    logError("Error updating enrollment", error, {
+      component: "enrollments/route",
+      action: "PATCH",
+      userId: user.id,
+      courseId,
+    })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  console.log("✅ Enrollment updated successfully:", data)
+  logInfo("Enrollment updated successfully", { userId: user.id, courseId, status })
   return NextResponse.json({ enrollment: data })
 }
