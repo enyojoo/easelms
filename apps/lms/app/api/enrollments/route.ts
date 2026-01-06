@@ -206,6 +206,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // Update enrolled_students count in courses table
+  // Recalculate the count to ensure accuracy
+  const { count: currentCount } = await supabase
+    .from("enrollments")
+    .select("*", { count: "exact", head: true })
+    .eq("course_id", courseId)
+
+  // Update the courses table with the new count
+  await supabase
+    .from("courses")
+    .update({ enrolled_students: currentCount || 0 })
+    .eq("id", courseId)
+
   return NextResponse.json({ enrollment: data })
 }
 

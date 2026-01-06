@@ -49,12 +49,25 @@ export async function POST(request: Request) {
     })
 
     // Create enrollment
-    await supabase.from("enrollments").upsert({
+    const { data: enrollmentData } = await supabase.from("enrollments").upsert({
       user_id: userId,
       course_id: parseInt(courseId),
       status: "active",
       progress: 0,
-    })
+    }).select().single()
+
+    // Update enrolled_students count in courses table if enrollment was created
+    if (enrollmentData) {
+      const { count: currentCount } = await supabase
+        .from("enrollments")
+        .select("*", { count: "exact", head: true })
+        .eq("course_id", parseInt(courseId))
+
+      await supabase
+        .from("courses")
+        .update({ enrolled_students: currentCount || 0 })
+        .eq("id", parseInt(courseId))
+    }
   }
 
   // Handle Checkout Session (for hosted Checkout pages)
@@ -86,12 +99,25 @@ export async function POST(request: Request) {
         })
 
         // Create enrollment
-        await supabase.from("enrollments").upsert({
+        const { data: enrollmentData } = await supabase.from("enrollments").upsert({
           user_id: userId,
           course_id: parseInt(courseId),
           status: "active",
           progress: 0,
-        })
+        }).select().single()
+
+        // Update enrolled_students count in courses table if enrollment was created
+        if (enrollmentData) {
+          const { count: currentCount } = await supabase
+            .from("enrollments")
+            .select("*", { count: "exact", head: true })
+            .eq("course_id", parseInt(courseId))
+
+          await supabase
+            .from("courses")
+            .update({ enrolled_students: currentCount || 0 })
+            .eq("id", parseInt(courseId))
+        }
       }
     }
   }

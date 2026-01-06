@@ -40,7 +40,7 @@ export default function VideoPlayer({
   const wasPlayingBeforeFullscreenRef = useRef(false)
   const completedRef = useRef(false)
   const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  
+
   // Storage key for video progress
   const progressStorageKey = courseId && lessonId ? `course-${courseId}-lesson-${lessonId}-progress` : null
 
@@ -66,7 +66,7 @@ export default function VideoPlayer({
             if (video.readyState >= 2) {
               if (savedTime > 5 && savedTime < savedDuration) {
                 video.currentTime = savedTime
-                setCurrentTime(savedTime)
+          setCurrentTime(savedTime)
               }
             } else {
               video.addEventListener('loadeddata', loadProgress, { once: true })
@@ -158,12 +158,12 @@ export default function VideoPlayer({
         setCurrentTime(current)
         if (dur > 0) {
           setDuration(dur)
-          // Call progress update callback
-          if (onProgressUpdate && dur > 0) {
-            onProgressUpdate((current / dur) * 100)
-          }
-        }
-      }
+                  // Call progress update callback
+                  if (onProgressUpdate && dur > 0) {
+                    onProgressUpdate((current / dur) * 100)
+                  }
+                }
+              }
     }
 
     const handleCanPlay = async () => {
@@ -470,13 +470,21 @@ export default function VideoPlayer({
       />
       
       {showOverlay && (
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+        <div 
+          className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center pointer-events-none"
+        >
           {showPauseButton ? (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div 
+              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-auto cursor-pointer"
+              onClick={handleTogglePlay}
+            >
               <Pause className="h-10 w-10 fill-current" />
             </div>
           ) : (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg">
+            <div 
+              className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-auto cursor-pointer"
+              onClick={handleTogglePlay}
+            >
               <Play className="h-10 w-10 fill-current" />
             </div>
           )}
@@ -489,41 +497,41 @@ export default function VideoPlayer({
           className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 sm:p-3"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Clickable progress bar */}
-          <div 
-            className="relative w-full h-1.5 sm:h-2 bg-white/20 rounded-full mb-2 cursor-pointer group/progress"
-            onClick={handleProgressClick}
-          >
+          {/* Controls row: timer - progressbar - total time | fullscreen */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Current time */}
+            <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
+              {formatTime(currentTime)}
+            </span>
+            
+            {/* Clickable progress bar */}
             <div 
-              className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
-            {/* Seekable range input overlay */}
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={progress}
-              step="0.1"
-              onChange={handleProgressSeek}
-              onMouseDown={() => setIsSeeking(true)}
-              onMouseUp={() => setIsSeeking(false)}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              style={{ zIndex: 10 }}
-            />
-          </div>
-          
-          {/* Controls row */}
-          <div className="flex items-center justify-between gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
-                {formatTime(currentTime)}
-              </span>
-              <span className="text-white/70 text-xs">/</span>
-              <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
-                {formatTime(duration)}
-              </span>
+              className="relative flex-1 h-1.5 sm:h-2 bg-white/20 rounded-full cursor-pointer group/progress"
+              onClick={handleProgressClick}
+            >
+              <div 
+                className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+              {/* Seekable range input overlay */}
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={progress}
+                step="0.1"
+                onChange={handleProgressSeek}
+                onMouseDown={() => setIsSeeking(true)}
+                onMouseUp={() => setIsSeeking(false)}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                style={{ zIndex: 10 }}
+              />
             </div>
+            
+            {/* Total time */}
+            <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
+              {formatTime(duration)}
+            </span>
             
             {/* Fullscreen button */}
             <Button
@@ -533,7 +541,7 @@ export default function VideoPlayer({
                 e.stopPropagation()
                 toggleFullscreen()
               }}
-              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white"
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
               aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
             >

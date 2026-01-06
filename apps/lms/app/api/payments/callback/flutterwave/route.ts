@@ -81,12 +81,12 @@ export async function GET(request: Request) {
       }
 
       // Create enrollment
-      const { error: enrollmentError } = await supabase.from("enrollments").upsert({
+      const { data: enrollmentData, error: enrollmentError } = await supabase.from("enrollments").upsert({
         user_id: userId,
         course_id: parseInt(courseId),
         status: "active",
         progress: 0,
-      })
+      }).select().single()
 
       if (enrollmentError) {
         logError("Error creating enrollment", enrollmentError, {
@@ -97,6 +97,19 @@ export async function GET(request: Request) {
           courseId,
         })
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      }
+
+      // Update enrolled_students count in courses table
+      if (enrollmentData) {
+        const { count: currentCount } = await supabase
+          .from("enrollments")
+          .select("*", { count: "exact", head: true })
+          .eq("course_id", parseInt(courseId))
+
+        await supabase
+          .from("courses")
+          .update({ enrolled_students: currentCount || 0 })
+          .eq("id", parseInt(courseId))
       }
 
       // Fetch course title to create proper slug for redirect
