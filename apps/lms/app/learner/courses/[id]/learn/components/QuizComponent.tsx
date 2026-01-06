@@ -76,6 +76,7 @@ export default function QuizComponent({
   const [quizStarted, setQuizStarted] = useState(false) // Track if user has started the quiz
   const quizCompletedRef = useRef(false) // Track if quiz has been completed
   const isRetryingRef = useRef(false) // Track if we're currently retrying (to prevent showResultsOnly from taking effect)
+  const justSubmittedRef = useRef(false) // Track if we just submitted (to prevent quiz info screen from showing)
   
   const queryClient = useQueryClient()
   
@@ -97,6 +98,7 @@ export default function QuizComponent({
       // Reset all state when lesson changes
       quizCompletedRef.current = false
       isRetryingRef.current = false // Reset retry flag when lesson changes
+      justSubmittedRef.current = false // Reset submission flag when lesson changes
       setCurrentQuestion(0)
       setSelectedAnswers([])
       setShowResults(false)
@@ -121,6 +123,15 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
+    // If we just submitted, don't reset anything - keep showing results
+    if (justSubmittedRef.current) {
+      // Ensure results are shown
+      if (!showResults) {
+        setShowResults(true)
+      }
+      return
+    }
+    
     // If we're in the middle of a retry, ignore showResultsOnly to prevent flicker
     if (isRetryingRef.current) {
       return
@@ -256,6 +267,8 @@ export default function QuizComponent({
     } else {
       // Mark quiz as completed to prevent reset
       quizCompletedRef.current = true
+      // Mark that we just submitted to prevent quiz info screen from showing
+      justSubmittedRef.current = true
       
       // Store original answers before showing results
       setOriginalAnswers([...selectedAnswers])
@@ -281,7 +294,8 @@ export default function QuizComponent({
         setSubmitting(false)
         setShowResults(true)
         // Update attempt count - use database attempt number if available, otherwise increment
-        const nextAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber + 1 : attemptCount + 1
+        // Note: The database query will be invalidated and refetched, so currentAttemptNumber will update
+        const nextAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber + 1 : (attemptCount > 0 ? attemptCount + 1 : 1)
         setAttemptCount(nextAttemptNumber)
       }
       
@@ -357,6 +371,8 @@ export default function QuizComponent({
       quizCompletedRef.current = false
       // Set retry flag to prevent showResultsOnly from taking effect during refetch
       isRetryingRef.current = true
+      // Clear submission flag to allow quiz info screen to show
+      justSubmittedRef.current = false
       
       // Reset local state first to prevent flicker
       setCurrentQuestion(0)
@@ -445,8 +461,16 @@ export default function QuizComponent({
     const currentAttemptCount = currentAttemptNumber > 0 
       ? currentAttemptNumber 
       : (showResultsOnly && initialAttemptCount !== undefined ? initialAttemptCount : attemptCount)
-    // Cannot retry if quiz is disabled or max attempts reached
-    const canRetry = !disabled && (quiz.allowMultipleAttempts !== false) && (currentAttemptCount < maxAttempts)
+    // Cannot retry if:
+    // - Quiz is disabled
+    // - Multiple attempts are not allowed
+    // - Current attempt count is 0 (no attempts made yet - shouldn't happen in results screen)
+    // - Current attempt count is greater than or equal to max attempts (max reached)
+    const hasReachedMaxAttempts = currentAttemptCount >= maxAttempts
+    const canRetry = !disabled && 
+                     (quiz.allowMultipleAttempts !== false) && 
+                     currentAttemptCount > 0 && 
+                     !hasReachedMaxAttempts
 
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
@@ -728,8 +752,16 @@ export default function QuizComponent({
   const minimumPointsNeeded = Math.ceil((minimumQuizScore / 100) * totalPoints)
 
   // Show quiz info card before starting (when quiz hasn't been started yet AND not showing results)
-  // Don't show info card if showResultsOnly is true (quiz was already completed), unless we're retrying
-  if ((!showResultsOnly || isRetryingRef.current) && !quizStarted && currentQuestion === 0 && selectedAnswers.length === 0 && !showResults) {
+  // Don't show info card if:
+  // - showResultsOnly is true (quiz was already completed), unless we're retrying
+  // - We just submitted (to prevent flicker after submission)
+  // - showResults is true (results are being shown)
+  if ((!showResultsOnly || isRetryingRef.current) && 
+      !justSubmittedRef.current && 
+      !quizStarted && 
+      currentQuestion === 0 && 
+      selectedAnswers.length === 0 && 
+      !showResults) {
     return (
       <div className="space-y-6 max-w-2xl mx-auto">
         <Card className="border-primary/20 bg-primary/5">

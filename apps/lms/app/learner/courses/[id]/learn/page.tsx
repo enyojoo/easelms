@@ -156,6 +156,60 @@ export default function CourseLearningPage() {
     }
   }, [allLessonsCompleted, course, id, user, queryClient, isCourseCompleted])
 
+  // Revert enrollment status to active if progress changes and not all lessons are completed
+  // This handles cases where a quiz is retaken and failed, making a lesson incomplete
+  useEffect(() => {
+    if (!course || !id || !user) return
+    
+    // If not all lessons are completed but enrollment is marked as completed
+    if (!allLessonsCompleted && isCourseCompleted) {
+      const revertEnrollmentStatus = async () => {
+        try {
+          logInfo("Reverting enrollment to active - not all lessons completed", { 
+            courseId: parseInt(id), 
+            allLessonsCompleted,
+            completedLessonsCount: completedLessons.length,
+            totalLessons: course.lessons?.length || 0
+          })
+          enrollmentMarkedRef.current = false // Reset flag so it can be marked completed again when all lessons are done
+          
+          const response = await fetch("/api/enrollments", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              courseId: parseInt(id),
+              status: "active",
+            }),
+          })
+          
+          if (response.ok) {
+            await queryClient.refetchQueries({ queryKey: ["enrollments"] })
+            logInfo("Enrollment status reverted to active", { courseId: parseInt(id) })
+          } else {
+            const error = await handleApiError(response)
+            logError("Failed to revert enrollment status", error, {
+              component: "CourseLearningPage",
+              action: "revertEnrollmentStatus",
+              courseId: parseInt(id),
+            })
+            toast({
+              title: "Error",
+              description: formatErrorMessage(error, "Failed to update course status"),
+              variant: "destructive",
+            })
+          }
+        } catch (error) {
+          logError("Error reverting enrollment status", error, {
+            component: "CourseLearningPage",
+            action: "revertEnrollmentStatus",
+            courseId: parseInt(id),
+          })
+        }
+      }
+      revertEnrollmentStatus()
+    }
+  }, [allLessonsCompleted, isCourseCompleted, course, id, user, queryClient, completedLessons.length])
+
   // Track if we've processed the lessonIndex parameter to prevent duplicate processing
   const lessonIndexProcessedRef = useRef(false)
 
