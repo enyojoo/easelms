@@ -122,7 +122,6 @@ export async function GET(request: Request) {
   }
 }
 
-
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -139,15 +138,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "courseId is required" }, { status: 400 })
     }
 
+    // Ensure courseId is a number
+    const numericCourseId = typeof courseId === "string" ? parseInt(courseId, 10) : courseId
+    
+    if (isNaN(numericCourseId)) {
+      return NextResponse.json({ error: "Invalid courseId format" }, { status: 400 })
+    }
+
+    logInfo("Certificates API POST: Creating certificate", {
+      userId: user.id,
+      courseId: numericCourseId,
+    })
+
     // Use service role client to bypass RLS
     const serviceSupabase = createServiceRoleClient()
+
+    // Get course details first to verify it exists
+    const { data: course, error: courseError } = await serviceSupabase
+      .from("courses")
+      .select("id, title, settings, certificate_enabled, certificate_type, certificate_title")
+      .eq("id", numericCourseId)
+      .single()
+
+    if (courseError || !course) {
+      logError("Certificates API POST: Course not found", courseError || new Error("Course not found"), {
+        component: "certificates/route",
+        action: "POST",
+        userId: user.id,
+        courseId: numericCourseId,
+        courseError: courseError?.message,
+      })
+      return NextResponse.json({ error: "Course not found" }, { status: 404 })
+    }
 
     // Check if certificate already exists
     const { data: existingCert } = await serviceSupabase
       .from("certificates")
       .select("id")
       .eq("user_id", user.id)
-      .eq("course_id", courseId)
+      .eq("course_id", numericCourseId)
       .single()
 
     if (existingCert) {
@@ -158,28 +187,26 @@ export async function POST(request: Request) {
     }
 
     // Check if course is completed
-    const { data: enrollment } = await serviceSupabase
+    const { data: enrollment, error: enrollmentError } = await serviceSupabase
       .from("enrollments")
       .select("status, completed_at")
       .eq("user_id", user.id)
-      .eq("course_id", courseId)
+      .eq("course_id", numericCourseId)
       .single()
+
+    if (enrollmentError) {
+      logError("Certificates API POST: Enrollment error", enrollmentError, {
+        component: "certificates/route",
+        action: "POST",
+        userId: user.id,
+        courseId: numericCourseId,
+      })
+    }
 
     if (!enrollment || enrollment.status !== "completed") {
       return NextResponse.json({ 
         error: "Course must be completed before certificate can be issued"
       }, { status: 400 })
-    }
-
-    // Get course details
-    const { data: course } = await serviceSupabase
-      .from("courses")
-      .select("id, title, settings, certificate_enabled, certificate_type, certificate_title")
-      .eq("id", courseId)
-      .single()
-
-    if (!course) {
-      return NextResponse.json({ error: "Course not found" }, { status: 404 })
     }
 
     // Check if certificate is enabled for this course
@@ -200,7 +227,7 @@ export async function POST(request: Request) {
       .from("certificates")
       .insert({
         user_id: user.id,
-        course_id: courseId,
+        course_id: numericCourseId,
         certificate_number: certificateNumber,
         certificate_type: course.certificate_type || courseSettings?.certificate?.certificateType || "completion",
         issued_at: enrollment.completed_at || new Date().toISOString(),
@@ -213,7 +240,7 @@ export async function POST(request: Request) {
         component: "certificates/route",
         action: "POST",
         userId: user.id,
-        courseId,
+        courseId: numericCourseId,
       })
       return NextResponse.json({ 
         error: insertError.message,

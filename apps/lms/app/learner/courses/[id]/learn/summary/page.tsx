@@ -247,6 +247,11 @@ export default function CourseCompletionPage() {
       let certId = certificateId
       if (!certId) {
         const courseId = parseInt(id)
+        
+        if (isNaN(courseId)) {
+          throw new Error(`Invalid course ID: ${id}`)
+        }
+
         const createResponse = await fetch("/api/certificates", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -255,7 +260,9 @@ export default function CourseCompletionPage() {
 
         if (!createResponse.ok) {
           const errorData = await createResponse.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to create certificate")
+          const errorMessage = errorData.error || `Failed to create certificate (${createResponse.status})`
+          console.error("Certificate creation error:", errorData)
+          throw new Error(errorMessage)
         }
 
         const createData = await createResponse.json()
