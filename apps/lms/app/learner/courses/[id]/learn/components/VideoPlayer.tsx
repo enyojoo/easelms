@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause, Maximize, Minimize } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import ModernVideoPlayer from "@/components/ModernVideoPlayer"
 
 interface VideoPlayerProps {
   lessonTitle: string
@@ -28,47 +27,34 @@ export default function VideoPlayer({
   onProgressUpdate,
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [showControls, setShowControls] = useState(true)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [isSeeking, setIsSeeking] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const wasPlayingBeforeFullscreenRef = useRef(false)
-  const wasPlayingBeforeSeekRef = useRef(false)
   const completedRef = useRef(false)
   const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  
+
   // Storage key for video progress
   const progressStorageKey = courseId && lessonId ? `course-${courseId}-lesson-${lessonId}-progress` : null
 
   // Ensure videoUrl is a valid string URL
   const validVideoUrl = videoUrl && typeof videoUrl === 'string' && videoUrl.trim() ? videoUrl.trim() : null
 
-  // Reset completion status and video state when lesson changes
+  // Reset completion status when lesson changes
   useEffect(() => {
     completedRef.current = false
     setIsPlaying(false)
     setCurrentTime(0)
-    setShowControls(true)
-    const video = videoRef.current
-    if (video) {
-      video.currentTime = 0
-      video.pause()
-    }
   }, [lessonId])
 
   // Save progress periodically
   useEffect(() => {
     if (!videoProgression || !progressStorageKey || duration === 0) return
 
+    // Clear existing interval
     if (progressSaveIntervalRef.current) {
       clearInterval(progressSaveIntervalRef.current)
     }
 
+    // Save progress every 5 seconds
     progressSaveIntervalRef.current = setInterval(() => {
       if (currentTime > 0 && duration > 0) {
         try {
@@ -85,7 +71,7 @@ export default function VideoPlayer({
             onProgressUpdate(progressData.progressPercentage)
           }
         } catch (error) {
-          console.error("Error saving video progress", error)
+          console.error("Error saving video progress:", error)
         }
       }
     }, 5000)
@@ -97,670 +83,81 @@ export default function VideoPlayer({
     }
   }, [videoProgression, progressStorageKey, currentTime, duration, onProgressUpdate])
 
-  // Sync video state with isPlaying and handle autoplay
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video || !validVideoUrl) return
-
-    const handlePlay = () => {
-      // #region agent log
-      const logData8 = {location:'VideoPlayer.tsx:105',message:'handlePlay event fired',data:{videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
-      console.log('[DEBUG]', logData8);
-      fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData8)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-      // #endregion
-      setIsPlaying(true)
-      // Show controls then hide after 5 seconds if no interaction
-      setShowControls(true)
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current)
-      }
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000)
-    }
-
-    const handlePause = () => {
-      // #region agent log
-      const logData9 = {location:'VideoPlayer.tsx:117',message:'handlePause event fired',data:{videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
-      console.log('[DEBUG]', logData9);
-      fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData9)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-      // #endregion
-      setIsPlaying(false)
-      // Show controls when paused
-      setShowControls(true)
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current)
-      }
-    }
-
-    const handleEnded = () => {
-      setIsPlaying(false)
-      setCurrentTime(0)
-      if (!completedRef.current) {
-        completedRef.current = true
-        onComplete()
-      }
-    }
-
-    const handleTimeUpdate = () => {
-      if (video && !isSeeking) {
-        const current = video.currentTime
-        const dur = video.duration && !isNaN(video.duration) ? video.duration : 0
-        setCurrentTime(current)
-        if (dur > 0) {
-          setDuration(dur)
-          // Call progress update callback
-          if (onProgressUpdate && dur > 0) {
-            onProgressUpdate((current / dur) * 100)
-          }
-        }
-      }
-    }
-
-    const handleCanPlay = async () => {
-      if (autoPlay && isActive && video.paused) {
-        try {
-          await video.play()
-        } catch (error: any) {
-          if (error.name !== 'NotAllowedError') {
-            console.error("Error autoplaying video:", error)
-          }
-        }
-      }
-    }
-
-    const handleLoadedData = async () => {
-      if (autoPlay && isActive && video.paused) {
-        try {
-          await video.play()
-        } catch (error: any) {
-          if (error.name !== 'NotAllowedError') {
-            console.error("Error autoplaying video on load:", error)
-          }
-        }
-      }
-    }
-
-    const handleLoadedMetadata = () => {
-      if (video && video.duration && !isNaN(video.duration)) {
-        setDuration(video.duration)
-      }
-      if (autoPlay && isActive && video.paused) {
-        video.play().catch((error: any) => {
-          if (error.name !== 'NotAllowedError') {
-            console.error("Error autoplaying video on metadata:", error)
-          }
-        })
-      }
-    }
-
-    video.addEventListener("play", handlePlay)
-    video.addEventListener("playing", handlePlay)
-    video.addEventListener("pause", handlePause)
-    video.addEventListener("ended", handleEnded)
-    video.addEventListener("timeupdate", handleTimeUpdate)
-    video.addEventListener("loadedmetadata", handleLoadedMetadata)
-    video.addEventListener("canplay", handleCanPlay)
-    video.addEventListener("loadeddata", handleLoadedData)
-
-    // Try autoplay immediately if conditions are met
-    if (autoPlay && isActive) {
-      const attemptPlay = () => {
-        if (video.paused) {
-          video.play().catch((error: any) => {
-            if (error.name !== 'NotAllowedError') {
-              console.error("Error autoplaying video:", error)
-            }
-          })
-        }
-      }
-      attemptPlay()
-      if (video.readyState >= 1) {
-        attemptPlay()
-      }
-    }
-
-    return () => {
-      video.removeEventListener("play", handlePlay)
-      video.removeEventListener("playing", handlePlay)
-      video.removeEventListener("pause", handlePause)
-      video.removeEventListener("ended", handleEnded)
-      video.removeEventListener("timeupdate", handleTimeUpdate)
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata)
-      video.removeEventListener("canplay", handleCanPlay)
-      video.removeEventListener("loadeddata", handleLoadedData)
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current)
-      }
-    }
-  }, [autoPlay, isActive, onComplete, onProgressUpdate, isSeeking, validVideoUrl])
-
-  // Handle fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isFullscreenNow = !!(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
-      )
-      setIsFullscreen(isFullscreenNow)
-      
-      const video = videoRef.current
-      if (video) {
-        if (isFullscreenNow) {
-          video.style.objectFit = 'contain'
-        } else {
-          video.style.objectFit = 'cover'
-          // Resume playback if video was playing before fullscreen (mobile fix)
-          if (wasPlayingBeforeFullscreenRef.current && video.paused) {
-            setTimeout(() => {
-              if (video && video.paused) {
-                video.play().catch((error) => {
-                  console.debug("Could not resume playback after fullscreen:", error)
-                })
-              }
-            }, 100)
-          }
-          wasPlayingBeforeFullscreenRef.current = false
-        }
-      }
-    }
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
-    document.addEventListener("mozfullscreenchange", handleFullscreenChange)
-    document.addEventListener("MSFullscreenChange", handleFullscreenChange)
-    window.addEventListener("orientationchange", handleFullscreenChange)
-    window.addEventListener("resize", handleFullscreenChange)
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
-      document.removeEventListener("mozfullscreenchange", handleFullscreenChange)
-      document.removeEventListener("MSFullscreenChange", handleFullscreenChange)
-      window.removeEventListener("orientationchange", handleFullscreenChange)
-      window.removeEventListener("resize", handleFullscreenChange)
-    }
-  }, [])
-
-  const toggleFullscreen = async () => {
-    const container = containerRef.current
-    const video = videoRef.current
-    if (!container || !video) return
-
-    try {
-      const isCurrentlyFullscreen = !!(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement ||
-        (document as any).msFullscreenElement
-      )
-
-      if (!isCurrentlyFullscreen) {
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-        const isAndroid = /Android/i.test(navigator.userAgent)
-        
-        wasPlayingBeforeFullscreenRef.current = !video.paused
-        
-        try {
-          if (isIOS && (video as any).webkitEnterFullscreen) {
-            video.removeAttribute('playsinline')
-            video.removeAttribute('webkit-playsinline')
-            ;(video as any).playsInline = false
-            ;(video as any).webkitPlaysInline = false
-            await (video as any).webkitEnterFullscreen()
-          } else if (isAndroid && (video as any).webkitEnterFullscreen) {
-            await (video as any).webkitEnterFullscreen()
-          } else {
-            const elementToFullscreen = container
-            if (elementToFullscreen.requestFullscreen) {
-              await elementToFullscreen.requestFullscreen()
-            } else if ((elementToFullscreen as any).webkitRequestFullscreen) {
-              await (elementToFullscreen as any).webkitRequestFullscreen()
-            } else if ((elementToFullscreen as any).mozRequestFullScreen) {
-              await (elementToFullscreen as any).mozRequestFullScreen()
-            } else if ((elementToFullscreen as any).msRequestFullscreen) {
-              await (elementToFullscreen as any).msRequestFullscreen()
-            }
-          }
-        } catch (err) {
-          console.error("Error entering fullscreen:", err)
-        }
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen()
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen()
-        } else if ((document as any).mozCancelFullScreen) {
-          await (document as any).mozCancelFullScreen()
-        } else if ((document as any).msExitFullscreen) {
-          await (document as any).msExitFullscreen()
-        }
-        
-        if (video) {
-          video.setAttribute('playsinline', 'true')
-          video.setAttribute('webkit-playsinline', 'true')
-          ;(video as any).playsInline = true
-          ;(video as any).webkitPlaysInline = true
-        }
-      }
-    } catch (error) {
-      console.error("Error toggling fullscreen:", error)
-    }
-  }
-
-  const handleTogglePlay = async (e: React.MouseEvent) => {
-    // #region agent log
-    const logData = {location:'VideoPlayer.tsx:343',message:'handleTogglePlay called',data:{isPlaying,hasVideo:!!videoRef.current,videoPaused:videoRef.current?.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
-    console.log('[DEBUG]', logData);
-    fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-    // #endregion
-    e.stopPropagation()
-    const video = videoRef.current
-    // #region agent log
-    const logData2 = {location:'VideoPlayer.tsx:346',message:'Before play/pause check',data:{isPlaying,videoPaused:video?.paused,videoReadyState:video?.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-    console.log('[DEBUG]', logData2);
-    fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-    // #endregion
-    if (video) {
-      // Use isPlaying state, not video.paused (matches VideoPreviewPlayer pattern)
-      if (isPlaying) {
-        // #region agent log
-        const logData3 = {location:'VideoPlayer.tsx:349',message:'Calling video.pause()',data:{isPlaying,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-        console.log('[DEBUG]', logData3);
-        fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-        // #endregion
-        video.pause()
-        setIsPlaying(false) // Set state immediately
-        // #region agent log
-        const logData4 = {location:'VideoPlayer.tsx:350',message:'After pause call',data:{isPlaying:false,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-        console.log('[DEBUG]', logData4);
-        fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-        // #endregion
-      } else {
-        try {
-          // #region agent log
-          const logData5 = {location:'VideoPlayer.tsx:353',message:'Calling video.play()',data:{isPlaying,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-          console.log('[DEBUG]', logData5);
-          fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-          // #endregion
-          await video.play()
-          setIsPlaying(true) // Set state immediately
-          // #region agent log
-          const logData6 = {location:'VideoPlayer.tsx:354',message:'After play call',data:{isPlaying:true,videoPaused:video.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-          console.log('[DEBUG]', logData6);
-          fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-          // #endregion
-        } catch (error) {
-          // #region agent log
-          const logData7 = {location:'VideoPlayer.tsx:356',message:'Play error',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-          console.log('[DEBUG]', logData7);
-          fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData7)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-          // #endregion
-          console.error("Error playing video:", error)
-        }
-      }
-    } else {
-      setIsPlaying(!isPlaying)
-    }
-    
-    // Show controls on interaction and reset timeout
-    setShowControls(true)
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current)
-    }
-    const videoForTimeout = videoRef.current
-    if (videoForTimeout && !videoForTimeout.paused) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000)
-    }
-  }
-
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation()
-    const video = videoRef.current
-    if (!video || !duration) return
-
-    const progressBar = e.currentTarget
-    const rect = progressBar.getBoundingClientRect()
-    const clickX = e.clientX - rect.left
-    const percentage = clickX / rect.width
-    const newTime = percentage * duration
-
-    // Remember if video was playing before seeking
-    const wasPlaying = !video.paused
-    wasPlayingBeforeSeekRef.current = wasPlaying
-
-    video.currentTime = newTime
-    setCurrentTime(newTime)
-
-    // Resume playing if it was playing before (after a small delay to ensure seek completes)
-    if (wasPlaying) {
-      requestAnimationFrame(() => {
-        const currentVideo = videoRef.current
-        if (currentVideo && currentVideo.paused && wasPlayingBeforeSeekRef.current) {
-          currentVideo.play().catch((error: any) => {
-            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
-              console.error("Error resuming video after seek:", error)
-            }
-          })
-        }
-        wasPlayingBeforeSeekRef.current = false
-      })
-    }
-    
-    // Show controls on interaction and reset timeout
-    setShowControls(true)
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current)
-    }
-    if (wasPlaying) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000)
-    }
-  }
-
-  const handleProgressSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current
-    if (!video || !duration) return
-
-    const newTime = (parseFloat(e.target.value) / 100) * duration
-    video.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  const handleSeekStart = () => {
-    setIsSeeking(true)
-    const video = videoRef.current
-    if (video) {
-      wasPlayingBeforeSeekRef.current = !video.paused
-    }
-  }
-
-  const handleSeekEnd = () => {
-    setIsSeeking(false)
-    const video = videoRef.current
-    
-    // Resume playing if it was playing before seeking (after a small delay to ensure seek completes)
-    if (video && wasPlayingBeforeSeekRef.current && video.paused) {
-      requestAnimationFrame(() => {
-        const currentVideo = videoRef.current
-        if (currentVideo && currentVideo.paused && wasPlayingBeforeSeekRef.current) {
-          currentVideo.play().catch((error: any) => {
-            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
-              console.error("Error resuming video after seek:", error)
-            }
-          })
-        }
-        wasPlayingBeforeSeekRef.current = false
-      })
-    } else {
-      wasPlayingBeforeSeekRef.current = false
-    }
-    
-    // Show controls on interaction and reset timeout
-    setShowControls(true)
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current)
-    }
-    if (video && !video.paused) {
-      controlsTimeoutRef.current = setTimeout(() => {
-        setShowControls(false)
-      }, 5000)
-    }
-  }
-
   if (!validVideoUrl) {
     return null
   }
 
-  // Calculate progress percentage
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-  
-  // Format time as MM:SS
-  const formatTime = (seconds: number): string => {
-    if (!isFinite(seconds) || isNaN(seconds)) return "0:00"
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
-
-  const showPlayButton = !isPlaying && showControls
-  const showPauseButton = isPlaying && showControls
-  const showOverlay = showPlayButton || showPauseButton
-  // #region agent log
-  const logData12 = {location:'VideoPlayer.tsx:515',message:'Render state',data:{isPlaying,showControls,showPlayButton,showPauseButton,showOverlay,videoPaused:videoRef.current?.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'};
-  console.log('[DEBUG]', logData12);
-  fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData12)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-  // #endregion
-
   return (
-    <div 
-      ref={containerRef}
-      className="relative w-full h-full bg-black overflow-hidden cursor-pointer group"
-      onMouseEnter={() => {
-        setIsHovered(true)
-        // Show controls on hover
-        setShowControls(true)
-        if (controlsTimeoutRef.current) {
-          clearTimeout(controlsTimeoutRef.current)
-        }
-        // Hide after 5 seconds if no interaction (even if still hovering)
-        if (isPlaying) {
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false)
-          }, 5000)
-        }
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false)
-        // Hide controls immediately when mouse leaves if playing
-        if (isPlaying) {
-          setShowControls(false)
-          if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current)
-          }
-        }
-      }}
-      onMouseMove={() => {
-        // Reset timeout on mouse movement (interaction) - works better in fullscreen
-        if (isPlaying && showControls) {
-          if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current)
-          }
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false)
-          }, 5000)
-        }
-      }}
-      onTouchStart={() => {
-        if (isPlaying) {
-          setShowControls(true)
-          setIsHovered(true)
-          if (controlsTimeoutRef.current) {
-            clearTimeout(controlsTimeoutRef.current)
-          }
-          controlsTimeoutRef.current = setTimeout(() => {
-            setShowControls(false)
-            setIsHovered(false)
-          }, 5000)
-        }
-      }}
-      onClick={(e) => {
-        // #region agent log
-        const logData11 = {location:'VideoPlayer.tsx:569',message:'Container onClick (hover overlay)',data:{isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
-        console.log('[DEBUG]', logData11);
-        fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData11)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-        // #endregion
-        handleTogglePlay(e)
-      }}
-    >
-      <video
-        key={`lesson-${lessonId}`}
-        ref={videoRef}
+    <div className="relative w-full h-full flex items-center justify-center bg-black">
+      <ModernVideoPlayer
         src={validVideoUrl}
-        className="w-full h-full object-cover"
-        preload="auto"
-        muted={false}
-        playsInline
-        crossOrigin="anonymous"
-        loop={false}
-      />
-      
-      {showOverlay && (
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center pointer-events-none">
-          {showPauseButton ? (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
-              <Pause className="h-10 w-10 fill-current" />
-            </div>
-          ) : (
-            <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-3 group-hover:scale-110 transition-transform shadow-lg pointer-events-none">
-              <Play className="h-10 w-10 fill-current" />
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Progress bar and controls at the bottom */}
-      {duration > 0 && (
-        <div 
-          className={`absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2 sm:p-3 transition-opacity duration-300 ${
-            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-          style={{ zIndex: 2 }}
-          onClick={(e) => {
-            e.stopPropagation()
-            // Show controls when clicking on controls area
-            setShowControls(true)
-            if (controlsTimeoutRef.current) {
-              clearTimeout(controlsTimeoutRef.current)
-            }
-            if (isPlaying) {
-              controlsTimeoutRef.current = setTimeout(() => {
-                setShowControls(false)
-              }, 5000)
-            }
-          }}
-          onMouseEnter={() => {
-            // Show controls on hover and reset timeout
-            setShowControls(true)
-            if (controlsTimeoutRef.current) {
-              clearTimeout(controlsTimeoutRef.current)
-            }
-            if (isPlaying) {
-              controlsTimeoutRef.current = setTimeout(() => {
-                setShowControls(false)
-              }, 5000)
-            }
-          }}
-          onMouseMove={() => {
-            // Reset timeout on mouse movement (interaction)
-            if (isPlaying && showControls) {
-              if (controlsTimeoutRef.current) {
-                clearTimeout(controlsTimeoutRef.current)
+        controls={true}
+        autoplay={autoPlay && isActive}
+        onReady={(player: any) => {
+          // Set up progress tracking with video player
+          if (videoProgression && progressStorageKey) {
+            const handleTimeUpdate = () => {
+              const current = typeof player.currentTime === 'function' ? player.currentTime() : player.currentTime
+              const dur = typeof player.duration === 'function' ? player.duration() : player.duration
+              if (current > 0 && dur > 0) {
+                setCurrentTime(current)
+                setDuration(dur)
+                
+                // Call progress update callback
+                if (onProgressUpdate && dur > 0) {
+                  onProgressUpdate((current / dur) * 100)
+                }
               }
-              controlsTimeoutRef.current = setTimeout(() => {
-                setShowControls(false)
-              }, 5000)
             }
-          }}
-        >
-          {/* Controls row: play/pause - timer - progressbar - total time - fullscreen */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Play/Pause button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                // #region agent log
-                const logData10 = {location:'VideoPlayer.tsx:647',message:'Control bar button clicked',data:{isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'};
-                console.log('[DEBUG]', logData10);
-                fetch('http://127.0.0.1:7243/ingest/5dcb81b3-1805-4a23-81ad-aa75cdae5e7b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData10)}).catch((err)=>console.error('[DEBUG] Log fetch failed:', err));
-                // #endregion
-                e.stopPropagation()
-                handleTogglePlay(e)
-              }}
-              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
-              aria-label={isPlaying ? "Pause" : "Play"}
-              title={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? (
-                <Pause className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-              ) : (
-                <Play className="h-4 w-4 sm:h-5 sm:w-5 fill-current" />
-              )}
-            </Button>
             
-            {/* Current time */}
-            <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
-              {formatTime(currentTime)}
-            </span>
+            // Use the proxy's on method or addEventListener directly
+            if (typeof player.on === 'function') {
+              player.on("timeupdate", handleTimeUpdate)
+            } else if (player.el && typeof player.el === 'function') {
+              const videoEl = player.el()
+              if (videoEl) {
+                videoEl.addEventListener("timeupdate", handleTimeUpdate)
+              }
+            }
             
-            {/* Clickable progress bar */}
-            <div 
-              className="relative flex-1 h-1.5 sm:h-2 bg-white/20 rounded-full cursor-pointer group/progress"
-              onClick={handleProgressClick}
-            >
-              <div 
-                className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
-              {/* Seekable range input overlay */}
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={progress}
-                step="0.1"
-                onChange={handleProgressSeek}
-                onMouseDown={handleSeekStart}
-                onMouseUp={handleSeekEnd}
-                onTouchStart={handleSeekStart}
-                onTouchEnd={handleSeekEnd}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                style={{ zIndex: 10 }}
-              />
-            </div>
-            
-            {/* Total time */}
-            <span className="text-white text-xs sm:text-sm font-mono tabular-nums min-w-[3ch]">
-              {formatTime(duration)}
-            </span>
-            
-            {/* Fullscreen button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleFullscreen()
-                // Show controls when clicking fullscreen button
-                setShowControls(true)
-                if (controlsTimeoutRef.current) {
-                  clearTimeout(controlsTimeoutRef.current)
+            // Load saved progress
+            try {
+              const savedProgress = localStorage.getItem(progressStorageKey)
+              if (savedProgress) {
+                const { currentTime: savedTime, duration: savedDuration } = JSON.parse(savedProgress)
+                if (savedTime > 5 && savedTime < savedDuration) {
+                  if (typeof player.currentTime === 'function') {
+                    player.currentTime(savedTime)
+                  } else {
+                    player.currentTime = savedTime
+                  }
+                  setCurrentTime(savedTime)
                 }
-                if (isPlaying) {
-                  controlsTimeoutRef.current = setTimeout(() => {
-                    setShowControls(false)
-                  }, 5000)
-                }
-              }}
-              className="h-7 w-7 sm:h-8 sm:w-8 p-0 hover:bg-white/20 text-white flex-shrink-0"
-              aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-              title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-            >
-              {isFullscreen ? (
-                <Minimize className="h-4 w-4 sm:h-5 sm:w-5" />
-              ) : (
-                <Maximize className="h-4 w-4 sm:h-5 sm:w-5" />
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
+              }
+            } catch (error) {
+              console.error("Error loading video progress:", error)
+            }
+          }
+        }}
+        onPlay={() => {
+          setIsPlaying(true)
+        }}
+        onPause={() => {
+          setIsPlaying(false)
+        }}
+        onEnded={() => {
+          setIsPlaying(false)
+          if (!completedRef.current) {
+            completedRef.current = true
+            onComplete()
+          }
+        }}
+        onTimeUpdate={(current, dur) => {
+          setCurrentTime(current)
+          setDuration(dur)
+        }}
+        className="w-full h-full"
+      />
     </div>
   )
 }
