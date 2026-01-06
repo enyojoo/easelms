@@ -12,6 +12,8 @@ const nextConfig = {
   // and also included from node_modules as a fallback
   outputFileTracingIncludes: {
     '/api/certificates/**': [
+      './apps/lms/lib/certificates/fonts/**/*.afm',
+      './apps/lms/lib/certificates/fonts/**/*.ttf',
       './lib/certificates/fonts/**/*.afm',
       './lib/certificates/fonts/**/*.ttf',
       './node_modules/pdfkit/js/data/**/*.afm',
