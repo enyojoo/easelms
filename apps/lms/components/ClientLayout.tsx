@@ -255,7 +255,7 @@ export default function ClientLayout({
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <ThemeProvider defaultTheme="dark" storageKey="enthronement-university-theme">
+        <ThemeProvider defaultTheme="dark" storageKey="easelms-theme">
           {shouldShowLayout ? (
             <div className="flex flex-col h-screen">
               <div className="lg:hidden">

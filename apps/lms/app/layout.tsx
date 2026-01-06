@@ -37,7 +37,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                const storageKey = 'enthronement-university-theme';
+                const storageKey = 'easelms-theme';
                 const theme = localStorage.getItem(storageKey) || 'dark';
                 let rootClass = '';
                 
