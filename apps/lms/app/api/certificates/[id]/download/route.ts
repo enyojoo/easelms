@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateCertificatePDF } from "@/lib/certificates/generate-pdf"
 import { uploadFileToS3, getS3StoragePath, getPublicUrl } from "@/lib/aws/s3"
@@ -21,7 +21,10 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { data: certificate, error } = await supabase
+    // Use service role client to bypass RLS and avoid infinite recursion
+    const serviceSupabase = createServiceRoleClient()
+    
+    const { data: certificate, error } = await serviceSupabase
       .from("certificates")
       .select(`
         *,
@@ -84,7 +87,8 @@ export async function GET(
 
     // Check if user owns this certificate or is admin
     if (certificate.user_id !== user.id) {
-      const { data: profile } = await supabase
+      // Use service role client to bypass RLS for admin check
+      const { data: profile } = await serviceSupabase
         .from("profiles")
         .select("user_type")
         .eq("id", user.id)
@@ -133,7 +137,7 @@ export async function GET(
     // If course relation didn't load, fetch it separately
     if (!course && certificate.course_id) {
       console.log("[Certificates API] Course relation not loaded, fetching separately for courseId:", certificate.course_id)
-      const { data: courseData, error: courseError } = await supabase
+      const { data: courseData, error: courseError } = await serviceSupabase
         .from("courses")
         .select("id, title, certificate_enabled, certificate_template, certificate_title, certificate_description, signature_image, signature_name, signature_title, additional_text, certificate_type")
         .eq("id", certificate.course_id)
@@ -238,8 +242,8 @@ export async function GET(
 
       console.log("[Certificates API] PDF uploaded successfully:", { key, url })
 
-      // Save PDF URL to database
-      const { error: updateError } = await supabase
+      // Save PDF URL to database (use service role client to bypass RLS)
+      const { error: updateError } = await serviceSupabase
         .from("certificates")
         .update({ certificate_url: url })
         .eq("id", id)
