@@ -84,18 +84,17 @@ export async function GET(
 
     // Check if user owns this certificate or is admin
     if (certificate.user_id !== user.id) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single()
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", user.id)
+        .single()
 
-    if (profile?.user_type !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      if (profile?.user_type !== "admin") {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      }
     }
-  }
 
-  try {
     // Check if PDF URL already exists (from previous generation)
     let pdfBuffer: Buffer
     let pdfUrl: string | null = certificate.certificate_url || null
@@ -288,7 +287,7 @@ export async function GET(
       stack: error?.stack,
       certificateId: id || "unknown",
     })
-    logError("Error generating certificate PDF", error, {
+    logError("Error in certificate download route", error, {
       component: "certificates/[id]/download/route",
       action: "GET",
       certificateId: id || "unknown",
@@ -298,7 +297,7 @@ export async function GET(
     })
     return NextResponse.json(
       { 
-        error: "Failed to generate certificate PDF", 
+        error: "Failed to process certificate download", 
         details: error?.message || "Unknown error",
         // Include more details in development
         ...(process.env.NODE_ENV === "development" && { stack: error?.stack })
