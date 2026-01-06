@@ -216,12 +216,44 @@ export async function POST(
     const questionOrder = hasShuffle ? quizAttempt.question_order : null
     // Note: answerOrders is no longer used - answers are NOT shuffled, only questions are
     let attemptId = quizAttempt?.id || null
+    let attemptNumber = quizAttempt?.attempt_number || 1
     
     // If attempt exists but is not completed, mark it as completed now
+    // This is when the attempt counts toward max attempts - when "Finish Quiz" is clicked
+    // Also increment the attempt_number at this point
     if (quizAttempt && !quizAttempt.completed_at) {
+      // Get the highest completed attempt number to calculate the next one
+      const { data: completedAttempts, error: completedAttemptsError } = await serviceSupabase
+        .from("quiz_attempts")
+        .select("attempt_number")
+        .eq("user_id", user.id)
+        .eq("lesson_id", lessonId)
+        .not("completed_at", "is", null)
+        .order("attempt_number", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (completedAttemptsError && completedAttemptsError.code !== 'PGRST116') {
+        logWarning("Error fetching completed attempts for attempt number calculation", {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          error: completedAttemptsError,
+          lessonId,
+        })
+      }
+      
+      // Calculate the attempt number - use the highest completed attempt + 1
+      // This ensures attempts only count when "Finish Quiz" is clicked
+      const calculatedAttemptNumber = completedAttempts?.attempt_number 
+        ? (completedAttempts.attempt_number + 1) 
+        : 1
+      
       const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
         .from("quiz_attempts")
-        .update({ completed_at: new Date().toISOString() })
+        .update({ 
+          completed_at: new Date().toISOString(),
+          attempt_number: calculatedAttemptNumber, // Increment attempt number when completing
+        })
         .eq("id", quizAttempt.id)
         .select()
         .single()
@@ -234,8 +266,79 @@ export async function POST(
           attemptId,
         })
       } else {
-        logInfo("Quiz attempt marked as completed", { attemptId, lessonId })
+        logInfo("Quiz attempt marked as completed - this attempt now counts toward max attempts", { 
+          attemptId, 
+          attemptNumber: calculatedAttemptNumber,
+          previousAttemptNumber: quizAttempt.attempt_number,
+          lessonId 
+        })
         attemptId = updatedAttempt?.id || attemptId
+        attemptNumber = calculatedAttemptNumber
+      }
+    } else if (!quizAttempt) {
+      // No attempt exists - this means "Finish Quiz" was clicked on first attempt
+      // Create a new attempt record now (this is when the attempt counts toward max attempts)
+      // Calculate the next attempt number based on completed attempts
+      const { data: completedAttempts, error: completedAttemptsError } = await serviceSupabase
+        .from("quiz_attempts")
+        .select("attempt_number")
+        .eq("user_id", user.id)
+        .eq("lesson_id", lessonId)
+        .not("completed_at", "is", null)
+        .order("attempt_number", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (completedAttemptsError && completedAttemptsError.code !== 'PGRST116') {
+        logWarning("Error fetching completed attempts", {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          error: completedAttemptsError,
+          lessonId,
+        })
+      }
+      
+      // Calculate next attempt number
+      attemptNumber = completedAttempts?.attempt_number 
+        ? (completedAttempts.attempt_number + 1) 
+        : 1
+      
+      // Generate seed for shuffling (should match what was used when quiz was loaded)
+      const { generateSeed } = await import("@/lib/quiz/shuffle")
+      const seed = generateSeed(user.id, lessonId, attemptNumber)
+      const { shuffleQuiz } = await import("@/lib/quiz/shuffle")
+      const { shuffledQuestions, questionOrder: calculatedQuestionOrder, answerOrders } = shuffleQuiz(quizQuestions, seed)
+      
+      // Create new attempt record - this is when the attempt counts toward max attempts
+      const { data: newAttempt, error: insertAttemptError } = await serviceSupabase
+        .from("quiz_attempts")
+        .insert({
+          user_id: user.id,
+          lesson_id: lessonId,
+          course_id: courseId,
+          attempt_number: attemptNumber,
+          question_order: calculatedQuestionOrder,
+          answer_orders: answerOrders,
+          completed_at: new Date().toISOString(), // Mark as completed immediately since quiz is being submitted
+        })
+        .select()
+        .single()
+      
+      if (insertAttemptError) {
+        logError("Error creating quiz attempt", insertAttemptError, {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          lessonId,
+          courseId,
+        })
+        // Continue without attempt ID - quiz results can still be saved
+      } else {
+        attemptId = newAttempt?.id || null
+        logInfo("New quiz attempt created and marked as completed - this attempt now counts toward max attempts", { 
+          attemptId, 
+          attemptNumber, 
+          lessonId 
+        })
       }
     }
 
