@@ -70,7 +70,7 @@ export async function GET(
     if (course) {
       const { data: lessonsData, error: lessonsError } = await supabase
         .from("lessons")
-        .select("id, title, type, video_url, text_content, estimated_duration, is_required, video_progression, order_index")
+        .select("id, title, type, video_url, text_content, estimated_duration, is_required, order_index")
         .eq("course_id", numericId)
         .order("order_index", { ascending: true })
       
@@ -128,7 +128,7 @@ export async function GET(
         // Fetch lessons separately
         const { data: lessonsData } = await supabase
           .from("lessons")
-          .select("id, title, type, video_url, text_content, estimated_duration, is_required, video_progression, order_index")
+          .select("id, title, type, video_url, text_content, estimated_duration, is_required, order_index")
           .eq("course_id", numericId)
           .order("order_index", { ascending: true })
         
@@ -681,7 +681,6 @@ export async function GET(
           type: lesson.type || contentRest.type,
           settings: {
             isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
-            videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
           },
           // Spread content properties (url, html, text, estimatedDuration, etc)
           // But NOT quiz and resources (we process those separately)

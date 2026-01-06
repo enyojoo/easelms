@@ -11,8 +11,6 @@ interface VideoPlayerProps {
   videoUrl?: string // S3 video URL
   courseId?: string
   lessonId?: string
-  videoProgression?: boolean // Enable video progress tracking
-  onProgressUpdate?: (progress: number) => void // Callback for progress updates
 }
 
 export default function VideoPlayer({
@@ -23,8 +21,6 @@ export default function VideoPlayer({
   videoUrl,
   courseId,
   lessonId,
-  videoProgression = false,
-  onProgressUpdate,
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -45,16 +41,16 @@ export default function VideoPlayer({
     setCurrentTime(0)
   }, [lessonId])
 
-  // Save progress periodically
+  // Save progress to localStorage periodically (always enabled for resume functionality)
   useEffect(() => {
-    if (!videoProgression || !progressStorageKey || duration === 0) return
+    if (!progressStorageKey || duration === 0) return
 
     // Clear existing interval
     if (progressSaveIntervalRef.current) {
       clearInterval(progressSaveIntervalRef.current)
     }
 
-    // Save progress every 5 seconds
+    // Save progress every 5 seconds to localStorage for resume functionality
     progressSaveIntervalRef.current = setInterval(() => {
       if (currentTime > 0 && duration > 0) {
         try {
@@ -65,13 +61,8 @@ export default function VideoPlayer({
             lastUpdated: new Date().toISOString(),
           }
           localStorage.setItem(progressStorageKey, JSON.stringify(progressData))
-
-          // Call progress update callback
-          if (onProgressUpdate && duration > 0) {
-            onProgressUpdate(progressData.progressPercentage)
-          }
         } catch (error) {
-          console.error("Error saving video progress:", error)
+          console.error("Error saving video progress to localStorage:", error)
         }
       }
     }, 5000)
@@ -81,7 +72,7 @@ export default function VideoPlayer({
         clearInterval(progressSaveIntervalRef.current)
       }
     }
-  }, [videoProgression, progressStorageKey, currentTime, duration, onProgressUpdate])
+  }, [progressStorageKey, currentTime, duration])
 
   if (!validVideoUrl) {
     return null
@@ -94,38 +85,14 @@ export default function VideoPlayer({
         controls={true}
         autoplay={autoPlay && isActive}
         onReady={(player: any) => {
-          // Set up progress tracking with video player
-          if (videoProgression && progressStorageKey) {
-            const handleTimeUpdate = () => {
-              const current = typeof player.currentTime === 'function' ? player.currentTime() : player.currentTime
-              const dur = typeof player.duration === 'function' ? player.duration() : player.duration
-              if (current > 0 && dur > 0) {
-                setCurrentTime(current)
-                setDuration(dur)
-                
-                // Call progress update callback
-                if (onProgressUpdate && dur > 0) {
-                  onProgressUpdate((current / dur) * 100)
-                }
-              }
-            }
-            
-            // Use the proxy's on method or addEventListener directly
-            if (typeof player.on === 'function') {
-              player.on("timeupdate", handleTimeUpdate)
-            } else if (player.el && typeof player.el === 'function') {
-              const videoEl = player.el()
-              if (videoEl) {
-                videoEl.addEventListener("timeupdate", handleTimeUpdate)
-              }
-            }
-            
-            // Load saved progress
+          // Always enable resume functionality - load saved progress from localStorage
+          if (progressStorageKey) {
             try {
               const savedProgress = localStorage.getItem(progressStorageKey)
               if (savedProgress) {
                 const { currentTime: savedTime, duration: savedDuration } = JSON.parse(savedProgress)
                 if (savedTime > 5 && savedTime < savedDuration) {
+                  // Resume from saved position if more than 5 seconds watched
                   if (typeof player.currentTime === 'function') {
                     player.currentTime(savedTime)
                   } else {
@@ -135,7 +102,7 @@ export default function VideoPlayer({
                 }
               }
             } catch (error) {
-              console.error("Error loading video progress:", error)
+              console.error("Error loading video progress from localStorage:", error)
             }
           }
         }}

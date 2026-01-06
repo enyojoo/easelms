@@ -38,7 +38,6 @@ interface Lesson {
   resources: Resource[]
   settings: {
     isRequired: boolean
-    videoProgression: boolean
   }
   quiz: {
     enabled: boolean
@@ -305,22 +304,6 @@ export default function LessonCard({
                     />
                   </div>
 
-                  {(localLesson.type === "video" || localLesson.type === "mixed") && (
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Video Progress Tracking</Label>
-                        <p className="text-sm text-muted-foreground">Track student's video watching progress</p>
-                      </div>
-                      <Switch
-                        checked={localLesson.settings.videoProgression}
-                        onCheckedChange={(checked) =>
-                          updateLesson({
-                            settings: { ...localLesson.settings, videoProgression: checked },
-                          })
-                        }
-                      />
-                    </div>
-                  )}
 
                 </div>
               </CollapsibleContent>

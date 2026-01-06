@@ -30,7 +30,6 @@ export interface Lesson {
   resources: Resource[]
   settings: {
     isRequired: boolean
-    videoProgression: boolean
   }
   quiz: {
     enabled: boolean
@@ -69,7 +68,6 @@ export default function LessonBuilder({ lessons, onUpdate, minimumQuizScore = 50
       resources: [],
       settings: {
         isRequired: true,
-        videoProgression: true,
       },
       quiz: {
         enabled: false,

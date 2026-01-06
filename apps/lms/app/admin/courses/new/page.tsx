@@ -196,14 +196,12 @@ function NewCourseContent() {
                     frontendContent = lesson.content || {}
                     settings = lesson.settings || {
                       isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
-                      videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
                     }
                     estimatedDuration = lesson.estimatedDuration || lesson.estimated_duration || 0
                   } else {
                     // Lesson is in database format - transform it
                     settings = {
                       isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
-                      videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
                     }
                     
                     const videoUrl = (lesson.video_url && lesson.video_url.trim() !== '') 

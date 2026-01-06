@@ -184,7 +184,6 @@ export async function POST(request: Request) {
           content: null, // No longer using content JSONB - set to null
           order_index: index,
           is_required: settings.isRequired !== undefined ? settings.isRequired : true,
-          video_progression: settings.videoProgression !== undefined ? settings.videoProgression : false,
         }
 
         // Check if lesson has a real database ID (numeric, not temporary like "lesson-123456-abc")
@@ -1151,7 +1150,6 @@ export async function GET(request: Request) {
       data.lessons = data.lessons.map((lesson: any) => {
         const settings = {
           isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
-          videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
         }
 
         // Get all data from dedicated columns (NO JSONB content)

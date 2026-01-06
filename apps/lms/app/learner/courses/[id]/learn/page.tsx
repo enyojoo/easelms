@@ -56,7 +56,6 @@ export default function CourseLearningPage() {
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [lessonStartTime, setLessonStartTime] = useState<number | null>(null)
-  const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
   const [timeLimitExceeded, setTimeLimitExceeded] = useState(false)
   const [textViewed, setTextViewed] = useState<{ [key: number]: boolean }>({})
   const [videoCompleted, setVideoCompleted] = useState<{ [key: number]: boolean }>({}) // Track video completion separately for mixed lessons
@@ -78,17 +77,10 @@ export default function CourseLearningPage() {
   const course = courseData?.course
 
   // Calculate progress using custom hook
-  const { completedLessons, progress, allCompleted, videoProgress: videoProg } = useCourseProgress({
+  const { completedLessons, progress, allCompleted } = useCourseProgress({
     course,
     progressData,
   })
-
-  // Update video progress state when it changes
-  useEffect(() => {
-    if (Object.keys(videoProg).length > 0) {
-      setVideoProgress((prev) => ({ ...prev, ...videoProg }))
-    }
-  }, [videoProg])
 
   // Update all lessons completed state
   useEffect(() => {
@@ -642,12 +634,6 @@ export default function CourseLearningPage() {
     }
   }
 
-  const handleVideoProgressUpdate = async (progressPercentage: number) => {
-    setVideoProgress((prev) => ({
-      ...prev,
-      [currentLessonIndex]: progressPercentage,
-    }))
-  }
 
   const handleQuizComplete = async (answers?: number[], questions?: any[], attemptCount?: number) => {
     if (!course || !id) return
@@ -1018,8 +1004,6 @@ export default function CourseLearningPage() {
                             videoUrl={(currentLesson as any).url}
                             courseId={id}
                             lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                            videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
-                            onProgressUpdate={handleVideoProgressUpdate}
                           />
                         </div>
                       </TabsContent>

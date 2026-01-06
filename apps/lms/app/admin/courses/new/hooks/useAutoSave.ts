@@ -237,7 +237,6 @@ export function useAutoSave<T>({
         const content = lesson.content || {}
         const settings = {
           isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
-          videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
         }
 
         // Get all data from dedicated columns (NO JSONB content)

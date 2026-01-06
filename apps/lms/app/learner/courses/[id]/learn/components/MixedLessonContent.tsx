@@ -10,7 +10,6 @@ interface MixedLessonContentProps {
   id: string
   activeTab: string
   onComplete: () => void
-  onProgressUpdate: (lessonId: number, progress: number) => void
   textViewed: { [key: number]: boolean }
   setTextViewed: React.Dispatch<React.SetStateAction<{ [key: number]: boolean }>>
   textViewedRefs: React.MutableRefObject<{ [key: number]: { viewed: boolean; scrollTop: number; scrollHeight: number } }>
@@ -22,7 +21,6 @@ export default function MixedLessonContent({
   id,
   activeTab,
   onComplete,
-  onProgressUpdate,
   textViewed,
   setTextViewed,
   textViewedRefs,
@@ -93,8 +91,6 @@ export default function MixedLessonContent({
             videoUrl={currentLesson.url}
             courseId={id}
             lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-            videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? currentLesson.settings.videoProgression : false) ?? false}
-            onProgressUpdate={onProgressUpdate}
           />
         </div>
         {/* Text Section */}

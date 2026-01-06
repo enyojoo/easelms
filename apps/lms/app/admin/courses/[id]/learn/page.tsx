@@ -45,7 +45,6 @@ export default function AdminCourseLearningPage() {
   const [activeTab, setActiveTab] = useState("video")
   const [completedLessons, setCompletedLessons] = useState<number[]>([])
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
-  const [videoProgress, setVideoProgress] = useState<{ [key: number]: number }>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -540,8 +539,6 @@ export default function AdminCourseLearningPage() {
                               videoUrl={(currentLesson as any).url}
                               courseId={id}
                               lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
-                              videoProgression={(currentLesson.settings && typeof currentLesson.settings === "object" ? (currentLesson.settings as any).videoProgression : false) ?? false}
-                              onProgressUpdate={handleVideoProgressUpdate}
                             />
                           </div>
                         </div>
