@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { createCourseSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
@@ -25,6 +25,7 @@ import AdminCoursesSkeleton from "@/components/AdminCoursesSkeleton"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import { toast } from "sonner"
+import { useCourses, useRealtimeCourses, useInvalidateCourses } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -49,9 +50,6 @@ interface Course {
 export default function ManageCoursesPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [priceFilter, setPriceFilter] = useState<string>("all")
@@ -60,6 +58,15 @@ export default function ManageCoursesPage() {
   const [deleting, setDeleting] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [draftCourses, setDraftCourses] = useState<Course[]>([])
+
+  // Use React Query hooks for data fetching with caching
+  const { data: coursesData, isPending: coursesPending, error: coursesError } = useCourses({ all: true })
+  
+  // Set up real-time subscription for courses
+  useRealtimeCourses()
+  
+  // Get cache invalidation function
+  const invalidateCourses = useInvalidateCourses()
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -186,6 +193,52 @@ export default function ManageCoursesPage() {
     setDraftCourses(drafts)
   }, [mounted, loadDrafts])
 
+  // Process courses data from React Query
+  const courses = useMemo(() => {
+    if (!coursesData?.courses) return []
+    
+    // Map API response to match UI expectations
+    return coursesData.courses.map((course: any) => {
+      // Parse settings if it's a string
+      let settings = course.settings
+      if (typeof settings === 'string') {
+        try {
+          settings = JSON.parse(settings)
+        } catch (e) {
+          settings = {}
+        }
+      }
+
+      // Map is_published to settings.isPublished
+      if (course.is_published !== undefined && settings) {
+        settings.isPublished = course.is_published
+      }
+
+      // Calculate duration from lessons if not already provided
+      const lessons = Array.isArray(course.lessons) ? course.lessons : []
+      const totalDurationMinutes = course.totalDurationMinutes !== undefined 
+        ? course.totalDurationMinutes 
+        : lessons.reduce((total: number, lesson: any) => {
+            return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
+          }, 0)
+      const totalHours = course.totalHours !== undefined 
+        ? course.totalHours 
+        : Math.round((totalDurationMinutes / 60) * 10) / 10
+
+      return {
+        id: course.id,
+        title: course.title || "",
+        description: course.description || "",
+        image: course.image || course.thumbnail || "/placeholder.svg",
+        lessons: lessons,
+        price: course.price || 0,
+        totalDurationMinutes: totalDurationMinutes,
+        totalHours: totalHours,
+        settings: settings || { isPublished: course.is_published || false },
+      }
+    })
+  }, [coursesData])
+
   // Clean up orphaned localStorage entries (drafts with positive IDs that don't exist in Supabase)
   // This runs after courses are loaded
   useEffect(() => {
@@ -234,153 +287,11 @@ export default function ManageCoursesPage() {
     }
   }, [mounted, loadDrafts])
 
-  // Fetch courses from API
-  useEffect(() => {
-    const fetchCourses = async () => {
-      if (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor")) return
-
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch("/api/courses?all=true")
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch courses")
-        }
-
-        const data = await response.json()
-        const fetchedCourses = data.courses || []
-
-        // Map API response to match UI expectations
-        const mappedCourses: Course[] = fetchedCourses.map((course: any) => {
-          // Parse settings if it's a string
-          let settings = course.settings
-          if (typeof settings === 'string') {
-            try {
-              settings = JSON.parse(settings)
-            } catch (e) {
-              settings = {}
-            }
-          }
-
-          // Map is_published to settings.isPublished
-          if (course.is_published !== undefined && settings) {
-            settings.isPublished = course.is_published
-          }
-
-          // Calculate duration from lessons if not already provided
-          const lessons = Array.isArray(course.lessons) ? course.lessons : []
-          const totalDurationMinutes = course.totalDurationMinutes !== undefined 
-            ? course.totalDurationMinutes 
-            : lessons.reduce((total: number, lesson: any) => {
-                return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
-              }, 0)
-          const totalHours = course.totalHours !== undefined 
-            ? course.totalHours 
-            : Math.round((totalDurationMinutes / 60) * 10) / 10
-
-          return {
-            id: course.id,
-            title: course.title || "",
-            description: course.description || "",
-            image: course.image || course.thumbnail || "/placeholder.svg",
-            lessons: lessons,
-            price: course.price || 0,
-            totalDurationMinutes: totalDurationMinutes,
-            totalHours: totalHours,
-            settings: settings || { isPublished: course.is_published || false },
-          }
-        })
-
-        setCourses(mappedCourses)
-      } catch (err: any) {
-        console.error("Error fetching courses:", err)
-        setError(err.message || "Failed to load courses")
-        toast.error(err.message || "Failed to load courses")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCourses()
-  }, [mounted, authLoading, user, userType])
-
-  // Refresh courses when page becomes visible (user returns from course builder)
-  useEffect(() => {
-    if (!mounted) return
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user && (userType === "admin" || userType === "instructor")) {
-        // Refetch courses when page becomes visible
-        const fetchCourses = async () => {
-          try {
-            const response = await fetch("/api/courses?all=true")
-            if (response.ok) {
-              const data = await response.json()
-              const fetchedCourses = data.courses || []
-              
-              const mappedCourses: Course[] = fetchedCourses.map((course: any) => {
-                let settings = course.settings
-                if (typeof settings === 'string') {
-                  try {
-                    settings = JSON.parse(settings)
-                  } catch (e) {
-                    settings = {}
-                  }
-                }
-                
-                if (course.is_published !== undefined && settings) {
-                  settings.isPublished = course.is_published
-                }
-                
-                const lessons = Array.isArray(course.lessons) ? course.lessons : []
-                const totalDurationMinutes = course.totalDurationMinutes !== undefined 
-                  ? course.totalDurationMinutes 
-                  : lessons.reduce((total: number, lesson: any) => {
-                      return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
-                    }, 0)
-                const totalHours = course.totalHours !== undefined 
-                  ? course.totalHours 
-                  : Math.round((totalDurationMinutes / 60) * 10) / 10
-                
-                return {
-                  id: course.id,
-                  title: course.title || "",
-                  description: course.description || "",
-                  image: course.image || course.thumbnail || "/placeholder.svg",
-                  lessons: lessons,
-                  price: course.price || 0,
-                  totalDurationMinutes: totalDurationMinutes,
-                  totalHours: totalHours,
-                  settings: settings || { isPublished: course.is_published || false },
-                }
-              })
-              
-              setCourses(mappedCourses)
-            }
-          } catch (err) {
-            console.error("Error refreshing courses:", err)
-          }
-        }
-        fetchCourses()
-      }
-    }
-    
-    document.addEventListener("visibilitychange", handleVisibilityChange)
-    window.addEventListener("focus", handleVisibilityChange)
-    
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener("focus", handleVisibilityChange)
-    }
-  }, [mounted, user, userType])
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
-  const hasData = courses.length > 0 || draftCourses.length > 0
-  const isLoading = (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor") || loading) && !hasData
+  const hasData = coursesData || draftCourses.length > 0
+  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasData
 
   const handleDeleteClick = (courseId: number) => {
     setCourseToDelete(courseId)
@@ -405,49 +316,8 @@ export default function ManageCoursesPage() {
       setDeleteDialogOpen(false)
       setCourseToDelete(null)
 
-      // Refresh courses list
-      const refreshResponse = await fetch("/api/courses?all=true")
-      if (refreshResponse.ok) {
-        const data = await refreshResponse.json()
-        const fetchedCourses = data.courses || []
-        const mappedCourses: Course[] = fetchedCourses.map((course: any) => {
-          let settings = course.settings
-          if (typeof settings === 'string') {
-            try {
-              settings = JSON.parse(settings)
-            } catch (e) {
-              settings = {}
-            }
-          }
-          if (course.is_published !== undefined && settings) {
-            settings.isPublished = course.is_published
-          }
-          
-          // Calculate duration from lessons if not already provided
-          const lessons = Array.isArray(course.lessons) ? course.lessons : []
-          const totalDurationMinutes = course.totalDurationMinutes !== undefined 
-            ? course.totalDurationMinutes 
-            : lessons.reduce((total: number, lesson: any) => {
-                return total + (lesson.estimated_duration || lesson.estimatedDuration || 0)
-              }, 0)
-          const totalHours = course.totalHours !== undefined 
-            ? course.totalHours 
-            : Math.round((totalDurationMinutes / 60) * 10) / 10
-
-          return {
-            id: course.id,
-            title: course.title || "",
-            description: course.description || "",
-            image: course.image || course.thumbnail || "/placeholder.svg",
-            lessons: lessons,
-            price: course.price || 0,
-            totalDurationMinutes: totalDurationMinutes,
-            totalHours: totalHours,
-            settings: settings || { isPublished: course.is_published || false },
-          }
-        })
-        setCourses(mappedCourses)
-      }
+      // Invalidate courses cache to trigger refetch
+      invalidateCourses()
     } catch (err: any) {
       console.error("Error deleting course:", err)
       toast.error(err.message || "Failed to delete course")
@@ -706,13 +576,13 @@ export default function ManageCoursesPage() {
 
   return (
     <div className="pt-4 md:pt-8">
-      {isLoading ? (
+      {showSkeleton ? (
         <AdminCoursesSkeleton />
-      ) : error ? (
+      ) : coursesError ? (
         <div className="text-center py-12">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Error loading courses</h3>
-          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+          <p className="text-sm text-muted-foreground mb-4">{coursesError.message || "Failed to load courses"}</p>
           <Button onClick={() => window.location.reload()}>Retry</Button>
         </div>
       ) : (
