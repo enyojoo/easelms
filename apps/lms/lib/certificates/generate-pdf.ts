@@ -1,6 +1,5 @@
-// PDFKit fonts are configured via next.config.mjs outputFileTracingIncludes
-// This ensures fonts from node_modules/pdfkit/js/data are included in Vercel bundle
-// Fonts should be accessible at runtime without needing a patch
+// Import font patch before PDFKit to ensure fonts are patched
+import "./pdfkit-font-patch"
 import PDFDocument from "pdfkit"
 import { Readable } from "stream"
 import path from "path"
@@ -71,17 +70,29 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
+// Helper function to get the path to Poppins font files
+function getPoppinsFontPath(fontName: string): string | null {
+  const possiblePaths = [
+    path.join(process.cwd(), "apps/lms/lib/certificates/fonts", fontName),
+    path.join(process.cwd(), "lib/certificates/fonts", fontName),
+    path.join(__dirname, "fonts", fontName),
+    path.join("/var/task/apps/lms/lib/certificates/fonts", fontName),
+    path.join("/var/task/lib/certificates/fonts", fontName),
+  ]
+
+  for (const fontPath of possiblePaths) {
+    if (fs.existsSync(fontPath)) {
+      return fontPath
+    }
+  }
+
+  return null
+}
+
 export async function generateCertificatePDF(data: CertificateData): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
-      // PDFKit looks for fonts in node_modules/pdfkit/js/data by default
-      // For Vercel, we've configured outputFileTracingIncludes to ensure
-      // these fonts are included in the serverless bundle
-      // The fonts are also copied to lib/certificates/fonts as a backup
-      
       // Initialize PDFDocument
-      // PDFKit will automatically find fonts in node_modules/pdfkit/js/data
-      // which should be included in the Vercel deployment bundle
       const doc = new PDFDocument({
         size: "LETTER",
         layout: "landscape",
@@ -92,6 +103,25 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           right: 50,
         },
       })
+
+      // Register Poppins fonts (Google Fonts) to match the website design
+      const poppinsRegular = getPoppinsFontPath("Poppins-Regular.ttf")
+      const poppinsBold = getPoppinsFontPath("Poppins-Bold.ttf")
+      const poppinsSemiBold = getPoppinsFontPath("Poppins-SemiBold.ttf")
+
+      if (poppinsRegular) {
+        doc.registerFont("Poppins", poppinsRegular)
+        doc.registerFont("Poppins-Regular", poppinsRegular)
+      }
+      if (poppinsBold) {
+        doc.registerFont("Poppins-Bold", poppinsBold)
+      }
+      if (poppinsSemiBold) {
+        doc.registerFont("Poppins-SemiBold", poppinsSemiBold)
+      }
+
+      // Fallback: If Poppins fonts aren't available, PDFKit will use default fonts
+      const usePoppins = poppinsRegular && poppinsBold
 
       const buffers: Buffer[] = []
       doc.on("data", buffers.push.bind(buffers))
@@ -190,7 +220,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         doc
           .fontSize(24)
           .fillColor("#2C3E50")
-          .font("Helvetica-Bold")
+          .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
           .text(data.organizationName, doc.page.width / 2, headerY, {
             align: "center",
           })
@@ -253,7 +283,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           doc
             .fontSize(16)
             .fillColor("#34495E")
-            .font("Helvetica")
+            .font(usePoppins ? "Poppins" : "Helvetica")
             .text(parts[0].trim(), doc.page.width / 2, currentY, {
               align: "center",
             })
@@ -264,7 +294,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           doc
             .fontSize(32)
             .fillColor("#2C3E50")
-            .font("Helvetica-Bold")
+            .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
             .text(data.learnerName, doc.page.width / 2, currentY, {
               align: "center",
             })
@@ -275,7 +305,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           doc
             .fontSize(16)
             .fillColor("#34495E")
-            .font("Helvetica")
+            .font(usePoppins ? "Poppins" : "Helvetica")
             .text(parts[1].trim(), doc.page.width / 2, currentY, {
               align: "center",
               width: doc.page.width - 200,
@@ -288,7 +318,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           doc
             .fontSize(16)
             .fillColor("#34495E")
-            .font("Helvetica")
+            .font(usePoppins ? "Poppins" : "Helvetica")
             .text(descriptionText, doc.page.width / 2, currentY, {
               align: "center",
               width: doc.page.width - 200,
@@ -301,7 +331,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(16)
         .fillColor("#34495E")
-        .font("Helvetica")
+        .font(usePoppins ? "Poppins" : "Helvetica")
           .text("This is to certify that", doc.page.width / 2, currentY, {
           align: "center",
         })
@@ -336,7 +366,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(16)
         .fillColor("#34495E")
-        .font("Helvetica")
+        .font(usePoppins ? "Poppins" : "Helvetica")
         .text(
             `has successfully ${getActionText()}`,
           doc.page.width / 2,
@@ -366,7 +396,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         doc
           .fontSize(14)
           .fillColor("#34495E")
-          .font("Helvetica")
+          .font(usePoppins ? "Poppins" : "Helvetica")
           .text(data.additionalText, doc.page.width / 2, currentY, {
             align: "center",
             width: doc.page.width - 200,
@@ -384,7 +414,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(14)
         .fillColor("#7F8C8D")
-        .font("Helvetica")
+        .font(usePoppins ? "Poppins" : "Helvetica")
         .text(`Issued on ${issuedDate}`, doc.page.width / 2, currentY, {
           align: "center",
         })
@@ -393,7 +423,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(10)
         .fillColor("#95A5A6")
-        .font("Helvetica")
+        .font(usePoppins ? "Poppins" : "Helvetica")
         .text(
           `Certificate Number: ${data.certificateNumber}`,
           doc.page.width / 2,
@@ -426,7 +456,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           doc
             .fontSize(12)
             .fillColor("#34495E")
-            .font("Helvetica")
+            .font(usePoppins ? "Poppins" : "Helvetica")
             .text("_________________________", signatureXLeft, signatureY, {
               align: "center",
             })
@@ -436,7 +466,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         doc
           .fontSize(12)
           .fillColor("#34495E")
-          .font("Helvetica")
+          .font(usePoppins ? "Poppins" : "Helvetica")
           .text("_________________________", signatureXLeft, signatureY, {
             align: "center",
           })
@@ -446,7 +476,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(12)
         .fillColor("#34495E")
-        .font("Helvetica")
+        .font(usePoppins ? "Poppins" : "Helvetica")
         .text("_________________________", signatureXRight, signatureY, {
           align: "center",
         })
@@ -466,7 +496,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(10)
         .fillColor("#7F8C8D")
-        .font("Helvetica")
+        .font(usePoppins ? "Poppins" : "Helvetica")
         .text(signatureText, signatureXLeft, signatureY + 25, {
           align: "center",
           width: 150,
