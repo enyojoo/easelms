@@ -154,9 +154,21 @@ function NewCourseContent() {
           console.log("Response status:", response.status, response.statusText)
           if (response.ok) {
             const result = await response.json()
+            console.log("Drafts API Response:", {
+              hasCourse: !!result.course,
+              courseId: result.course?.id,
+              lessonsCount: result.course?.lessons?.length || 0,
+              lessonIds: result.course?.lessons?.map((l: any) => l.id) || [],
+              lessonTitles: result.course?.lessons?.map((l: any) => l.title) || [],
+            })
             if (result.course) {
               // Transform database format to course builder format
               const course = result.course
+              console.log("Setting course data with lessons:", {
+                lessonsCount: course.lessons?.length || 0,
+                lessons: course.lessons,
+                firstLesson: course.lessons?.[0],
+              })
               setCourseData({
                 basicInfo: {
                   title: course.title || "",
@@ -168,29 +180,47 @@ function NewCourseContent() {
                   price: course.price?.toString() || "",
                 },
                 lessons: (course.lessons || []).map((lesson: any) => {
-                  const content = lesson.content || {}
-                  const settings = {
-                    isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
-                    videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
-                  }
-
-                  // Get all data from dedicated columns (NO JSONB content)
-                  const videoUrl = (lesson.video_url && lesson.video_url.trim() !== '') 
-                    ? lesson.video_url.trim() 
-                    : undefined
-
-                  const textContent = (lesson.text_content && lesson.text_content.trim() !== '')
-                    ? lesson.text_content.trim()
-                    : undefined
-
-                  const estimatedDuration = lesson.estimated_duration || 0
-
-                  // Build content object for frontend compatibility (but data comes from columns)
-                  const frontendContent: any = {}
-                  if (videoUrl) frontendContent.url = videoUrl
-                  if (textContent) {
-                    frontendContent.html = textContent
-                    frontendContent.text = textContent
+                  // The API already transforms lessons to frontend format, but we need to ensure
+                  // the structure matches exactly what the lesson builder expects
+                  
+                  // Check if lesson is already in frontend format (has content object)
+                  // or if it's still in database format (has video_url, text_content columns)
+                  const isAlreadyTransformed = lesson.content && typeof lesson.content === 'object'
+                  
+                  let frontendContent: any = {}
+                  let settings: any = {}
+                  let estimatedDuration = 0
+                  
+                  if (isAlreadyTransformed) {
+                    // Lesson is already transformed by API - use it directly
+                    frontendContent = lesson.content || {}
+                    settings = lesson.settings || {
+                      isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
+                      videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
+                    }
+                    estimatedDuration = lesson.estimatedDuration || lesson.estimated_duration || 0
+                  } else {
+                    // Lesson is in database format - transform it
+                    settings = {
+                      isRequired: lesson.is_required !== undefined ? lesson.is_required : true,
+                      videoProgression: lesson.video_progression !== undefined ? lesson.video_progression : false,
+                    }
+                    
+                    const videoUrl = (lesson.video_url && lesson.video_url.trim() !== '') 
+                      ? lesson.video_url.trim() 
+                      : undefined
+                    
+                    const textContent = (lesson.text_content && lesson.text_content.trim() !== '')
+                      ? lesson.text_content.trim()
+                      : undefined
+                    
+                    estimatedDuration = lesson.estimated_duration || 0
+                    
+                    if (videoUrl) frontendContent.url = videoUrl
+                    if (textContent) {
+                      frontendContent.html = textContent
+                      frontendContent.text = textContent
+                    }
                   }
 
                   // Ensure quiz questions preserve their database IDs
@@ -204,12 +234,12 @@ function NewCourseContent() {
                     }
                   })
 
-                  return {
+                  // Build the lesson object in the format expected by the lesson builder
+                  const transformedLesson = {
                     id: lesson.id?.toString() || `lesson-${Date.now()}`,
                     title: lesson.title || "",
                     type: lesson.type || "text",
-                    content: frontendContent, // Built from dedicated columns, not JSONB
-                    // Resources and quiz come from normalized tables (via API)
+                    content: frontendContent,
                     resources: lesson.resources || [],
                     settings: settings,
                     quiz: lesson.quiz ? {
@@ -233,6 +263,18 @@ function NewCourseContent() {
                     },
                     estimatedDuration: estimatedDuration,
                   }
+                  
+                  console.log("Transformed lesson:", {
+                    id: transformedLesson.id,
+                    title: transformedLesson.title,
+                    type: transformedLesson.type,
+                    hasContent: !!(transformedLesson.content && Object.keys(transformedLesson.content).length > 0),
+                    hasResources: transformedLesson.resources.length > 0,
+                    hasQuiz: !!transformedLesson.quiz,
+                    quizQuestionsCount: transformedLesson.quiz?.questions?.length || 0,
+                  })
+                  
+                  return transformedLesson
                 }),
                 settings: {
                   isPublished: course.is_published || false,

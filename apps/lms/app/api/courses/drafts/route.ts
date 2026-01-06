@@ -737,14 +737,26 @@ export async function GET(request: Request) {
     }
 
     // Fetch lessons separately with proper ordering by order_index
+    // Convert courseId to number for the query
+    const numericCourseId = typeof courseId === 'string' ? parseInt(courseId, 10) : courseId
+    
+    console.log(`Drafts API: Fetching lessons for course ${courseId} (numeric: ${numericCourseId})`)
+    
     const { data: lessonsData, error: lessonsError } = await dbClient
       .from("lessons")
       .select("*")
-      .eq("course_id", courseId)
+      .eq("course_id", numericCourseId)
       .order("order_index", { ascending: true })
     
     if (lessonsError) {
-      console.error("Error fetching lessons for course draft:", lessonsError)
+      console.error("Error fetching lessons for course draft:", {
+        error: lessonsError,
+        courseId: courseId,
+        numericCourseId: numericCourseId,
+        message: lessonsError.message,
+        code: lessonsError.code,
+        details: lessonsError.details,
+      })
       // Don't fail the entire request, but log the error
     }
     
@@ -753,8 +765,12 @@ export async function GET(request: Request) {
     data.lessons = lessons
     
     console.log(`Drafts API: Fetched ${lessons.length} lessons for course ${courseId}`, {
+      courseId: courseId,
+      numericCourseId: numericCourseId,
       lessonIds: lessons.map((l: any) => l.id),
       orderIndices: lessons.map((l: any) => l.order_index),
+      lessonTitles: lessons.map((l: any) => l.title),
+      hasLessons: lessons.length > 0,
     })
 
     // Fetch prerequisites
@@ -969,6 +985,15 @@ export async function GET(request: Request) {
       courseId: courseId,
       lessonsCount: data.lessons.length,
       lessonIds: data.lessons.map((l: any) => l.id),
+      lessonTitles: data.lessons.map((l: any) => l.title),
+      firstLesson: data.lessons.length > 0 ? {
+        id: data.lessons[0].id,
+        title: data.lessons[0].title,
+        type: data.lessons[0].type,
+        hasContent: !!(data.lessons[0].content && Object.keys(data.lessons[0].content).length > 0),
+        hasResources: !!(data.lessons[0].resources && data.lessons[0].resources.length > 0),
+        hasQuiz: !!data.lessons[0].quiz,
+      } : null,
     })
 
     return NextResponse.json({ course: data })
