@@ -1,5 +1,6 @@
-// Import font patch before PDFKit to ensure fonts are patched
-import "./pdfkit-font-patch"
+// PDFKit fonts are configured via next.config.mjs outputFileTracingIncludes
+// This ensures fonts from node_modules/pdfkit/js/data are included in Vercel bundle
+// Fonts should be accessible at runtime without needing a patch
 import PDFDocument from "pdfkit"
 import { Readable } from "stream"
 import path from "path"
