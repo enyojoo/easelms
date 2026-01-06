@@ -227,14 +227,53 @@ export default function CourseCompletionPage() {
   }
 
   const handleDownloadCertificate = async () => {
-    if (!certificateId) {
-      alert("Certificate is not available yet. Please contact support.")
+    if (!course || !id) {
+      alert("Course information is not available.")
       return
     }
 
     try {
       setDownloadingCertificate(true)
-      const response = await fetch(`/api/certificates/${certificateId}/download`)
+      
+      // Check if certificate is enabled for this course
+      const certificateEnabled = course.settings?.certificate?.certificateEnabled || false
+      if (!certificateEnabled) {
+        alert("Certificate is not enabled for this course.")
+        setDownloadingCertificate(false)
+        return
+      }
+
+      // If certificate doesn't exist, create it first
+      let certId = certificateId
+      if (!certId) {
+        const courseId = parseInt(id)
+        const createResponse = await fetch("/api/certificates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId }),
+        })
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json().catch(() => ({}))
+          throw new Error(errorData.error || "Failed to create certificate")
+        }
+
+        const createData = await createResponse.json()
+        certId = createData.certificate?.id?.toString() || null
+        
+        if (certId) {
+          setCertificateId(certId)
+        } else {
+          throw new Error("Certificate was created but ID is missing")
+        }
+      }
+
+      if (!certId) {
+        throw new Error("Certificate ID is not available")
+      }
+
+      // Download the certificate
+      const response = await fetch(`/api/certificates/${certId}/download`)
       
       if (!response.ok) {
         throw new Error("Failed to download certificate")
@@ -254,7 +293,7 @@ export default function CourseCompletionPage() {
       document.body.removeChild(a)
     } catch (error: any) {
       console.error("Error downloading certificate:", error)
-      alert("Failed to download certificate. Please try again later.")
+      alert(error.message || "Failed to download certificate. Please try again later.")
     } finally {
       setDownloadingCertificate(false)
     }
@@ -318,25 +357,32 @@ export default function CourseCompletionPage() {
                   Course Completed! 🎉
                 </CardTitle>
               </div>
-              <Button
-                onClick={handleDownloadCertificate}
-                size="sm"
-                disabled={!certificateId || downloadingCertificate}
-                variant={certificateId ? "default" : "outline"}
-                className="flex-shrink-0"
-              >
-                {downloadingCertificate ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    {certificateId ? "Download Certificate" : "Certificate Not Available"}
-                  </>
-                )}
-              </Button>
+              {(() => {
+                const certificateEnabled = course?.settings?.certificate?.certificateEnabled || false
+                const canDownload = certificateEnabled && !downloadingCertificate
+                
+                return (
+                  <Button
+                    onClick={handleDownloadCertificate}
+                    size="sm"
+                    disabled={!canDownload || downloadingCertificate}
+                    variant={canDownload ? "default" : "outline"}
+                    className="flex-shrink-0"
+                  >
+                    {downloadingCertificate ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="mr-2 h-4 w-4" />
+                        {canDownload ? "Download Certificate" : "Certificate Not Available"}
+                      </>
+                    )}
+                  </Button>
+                )
+              })()}
             </div>
           </CardHeader>
           <CardContent className="p-4 md:p-6 pt-0">

@@ -122,3 +122,119 @@ export async function GET(request: Request) {
   }
 }
 
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { courseId } = body
+
+    if (!courseId) {
+      return NextResponse.json({ error: "courseId is required" }, { status: 400 })
+    }
+
+    // Use service role client to bypass RLS
+    const serviceSupabase = createServiceRoleClient()
+
+    // Check if certificate already exists
+    const { data: existingCert } = await serviceSupabase
+      .from("certificates")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .single()
+
+    if (existingCert) {
+      return NextResponse.json({ 
+        certificate: { id: existingCert.id },
+        message: "Certificate already exists"
+      })
+    }
+
+    // Check if course is completed
+    const { data: enrollment } = await serviceSupabase
+      .from("enrollments")
+      .select("status, completed_at")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .single()
+
+    if (!enrollment || enrollment.status !== "completed") {
+      return NextResponse.json({ 
+        error: "Course must be completed before certificate can be issued"
+      }, { status: 400 })
+    }
+
+    // Get course details
+    const { data: course } = await serviceSupabase
+      .from("courses")
+      .select("id, title, settings, certificate_enabled, certificate_type, certificate_title")
+      .eq("id", courseId)
+      .single()
+
+    if (!course) {
+      return NextResponse.json({ error: "Course not found" }, { status: 404 })
+    }
+
+    // Check if certificate is enabled for this course
+    const courseSettings = course.settings as any
+    const certificateEnabled = course.certificate_enabled || courseSettings?.certificate?.certificateEnabled
+
+    if (!certificateEnabled) {
+      return NextResponse.json({ 
+        error: "Certificate is not enabled for this course"
+      }, { status: 400 })
+    }
+
+    // Generate certificate number
+    const certificateNumber = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+
+    // Create certificate
+    const { data: certificate, error: insertError } = await serviceSupabase
+      .from("certificates")
+      .insert({
+        user_id: user.id,
+        course_id: courseId,
+        certificate_number: certificateNumber,
+        certificate_type: course.certificate_type || courseSettings?.certificate?.certificateType || "completion",
+        issued_at: enrollment.completed_at || new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (insertError) {
+      logError("Certificates API POST: Database error", insertError, {
+        component: "certificates/route",
+        action: "POST",
+        userId: user.id,
+        courseId,
+      })
+      return NextResponse.json({ 
+        error: insertError.message,
+        details: insertError.details,
+      }, { status: 500 })
+    }
+
+    return NextResponse.json({ 
+      certificate: {
+        id: certificate.id,
+        certificateNumber: certificate.certificate_number,
+      },
+      message: "Certificate created successfully"
+    })
+  } catch (error: any) {
+    logError("Certificates API POST: Unexpected error", error, {
+      component: "certificates/route",
+      action: "POST",
+    })
+    return NextResponse.json({ 
+      error: error?.message || "An unexpected error occurred while creating certificate",
+    }, { status: 500 })
+  }
+}

@@ -402,12 +402,35 @@ export default function CoursePage() {
                 <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
                 <span className="text-xs md:text-sm break-words">{access}</span>
               </div>
-              {course.settings?.certificate?.certificateEnabled && (
-                <div className="flex items-center">
-                  <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                  <span className="text-xs md:text-sm">Certificate of completion</span>
-                </div>
-              )}
+              {course.settings?.certificate?.certificateEnabled && (() => {
+                const certType = course.settings?.certificate?.certificateType || "completion"
+                const certTitle = course.settings?.certificate?.certificateTitle
+                let displayText = "Certificate of completion"
+                
+                if (certTitle && certTitle.trim() !== "") {
+                  displayText = certTitle
+                } else {
+                  switch (certType) {
+                    case "participation":
+                      displayText = "Certificate of Participation"
+                      break
+                    case "achievement":
+                      displayText = "Certificate of Achievement"
+                      break
+                    case "completion":
+                    default:
+                      displayText = "Certificate of Completion"
+                      break
+                  }
+                }
+                
+                return (
+                  <div className="flex items-center">
+                    <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                    <span className="text-xs md:text-sm">{displayText}</span>
+                  </div>
+                )
+              })()}
               <div className="flex items-center">
                 <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
                 <span className="text-xs md:text-sm">{course?.enrolledStudents || 0} learners enrolled</span>
@@ -652,12 +675,35 @@ export default function CoursePage() {
                   <Globe className="w-5 h-5 mr-2 text-primary" />
                   <span>{access}</span>
                 </div>
-                {course.settings?.certificate?.certificateEnabled && (
-                  <div className="flex items-center">
-                    <Award className="w-5 h-5 mr-2 text-primary" />
-                    <span>Certificate of completion</span>
-                  </div>
-                )}
+                {course.settings?.certificate?.certificateEnabled && (() => {
+                  const certType = course.settings?.certificate?.certificateType || "completion"
+                  const certTitle = course.settings?.certificate?.certificateTitle
+                  let displayText = "Certificate of completion"
+                  
+                  if (certTitle && certTitle.trim() !== "") {
+                    displayText = certTitle
+                  } else {
+                    switch (certType) {
+                      case "participation":
+                        displayText = "Certificate of Participation"
+                        break
+                      case "achievement":
+                        displayText = "Certificate of Achievement"
+                        break
+                      case "completion":
+                      default:
+                        displayText = "Certificate of Completion"
+                        break
+                    }
+                  }
+                  
+                  return (
+                    <div className="flex items-center">
+                      <Award className="w-5 h-5 mr-2 text-primary" />
+                      <span>{displayText}</span>
+                    </div>
+                  )
+                })()}
                 <div className="flex items-center">
                   <Users className="w-5 h-5 mr-2 text-primary" />
                   <span>{enrollmentCount} learners enrolled</span>
