@@ -3,7 +3,12 @@
  * Provides seeded shuffling for questions and answers to prevent answer sharing
  * 
  * NOTE: This module is server-only and should NOT be imported in client components
+ * This file should only be imported in API routes (server-side code)
  */
+
+// Mark this module as server-only using server-only package
+// This prevents Next.js from bundling it into client code
+import 'server-only'
 
 /**
  * Seeded random number generator
