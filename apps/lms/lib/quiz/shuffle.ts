@@ -8,7 +8,13 @@
 
 // Mark this module as server-only using server-only package
 // This prevents Next.js from bundling it into client code
+// This MUST be the first import to ensure it works correctly
 import 'server-only'
+
+// Additional runtime check to prevent client-side execution
+if (typeof window !== 'undefined') {
+  throw new Error('shuffle.ts is a server-only module and cannot be imported in client components')
+}
 
 // Additional runtime check to prevent client-side execution
 if (typeof window !== 'undefined') {
