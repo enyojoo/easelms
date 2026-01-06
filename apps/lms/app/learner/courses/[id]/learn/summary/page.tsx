@@ -379,14 +379,20 @@ export default function CourseCompletionPage() {
               </div>
               {(() => {
                 const certificateEnabled = course?.settings?.certificate?.certificateEnabled || false
-                const canDownload = certificateEnabled && !downloadingCertificate
+                
+                // Only show download button if certificate is enabled
+                if (!certificateEnabled) {
+                  return null
+                }
+                
+                const canDownload = !downloadingCertificate
                 
                 return (
                   <Button
                     onClick={handleDownloadCertificate}
                     size="sm"
-                    disabled={!canDownload || downloadingCertificate}
-                    variant={canDownload ? "default" : "outline"}
+                    disabled={downloadingCertificate}
+                    variant="default"
                     className="flex-shrink-0"
                   >
                     {downloadingCertificate ? (
@@ -397,7 +403,7 @@ export default function CourseCompletionPage() {
                     ) : (
                       <>
                         <Download className="mr-2 h-4 w-4" />
-                        {canDownload ? "Download Certificate" : "Certificate Not Available"}
+                        Download Certificate
                       </>
                     )}
                   </Button>
