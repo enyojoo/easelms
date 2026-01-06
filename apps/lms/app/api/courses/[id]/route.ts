@@ -195,7 +195,8 @@ export async function GET(
     
     // Calculate total duration from lessons (using estimated_duration column)
     const totalDurationMinutes = lessons.reduce((total: number, lesson: any) => {
-      const estimatedDuration = lesson.estimated_duration || lesson.content?.estimatedDuration || 0
+      // Use estimated_duration column only (NO JSONB fallback)
+      const estimatedDuration = lesson.estimated_duration || 0
       return total + estimatedDuration
     }, 0)
     const totalHours = Math.round((totalDurationMinutes / 60) * 10) / 10
@@ -248,12 +249,11 @@ export async function GET(
           content.text = textContent
         }
         
-        // Extract quiz and resources from content JSON (where they're stored)
-        // Try to get questions from quiz_questions table first, fallback to JSONB
+        // Get quiz questions and settings from normalized tables (NO JSONB fallback)
         let quiz_questions = []
         let quizSettings = {}
         
-        // Fetch questions from quiz_questions table
+        // Fetch questions from quiz_questions table (normalized table)
         const { data: dbQuestions } = await supabaseClientForShuffle
           .from("quiz_questions")
           .select("*")
@@ -519,7 +519,8 @@ export async function GET(
             settings: quizSettings,
           })
         } else {
-          // No quiz settings found - use defaults
+          // No quiz settings found - use defaults (only if we have questions)
+          // If no questions in normalized table, quiz is empty (no JSONB fallback)
           quizSettings = {
             enabled: quiz_questions.length > 0,
             maxAttempts: 3,
@@ -530,126 +531,11 @@ export async function GET(
             passingScore: null,
           }
           
-          // Fallback to JSONB for quiz questions only (if no data, this won't execute)
-          if (content.quiz && content.quiz.enabled && Array.isArray(content.quiz.questions)) {
-            quiz_questions = content.quiz.questions.map((q: any) => ({
-              id: q.id,
-              question: q.text || q.question,
-              text: q.text || q.question,
-              type: q.type,
-              options: q.options || [],
-              correct_answer: q.correctOption,
-              correctOption: q.correctOption,
-              points: q.points || 0,
-              imageUrl: q.imageUrl,
-            }))
-            
-            // Handle quiz shuffling if enabled (JSONB fallback)
-            if (quizSettings.shuffleQuiz && quiz_questions.length > 0) {
-              try {
-                // Get current user for shuffle seed
-                const { createClient: createUserClient } = await import("@/lib/supabase/server")
-                const userSupabase = await createUserClient()
-                const { data: { user } } = await userSupabase.auth.getUser()
-                
-                if (user) {
-                  try {
-                    // Get or create quiz attempt record
-                    const { data: existingAttempts, error: attemptError } = await supabaseClientForShuffle
-                      .from("quiz_attempts")
-                      .select("*")
-                      .eq("user_id", user.id)
-                      .eq("lesson_id", lesson.id)
-                      .order("attempt_number", { ascending: false })
-                      .limit(1)
-                    
-                    if (attemptError) {
-                      console.error("Error fetching quiz attempts (JSONB):", attemptError)
-                      throw attemptError
-                    }
-                    
-                    const existingAttempt = existingAttempts && existingAttempts.length > 0 ? existingAttempts[0] : null
-                    
-                    let attemptNumber = 1
-                    
-                    if (existingAttempt) {
-                      if (existingAttempt.completed_at) {
-                        attemptNumber = (existingAttempt.attempt_number || 0) + 1
-                      } else {
-                        attemptNumber = existingAttempt.attempt_number || 1
-                      }
-                    }
-                    
-                    // Generate seed for shuffling
-                    const seed = generateSeed(user.id, lesson.id, attemptNumber)
-                    
-                    // Shuffle questions and answers
-                    const { shuffledQuestions, questionOrder, answerOrders } = shuffleQuiz(quiz_questions, seed)
-                    
-                    // Create or update quiz attempt record
-                    if (existingAttempt && !existingAttempt.completed_at) {
-                      // Update existing incomplete attempt
-                      const { error: updateError } = await supabaseClientForShuffle
-                        .from("quiz_attempts")
-                        .update({
-                          question_order: questionOrder,
-                          answer_orders: answerOrders,
-                          completed_at: null,
-                        })
-                        .eq("id", existingAttempt.id)
-                      
-                      if (updateError) {
-                        console.error("Error updating quiz attempt (JSONB):", updateError)
-                        throw updateError
-                      }
-                    } else {
-                      // Create new attempt
-                      const { error: insertError } = await supabaseClientForShuffle
-                        .from("quiz_attempts")
-                        .insert({
-                          user_id: user.id,
-                          lesson_id: lesson.id,
-                          course_id: courseIdForShuffle,
-                          attempt_number: attemptNumber,
-                          question_order: questionOrder,
-                          answer_orders: answerOrders,
-                        })
-                      
-                      if (insertError) {
-                        console.error("Error creating quiz attempt (JSONB):", insertError)
-                        throw insertError
-                      }
-                    }
-                    
-                    // Use shuffled questions
-                    quiz_questions = shuffledQuestions
-                  } catch (shuffleError: any) {
-                    console.error("Error shuffling quiz (JSONB):", {
-                      error: shuffleError,
-                      message: shuffleError?.message,
-                      stack: shuffleError?.stack,
-                      lessonId: lesson.id,
-                    })
-                    // Continue with unshuffled questions if shuffle fails
-                  }
-                }
-              } catch (shuffleError: any) {
-                console.error("Error shuffling quiz (JSONB outer catch):", {
-                  error: shuffleError,
-                  message: shuffleError?.message,
-                  stack: shuffleError?.stack,
-                  lessonId: lesson.id,
-                })
-                // Continue with unshuffled questions if shuffle fails
-              }
-            }
-            
-            console.log("Course API: Quiz loaded from JSONB (fallback) for lesson", {
-              lessonId: lesson.id,
-              lessonTitle: lesson.title,
-              questionsCount: quiz_questions.length,
-            })
-          }
+          console.log("Course API: No quiz settings found for lesson, using defaults", {
+            lessonId: lesson.id,
+            lessonTitle: lesson.title,
+            questionsCount: quiz_questions.length,
+          })
         }
         
         // Fetch resources from normalized table

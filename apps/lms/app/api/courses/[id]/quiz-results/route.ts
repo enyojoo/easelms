@@ -177,34 +177,12 @@ export async function POST(
       
       console.log("Fetched quiz questions from table - Count:", quizQuestions.length)
     } else {
-      // Fallback to JSONB storage (backward compatibility)
-      const { data: lesson, error: lessonError } = await serviceSupabase
-        .from("lessons")
-        .select("content")
-        .eq("id", lessonId)
-        .single()
-
-      if (lessonError || !lesson) {
-        console.error("Lesson fetch error:", lessonError)
-        return NextResponse.json(
-          { error: "Failed to fetch lesson" },
-          { status: 500 }
-        )
-      }
-
-      // Parse content if it's a JSON string
-      let content = lesson.content
-      if (typeof content === "string") {
-        try {
-          content = JSON.parse(content)
-        } catch (e) {
-          console.error("Failed to parse lesson content:", e)
-          content = {}
-        }
-      }
-
-      quizQuestions = content?.quiz?.questions || []
-      console.log("Fetched quiz questions from JSONB (fallback) - Count:", quizQuestions.length)
+      // NO JSONB fallback - only use normalized quiz_questions table
+      // If no questions found in table, quiz is empty
+      quizQuestions = []
+      console.log("No quiz questions found in normalized table for lesson", {
+        lessonId: lessonId,
+      })
     }
     
     console.log("Received answers:", answers)
