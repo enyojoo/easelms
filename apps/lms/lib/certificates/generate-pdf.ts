@@ -92,7 +92,30 @@ function getPoppinsFontPath(fontName: string): string | null {
 export async function generateCertificatePDF(data: CertificateData): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
+      // Verify fonts are available before initializing PDFDocument
+      // PDFKit initializes default fonts (Helvetica, Times, Courier) on creation
+      // even if we use custom fonts, so we need the .afm files available
+      const fontDir = getFontDirectory()
+      if (!fs.existsSync(fontDir)) {
+        throw new Error(
+          `PDFKit font directory not found: ${fontDir}. ` +
+          `Please ensure fonts are included in the deployment bundle.`
+        )
+      }
+      
+      const afmFiles = fs.readdirSync(fontDir).filter(f => f.endsWith('.afm'))
+      if (afmFiles.length === 0) {
+        throw new Error(
+          `No .afm font files found in ${fontDir}. ` +
+          `PDFKit requires these files to initialize. ` +
+          `Available files: ${fs.readdirSync(fontDir).join(', ')}`
+        )
+      }
+      
+      console.log(`[PDF Generation] Found ${afmFiles.length} font files in ${fontDir}`)
+
       // Initialize PDFDocument
+      // PDFKit will initialize default fonts, which our patch should redirect to local fonts
       const doc = new PDFDocument({
         size: "LETTER",
         layout: "landscape",

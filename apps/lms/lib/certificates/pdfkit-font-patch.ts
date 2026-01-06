@@ -59,6 +59,7 @@ export function patchPDFKitFonts() {
       // Intercept PDFKit font file reads
       // PDFKit reads fonts from paths like: /ROOT/node_modules/pdfkit/js/data/Helvetica.afm
       // or: node_modules/pdfkit/js/data/Helvetica.afm
+      // or: /var/task/node_modules/pdfkit/js/data/Helvetica.afm
       if (filePathStr.includes('pdfkit') && filePathStr.includes('data') && filePathStr.endsWith('.afm')) {
         const fontFileName = path.basename(filePathStr)
         const localFontPath = path.join(localFontsPath, fontFileName)
@@ -68,7 +69,15 @@ export function patchPDFKitFonts() {
           console.log(`[PDFKit Font Patch] Redirecting font read: ${fontFileName} -> ${localFontPath}`)
           return originalReadFileSync.call(this, localFontPath, options)
         } else {
-          console.warn(`[PDFKit Font Patch] Font not found in local directory: ${fontFileName} (tried: ${localFontPath})`)
+          // Log the attempted path for debugging
+          console.warn(`[PDFKit Font Patch] Font not found in local directory: ${fontFileName}`)
+          console.warn(`[PDFKit Font Patch] Original path: ${filePathStr}`)
+          console.warn(`[PDFKit Font Patch] Tried local path: ${localFontPath}`)
+          console.warn(`[PDFKit Font Patch] Local fonts directory exists: ${fs.existsSync(localFontsPath)}`)
+          if (fs.existsSync(localFontsPath)) {
+            const availableFonts = fs.readdirSync(localFontsPath).filter(f => f.endsWith('.afm'))
+            console.warn(`[PDFKit Font Patch] Available fonts: ${availableFonts.join(', ')}`)
+          }
         }
       }
 
@@ -85,4 +94,8 @@ export function patchPDFKitFonts() {
 }
 
 // Auto-patch when this module is imported (before PDFKit is loaded)
-patchPDFKitFonts()
+// This must run before PDFKit is imported
+const patchResult = patchPDFKitFonts()
+if (!patchResult) {
+  console.error("[PDFKit Font Patch] WARNING: Font patch failed! PDFKit may fail to load fonts.")
+}
