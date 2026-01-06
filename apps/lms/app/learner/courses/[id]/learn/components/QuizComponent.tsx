@@ -123,6 +123,11 @@ export default function QuizComponent({
   // Reset quiz when questions change or initialize with prefilled answers
   // Don't reset if quiz has been completed (unless retrying)
   useEffect(() => {
+    // If we just submitted and results are now showing, clear the flag
+    if (justSubmittedRef.current && showResults) {
+      justSubmittedRef.current = false
+    }
+    
     // If we just submitted, don't reset anything - keep showing results
     if (justSubmittedRef.current) {
       // Ensure results are shown
@@ -291,12 +296,15 @@ export default function QuizComponent({
         // Continue to show results even if submission failed
       } finally {
         // After submission completes, show results screen
-        setSubmitting(false)
+        // IMPORTANT: Set showResults to true BEFORE setting submitting to false
+        // This prevents the quiz info screen from briefly showing
         setShowResults(true)
         // Update attempt count - use database attempt number if available, otherwise increment
         // Note: The database query will be invalidated and refetched, so currentAttemptNumber will update
         const nextAttemptNumber = currentAttemptNumber > 0 ? currentAttemptNumber + 1 : (attemptCount > 0 ? attemptCount + 1 : 1)
         setAttemptCount(nextAttemptNumber)
+        // Set submitting to false - showResults is already true, so results screen will show
+        setSubmitting(false)
       }
       
       // Call onComplete to save progress and mark lesson as completed
@@ -426,7 +434,9 @@ export default function QuizComponent({
   }
 
   // Show submitting state when quiz is being submitted
-  if (submitting && !showResults && !showResultsOnly) {
+  // Keep showing submitting screen if we just submitted (even if submitting becomes false briefly)
+  // This prevents the quiz info screen from showing during the transition
+  if ((submitting || justSubmittedRef.current) && !showResults && !showResultsOnly) {
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
         <Card>
