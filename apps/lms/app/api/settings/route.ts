@@ -238,12 +238,47 @@ export async function PUT(request: Request) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
-        const { error: platformError } = await clientToUse
+        // Check if a platform_settings record already exists
+        const { data: existingSettings, error: fetchError } = await clientToUse
           .from("platform_settings")
-          .upsert({
-            ...platformSettings,
-            updated_at: new Date().toISOString(),
+          .select("id")
+          .limit(1)
+          .single()
+
+        if (fetchError && fetchError.code !== "PGRST116") {
+          // PGRST116 is "not found" - that's okay, we'll insert
+          // Other errors should be logged
+          logWarning("Error fetching existing platform_settings", {
+            component: "settings/route",
+            action: "PUT",
+            error: fetchError.message,
+            userId: user.id,
           })
+        }
+
+        let platformError
+        if (existingSettings?.id) {
+          // Update existing record
+          const { error: updateError } = await clientToUse
+            .from("platform_settings")
+            .update({
+              ...platformSettings,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingSettings.id)
+
+          platformError = updateError
+        } else {
+          // Insert new record (should only happen once)
+          const { error: insertError } = await clientToUse
+            .from("platform_settings")
+            .insert({
+              ...platformSettings,
+              updated_at: new Date().toISOString(),
+            })
+
+          platformError = insertError
+        }
 
         if (platformError) {
           // If table doesn't exist, that's okay - just log and continue
