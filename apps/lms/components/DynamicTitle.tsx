@@ -93,20 +93,27 @@ export default function DynamicTitle() {
 
     // On pathname change, set title immediately to prevent flicker
     if (pathname !== lastPathnameRef.current) {
-      // First, try to read title from HTML head (set by server-side metadata)
-      // This is the most accurate as it includes course titles, etc.
+      // Check if title is already set by layout script tag (for auth pages, etc.)
+      // Script tags run synchronously before React, so title should already be set
+      const currentTitle = document.title
       const metaTitle = document.querySelector('title')
-      if (metaTitle && metaTitle.textContent) {
-        const serverTitle = metaTitle.textContent.trim()
-        // Only use if it's not the default/root title and looks like a page title
-        if (serverTitle && 
-            serverTitle !== lastTitleRef.current && 
-            serverTitle.includes(" - ")) {
-          document.title = serverTitle
-          lastTitleRef.current = serverTitle
-          lastPathnameRef.current = pathname
-          return // Use server-set title immediately
-        }
+      const htmlTitle = metaTitle?.textContent?.trim() || ""
+      
+      // If title is already set and looks correct (contains " - "), use it
+      // This handles auth pages where script tags set the title immediately
+      if (currentTitle && currentTitle.includes(" - ") && currentTitle !== lastTitleRef.current) {
+        // Title already set by script tag, just track it
+        lastTitleRef.current = currentTitle
+        lastPathnameRef.current = pathname
+        return
+      }
+      
+      // If HTML head has a valid title, use it
+      if (htmlTitle && htmlTitle.includes(" - ") && htmlTitle !== lastTitleRef.current) {
+        document.title = htmlTitle
+        lastTitleRef.current = htmlTitle
+        lastPathnameRef.current = pathname
+        return
       }
       
       // If no server title yet or it's the default, set title based on pathname
@@ -128,12 +135,9 @@ export default function DynamicTitle() {
       } else {
         // For course pages or routes without mapping, try HTML head again
         // or set a generic title to prevent domain URL flash
-        if (metaTitle && metaTitle.textContent) {
-          const serverTitle = metaTitle.textContent.trim()
-          if (serverTitle && serverTitle !== lastTitleRef.current) {
-            document.title = serverTitle
-            lastTitleRef.current = serverTitle
-          }
+        if (htmlTitle && htmlTitle !== lastTitleRef.current) {
+          document.title = htmlTitle
+          lastTitleRef.current = htmlTitle
         } else {
           // Last resort: set generic title to prevent domain URL
           const platformName = brandSettings.platformName || "Platform"
