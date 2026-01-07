@@ -13,8 +13,18 @@ export default function DynamicFavicon() {
   useEffect(() => {
     if (typeof document === "undefined") return
 
-    // Always use favicon from brand settings (will fallback to default if empty)
-    const faviconUrl = brandSettings.favicon || "https://cldup.com/6yEKvPtX22.svg"
+    // Don't update favicon while loading - wait for confirmed data
+    if (brandSettings.isLoading || !brandSettings.hasData) {
+      return
+    }
+
+    // Only use default if confirmed no brand settings exist
+    const faviconUrl = brandSettings.favicon || (brandSettings.hasData ? "" : "https://cldup.com/6yEKvPtX22.svg")
+    
+    // If no favicon URL, don't update (keep existing favicon)
+    if (!faviconUrl) {
+      return
+    }
 
     // Remove existing favicon links
     const existingLinks = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]')
@@ -45,7 +55,7 @@ export default function DynamicFavicon() {
     shortcutLink.rel = "shortcut icon"
     shortcutLink.href = faviconUrl
     document.head.appendChild(shortcutLink)
-  }, [brandSettings.favicon])
+  }, [brandSettings.favicon, brandSettings.isLoading, brandSettings.hasData])
 
   return null
 }

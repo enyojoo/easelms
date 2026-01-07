@@ -27,22 +27,53 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
   // Determine which logo to show based on theme
   const isDark = mounted && (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches))
 
-  // Get logo source - prefer custom, fallback to default if empty or error
+  // If still loading brand settings, show placeholder (NOT default logo)
+  if (brandSettings.isLoading || !brandSettings.hasData) {
+    return (
+      <div 
+        className={cn("flex items-center animate-pulse bg-muted rounded", className)} 
+        style={{ 
+          minHeight: variant === "icon" ? "32px" : "40px", 
+          minWidth: variant === "icon" ? "32px" : "120px",
+          height: variant === "icon" ? "32px" : "40px",
+          width: variant === "icon" ? "32px" : "120px"
+        }} 
+      />
+    )
+  }
+
+  // Get logo source - only use defaults if confirmed no brand settings exist
   const getLogoSrc = () => {
     if (variant === "icon") {
       // Mobile header icon variant - use favicon
-      return brandSettings.favicon || "https://cldup.com/6yEKvPtX22.svg"
+      return brandSettings.favicon || (brandSettings.hasData ? "" : "https://cldup.com/6yEKvPtX22.svg")
     }
     // Full logo variant (default) - use logo based on theme
     const customLogo = isDark ? brandSettings.logoWhite : brandSettings.logoBlack
-    // If custom logo exists and is not empty, use it; otherwise use default
-    return customLogo || (isDark ? "https://cldup.com/bwlFqC4f8I.svg" : "https://cldup.com/VQGhFU5kd6.svg")
+    // Only use default if confirmed no brand settings exist
+    return customLogo || (brandSettings.hasData ? "" : (isDark ? "https://cldup.com/bwlFqC4f8I.svg" : "https://cldup.com/VQGhFU5kd6.svg"))
   }
 
   const logoSrc = getLogoSrc()
-  const platformName = brandSettings.platformName || "EaseLMS"
+  
+  // If no logo source (empty string), show placeholder instead of default
+  if (!logoSrc) {
+    return (
+      <div 
+        className={cn("flex items-center animate-pulse bg-muted rounded", className)} 
+        style={{ 
+          minHeight: variant === "icon" ? "32px" : "40px", 
+          minWidth: variant === "icon" ? "32px" : "120px",
+          height: variant === "icon" ? "32px" : "40px",
+          width: variant === "icon" ? "32px" : "120px"
+        }} 
+      />
+    )
+  }
 
-  // Handle image load error - fallback to default
+  const platformName = brandSettings.platformName || (brandSettings.hasData ? "" : "EaseLMS")
+
+  // Handle image load error - show placeholder instead of default
   const handleImageError = () => {
     if (!imageError) {
       setImageError(true)
@@ -54,12 +85,20 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
     setImageError(false)
   }, [logoSrc])
 
-  // Use default logo if image error occurred or if custom logo is empty
-  const finalLogoSrc = imageError || !logoSrc
-    ? (variant === "icon" 
-        ? "https://cldup.com/6yEKvPtX22.svg"
-        : (isDark ? "https://cldup.com/bwlFqC4f8I.svg" : "https://cldup.com/VQGhFU5kd6.svg"))
-    : logoSrc
+  // If image error, show placeholder (NOT default logo)
+  if (imageError) {
+    return (
+      <div 
+        className={cn("flex items-center animate-pulse bg-muted rounded", className)} 
+        style={{ 
+          minHeight: variant === "icon" ? "32px" : "40px", 
+          minWidth: variant === "icon" ? "32px" : "120px",
+          height: variant === "icon" ? "32px" : "40px",
+          width: variant === "icon" ? "32px" : "120px"
+        }} 
+      />
+    )
+  }
 
   if (variant === "icon") {
     return (

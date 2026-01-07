@@ -12,31 +12,33 @@ import { useQueryClient } from "@tanstack/react-query"
  */
 export default function DynamicTitle() {
   const brandSettings = useBrandSettings()
-  const queryClient = useQueryClient()
   const lastTitleRef = useRef<string>("")
-  const [initialized, setInitialized] = useState(false)
-
-  // Check if settings data is loaded
-  const settingsData = queryClient.getQueryData<{ platformSettings: any }>(["settings"])
-  const hasData = settingsData !== undefined
 
   useEffect(() => {
     if (typeof document !== "undefined") {
-      // Always update title based on brand settings
-      // Use custom branding if available, otherwise use defaults
-      const title = brandSettings.seoTitle || 
-        (brandSettings.platformName 
-          ? `${brandSettings.platformName} - Learning Management System`
-          : "EaseLMS - Learning Management System")
+      // Don't update title while loading - wait for confirmed data
+      if (brandSettings.isLoading || !brandSettings.hasData) {
+        return
+      }
+      
+      // Build title - only use defaults if confirmed no brand settings exist
+      let title: string
+      if (brandSettings.seoTitle) {
+        title = brandSettings.seoTitle
+      } else if (brandSettings.platformName) {
+        title = `${brandSettings.platformName} - Learning Management System`
+      } else {
+        // Only use default if confirmed no brand settings exist
+        title = brandSettings.hasData ? "Learning Management System" : "EaseLMS - Learning Management System"
+      }
       
       // Only update if title actually changed
       if (title !== lastTitleRef.current) {
         document.title = title
         lastTitleRef.current = title
-        setInitialized(true)
       }
     }
-  }, [brandSettings.seoTitle, brandSettings.platformName])
+  }, [brandSettings.seoTitle, brandSettings.platformName, brandSettings.isLoading, brandSettings.hasData])
 
   return null
 }

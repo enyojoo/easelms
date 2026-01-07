@@ -20,12 +20,13 @@ export interface BrandSettings {
   seoDescription?: string
   seoKeywords?: string
   seoImage?: string
+  isLoading: boolean
+  hasData: boolean
 }
 
 // Hook to get brand settings with defaults
-// Only shows defaults if no custom branding has ever been set
-// Once custom branding exists, defaults NEVER show again
-export function useBrandSettings(): BrandSettings {
+// NEVER shows defaults while loading - only shows defaults when confirmed no brand settings exist
+export function useBrandSettings(): BrandSettings & { isLoading: boolean; hasData: boolean } {
   const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["settings"],
     queryFn: async () => {
@@ -42,7 +43,7 @@ export function useBrandSettings(): BrandSettings {
         }
         return response.json()
       } catch (error) {
-        // If fetch fails, return null to use defaults
+        // If fetch fails, return null to indicate no data
         return { platformSettings: null }
       }
     },
@@ -56,12 +57,13 @@ export function useBrandSettings(): BrandSettings {
 
   const platformSettings = data?.platformSettings
   
-  // Check if we have cached data (even if null)
-  const hasCachedData = data !== undefined
+  // Check if we have confirmed data (even if null - null means confirmed no brand settings)
+  const hasConfirmedData = data !== undefined
+  const isLoading = isPending && !hasConfirmedData
   
   // Check if ANY custom brand setting has been set
-  // This is the key: if custom branding exists, use it instead of defaults
-  const hasCustomBranding = hasCachedData && platformSettings && !!(
+  // Only check this if we have confirmed data
+  const hasCustomBranding = hasConfirmedData && platformSettings && !!(
     platformSettings.platform_name ||
     platformSettings.logo_black ||
     platformSettings.logo_white ||
@@ -72,13 +74,26 @@ export function useBrandSettings(): BrandSettings {
     platformSettings.seo_image
   )
   
-  // Helper to get value: use custom if set, otherwise use default
-  // This ensures custom values replace defaults, but empty custom values fallback to defaults
+  // Helper to get value: NEVER return defaults while loading
+  // Only return defaults when confirmed no brand settings exist
   const getValue = (customValue: string | null | undefined, defaultValue: string): string => {
+    // If still loading, return empty string (components will handle this)
+    if (isLoading) {
+      return ""
+    }
+    
+    // If we have confirmed data and custom branding exists, use custom value
     if (hasCustomBranding && customValue) {
       return customValue
     }
-    return defaultValue
+    
+    // Only return defaults if we've confirmed no brand settings exist
+    if (hasConfirmedData && !hasCustomBranding) {
+      return defaultValue
+    }
+    
+    // Still loading or no confirmed data - return empty
+    return ""
   }
   
   return {
@@ -91,5 +106,7 @@ export function useBrandSettings(): BrandSettings {
     seoDescription: platformSettings?.seo_description || undefined,
     seoKeywords: platformSettings?.seo_keywords || undefined,
     seoImage: platformSettings?.seo_image || undefined,
+    isLoading,
+    hasData: hasConfirmedData,
   }
 }
