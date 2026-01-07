@@ -288,8 +288,9 @@ export default function VideoPreviewPlayer({
   // Show pause button when playing and controls are visible
   // When showControlsOnHover is true: pause button only shows on hover (desktop) or tap (mobile)
   // When showControlsOnHover is false: pause button shows normally
-  const showPlayButton = !isPlaying && showControls
-  const showPauseButton = isPlaying && showControls && (!showControlsOnHover || isHovered)
+  // Don't show play/pause overlay when video is loading
+  const showPlayButton = !isPlaying && showControls && !isLoading
+  const showPauseButton = isPlaying && showControls && (!showControlsOnHover || isHovered) && !isLoading
   const showOverlay = showPlayButton || showPauseButton
   
   // Calculate progress percentage
