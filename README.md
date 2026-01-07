@@ -328,7 +328,7 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 ## 🙏 Acknowledgments
 
-Built with [Next.js](https://nextjs.org/), [v0.dev](https://v0.dev/), and [Cursor](https://cursor.com/).
+Built with [Next.js](https://nextjs.org/), [v0.dev](https://v0.dev/), and [Cursor](https://cursor.com/). Storage powered by [Amazon S3](https://aws.amazon.com/s3/).
 
 ---
 
