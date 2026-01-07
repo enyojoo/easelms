@@ -10,7 +10,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Enabled-green?logo=supabase)](https://supabase.com)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Hosted Service](#-hosted-service) • [Contributing](#-contributing)
+[Features](#-features) • [Quick Start](#-quick-start) • [Hosted Service](#-hosted-service) • [Contributing](#-contributing)
 
 </div>
 
@@ -197,15 +197,9 @@ After setting up the database, create your first admin user through the Supabase
 
 ---
 
-## 📖 Documentation
+## 📖 Contributing
 
-- <a href="https://www.easelms.org/docs/installation" target="_blank" rel="noopener noreferrer">Installation Guide</a>
-- <a href="https://www.easelms.org/docs/configuration" target="_blank" rel="noopener noreferrer">Configuration</a>
-- <a href="https://www.easelms.org/docs/deployment" target="_blank" rel="noopener noreferrer">Deployment</a>
-- <a href="https://www.easelms.org/docs/api" target="_blank" rel="noopener noreferrer">API Reference</a>
 - [Contributing Guide](CONTRIBUTING.md)
-
-For detailed documentation, visit <a href="https://www.easelms.org/docs" target="_blank" rel="noopener noreferrer">www.easelms.org/docs</a>
 
 ---
 
