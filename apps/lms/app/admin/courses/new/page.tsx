@@ -365,9 +365,11 @@ function NewCourseContent() {
           } else {
             const errorData = await response.json().catch(() => ({}))
             console.error("Failed to load course:", response.status, errorData)
+            toast.error(errorData.error || "Failed to load course. Please try again.")
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error loading course:", error)
+          toast.error(error?.message || "Failed to load course. Please try again.")
         } finally {
           setLoading(false)
         }

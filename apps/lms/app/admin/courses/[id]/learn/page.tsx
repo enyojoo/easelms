@@ -14,6 +14,7 @@ import ResourcesPanel from "@/app/learner/courses/[id]/learn/components/Resource
 import TextContentWithTracking from "@/app/learner/courses/[id]/learn/components/TextContentWithTracking"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "sonner"
 
 interface Course {
   id: number
@@ -109,7 +110,9 @@ export default function AdminCourseLearningPage() {
         setCourse(courseData.course)
       } catch (err: any) {
         console.error("Error fetching course:", err)
-        setError(err.message || "Failed to load course")
+        const errorMessage = err.message || "Failed to load course"
+        setError(errorMessage)
+        toast.error(errorMessage)
       } finally {
         setLoading(false)
       }
@@ -318,7 +321,7 @@ export default function AdminCourseLearningPage() {
       // Go to next lesson
       const nextIndex = currentLessonIndex + 1
       if (!canAccessLesson(nextIndex)) {
-        alert("You must complete all required previous lessons before accessing this lesson.")
+        toast.error("You must complete all required previous lessons before accessing this lesson.")
         return
       }
       const nextLesson = course.lessons[nextIndex]
@@ -360,7 +363,7 @@ export default function AdminCourseLearningPage() {
         if (currentLessonIndex < course.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
-            alert("You must complete all required previous lessons before accessing this lesson.")
+            toast.error("You must complete all required previous lessons before accessing this lesson.")
             return
           }
           const nextLesson = course.lessons[nextIndex]
@@ -379,7 +382,7 @@ export default function AdminCourseLearningPage() {
         if (currentLessonIndex < course.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
-            alert("You must complete all required previous lessons before accessing this lesson.")
+            toast.error("You must complete all required previous lessons before accessing this lesson.")
             return
           }
           const nextLesson = course.lessons[nextIndex]
@@ -393,7 +396,7 @@ export default function AdminCourseLearningPage() {
         const nextIndex = currentLessonIndex + 1
         // Check if can access next lesson
         if (!canAccessLesson(nextIndex)) {
-          alert("You must complete all required previous lessons before accessing this lesson.")
+          toast.error("You must complete all required previous lessons before accessing this lesson.")
           return
         }
         const nextLesson = course.lessons[nextIndex]
@@ -409,7 +412,7 @@ export default function AdminCourseLearningPage() {
       const prevIndex = currentLessonIndex - 1
       // Check if can access previous lesson
       if (!canAccessLesson(prevIndex)) {
-        alert("You must complete all required previous lessons before accessing this lesson.")
+        toast.error("You must complete all required previous lessons before accessing this lesson.")
         return
       }
       const prevLesson = course.lessons[prevIndex]
@@ -711,7 +714,7 @@ export default function AdminCourseLearningPage() {
                       key={index}
                       onClick={() => {
                         if (!canAccess) {
-                          alert("You must complete all required previous lessons before accessing this lesson.")
+                          toast.error("You must complete all required previous lessons before accessing this lesson.")
                           return
                         }
                         const lesson = course.lessons[index]

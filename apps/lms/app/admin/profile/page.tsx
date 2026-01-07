@@ -15,6 +15,7 @@ import type { User } from "@/data/users"
 import { Upload, Loader2 } from "lucide-react"
 import AdminProfileSkeleton from "@/components/AdminProfileSkeleton"
 import { useProfile, useUpdateProfile } from "@/lib/react-query/hooks"
+import { toast } from "sonner"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -93,12 +94,15 @@ export default function ProfilePage() {
         bio: formData.bio,
       })
       
+      toast.success("Profile updated successfully")
       setIsEditing(false)
       // Dispatch event to refresh header
       window.dispatchEvent(new CustomEvent("profileUpdated"))
     } catch (error: any) {
       console.error("Error updating profile:", error)
-      setError(error.message || "Failed to update profile")
+      const errorMessage = error.message || "Failed to update profile"
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
@@ -108,13 +112,17 @@ export default function ProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      setError("Please select an image file")
+      const errorMessage = "Please select an image file"
+      setError(errorMessage)
+      toast.error(errorMessage)
       return
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      setError("Image size must be less than 5MB")
+      const errorMessage = "Image size must be less than 5MB"
+      setError(errorMessage)
+      toast.error(errorMessage)
       return
     }
 
@@ -144,13 +152,16 @@ export default function ProfilePage() {
         profile_image: data.url,
       })
       
+      toast.success("Profile picture updated successfully")
       // Reset image error state when new image is uploaded
       setImageError(false)
       // Dispatch event to refresh header
       window.dispatchEvent(new CustomEvent("profileUpdated"))
     } catch (error: any) {
       console.error("Error uploading image:", error)
-      setError(error.message || "Failed to upload image")
+      const errorMessage = error.message || "Failed to upload image"
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setUploadingImage(false)
       // Reset file input

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 interface CoursePrerequisitesSettingsProps {
   prerequisitesEnabled: boolean
@@ -53,8 +54,9 @@ export default function CoursePrerequisitesSettings({
         })
 
         setAvailableCourses(courses)
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching courses:", error)
+        toast.error(error?.message || "Failed to load courses")
       } finally {
         setLoading(false)
       }

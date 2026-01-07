@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import InstructorCard from "@/components/InstructorCard"
 import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
 import { useClientAuthState } from "@/utils/client-auth"
+import { toast } from "sonner"
 
 interface Course {
   id: number
@@ -121,7 +122,9 @@ export default function InstructorCoursePreviewPage() {
             body: errorText,
           })
           if (response.status === 404) {
-            setError("Course not found")
+            const errorMessage = "Course not found"
+            setError(errorMessage)
+            toast.error(errorMessage)
             setLoading(false)
             return
           }
@@ -132,7 +135,9 @@ export default function InstructorCoursePreviewPage() {
         setCourse(data.course)
       } catch (err: any) {
         console.error("Error fetching course:", err)
-        setError(err.message || "Failed to load course")
+        const errorMessage = err.message || "Failed to load course"
+        setError(errorMessage)
+        toast.error(errorMessage)
       } finally {
         setLoading(false)
       }

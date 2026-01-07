@@ -11,6 +11,7 @@ import QuizComponent from "@/app/learner/courses/[id]/learn/components/QuizCompo
 import ResourcesPanel from "@/app/learner/courses/[id]/learn/components/ResourcesPanel"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useClientAuthState } from "@/utils/client-auth"
+import { toast } from "sonner"
 
 interface Course {
   id: number
@@ -86,7 +87,9 @@ export default function AdminCoursePreviewLearningPage() {
         setCourse(courseData.course)
       } catch (err: any) {
         console.error("Error fetching course:", err)
-        setError(err.message || "Failed to load course")
+        const errorMessage = err.message || "Failed to load course"
+        setError(errorMessage)
+        toast.error(errorMessage)
       } finally {
         setLoading(false)
       }
