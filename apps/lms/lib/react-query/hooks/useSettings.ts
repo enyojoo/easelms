@@ -35,8 +35,12 @@ export function useSettings() {
       }
       return response.json()
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes - settings don't change frequently
+    staleTime: Infinity, // Never consider data stale - settings don't change frequently
+    gcTime: Infinity, // Keep cache forever - once loaded, always use it
     placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
+    refetchOnMount: false, // Don't refetch on mount if we have cached data
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   })
 }
 
@@ -57,7 +61,11 @@ export function useUpdateSettings() {
       }
       return response.json()
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Update cache immediately with new data instead of invalidating
+      // This prevents flickering to defaults
+      queryClient.setQueryData(["settings"], data)
+      // Also trigger a background refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["settings"] })
     },
   })
