@@ -25,7 +25,7 @@ export async function generateMetadata({
       .single()
 
     if (course) {
-      return generatePageMetadata("Learn", {
+      return generatePageMetadata("Course", {
         courseTitle: course.title,
         description: course.description || undefined,
         image: course.image || undefined,
@@ -35,7 +35,7 @@ export async function generateMetadata({
     // If fetch fails, use default
   }
 
-  return generatePageMetadata("Learn")
+  return generatePageMetadata("Course")
 }
 
 export default function CourseLearnLayout({
