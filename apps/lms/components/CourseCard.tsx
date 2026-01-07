@@ -141,7 +141,7 @@ export default function CourseCard({
   const getCTAButtons = () => {
     const previewButton = (
       <Button variant="outline" asChild className="flex-1">
-        <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}`}>
+        <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}`} prefetch={true}>
           <Eye className="w-4 h-4 mr-2" />
           Preview
         </Link>
@@ -153,7 +153,7 @@ export default function CourseCard({
         <>
           {previewButton}
           <Button variant="outline" asChild className="flex-1">
-            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn/summary`}>View Summary</Link>
+            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn/summary`} prefetch={true}>View Summary</Link>
           </Button>
         </>
       )
@@ -164,7 +164,7 @@ export default function CourseCard({
         <>
           {previewButton}
           <Button asChild className="flex-1">
-            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${firstIncompleteLessonIndex}`}>
+            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${firstIncompleteLessonIndex}`} prefetch={true}>
               <Play className="w-4 h-4 mr-2" />
               Continue
             </Link>
@@ -274,7 +274,7 @@ export default function CourseCard({
   return (
     <Card className={`flex flex-col h-full ${className || ""}`}>
       <CardHeader className="p-6">
-        <Link href={mainLink} className="block">
+        <Link href={mainLink} className="block" prefetch={true}>
           <div className="aspect-video relative rounded-md overflow-hidden mb-4 cursor-pointer hover:opacity-90 transition-opacity">
             <SafeImage
               src={imageSrc}
@@ -288,7 +288,7 @@ export default function CourseCard({
             </div>
           </div>
         </Link>
-        <Link href={mainLink} className="block">
+        <Link href={mainLink} className="block" prefetch={true}>
           <CardTitle className="text-lg mb-2 hover:text-primary transition-colors cursor-pointer">
             {course.title}
           </CardTitle>

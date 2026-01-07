@@ -487,7 +487,7 @@ export default function ManageCoursesPage() {
       </CardContent>
       <CardFooter className="flex flex-row gap-2 p-4 sm:p-6 pt-0">
         {!isDraft && (
-        <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`} className="flex-1">
+        <Link href={`/admin/courses/preview/${createCourseSlug(course.title, course.id)}`} className="flex-1" prefetch={true}>
           <Button 
             variant="outline" 
             className="flex items-center justify-center w-full h-8 text-xs"
@@ -498,7 +498,7 @@ export default function ManageCoursesPage() {
           </Button>
         </Link>
         )}
-        <Link href={isDraft && course.id < 0 ? "/admin/courses/new" : `/admin/courses/new?edit=${course.id}`} className="flex-1">
+        <Link href={isDraft && course.id < 0 ? "/admin/courses/new" : `/admin/courses/new?edit=${course.id}`} className="flex-1" prefetch={true}>
           <Button 
             variant="outline" 
             className="flex items-center justify-center w-full h-8 text-xs"

@@ -191,6 +191,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={true}
                       className={`flex items-center py-3 px-4 rounded-lg text-base font-medium ${
                         pathname === item.href
                           ? "text-primary"
@@ -221,6 +222,7 @@ export default function MobileMenu({ userType, user }: MobileMenuProps) {
           <Link
             key={item.href}
             href={item.href}
+            prefetch={true}
             className={`flex items-center justify-center w-16 h-16 ${
               pathname === item.href ? "text-primary" : "text-muted-foreground"
             }`}

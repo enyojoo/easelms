@@ -1342,7 +1342,7 @@ export async function GET(request: Request) {
       .eq("course_id", courseId)
 
     const instructorIds = (courseInstructorsData || []).map((ci: any) => ci.instructor_id)
-
+    
     // Transform course settings from database columns to nested structure (for frontend compatibility)
     // Include instructor settings in the transformation
     data.settings = {

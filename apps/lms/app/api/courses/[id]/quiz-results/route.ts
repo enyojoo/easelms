@@ -384,7 +384,7 @@ export async function POST(
         finalQuestionOrder = attemptData.question_order
       }
     }
-    
+
     // If shuffled, we need to reconstruct the shuffled questions that user saw
     // NOTE: Only questions are shuffled, NOT answers - answers stay in original order
     let shuffledQuestionsForComparison: any[] = quizQuestions

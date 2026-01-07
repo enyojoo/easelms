@@ -133,7 +133,9 @@ export default function CoursePage() {
       <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
           <p className="text-destructive">{courseError instanceof Error ? courseError.message : "Course not found"}</p>
-          <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
+          <Button asChild>
+            <Link href="/learner/courses" prefetch={true}>Back to Courses</Link>
+          </Button>
         </div>
       </div>
     )

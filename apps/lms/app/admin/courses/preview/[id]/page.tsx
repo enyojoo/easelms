@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
@@ -161,9 +162,11 @@ export default function InstructorCoursePreviewPage() {
       <div className="pt-4 md:pt-8">
         <div className="text-center py-8">
           <p className="text-destructive mb-4">{error || "Course not found"}</p>
-          <Button variant="outline" onClick={() => router.push("/admin/courses")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Courses
+          <Button variant="outline" asChild>
+            <Link href="/admin/courses" prefetch={true}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Courses
+            </Link>
           </Button>
         </div>
       </div>
@@ -248,13 +251,17 @@ export default function InstructorCoursePreviewPage() {
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
       <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/admin/courses")} className="flex-shrink-0">
-          <ArrowLeft className="mr-2 h-4 w-4" />
+        <Button variant="ghost" size="sm" asChild className="flex-shrink-0">
+          <Link href="/admin/courses" prefetch={true}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+          </Link>
         </Button>
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course.title}</h1>
-        <Button onClick={() => router.push(`/admin/courses/new?edit=${course.id}`)} className="flex items-center flex-shrink-0">
-          <Edit className="w-4 h-4 mr-2" />
-          Edit Course
+        <Button asChild className="flex items-center flex-shrink-0">
+          <Link href={`/admin/courses/new?edit=${course.id}`} prefetch={true}>
+            <Edit className="w-4 h-4 mr-2" />
+            Edit Course
+          </Link>
         </Button>
       </div>
 

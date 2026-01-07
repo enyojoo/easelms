@@ -84,17 +84,20 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
               </Button>
             </a>
           ) : (
-            <Link href={item.href} key={item.href}>
-              <Button
-                variant="ghost"
-                className={`w-full justify-start mb-2 ${
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <item.icon className={`mr-2 h-4 w-4 ${isActive ? "text-primary" : ""}`} />
-                {item.label}
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start mb-2 ${
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              asChild
+            >
+              <Link href={item.href} key={item.href} prefetch={true}>
+                <>
+                  <item.icon className={`mr-2 h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                  {item.label}
+                </>
+              </Link>
+            </Button>
           )
         })}
       </nav>
@@ -115,17 +118,20 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
             )
           }
           return (
-            <Link href={item.href} key={item.href}>
-              <Button
-                variant="ghost"
-                className={`w-full justify-start mb-2 ${
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <item.icon className={`mr-2 h-4 w-4 ${isActive ? "text-primary" : ""}`} />
-                {item.label}
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              className={`w-full justify-start mb-2 ${
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              }`}
+              asChild
+            >
+              <Link href={item.href} key={item.href} prefetch={true}>
+                <>
+                  <item.icon className={`mr-2 h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                  {item.label}
+                </>
+              </Link>
+            </Button>
           )
         })}
         <div className="mt-4 flex justify-center mb-4">

@@ -504,8 +504,8 @@ export async function GET(
                     }
                     
                     logInfo("Using existing quiz attempt shuffle order", {
-                      lessonId: lesson.id,
-                      attemptId: existingAttempt.id,
+                        lessonId: lesson.id,
+                        attemptId: existingAttempt.id,
                       attemptNumber: existingAttempt.attempt_number,
                       isCompleted: !!existingAttempt.completed_at,
                       note: "Attempt not created/updated on page load",
@@ -521,10 +521,10 @@ export async function GET(
                     answerOrders = shuffleResult.answerOrders
                     
                     logInfo("No existing quiz attempt - shuffle generated but attempt not created", {
-                      lessonId: lesson.id,
-                      attemptNumber,
+                        lessonId: lesson.id,
+                        attemptNumber,
                       note: "Attempt will be created when quiz is submitted",
-                    })
+                      })
                   }
                 
                   // Use shuffled questions for display
