@@ -305,9 +305,21 @@ npm run build
 
 This project is licensed under the **AGPL-3.0 License** - see the [LICENSE](LICENSE) file for details.
 
-### Commercial License
+### Using EaseLMS
 
-If you need to use EaseLMS in a proprietary application without open-sourcing your code, commercial licenses are available. <a href="https://www.easelms.org/contact" target="_blank" rel="noopener noreferrer">Contact us</a> for more information.
+**For Your Own Use (Self-Hosting):**
+- ✅ You can freely download, install, and use EaseLMS for your own organization
+- ✅ You can modify the code to fit your needs
+- ✅ No restrictions on internal use - use it privately within your organization
+
+**Commercial Use & Distribution:**
+- ✅ You can use EaseLMS commercially (e.g., offer courses for sale)
+- ✅ You can modify and distribute EaseLMS
+- ⚠️ **Important:** If you modify EaseLMS and provide it as a hosted service (SaaS), you must make your modifications available under AGPL-3.0
+- ⚠️ If you want to create a proprietary hosted service without sharing modifications, you'll need a commercial license
+
+**Commercial License:**
+If you need to use EaseLMS in a proprietary application or provide a hosted service without open-sourcing your modifications, commercial licenses are available. <a href="https://www.easelms.org/contact" target="_blank" rel="noopener noreferrer">Contact us</a> for more information.
 
 ---
 
