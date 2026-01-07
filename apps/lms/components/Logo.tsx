@@ -104,7 +104,7 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
     return (
       <Link href="/" className={cn("flex items-center", className)}>
         <Image
-          src={finalLogoSrc}
+          src={logoSrc}
           alt={`${platformName} Logo`}
           width={32}
           height={32}
@@ -119,7 +119,7 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
   return (
     <Link href="/" className={cn("flex items-center", className)}>
       <Image
-        src={finalLogoSrc}
+        src={logoSrc}
         alt={`${platformName} Logo`}
         width={120}
         height={40}
