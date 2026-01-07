@@ -87,7 +87,6 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - 📦 Monorepo structure with Turborepo
 - 🎨 shadcn/ui component library
 - 🧪 Well-structured, maintainable codebase
-- 📝 Comprehensive documentation
 
 ---
 
