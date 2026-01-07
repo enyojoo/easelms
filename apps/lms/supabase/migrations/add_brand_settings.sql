@@ -71,6 +71,22 @@ CREATE TRIGGER update_platform_settings_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Insert default platform settings row (only non-brand settings, brand settings use app defaults)
+INSERT INTO platform_settings (
+  default_currency,
+  course_enrollment_notifications,
+  course_completion_notifications,
+  platform_announcements,
+  user_email_notifications
+)
+SELECT 
+  'USD',
+  true,
+  true,
+  true,
+  true
+WHERE NOT EXISTS (SELECT 1 FROM platform_settings);
+
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================================
