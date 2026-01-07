@@ -101,7 +101,7 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - **Forms:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
 - **Payments:** [Stripe](https://stripe.com/) & [Flutterwave](https://flutterwave.com/)
 - **PDF Generation:** [PDFKit](https://pdfkit.org/)
-- **Video Player:** [Video.js](https://videojs.com/)
+- **Video Player:** [Media Chrome](https://www.media-chrome.org/)
 - **Monorepo:** [Turborepo](https://turbo.build/)
 
 ---
