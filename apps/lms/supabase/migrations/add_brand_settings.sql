@@ -70,3 +70,42 @@ CREATE TRIGGER update_platform_settings_updated_at
   BEFORE UPDATE ON platform_settings
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================================================
+
+-- Enable RLS on platform_settings table
+ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
+
+-- Platform settings policies
+CREATE POLICY "Anyone can view platform settings"
+  ON platform_settings FOR SELECT
+  USING (TRUE);
+
+CREATE POLICY "Admins can insert platform settings"
+  ON platform_settings FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND user_type = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can update platform settings"
+  ON platform_settings FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND user_type = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can delete platform settings"
+  ON platform_settings FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND user_type = 'admin'
+    )
+  );
