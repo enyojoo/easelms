@@ -23,10 +23,10 @@ export interface BrandSettings {
 }
 
 // Hook to get brand settings with defaults
-// Only shows defaults on first load when no data exists
-// Once data is loaded, always uses cached values to prevent flickering
+// Only shows defaults if no custom branding has ever been set
+// Once custom branding exists, defaults NEVER show again
 export function useBrandSettings(): BrandSettings {
-  const { data } = useQuery<{ platformSettings: PlatformSettings | null }>({
+  const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["settings"],
     queryFn: async () => {
       const response = await fetch("/api/settings")
@@ -45,20 +45,40 @@ export function useBrandSettings(): BrandSettings {
 
   const platformSettings = data?.platformSettings
   
-  // Only use defaults if we have no cached data at all (first load)
-  // Once data exists in cache, always prefer cached values (even if null/undefined)
+  // Check if we have cached data (even if null)
   const hasCachedData = data !== undefined
   
-  // Helper function to get value - only uses defaults if no cached data exists
+  // Check if ANY custom brand setting has been set
+  // This is the key: if custom branding exists, NEVER use defaults
+  const hasCustomBranding = hasCachedData && platformSettings && !!(
+    platformSettings.platform_name ||
+    platformSettings.logo_black ||
+    platformSettings.logo_white ||
+    platformSettings.favicon ||
+    platformSettings.seo_title ||
+    platformSettings.seo_description ||
+    platformSettings.seo_keywords ||
+    platformSettings.seo_image
+  )
+  
+  // Helper function to get value - NEVER uses defaults if custom branding exists
   const getValue = <T,>(dbValue: T | null | undefined, defaultValue: T): T => {
-    // If we have cached data, always use it (even if null/undefined)
-    // This ensures defaults never appear after first load
-    if (hasCachedData) {
-      // If dbValue is null/undefined, return it as-is (don't use defaults)
-      // Components should handle null/undefined appropriately
+    // If custom branding exists, ALWAYS prefer custom values (even if null/undefined)
+    // Only fall back to defaults if the field is required and no custom value exists
+    if (hasCustomBranding) {
+      // Custom branding exists - use custom value, fallback to default only for required fields
       return (dbValue ?? defaultValue) as T
     }
-    // No cached data - use defaults on first load only
+    
+    // No custom branding exists yet
+    if (hasCachedData) {
+      // We have data but no custom branding - use defaults
+      // This handles the case where platformSettings is null (no record) or all fields are null
+      return defaultValue
+    }
+    
+    // No cached data yet (first load) - use defaults temporarily
+    // Once data loads, this will be recalculated
     return defaultValue
   }
 
@@ -68,9 +88,9 @@ export function useBrandSettings(): BrandSettings {
     logoBlack: getValue(platformSettings?.logo_black, DEFAULT_BRAND_SETTINGS.logoBlack),
     logoWhite: getValue(platformSettings?.logo_white, DEFAULT_BRAND_SETTINGS.logoWhite),
     favicon: getValue(platformSettings?.favicon, DEFAULT_BRAND_SETTINGS.favicon),
-    seoTitle: platformSettings?.seo_title,
-    seoDescription: platformSettings?.seo_description,
-    seoKeywords: platformSettings?.seo_keywords,
-    seoImage: platformSettings?.seo_image,
+    seoTitle: platformSettings?.seo_title || undefined,
+    seoDescription: platformSettings?.seo_description || undefined,
+    seoKeywords: platformSettings?.seo_keywords || undefined,
+    seoImage: platformSettings?.seo_image || undefined,
   }
 }

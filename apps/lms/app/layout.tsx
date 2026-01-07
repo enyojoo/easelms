@@ -61,11 +61,15 @@ export const viewport = {
   userScalable: true,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Fetch brand settings server-side to set initial title immediately
+  const brandSettings = await getBrandSettings()
+  const initialTitle = brandSettings.seoTitle || `${brandSettings.platformName} - Learning Management System`
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.className} bg-background text-text-primary`}>
@@ -73,6 +77,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                // Set title immediately before React hydrates to prevent default flash
+                document.title = ${JSON.stringify(initialTitle)};
+                
+                // Set theme
                 const storageKey = 'easelms-theme';
                 const theme = localStorage.getItem(storageKey) || 'dark';
                 let rootClass = '';
