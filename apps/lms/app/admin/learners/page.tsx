@@ -100,7 +100,7 @@ export default function LearnersPage() {
       id: learner.id,
       name: learner.name,
       email: learner.email,
-      profileImage: learner.profileImage || learner.profile_image || "/placeholder-user.jpg",
+      profileImage: learner.profileImage || learner.profile_image || "",
       enrolledCourses: learner.enrolledCourses || [],
       completedCourses: learner.completedCourses || [],
       progress: learner.progress || {},

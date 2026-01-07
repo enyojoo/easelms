@@ -85,7 +85,7 @@ function LearnerDetailsPage() {
       id: l.id,
       name: l.name,
       email: l.email,
-      profileImage: l.profileImage || l.profile_image || "/placeholder-user.jpg",
+      profileImage: l.profileImage || l.profile_image || "",
       bio: l.bio,
       currency: l.currency || "USD",
       enrolledCourses: l.enrolledCourses || [],
