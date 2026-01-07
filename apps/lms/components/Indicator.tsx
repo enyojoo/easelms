@@ -23,7 +23,7 @@ export default function Indicator() {
     : "https://cldup.com/rIhf7ALxYw.svg"
 
   return (
-    <div className="flex items-center justify-center mt-2 opacity-60 hover:opacity-80 transition-opacity">
+    <div className="flex items-center justify-center pt-4 mt-2 opacity-60 hover:opacity-80 transition-opacity">
       <Link 
         href="https://www.easelms.org" 
         target="_blank" 
@@ -33,9 +33,9 @@ export default function Indicator() {
         <Image
           src={logoSrc}
           alt="EaseLMS"
-          width={120}
-          height={20}
-          className="h-5 w-auto object-contain"
+          width={72}
+          height={12}
+          className="h-3 w-auto object-contain"
         />
       </Link>
     </div>
