@@ -318,8 +318,6 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 - [ ] Advanced quiz types (drag-and-drop, matching, etc.)
 - [ ] Learning paths and curriculum builder
 
-<a href="https://github.com/enyojoo/easelms/projects" target="_blank" rel="noopener noreferrer">View Full Roadmap →</a>
-
 ---
 
 ## 🙏 Acknowledgments
