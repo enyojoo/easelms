@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![EaseLMS Logo](https://cldup.com/3DOgOVrIWN.png)
+<img src="https://cldup.com/3DOgOVrIWN.png" alt="EaseLMS Logo" width="200" />
 
 **The Modern Open-Source Learning Management System**
 
