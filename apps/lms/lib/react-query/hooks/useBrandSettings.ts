@@ -20,13 +20,12 @@ export interface BrandSettings {
   seoDescription?: string
   seoKeywords?: string
   seoImage?: string
-  isLoading: boolean
-  hasData: boolean
 }
 
-// Hook to get brand settings with defaults
-// NEVER shows defaults while loading - only shows defaults when confirmed no brand settings exist
-export function useBrandSettings(): BrandSettings {
+// Hook to get brand settings
+// NEVER shows defaults until we've confirmed from database that no custom branding exists
+// If data is loading or pending, return empty strings to prevent default flash
+export function useBrandSettings(): BrandSettings & { isLoading: boolean; hasData: boolean } {
   const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["settings"],
     queryFn: async () => {
@@ -43,7 +42,7 @@ export function useBrandSettings(): BrandSettings {
         }
         return response.json()
       } catch (error) {
-        // If fetch fails, return null to indicate no data
+        // If fetch fails, return null - this means we've checked and found nothing
         return { platformSettings: null }
       }
     },
@@ -57,9 +56,9 @@ export function useBrandSettings(): BrandSettings {
 
   const platformSettings = data?.platformSettings
   
-  // Check if we have confirmed data (even if null - null means confirmed no brand settings)
-  const hasConfirmedData = data !== undefined
-  const isLoading = isPending && !hasConfirmedData
+  // Check if we have confirmed data from database (even if null)
+  // isPending means we're still fetching, so we haven't confirmed yet
+  const hasConfirmedData = data !== undefined && !isPending
   
   // Check if ANY custom brand setting has been set
   // Only check this if we have confirmed data
@@ -74,25 +73,28 @@ export function useBrandSettings(): BrandSettings {
     platformSettings.seo_image
   )
   
-  // Helper to get value: NEVER return defaults while loading
-  // Only return defaults when confirmed no brand settings exist
+  // Helper to get value: 
+  // - If data is still loading (not confirmed), return empty string (no defaults)
+  // - If custom branding exists, use custom value
+  // - If we've confirmed no custom branding exists, use default
   const getValue = (customValue: string | null | undefined, defaultValue: string): string => {
-    // If still loading, return empty string (components will handle this)
-    if (isLoading) {
+    // If we haven't confirmed data yet, return empty string to prevent default flash
+    if (!hasConfirmedData) {
       return ""
     }
     
-    // If we have confirmed data and custom branding exists, use custom value
+    // If custom branding exists and we have a custom value, use it
     if (hasCustomBranding && customValue) {
       return customValue
     }
     
-    // Only return defaults if we've confirmed no brand settings exist
+    // If we've confirmed no custom branding exists, use default
+    // This only happens when platformSettings is null or all fields are null/empty
     if (hasConfirmedData && !hasCustomBranding) {
       return defaultValue
     }
     
-    // Still loading or no confirmed data - return empty
+    // Fallback: if custom branding exists but value is empty, return empty (don't use default)
     return ""
   }
   
@@ -106,7 +108,7 @@ export function useBrandSettings(): BrandSettings {
     seoDescription: platformSettings?.seo_description || undefined,
     seoKeywords: platformSettings?.seo_keywords || undefined,
     seoImage: platformSettings?.seo_image || undefined,
-    isLoading,
+    isLoading: isPending,
     hasData: hasConfirmedData,
   }
 }

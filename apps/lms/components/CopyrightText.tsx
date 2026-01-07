@@ -7,7 +7,8 @@ import { useQueryClient } from "@tanstack/react-query"
 export default function CopyrightText() {
   const brandSettings = useBrandSettings()
   
-  // If still loading, show placeholder (NOT default name)
+  // Only show platform name if we've confirmed data from database
+  // If still loading, show placeholder
   if (brandSettings.isLoading || !brandSettings.hasData) {
     return (
       <p className="text-xs text-muted-foreground text-center">
@@ -16,22 +17,12 @@ export default function CopyrightText() {
     )
   }
   
-  // Only show platform name if we have confirmed data
-  // Only use default if confirmed no brand settings exist
-  const platformName = brandSettings.platformName || (brandSettings.hasData ? "" : "EaseLMS")
-  
-  // If no platform name (empty), just show year
-  if (!platformName) {
-    return (
-      <p className="text-xs text-muted-foreground text-center">
-        © {new Date().getFullYear()}
-      </p>
-    )
-  }
+  // Show platform name only if we have it (either custom or default after confirmation)
+  const platformName = brandSettings.platformName || ""
   
   return (
     <p className="text-xs text-muted-foreground text-center">
-      © {new Date().getFullYear()} {platformName}
+      © {new Date().getFullYear()}{platformName ? ` ${platformName}` : ""}
     </p>
   )
 }
