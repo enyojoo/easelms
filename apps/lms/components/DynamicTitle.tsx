@@ -22,6 +22,12 @@ export default function DynamicTitle() {
 
   useEffect(() => {
     if (typeof document !== "undefined") {
+      // CRITICAL: Don't update title until data is loaded to prevent default flash
+      // Keep the server-set title until we're certain about brand settings
+      if (brandSettings.isLoading) {
+        return
+      }
+      
       // Always update title based on brand settings
       // Use custom branding if available, otherwise use defaults
       const title = brandSettings.seoTitle || 
@@ -36,7 +42,7 @@ export default function DynamicTitle() {
         setInitialized(true)
       }
     }
-  }, [brandSettings.seoTitle, brandSettings.platformName])
+  }, [brandSettings.seoTitle, brandSettings.platformName, brandSettings.isLoading])
 
   return null
 }

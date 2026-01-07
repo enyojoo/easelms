@@ -23,9 +23,9 @@ export interface BrandSettings {
 }
 
 // Hook to get brand settings with defaults
-// Only shows defaults if no custom branding has ever been set
-// Once custom branding exists, defaults NEVER show again
-export function useBrandSettings(): BrandSettings {
+// CRITICAL RULE: Never show defaults until we're certain no custom branding exists in database
+// Only shows defaults if data is loaded AND confirmed no custom branding exists
+export function useBrandSettings(): BrandSettings & { isLoading: boolean } {
   const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["settings"],
     queryFn: async () => {
@@ -42,7 +42,7 @@ export function useBrandSettings(): BrandSettings {
         }
         return response.json()
       } catch (error) {
-        // If fetch fails, return null to use defaults
+        // If fetch fails, return null - but we'll wait before showing defaults
         return { platformSettings: null }
       }
     },
@@ -56,12 +56,16 @@ export function useBrandSettings(): BrandSettings {
 
   const platformSettings = data?.platformSettings
   
-  // Check if we have cached data (even if null)
-  const hasCachedData = data !== undefined
+  // Check if we have loaded data (even if null) - this means we've checked the database
+  const hasLoadedData = data !== undefined
+  
+  // CRITICAL: Only show defaults if data is loaded AND we've confirmed no custom branding exists
+  // If data is still loading (isPending), don't show defaults yet
+  const isLoading = isPending && !hasLoadedData
   
   // Check if ANY custom brand setting has been set
   // This is the key: if custom branding exists, use it instead of defaults
-  const hasCustomBranding = hasCachedData && platformSettings && !!(
+  const hasCustomBranding = hasLoadedData && platformSettings && !!(
     platformSettings.platform_name ||
     platformSettings.logo_black ||
     platformSettings.logo_white ||
@@ -73,23 +77,39 @@ export function useBrandSettings(): BrandSettings {
   )
   
   // Helper to get value: use custom if set, otherwise use default
-  // This ensures custom values replace defaults, but empty custom values fallback to defaults
+  // CRITICAL: Only use defaults if data is loaded and confirmed no custom branding
   const getValue = (customValue: string | null | undefined, defaultValue: string): string => {
+    // If still loading, return empty string to prevent default flash
+    // Components will check isLoading and show placeholder instead
+    if (isLoading) {
+      return ""
+    }
+    
+    // If custom branding exists and has value, use it
     if (hasCustomBranding && customValue) {
       return customValue
     }
-    return defaultValue
+    
+    // Only use defaults if data is loaded and no custom branding exists
+    if (hasLoadedData && !hasCustomBranding) {
+      return defaultValue
+    }
+    
+    // Still loading or uncertain - return empty to prevent default flash
+    return ""
   }
   
+  // Return values - components will check isLoading before using defaults
   return {
-    platformName: getValue(platformSettings?.platform_name, DEFAULT_BRAND_SETTINGS.platformName),
-    platformDescription: getValue(platformSettings?.platform_description, DEFAULT_BRAND_SETTINGS.platformDescription),
-    logoBlack: getValue(platformSettings?.logo_black, DEFAULT_BRAND_SETTINGS.logoBlack),
-    logoWhite: getValue(platformSettings?.logo_white, DEFAULT_BRAND_SETTINGS.logoWhite),
-    favicon: getValue(platformSettings?.favicon, DEFAULT_BRAND_SETTINGS.favicon),
+    platformName: isLoading ? "" : (getValue(platformSettings?.platform_name, DEFAULT_BRAND_SETTINGS.platformName) || DEFAULT_BRAND_SETTINGS.platformName),
+    platformDescription: isLoading ? "" : (getValue(platformSettings?.platform_description, DEFAULT_BRAND_SETTINGS.platformDescription) || DEFAULT_BRAND_SETTINGS.platformDescription),
+    logoBlack: isLoading ? "" : (getValue(platformSettings?.logo_black, DEFAULT_BRAND_SETTINGS.logoBlack) || DEFAULT_BRAND_SETTINGS.logoBlack),
+    logoWhite: isLoading ? "" : (getValue(platformSettings?.logo_white, DEFAULT_BRAND_SETTINGS.logoWhite) || DEFAULT_BRAND_SETTINGS.logoWhite),
+    favicon: isLoading ? "" : (getValue(platformSettings?.favicon, DEFAULT_BRAND_SETTINGS.favicon) || DEFAULT_BRAND_SETTINGS.favicon),
     seoTitle: platformSettings?.seo_title || undefined,
     seoDescription: platformSettings?.seo_description || undefined,
     seoKeywords: platformSettings?.seo_keywords || undefined,
     seoImage: platformSettings?.seo_image || undefined,
+    isLoading,
   }
 }
