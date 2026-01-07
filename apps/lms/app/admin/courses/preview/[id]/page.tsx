@@ -368,13 +368,17 @@ export default function InstructorCoursePreviewPage() {
                   fill
                   className="object-cover"
                 />
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
-                  <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
-                </div>
+                {videoUrl && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                    <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                )}
               </div>
-              <div className="mt-4 mb-4">
-                <span className="text-2xl font-bold text-primary">{price}</span>
-                {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+              <div className="mt-4 mb-4 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-2xl font-bold text-primary">{price}</span>
+                  {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+                </div>
               </div>
               <Button 
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11"
@@ -382,7 +386,6 @@ export default function InstructorCoursePreviewPage() {
               >
                 View Course
               </Button>
-              <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               <div className="space-y-2 text-muted-foreground">
                 {totalResources > 0 && (
                   <div className="flex items-center">
