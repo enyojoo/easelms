@@ -26,6 +26,11 @@ export async function generatePageMetadata(
   return {
     title,
     description,
+    // Add other metadata to ensure title is set immediately
+    other: {
+      // Set title immediately via script (will be handled by DynamicTitle component)
+      'title-script': title,
+    },
     openGraph: {
       title,
       description,
@@ -38,4 +43,18 @@ export async function generatePageMetadata(
       images: options?.image ? [options.image] : brandSettings.seoImage ? [brandSettings.seoImage] : undefined,
     },
   }
+}
+
+/**
+ * Generate a script tag to set title immediately
+ * This prevents flicker by setting title before React hydrates
+ */
+export function generateTitleScript(title: string): string {
+  return `
+    (function() {
+      if (typeof document !== 'undefined') {
+        document.title = ${JSON.stringify(title)};
+      }
+    })();
+  `
 }
