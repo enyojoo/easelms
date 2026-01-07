@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import Logo from "@/components/Logo"
-import PoweredByEaseLMS from "@/components/PoweredByEaseLMS"
+import BrandIndicator from "@/components/BrandIndicator"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -61,6 +61,7 @@ export default function ForgotPasswordPage() {
             </CardFooter>
           </form>
         </Card>
+        <BrandIndicator />
       </div>
     </div>
   )

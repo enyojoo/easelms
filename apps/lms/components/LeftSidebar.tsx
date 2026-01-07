@@ -18,7 +18,7 @@ import Logo from "./Logo"
 import { ThemeToggle } from "./ThemeToggle"
 import { logout } from "../utils/logout"
 import CopyrightText from "./CopyrightText"
-import PoweredByEaseLMS from "./PoweredByEaseLMS"
+import Indicator from "./Indicator"
 
 interface LeftSidebarProps {
   userType: "user" | "admin" | "instructor"
@@ -139,9 +139,9 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
         <div className="mt-4 flex justify-center mb-4">
           <ThemeToggle />
         </div>
-        <div className="px-4 pb-4 space-y-2">
+        <div className="px-4 pb-4">
           <CopyrightText />
-          <PoweredByEaseLMS />
+          <BrandIndicator />
         </div>
       </div>
     </div>
