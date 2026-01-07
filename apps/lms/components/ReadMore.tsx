@@ -28,19 +28,22 @@ export default function ReadMore({ text, maxLength = 350, className }: ReadMoreP
 
   return (
     <div className={cn("text-sm md:text-base text-muted-foreground", className)}>
-      <p>
+      <p className="inline">
         {displayText}
         {!isExpanded && hasMore && "..."}
+        {hasMore && (
+          <>
+            {" "}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-primary hover:underline text-sm font-medium inline"
+              type="button"
+            >
+              {isExpanded ? "Read less" : "Read more"}
+            </button>
+          </>
+        )}
       </p>
-      {hasMore && (
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-1 text-primary hover:underline text-sm font-medium"
-          type="button"
-        >
-          {isExpanded ? "Read less" : "Read more"}
-        </button>
-      )}
     </div>
   )
 }
