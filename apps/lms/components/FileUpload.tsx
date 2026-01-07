@@ -21,6 +21,7 @@ interface FileUploadProps {
   resourceId?: string | number // Resource ID for resource files
   fileId?: string | number // File ID for better identification
   initialValue?: string | string[] // URL(s) to restore uploaded state
+  disabled?: boolean // Disable file upload
 }
 
 export default function FileUpload({
@@ -38,6 +39,7 @@ export default function FileUpload({
   resourceId,
   fileId,
   initialValue,
+  disabled = false,
 }: FileUploadProps) {
   const [files, setFiles] = useState<File[]>([])
   const [uploading, setUploading] = useState(false)
@@ -326,6 +328,7 @@ export default function FileUpload({
     accept: accept ? { [accept]: [] } : acceptTypes,
     multiple,
     maxSize,
+    disabled: disabled || uploading || uploaded,
   })
 
   const handleUpload = async () => {

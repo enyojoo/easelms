@@ -7,13 +7,17 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import FileUpload from "@/components/FileUpload"
-import { Image, Globe, Search, Save } from "lucide-react"
+import { Image, Globe, Search, Save, Edit, X } from "lucide-react"
 import { toast } from "sonner"
 import { useSettings, useUpdateSettings } from "@/lib/react-query/hooks"
+import { useTheme } from "@/components/ThemeProvider"
 
 export default function BrandSettings() {
   const { data: settingsData, isPending: settingsPending } = useSettings()
   const updateSettingsMutation = useUpdateSettings()
+  const { theme } = useTheme()
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   
   const [brandSettings, setBrandSettings] = useState({
     platformName: "EaseLMS",
@@ -52,57 +56,63 @@ export default function BrandSettings() {
     }
   }, [settingsData])
 
-  // Auto-save with debouncing
-  useEffect(() => {
-    if (!settingsData || !initialSettingsRef.current) return
+  const handleEdit = () => {
+    setIsEditing(true)
+    if (initialSettingsRef.current) {
+      // Reset to initial values when starting to edit
+      setBrandSettings({ ...initialSettingsRef.current })
+    }
+  }
 
-    const initialSettings = initialSettingsRef.current
-    const hasChanged = 
-      brandSettings.platformName !== initialSettings.platformName ||
-      brandSettings.platformDescription !== initialSettings.platformDescription ||
-      brandSettings.logoBlack !== initialSettings.logoBlack ||
-      brandSettings.logoWhite !== initialSettings.logoWhite ||
-      brandSettings.favicon !== initialSettings.favicon ||
-      brandSettings.seoTitle !== initialSettings.seoTitle ||
-      brandSettings.seoDescription !== initialSettings.seoDescription ||
-      brandSettings.seoKeywords !== initialSettings.seoKeywords ||
-      brandSettings.seoImage !== initialSettings.seoImage
+  const handleCancel = () => {
+    setIsEditing(false)
+    setError(null)
+    if (initialSettingsRef.current) {
+      // Restore initial values
+      setBrandSettings({ ...initialSettingsRef.current })
+    }
+  }
 
-    if (!hasChanged) return
+  const handleSave = async () => {
+    if (!initialSettingsRef.current) return
 
-    const timeoutId = setTimeout(async () => {
-      try {
-        setError(null)
-        const platformSettings = {
-          platform_name: brandSettings.platformName,
-          platform_description: brandSettings.platformDescription,
-          logo_black: brandSettings.logoBlack,
-          logo_white: brandSettings.logoWhite,
-          favicon: brandSettings.favicon,
-          seo_title: brandSettings.seoTitle || null,
-          seo_description: brandSettings.seoDescription || null,
-          seo_keywords: brandSettings.seoKeywords || null,
-          seo_image: brandSettings.seoImage || null,
-        }
+    setIsSaving(true)
+    setError(null)
 
-        await updateSettingsMutation.mutateAsync({ platformSettings })
-        initialSettingsRef.current = { ...brandSettings }
-        toast.success("Brand settings saved")
-      } catch (err: any) {
-        console.error("Error saving brand settings:", err)
-        setError(err.message || "Failed to save brand settings")
-        toast.error(err.message || "Failed to save brand settings")
+    try {
+      const platformSettings = {
+        platform_name: brandSettings.platformName,
+        platform_description: brandSettings.platformDescription,
+        logo_black: brandSettings.logoBlack,
+        logo_white: brandSettings.logoWhite,
+        favicon: brandSettings.favicon,
+        seo_title: brandSettings.seoTitle || null,
+        seo_description: brandSettings.seoDescription || null,
+        seo_keywords: brandSettings.seoKeywords || null,
+        seo_image: brandSettings.seoImage || null,
       }
-    }, 1000)
 
-    return () => clearTimeout(timeoutId)
-  }, [brandSettings, settingsData, updateSettingsMutation])
+      await updateSettingsMutation.mutateAsync({ platformSettings })
+      initialSettingsRef.current = { ...brandSettings }
+      setIsEditing(false)
+      toast.success("Brand settings saved successfully")
+    } catch (err: any) {
+      console.error("Error saving brand settings:", err)
+      setError(err.message || "Failed to save brand settings")
+      toast.error(err.message || "Failed to save brand settings")
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const handleFileUpload = (field: "logoBlack" | "logoWhite" | "favicon" | "seoImage") => (files: File[], urls: string[]) => {
     if (urls.length > 0) {
       setBrandSettings((prev) => ({ ...prev, [field]: urls[0] }))
     }
   }
+
+  // Determine theme for logo preview backgrounds
+  const isDark = theme === "dark" || (theme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches)
 
   if (settingsPending) {
     return <div className="text-muted-foreground">Loading brand settings...</div>
@@ -119,12 +129,33 @@ export default function BrandSettings() {
       {/* Platform Branding */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Image className="mr-2 h-5 w-5" /> Platform Branding
-          </CardTitle>
-          <CardDescription>
-            Customize your platform's visual identity. These settings will replace the default EaseLMS branding.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center">
+                <Image className="mr-2 h-5 w-5" /> Platform Branding
+              </CardTitle>
+              <CardDescription>
+                Customize your platform's visual identity. These settings will replace the default EaseLMS branding.
+              </CardDescription>
+            </div>
+            {!isEditing ? (
+              <Button onClick={handleEdit} variant="outline" size="sm">
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button onClick={handleCancel} variant="outline" size="sm" disabled={isSaving}>
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} size="sm" disabled={isSaving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Platform Name */}
@@ -138,6 +169,7 @@ export default function BrandSettings() {
               onChange={(e) => setBrandSettings((prev) => ({ ...prev, platformName: e.target.value }))}
               placeholder="EaseLMS"
               className="max-w-md"
+              disabled={!isEditing}
             />
             <p className="text-sm text-muted-foreground">
               The name of your platform. This will appear in the browser tab and throughout the application.
@@ -154,6 +186,7 @@ export default function BrandSettings() {
               placeholder="Enter platform description..."
               rows={4}
               className="max-w-2xl"
+              disabled={!isEditing}
             />
             <p className="text-sm text-muted-foreground">
               A brief description of your platform. This will be used for SEO and meta tags.
@@ -172,15 +205,18 @@ export default function BrandSettings() {
                   initialValue={brandSettings.logoBlack}
                   bucket="course-thumbnails"
                   additionalPath="brand"
+                  disabled={!isEditing}
                 />
               </div>
               {brandSettings.logoBlack && (
                 <div className="flex-shrink-0">
-                  <img
-                    src={brandSettings.logoBlack}
-                    alt="Logo preview"
-                    className="h-16 w-auto object-contain border rounded p-2 bg-background"
-                  />
+                  <div className="h-16 w-auto border rounded p-2 bg-white dark:bg-white">
+                    <img
+                      src={brandSettings.logoBlack}
+                      alt="Logo preview"
+                      className="h-full w-auto object-contain"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -201,15 +237,18 @@ export default function BrandSettings() {
                   initialValue={brandSettings.logoWhite}
                   bucket="course-thumbnails"
                   additionalPath="brand"
+                  disabled={!isEditing}
                 />
               </div>
               {brandSettings.logoWhite && (
                 <div className="flex-shrink-0">
-                  <img
-                    src={brandSettings.logoWhite}
-                    alt="Logo preview"
-                    className="h-16 w-auto object-contain border rounded p-2 bg-background"
-                  />
+                  <div className="h-16 w-auto border rounded p-2 bg-black dark:bg-black">
+                    <img
+                      src={brandSettings.logoWhite}
+                      alt="Logo preview"
+                      className="h-full w-auto object-contain"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -230,6 +269,7 @@ export default function BrandSettings() {
                   initialValue={brandSettings.favicon}
                   bucket="course-thumbnails"
                   additionalPath="brand"
+                  disabled={!isEditing}
                 />
               </div>
               {brandSettings.favicon && (
@@ -269,6 +309,7 @@ export default function BrandSettings() {
               onChange={(e) => setBrandSettings((prev) => ({ ...prev, seoTitle: e.target.value }))}
               placeholder="Enter SEO title (optional)"
               className="max-w-md"
+              disabled={!isEditing}
             />
             <p className="text-sm text-muted-foreground">
               Custom title for search engines. If not set, platform name will be used.
@@ -285,6 +326,7 @@ export default function BrandSettings() {
               placeholder="Enter SEO description (optional)"
               rows={3}
               className="max-w-2xl"
+              disabled={!isEditing}
             />
             <p className="text-sm text-muted-foreground">
               Custom description for search engines. If not set, platform description will be used.
@@ -300,6 +342,7 @@ export default function BrandSettings() {
               onChange={(e) => setBrandSettings((prev) => ({ ...prev, seoKeywords: e.target.value }))}
               placeholder="keyword1, keyword2, keyword3 (optional)"
               className="max-w-md"
+              disabled={!isEditing}
             />
             <p className="text-sm text-muted-foreground">
               Comma-separated keywords for SEO. These help search engines understand your platform's content.
@@ -318,6 +361,7 @@ export default function BrandSettings() {
                   initialValue={brandSettings.seoImage}
                   bucket="course-thumbnails"
                   additionalPath="brand"
+                  disabled={!isEditing}
                 />
               </div>
               {brandSettings.seoImage && (
