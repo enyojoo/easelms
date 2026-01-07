@@ -156,7 +156,31 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 
 4. **Set up Supabase Database**
    
-   Run the database migrations from `apps/lms/supabase/migrations/` in your Supabase project.
+   a. **Create a Supabase Project**
+      - Go to [supabase.com](https://supabase.com) and sign up/login
+      - Click "New Project"
+      - Choose your organization, enter project name, database password, and region
+      - Wait for the project to be created (takes ~2 minutes)
+   
+   b. **Get your Supabase credentials**
+      - Go to Project Settings → API
+      - Copy your `Project URL` (this is your `NEXT_PUBLIC_SUPABASE_URL`)
+      - Copy your `anon` `public` key (this is your `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+      - Copy your `service_role` `secret` key (this is your `SUPABASE_SERVICE_ROLE_KEY`)
+      - Update your `.env.local` file with these values
+   
+   c. **Run the database migration**
+      - In your Supabase project, go to SQL Editor
+      - Click "New Query"
+      - Open the file `apps/lms/supabase/migrations/database_setup.sql` from this repository
+      - Copy the entire contents of the file
+      - Paste it into the SQL Editor
+      - Click "Run" (or press Cmd/Ctrl + Enter)
+      - Wait for the migration to complete (you should see "Success. No rows returned")
+   
+   d. **Verify the migration**
+      - Go to Table Editor in Supabase
+      - You should see all the tables created: `profiles`, `courses`, `lessons`, `enrollments`, `progress`, `payments`, `certificates`, `instructors`, `resources`, `quiz_questions`, `quiz_settings`, `quiz_attempts`, `quiz_results`, `course_instructors`, `course_prerequisites`, and `lesson_resources`
 
 5. **Start the development server**
    ```bash
