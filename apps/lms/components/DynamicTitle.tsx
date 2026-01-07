@@ -21,16 +21,26 @@ export default function DynamicTitle() {
   const hasData = settingsData !== undefined
 
   useEffect(() => {
-    if (typeof document !== "undefined" && hasData) {
-      // Only update title once we have data from database
-      // This prevents default title from showing
-      const title = brandSettings.seoTitle || `${brandSettings.platformName} - Learning Management System`
-      
-      // Only update if title actually changed and we've initialized
-      if (title !== lastTitleRef.current && (title !== document.title || !initialized)) {
-        document.title = title
-        lastTitleRef.current = title
-        setInitialized(true)
+    if (typeof document !== "undefined") {
+      // Always update title, but prefer data from database if available
+      // This ensures title works on auth pages too
+      if (hasData) {
+        // We have data from database - use custom branding
+        const title = brandSettings.seoTitle || `${brandSettings.platformName} - Learning Management System`
+        
+        // Only update if title actually changed
+        if (title !== lastTitleRef.current) {
+          document.title = title
+          lastTitleRef.current = title
+          setInitialized(true)
+        }
+      } else {
+        // No data yet - keep the server-set title (from layout.tsx script tag)
+        // Don't update until we have data to prevent default flash
+        if (!initialized) {
+          // Mark as initialized to prevent unnecessary updates
+          setInitialized(true)
+        }
       }
     }
   }, [brandSettings.seoTitle, brandSettings.platformName, hasData, initialized])

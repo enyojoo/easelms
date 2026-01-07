@@ -302,20 +302,28 @@ function BrandSettingsPrefetcher({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setMounted(true)
-    // Prefetch brand settings immediately on mount to ensure data is available
-    // This prevents defaults from showing even briefly
-    queryClient.prefetchQuery({
-      queryKey: ["settings"],
-      queryFn: async () => {
-        const response = await fetch("/api/settings")
-        if (!response.ok) {
-          return { platformSettings: null }
-        }
-        return response.json()
-      },
-      staleTime: Infinity,
-      gcTime: Infinity,
-    })
+    
+    // Check if data already exists in cache
+    const cachedData = queryClient.getQueryData<{ platformSettings: any }>(["settings"])
+    
+    // Only prefetch if data doesn't exist in cache
+    // This ensures we don't refetch unnecessarily and data is available immediately
+    if (!cachedData) {
+      // Prefetch brand settings immediately on mount to ensure data is available
+      // This prevents defaults from showing even briefly
+      queryClient.prefetchQuery({
+        queryKey: ["settings"],
+        queryFn: async () => {
+          const response = await fetch("/api/settings")
+          if (!response.ok) {
+            return { platformSettings: null }
+          }
+          return response.json()
+        },
+        staleTime: Infinity,
+        gcTime: Infinity,
+      })
+    }
   }, [queryClient])
 
   return <>{children}</>
