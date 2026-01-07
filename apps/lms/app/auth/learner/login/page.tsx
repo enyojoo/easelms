@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import Logo from "@/components/Logo"
-import BrandIndicator from "@/components/BrandIndicator"
+import Indicator from "@/components/Indicator"
 import { AlertCircle, Eye, EyeOff } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
@@ -147,7 +147,7 @@ export default function UserLoginPage() {
             </CardFooter>
           </form>
         </Card>
-        <BrandIndicator />
+        <Indicator />
       </div>
     </div>
   )

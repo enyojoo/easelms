@@ -141,7 +141,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
         </div>
         <div className="px-4 pb-4">
           <CopyrightText />
-          <BrandIndicator />
+          <Indicator />
         </div>
       </div>
     </div>

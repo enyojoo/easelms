@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Logo from "@/components/Logo"
-import BrandIndicator from "@/components/BrandIndicator"
+import Indicator from "@/components/Indicator"
 import { AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 
 export default function UserSignUpPage() {
@@ -244,7 +244,7 @@ export default function UserSignUpPage() {
             </CardFooter>
           </form>
         </Card>
-        <BrandIndicator />
+        <Indicator />
       </div>
     </div>
   )

@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Logo from "@/components/Logo"
-import BrandIndicator from "@/components/BrandIndicator"
+import Indicator from "@/components/Indicator"
 import { AlertCircle, Eye, EyeOff } from "lucide-react"
 
 export default function NewPasswordPage() {
@@ -137,7 +137,7 @@ export default function NewPasswordPage() {
             </CardFooter>
           </form>
         </Card>
-        <BrandIndicator />
+        <Indicator />
       </div>
     </div>
   )
