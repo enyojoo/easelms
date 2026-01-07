@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,15 +20,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { usePlatformUsers, useDeleteUser, type PlatformUser } from "@/lib/react-query/hooks/useUsers"
+import TableSkeleton from "@/components/TableSkeleton"
 
 export default function UserManagement() {
   const { user, loading: authLoading, userType } = useClientAuthState()
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   
   const { data: usersData, isPending: usersPending, error: usersError } = usePlatformUsers()
   const deleteUserMutation = useDeleteUser()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Don't render if not authenticated or not admin
   if (authLoading || !user || userType !== "admin") {
@@ -45,10 +51,11 @@ export default function UserManagement() {
   }))
 
   // Check if we have cached data
-  const hasCachedData = !!usersData?.users
+  const hasCachedData = !!usersData?.users?.length
   
-  // Show skeleton only on true initial load (no cached data exists)
-  const showSkeleton = usersPending && !hasCachedData
+  // Show skeleton only on true initial load (no cached data exists and pending)
+  // Once mounted and we have cached data, always show data (even if refetching)
+  const showSkeleton = !mounted || (usersPending && !hasCachedData)
   
   // Show error only if we have no cached data
   const error = usersError && !hasCachedData ? (usersError as Error).message : null
@@ -139,8 +146,10 @@ export default function UserManagement() {
         </div>
         <div className="mt-6">
           {showSkeleton ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
+            <TableSkeleton columns={6} rows={5} />
+          ) : filteredUsers.length === 0 && !usersPending ? (
+            <div className="text-center text-muted-foreground py-8">
+              {searchQuery ? "No users found matching your search" : "No users found"}
             </div>
           ) : (
             <Table>

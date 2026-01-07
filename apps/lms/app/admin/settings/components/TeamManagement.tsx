@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useTeamMembers, useCreateTeamMember, useDeleteUser, type TeamMember } from "@/lib/react-query/hooks/useUsers"
+import TableSkeleton from "@/components/TableSkeleton"
 
 export default function TeamManagement() {
   const { user, loading: authLoading, userType } = useClientAuthState()
@@ -32,10 +33,15 @@ export default function TeamManagement() {
   })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   const { data: teamData, isPending: teamPending, error: teamError } = useTeamMembers()
   const createMemberMutation = useCreateTeamMember()
   const deleteUserMutation = useDeleteUser()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Don't render if not authenticated or not admin
   if (authLoading || !user || userType !== "admin") {
@@ -50,10 +56,10 @@ export default function TeamManagement() {
   }))
 
   // Check if we have cached data
-  const hasCachedData = !!teamData?.users
+  const hasCachedData = !!teamData?.users?.length
   
-  // Show skeleton only on true initial load (no cached data exists)
-  const showSkeleton = teamPending && !hasCachedData
+  // Show skeleton only on true initial load (no cached data exists and pending)
+  const showSkeleton = !mounted || (teamPending && !hasCachedData)
   
   // Show error only if we have no cached data
   const error = teamError && !hasCachedData ? (teamError as Error).message : null
@@ -175,8 +181,10 @@ export default function TeamManagement() {
         </div>
         <div className="mt-6">
           {showSkeleton ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
+            <TableSkeleton columns={4} rows={5} />
+          ) : teamMembers.length === 0 && !teamPending ? (
+            <div className="text-center text-muted-foreground py-8">
+              No team members found
             </div>
           ) : (
           <Table>
@@ -202,15 +210,15 @@ export default function TeamManagement() {
                   <TableCell>{member.email}</TableCell>
                       <TableCell className="capitalize">{member.user_type}</TableCell>
                   <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveClick(member.id)}
-                          disabled={deleteUserMutation.isPending && memberToDelete === member.id}
-                        >
-                          {deleteUserMutation.isPending && memberToDelete === member.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveClick(member.id)}
+                      disabled={deleteUserMutation.isPending && memberToDelete === member.id}
+                    >
+                      {deleteUserMutation.isPending && memberToDelete === member.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
                       <Trash2 className="h-4 w-4" />
                           )}
                     </Button>
