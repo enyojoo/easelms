@@ -79,7 +79,7 @@ export default function UserLoginPage() {
         </div>
         <Card className="w-full">
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-xl sm:text-2xl">Learner Login</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">Login</CardTitle>
             <CardDescription className="text-sm sm:text-base">Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
