@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { Play, Pause } from "lucide-react"
+import { Play, Pause, Loader2 } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 import { Progress } from "@/components/ui/progress"
 
@@ -27,8 +27,60 @@ export default function VideoPreviewPlayer({
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(true) // Controls visibility state
+  const [isLoading, setIsLoading] = useState(true) // Track loading state
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Track video loading state
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadStart = () => {
+      setIsLoading(true)
+    }
+
+    const handleWaiting = () => {
+      // Video is waiting for data (buffering)
+      setIsLoading(true)
+    }
+
+    const handleCanPlay = () => {
+      // Video can start playing
+      setIsLoading(false)
+    }
+
+    const handleCanPlayThrough = () => {
+      // Video can play through without stopping
+      setIsLoading(false)
+    }
+
+    const handlePlaying = () => {
+      // Video is actually playing (not buffering)
+      setIsLoading(false)
+    }
+
+    const handleError = () => {
+      // Stop loading on error
+      setIsLoading(false)
+    }
+
+    video.addEventListener("loadstart", handleLoadStart)
+    video.addEventListener("waiting", handleWaiting)
+    video.addEventListener("canplay", handleCanPlay)
+    video.addEventListener("canplaythrough", handleCanPlayThrough)
+    video.addEventListener("playing", handlePlaying)
+    video.addEventListener("error", handleError)
+
+    return () => {
+      video.removeEventListener("loadstart", handleLoadStart)
+      video.removeEventListener("waiting", handleWaiting)
+      video.removeEventListener("canplay", handleCanPlay)
+      video.removeEventListener("canplaythrough", handleCanPlayThrough)
+      video.removeEventListener("playing", handlePlaying)
+      video.removeEventListener("error", handleError)
+    }
+  }, [src])
 
   // Sync video state with isPlaying and handle autoplay
   useEffect(() => {
@@ -286,6 +338,15 @@ export default function VideoPreviewPlayer({
       }}
       onClick={handleTogglePlay}
     >
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
+            <p className="text-white text-sm">Loading video...</p>
+          </div>
+        </div>
+      )}
       <video
         key={src.trim()}
         ref={videoRef}

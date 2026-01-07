@@ -12,7 +12,7 @@ import {
   VideoPlayerVolumeRange,
   VideoPlayerFullscreenButton,
 } from "@/components/kibo-ui/video-player"
-import { Maximize, Minimize } from "lucide-react"
+import { Maximize, Minimize, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -44,6 +44,7 @@ export default function ModernVideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true) // Track loading state
   const autoplayProcessedRef = useRef(false)
   const wasPlayingBeforeFullscreenRef = useRef(false) // Track if video was playing before fullscreen
 
@@ -172,6 +173,58 @@ export default function ModernVideoPlayer({
   // Reset autoplay processed flag when src changes
   useEffect(() => {
     autoplayProcessedRef.current = false
+    setIsLoading(true) // Reset loading state when src changes
+  }, [src])
+
+  // Track video loading state
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const handleLoadStart = () => {
+      setIsLoading(true)
+    }
+
+    const handleWaiting = () => {
+      // Video is waiting for data (buffering)
+      setIsLoading(true)
+    }
+
+    const handleCanPlay = () => {
+      // Video can start playing
+      setIsLoading(false)
+    }
+
+    const handleCanPlayThrough = () => {
+      // Video can play through without stopping
+      setIsLoading(false)
+    }
+
+    const handlePlaying = () => {
+      // Video is actually playing (not buffering)
+      setIsLoading(false)
+    }
+
+    const handleError = () => {
+      // Stop loading on error
+      setIsLoading(false)
+    }
+
+    video.addEventListener("loadstart", handleLoadStart)
+    video.addEventListener("waiting", handleWaiting)
+    video.addEventListener("canplay", handleCanPlay)
+    video.addEventListener("canplaythrough", handleCanPlayThrough)
+    video.addEventListener("playing", handlePlaying)
+    video.addEventListener("error", handleError)
+
+    return () => {
+      video.removeEventListener("loadstart", handleLoadStart)
+      video.removeEventListener("waiting", handleWaiting)
+      video.removeEventListener("canplay", handleCanPlay)
+      video.removeEventListener("canplaythrough", handleCanPlayThrough)
+      video.removeEventListener("playing", handlePlaying)
+      video.removeEventListener("error", handleError)
+    }
   }, [src])
 
   // Aggressive autoplay handling - try to play immediately when autoplay is enabled
@@ -578,6 +631,15 @@ export default function ModernVideoPlayer({
           maxHeight: '100%',
         }}
       >
+      {/* Loading overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-8 w-8 text-white animate-spin" />
+            <p className="text-white text-sm">Loading video...</p>
+          </div>
+        </div>
+      )}
       <VideoPlayerContent
         ref={videoRef}
         crossOrigin="anonymous"
