@@ -16,25 +16,25 @@ CREATE TABLE IF NOT EXISTS platform_settings (
 -- Add brand settings columns if they don't exist
 DO $$ 
 BEGIN
-  -- Platform branding
+  -- Platform branding (defaults are hardcoded in application code, not in database)
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'platform_name') THEN
-    ALTER TABLE platform_settings ADD COLUMN platform_name TEXT DEFAULT 'EaseLMS';
+    ALTER TABLE platform_settings ADD COLUMN platform_name TEXT;
   END IF;
   
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'platform_description') THEN
-    ALTER TABLE platform_settings ADD COLUMN platform_description TEXT DEFAULT 'EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.';
+    ALTER TABLE platform_settings ADD COLUMN platform_description TEXT;
   END IF;
   
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'logo_black') THEN
-    ALTER TABLE platform_settings ADD COLUMN logo_black TEXT DEFAULT 'https://cldup.com/VQGhFU5kd6.svg';
+    ALTER TABLE platform_settings ADD COLUMN logo_black TEXT;
   END IF;
   
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'logo_white') THEN
-    ALTER TABLE platform_settings ADD COLUMN logo_white TEXT DEFAULT 'https://cldup.com/bwlFqC4f8I.svg';
+    ALTER TABLE platform_settings ADD COLUMN logo_white TEXT;
   END IF;
   
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'favicon') THEN
-    ALTER TABLE platform_settings ADD COLUMN favicon TEXT DEFAULT 'https://cldup.com/6yEKvPtX22.svg';
+    ALTER TABLE platform_settings ADD COLUMN favicon TEXT;
   END IF;
   
   -- SEO settings
