@@ -1,8 +1,6 @@
-# EaseLMS
-
 <div align="center">
 
-<img src="https://cldup.com/3DOgOVrIWN.png" alt="EaseLMS Logo" width="200" />
+<img src="https://cldup.com/3DOgOVrIWN.png" alt="EaseLMS Logo" width="250" />
 
 **The Modern Open-Source Learning Management System**
 
