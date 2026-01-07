@@ -66,7 +66,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
   return (
     <div className="w-64 h-screen py-4 flex flex-col fixed left-0 top-0 bg-background-element border-r border-border hidden lg:flex">
       <div className="mb-8 px-6">
-        <Logo className="w-44" />
+        <Logo className="w-32" />
       </div>
       <nav className="flex-grow px-2">
         {currentMenu.map((item) => {

@@ -34,8 +34,8 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
           <Image
             src={logoSrc}
             alt={`${brandSettings.platformName} Logo`}
-            width={40}
-            height={40}
+            width={32}
+            height={32}
             className="h-auto w-auto object-contain"
             priority
           />
@@ -53,8 +53,8 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
         <Image
           src={logoSrc}
           alt={`${brandSettings.platformName} Logo`}
-          width={180}
-          height={60}
+          width={120}
+          height={40}
           className="h-auto w-auto object-contain"
           priority
         />

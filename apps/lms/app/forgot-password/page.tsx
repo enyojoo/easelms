@@ -27,7 +27,7 @@ export default function ForgotPasswordPage() {
     <div className="flex justify-center items-center min-h-screen bg-background px-4 sm:px-0">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <Logo className="mx-auto mb-8" />
+          <Logo className="mx-auto mb-8 max-w-[100px] sm:max-w-[120px]" />
         </div>
         <Card className="w-full max-w-md">
           <CardHeader>
