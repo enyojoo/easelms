@@ -321,9 +321,6 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 ## 🆘 Support
 
-- 📚 <a href="https://www.easelms.org/docs" target="_blank" rel="noopener noreferrer">Documentation</a>
-- 💬 <a href="https://github.com/enyojoo/easelms/discussions" target="_blank" rel="noopener noreferrer">GitHub Discussions</a>
-- 🐛 <a href="https://github.com/enyojoo/easelms/issues" target="_blank" rel="noopener noreferrer">Issue Tracker</a>
 - 📧 [Email Support](mailto:support@easelms.org)
 - 💼 <a href="https://www.easelms.org/enterprise" target="_blank" rel="noopener noreferrer">Enterprise Support</a>
 
