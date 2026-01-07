@@ -26,7 +26,7 @@ export interface BrandSettings {
 
 // Hook to get brand settings with defaults
 // NEVER shows defaults while loading - only shows defaults when confirmed no brand settings exist
-export function useBrandSettings(): BrandSettings & { isLoading: boolean; hasData: boolean } {
+export function useBrandSettings(): BrandSettings {
   const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["settings"],
     queryFn: async () => {
