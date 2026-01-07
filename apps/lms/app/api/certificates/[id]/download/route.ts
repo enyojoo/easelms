@@ -189,8 +189,14 @@ export async function GET(
       // Use black logo for certificates (white background)
       logoUrl = brandSettings.logoBlack || undefined
       organizationName = brandSettings.platformName || undefined
-    } catch (error) {
-      console.warn("[Certificates API] Failed to fetch brand settings, using defaults:", error)
+    } catch (brandError) {
+      // If brand settings fetch fails, log warning but continue with defaults
+      logWarning("Failed to fetch brand settings for certificate", {
+        component: "certificates/[id]/download/route",
+        action: "GET",
+        certificateId: certificateId,
+        error: brandError instanceof Error ? brandError.message : String(brandError),
+      })
       // Fallback to defaults if brand settings fetch fails
       logoUrl = "https://cldup.com/VQGhFU5kd6.svg"
       organizationName = "EaseLMS"

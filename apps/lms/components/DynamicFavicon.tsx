@@ -13,11 +13,6 @@ export default function DynamicFavicon() {
   useEffect(() => {
     if (typeof document === "undefined") return
 
-    // CRITICAL: Don't update favicon until data is loaded to prevent default flash
-    if (brandSettings.isLoading) {
-      return
-    }
-
     // Always use favicon from brand settings (will fallback to default if empty)
     const faviconUrl = brandSettings.favicon || "https://cldup.com/6yEKvPtX22.svg"
 
@@ -50,7 +45,7 @@ export default function DynamicFavicon() {
     shortcutLink.rel = "shortcut icon"
     shortcutLink.href = faviconUrl
     document.head.appendChild(shortcutLink)
-  }, [brandSettings.favicon, brandSettings.isLoading])
+  }, [brandSettings.favicon])
 
   return null
 }

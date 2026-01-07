@@ -27,22 +27,6 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
   // Determine which logo to show based on theme
   const isDark = mounted && (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches))
 
-  // CRITICAL: Don't render logo until data is loaded to prevent default flash
-  // Show placeholder if still loading
-  if (!mounted || brandSettings.isLoading) {
-    return (
-      <div 
-        className={cn("flex items-center animate-pulse bg-muted rounded", className)} 
-        style={{ 
-          minHeight: variant === "icon" ? "32px" : "40px", 
-          minWidth: variant === "icon" ? "32px" : "120px",
-          height: variant === "icon" ? "32px" : "40px",
-          width: variant === "icon" ? "32px" : "120px"
-        }} 
-      />
-    )
-  }
-
   // Get logo source - prefer custom, fallback to default if empty or error
   const getLogoSrc = () => {
     if (variant === "icon") {
