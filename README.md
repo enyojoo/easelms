@@ -261,22 +261,14 @@ easelms/
 
 Don't want to manage infrastructure? We offer a fully managed hosted service with:
 
-- ✅ **Zero Setup** - Get started in minutes
-- ✅ **Managed Infrastructure** - We handle Supabase, S3, and hosting
-- ✅ **Automatic Updates** - Always on the latest version
-- ✅ **Professional Support** - Priority email and chat support
-- ✅ **Custom Branding** - Platform name, logos, favicon, and SEO metadata
-- ✅ **Backups & Security** - Automated backups and security updates
+- ✅ **Zero Setup** - Get started in minutes, not weeks. We handle all the infrastructure setup and configuration
+- ✅ **Managed Infrastructure** - We manage servers, databases, backups, and updates so you can focus on your content
+- ✅ **Security & Compliance** - Enterprise-grade security with regular updates, SSL certificates, and compliance standards
+- ✅ **Professional Support** - Get help when you need it with priority support and dedicated account management
+- ✅ **Automatic Backups** - Your data is automatically backed up daily with point-in-time recovery options
+- ✅ **Scalable Infrastructure** - Scale seamlessly as your learner base grows without worrying about infrastructure limits
 
-### Pricing
-
-| Plan | Price | Learners | Storage | Bandwidth |
-|------|-------|----------|---------|-----------|
-| **Starter** | $99/mo | Up to 100 | 50GB | 100GB/mo |
-| **Professional** | $299/mo | Up to 500 | 200GB | 500GB/mo |
-| **Enterprise** | Custom | Unlimited | Custom | Custom |
-
-<a href="https://www.easelms.org/pricing" target="_blank" rel="noopener noreferrer">View Full Pricing →</a> | <a href="https://www.easelms.org/trial" target="_blank" rel="noopener noreferrer">Start Free Trial →</a>
+**Learn more about our hosted service, including pricing plans and features:** [https://www.easelms.org/hosted](https://www.easelms.org/hosted)
 
 ---
 
