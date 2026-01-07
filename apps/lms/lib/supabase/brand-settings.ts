@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "./server"
+import { PLATFORM_DEFAULTS } from "@/lib/config/platform-defaults"
 
 export interface BrandSettings {
   platformName: string
@@ -49,8 +50,5 @@ export async function getBrandSettings(): Promise<BrandSettings> {
   } catch (error) {
     console.error("Error fetching brand settings:", error)
     return DEFAULT_BRAND_SETTINGS
-  }
-}
-
   }
 }

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import FileUpload from "@/components/FileUpload"
 import { Palette, Globe, Search, Save, Edit, X } from "lucide-react"
 import { toast } from "sonner"
@@ -29,7 +30,6 @@ export default function BrandSettings() {
     seoDescription: "",
     seoKeywords: "",
     seoImage: "",
-    creditsEnabled: PLATFORM_DEFAULTS.credits.enabled,
   })
   
   const initialSettingsRef = useRef<typeof brandSettings | null>(null)
@@ -49,6 +49,7 @@ export default function BrandSettings() {
         seoDescription: platformSettings.seo_description || "",
         seoKeywords: platformSettings.seo_keywords || "",
         seoImage: platformSettings.seo_image || "",
+        creditsEnabled: platformSettings.credits_enabled !== undefined ? platformSettings.credits_enabled : PLATFORM_DEFAULTS.credits.enabled,
       }
       setBrandSettings(loadedSettings)
       if (!initialSettingsRef.current) {
@@ -379,6 +380,36 @@ export default function BrandSettings() {
             <p className="text-sm text-muted-foreground">
               Image displayed when sharing your platform on social media. Recommended: 1200x630px PNG/JPG.
             </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+          <CardTitle className="flex items-center">
+            <Palette className="mr-2 h-5 w-5" /> Platform Credits
+          </CardTitle>
+          <CardDescription>
+            Control the display of "Powered by EaseLMS" attribution. For open-source installations, credits are enabled by default. For hosted/paid versions, you can disable this.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="space-y-0.5 flex-1">
+              <Label htmlFor="credits-enabled" className="text-base font-semibold cursor-pointer">
+                Show "Powered by EaseLMS"
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Display platform credits in the sidebar and on auth pages. For open-source installations, credits are enabled by default.
+              </p>
+            </div>
+            <Switch
+              id="credits-enabled"
+              checked={brandSettings.creditsEnabled}
+              onCheckedChange={(checked) => setBrandSettings((prev) => ({ ...prev, creditsEnabled: checked }))}
+              disabled={!isEditing}
+            />
           </div>
         </CardContent>
       </Card>

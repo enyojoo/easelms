@@ -54,6 +54,3 @@ export function useBrandSettings(): BrandSettings {
     creditsEnabled: platformSettings?.credits_enabled !== undefined ? platformSettings.credits_enabled : true,
   }
 }
-
-  }
-}
