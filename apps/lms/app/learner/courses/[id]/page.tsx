@@ -415,17 +415,14 @@ export default function CoursePage() {
                 <span className="text-xs md:text-sm break-words">{access}</span>
               </div>
               {course.settings?.certificate?.certificateEnabled && (() => {
-                // Only show certificate info if enabled
-                const certType = course.settings?.certificate?.certificateType
+                const certType = course.settings?.certificate?.certificateType || "completion"
                 const certTitle = course.settings?.certificate?.certificateTitle
-                let displayText = ""
+                let displayText = "Certificate of completion"
                 
-                // Use custom title if provided, otherwise use type-based title
                 if (certTitle && certTitle.trim() !== "") {
                   displayText = certTitle
-                } else if (certType) {
-                  // Use the certificate type from database
-                  switch (certType.toLowerCase()) {
+                } else {
+                  switch (certType) {
                     case "participation":
                       displayText = "Certificate of Participation"
                       break
@@ -433,22 +430,17 @@ export default function CoursePage() {
                       displayText = "Certificate of Achievement"
                       break
                     case "completion":
-                      displayText = "Certificate of Completion"
-                      break
                     default:
                       displayText = "Certificate of Completion"
                       break
                   }
-                } else {
-                  // Fallback if no type specified
-                  displayText = "Certificate of Completion"
                 }
                 
                 return (
-                  <div className="flex items-center">
-                    <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <div className="flex items-center">
+                  <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
                     <span className="text-xs md:text-sm">{displayText}</span>
-                  </div>
+                </div>
                 )
               })()}
               <div className="flex items-center">
@@ -701,17 +693,14 @@ export default function CoursePage() {
                   <span>{access}</span>
                 </div>
                 {course.settings?.certificate?.certificateEnabled && (() => {
-                  // Only show certificate info if enabled
-                  const certType = course.settings?.certificate?.certificateType
+                  const certType = course.settings?.certificate?.certificateType || "completion"
                   const certTitle = course.settings?.certificate?.certificateTitle
-                  let displayText = ""
+                  let displayText = "Certificate of completion"
                   
-                  // Use custom title if provided, otherwise use type-based title
                   if (certTitle && certTitle.trim() !== "") {
                     displayText = certTitle
-                  } else if (certType) {
-                    // Use the certificate type from database
-                    switch (certType.toLowerCase()) {
+                  } else {
+                    switch (certType) {
                       case "participation":
                         displayText = "Certificate of Participation"
                         break
@@ -719,21 +708,16 @@ export default function CoursePage() {
                         displayText = "Certificate of Achievement"
                         break
                       case "completion":
-                        displayText = "Certificate of Completion"
-                        break
                       default:
                         displayText = "Certificate of Completion"
                         break
                     }
-                  } else {
-                    // Fallback if no type specified
-                    displayText = "Certificate of Completion"
                   }
                   
                   return (
                   <div className="flex items-center">
                     <Award className="w-5 h-5 mr-2 text-primary" />
-                    <span>{displayText}</span>
+                      <span>{displayText}</span>
                   </div>
                   )
                 })()}

@@ -6,7 +6,7 @@ import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { PlayCircle, FileText, Award, Clock, Globe, Users } from "lucide-react"
+import { PlayCircle, FileText, Award, Clock, Globe } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit, Link as LinkIcon } from "lucide-react"
@@ -31,22 +31,8 @@ interface Course {
       price?: number
       recurringPrice?: number
     }
-    certificate?: {
-      certificateEnabled?: boolean
-      certificateType?: string
-      certificateTitle?: string
-    }
-    instructor?: {
-      instructorEnabled?: boolean
-      instructorIds?: string[]
-    }
+    certificate?: any
   }
-  instructors?: Array<{
-    id: string
-    name: string
-    image?: string
-    bio?: string
-  }>
   lessons?: Array<{
     id: number
     title: string
@@ -202,32 +188,18 @@ export default function InstructorCoursePreviewPage() {
 
   const { price, buttonText, access } = getAccessDetails()
 
-  // Instructor information - use assigned instructors if available, otherwise fallback to creator
-  const hasInstructors = course?.instructors && course.instructors.length > 0
-  const instructorsEnabled = course?.settings?.instructor?.instructorEnabled || hasInstructors
-  
-  // If instructors are enabled and there are instructors, use them
-  // Otherwise, fallback to course creator
-  const instructors = hasInstructors && instructorsEnabled
-    ? course.instructors.map((inst: any) => ({
-        name: inst.name || "Instructor",
-        profileImage: inst.image || "/placeholder.svg?height=200&width=200",
-        bio: inst.bio || "",
-        title: "Course Instructor"
-      }))
-    : course?.creator ? [{
+  // Instructor information from creator
+  const instructor = course.creator
+    ? {
         name: course.creator.name || "Instructor",
-        profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
         bio: course.creator.bio || "",
-        title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
-          ? "Course Instructor" 
-          : "Course Creator"
-      }] : [{
+        profileImage: course.creator.profile_image || "",
+      }
+    : {
         name: "Instructor",
-        profileImage: "/placeholder.svg?height=200&width=200",
         bio: "",
-        title: "Course Instructor"
-      }]
+        profileImage: "",
+      }
 
   return (
     <div className="pt-4 md:pt-8">
@@ -338,21 +310,13 @@ export default function InstructorCoursePreviewPage() {
             </Card>
           )}
 
-          {/* Instructor Profile Cards */}
-          {instructors && instructors.length > 0 && (
-            <div className="space-y-4">
-              {instructors.map((instructor: any, index: number) => (
-                <InstructorCard
-                  key={index}
-                  name={instructor.name}
-                  image={instructor.profileImage}
-                  bio={instructor.bio}
-                  title={instructor.title}
-                  className="mb-4"
-                />
-              ))}
-            </div>
-          )}
+          {/* Instructor Profile Card */}
+          <InstructorCard
+            name={instructor.name}
+            image={instructor.profileImage}
+            bio={instructor.bio}
+            className="mb-4"
+          />
         </div>
 
         <div className="lg:col-span-1">
@@ -368,17 +332,13 @@ export default function InstructorCoursePreviewPage() {
                   fill
                   className="object-cover"
                 />
-                {videoUrl && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
-                    <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 mb-4 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
-                  {enrollmentMode === "recurring" && <span className="text-xs md:text-sm text-muted-foreground">/month</span>}
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                  <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
                 </div>
+              </div>
+              <div className="mt-4 mb-4">
+                <span className="text-2xl font-bold text-primary">{price}</span>
+                {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
               </div>
               <Button 
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11"
@@ -386,58 +346,24 @@ export default function InstructorCoursePreviewPage() {
               >
                 View Course
               </Button>
-              <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
+              <p className="text-center text-sm text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+              <div className="space-y-2 text-muted-foreground">
                 {totalResources > 0 && (
                   <div className="flex items-center">
-                    <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                    <span className="text-xs md:text-sm">{totalResources} resources</span>
+                    <FileText className="w-5 h-5 mr-2 text-primary" />
+                    <span>{totalResources} resources</span>
                   </div>
                 )}
                 <div className="flex items-center">
-                  <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                  <span className="text-xs md:text-sm break-words">{access}</span>
+                  <Globe className="w-5 h-5 mr-2 text-primary" />
+                  <span>{access}</span>
                 </div>
-                <div className="flex items-center">
-                  <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                  <span className="text-xs md:text-sm">{course?.enrolledStudents || 0} learners enrolled</span>
-                </div>
-                {course.settings?.certificate?.certificateEnabled && (() => {
-                  // Only show certificate info if enabled
-                  const certType = course.settings?.certificate?.certificateType
-                  const certTitle = course.settings?.certificate?.certificateTitle
-                  let displayText = ""
-                  
-                  // Use custom title if provided, otherwise use type-based title
-                  if (certTitle && certTitle.trim() !== "") {
-                    displayText = certTitle
-                  } else if (certType) {
-                    // Use the certificate type from database
-                    switch (certType.toLowerCase()) {
-                      case "participation":
-                        displayText = "Certificate of Participation"
-                        break
-                      case "achievement":
-                        displayText = "Certificate of Achievement"
-                        break
-                      case "completion":
-                        displayText = "Certificate of Completion"
-                        break
-                      default:
-                        displayText = "Certificate of Completion"
-                        break
-                    }
-                  } else {
-                    // Fallback if no type specified
-                    displayText = "Certificate of Completion"
-                  }
-                  
-                  return (
+                {course.settings?.certificate && (
                   <div className="flex items-center">
-                    <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                    <span className="text-xs md:text-sm">{displayText}</span>
+                    <Award className="w-5 h-5 mr-2 text-primary" />
+                    <span>Certificate of completion</span>
                   </div>
-                  )
-                })()}
+                )}
               </div>
             </CardContent>
           </Card>

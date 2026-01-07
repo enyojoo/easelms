@@ -319,21 +319,9 @@ function NewCourseContent() {
           } else {
             const errorData = await response.json().catch(() => ({}))
             console.error("Failed to load course:", response.status, errorData)
-
-            // Show user-friendly error message
-            if (response.status === 404) {
-              toast.error("Course not found. It may have been deleted or you may not have permission to access it.")
-            } else if (response.status === 403) {
-              toast.error("You don't have permission to edit this course.")
-            } else if (response.status === 401) {
-              toast.error("Please log in again to edit courses.")
-            } else {
-              toast.error(`Failed to load course data: ${errorData.error || "Unknown error"}`)
-            }
           }
         } catch (error) {
           console.error("Error loading course:", error)
-          toast.error("Failed to load course data. Please check your internet connection and try again.")
         } finally {
           setLoading(false)
         }
