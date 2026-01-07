@@ -15,7 +15,7 @@ Be respectful, inclusive, and constructive in all interactions. We are committed
 - Describe expected vs actual behavior
 - Include environment details (OS, Node version, browser, etc.)
 - Add screenshots or error messages if applicable
-- Use the bug report template when creating an issue
+- Use clear, descriptive titles and include all relevant information
 
 ### Suggesting Features
 
@@ -23,7 +23,7 @@ Be respectful, inclusive, and constructive in all interactions. We are committed
 - Describe the use case and problem it solves
 - Explain the proposed solution
 - Consider implementation complexity
-- Use the feature request template when creating an issue
+- Use clear, descriptive titles and explain the use case
 
 ### Pull Requests
 
@@ -110,7 +110,7 @@ test: Add tests for certificate generation
 
 1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/yourusername/easelms.git
+   git clone https://github.com/enyojoo/easelms.git
    cd easelms
    ```
 
@@ -120,8 +120,9 @@ test: Add tests for certificate generation
    ```
 
 3. **Set up environment variables**
-   - Copy `.env.example` to `.env.local` (if available)
-   - Fill in required environment variables
+   - Create a `.env.local` file in `apps/lms/`
+   - See the [README.md](README.md#quick-start) for detailed environment variable setup instructions
+   - You'll need Supabase credentials (free tier works for development)
 
 4. **Start development server**
    ```bash
@@ -146,16 +147,15 @@ test: Add tests for certificate generation
 
 ## Questions?
 
-- Open a GitHub Discussion for general questions
-- Check existing issues and discussions
-- Review the documentation
-- Ask in the community Discord (if available)
+- Open a [GitHub Issue](https://github.com/enyojoo/easelms/issues) for questions or discussions
+- Check existing [issues](https://github.com/enyojoo/easelms/issues) and discussions
+- Review the [README.md](README.md) for setup and usage information
+- Contact us at [contact@easelms.org](mailto:contact@easelms.org) or visit [easelms.org/contact](https://www.easelms.org/contact)
 
 ## Recognition
 
 Contributors will be recognized in:
-- README.md contributors section
-- Release notes
-- Project documentation
+- Release notes and changelog
+- Project acknowledgments
 
 Thank you for contributing to EaseLMS! 🎉
