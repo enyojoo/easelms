@@ -290,8 +290,9 @@ export default function ManageCoursesPage() {
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
-  const hasData = coursesData || draftCourses.length > 0
-  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasData
+  // Show cached data instantly even if isPending is true
+  const hasCachedData = !!coursesData?.courses
+  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasCachedData && coursesPending
 
   const handleDeleteClick = (courseId: number) => {
     setCourseToDelete(courseId)
@@ -578,7 +579,7 @@ export default function ManageCoursesPage() {
     <div className="pt-4 md:pt-8">
       {showSkeleton ? (
         <AdminCoursesSkeleton />
-      ) : coursesError ? (
+      ) : coursesError && !hasCachedData ? (
         <div className="text-center py-12">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Error loading courses</h3>

@@ -110,6 +110,12 @@ export default function LearnersPage() {
   // API already handles filtering, so filteredLearners is just the learners
   const filteredLearners = learners
 
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  // Show cached data instantly even if isPending is true
+  const hasCachedData = !!learnersData?.learners
+  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasCachedData && learnersPending
+
   const handleEnrollClick = (learner: Learner) => {
     setSelectedUser(learner)
     setEnrollDialogOpen(true)
@@ -166,8 +172,8 @@ export default function LearnersPage() {
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
-  const hasData = learnersData || stats
-  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasData
+  // Show cached data instantly even if isPending is true
+  // Note: hasCachedData is already defined above
 
   return (
     <div className="pt-4 md:pt-8">
