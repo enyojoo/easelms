@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { generateCertificatePDF } from "@/lib/certificates/generate-pdf"
 import { uploadFileToS3, getS3StoragePath, getPublicUrl } from "@/lib/aws/s3"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
+import { getBrandSettings } from "@/lib/supabase/brand-settings"
 
 export async function GET(
   request: Request,
@@ -179,11 +180,21 @@ export async function GET(
       )
     }
 
-    // Use black logo URL for certificates (white background) - same as Logo component
-    const logoUrl = "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk.svg"
+    // Fetch brand settings to use platform logo and name
+    let logoUrl: string | undefined
+    let organizationName: string | undefined
     
-    // Organization name (hardcoded, same as used in Logo component)
-    const organizationName = "Enthronement University"
+    try {
+      const brandSettings = await getBrandSettings()
+      // Use black logo for certificates (white background)
+      logoUrl = brandSettings.logoBlack || undefined
+      organizationName = brandSettings.platformName || undefined
+    } catch (error) {
+      console.warn("[Certificates API] Failed to fetch brand settings, using defaults:", error)
+      // Fallback to defaults if brand settings fetch fails
+      logoUrl = "https://cldup.com/VQGhFU5kd6.svg"
+      organizationName = "EaseLMS"
+    }
 
     console.log("[Certificates API] Generating PDF with data:", {
       certificateNumber: certificate.certificate_number,
