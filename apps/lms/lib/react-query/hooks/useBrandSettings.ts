@@ -61,7 +61,8 @@ export function useBrandSettings(): BrandSettings & { isLoading: boolean } {
   
   // CRITICAL: Only show defaults if data is loaded AND we've confirmed no custom branding exists
   // If data is still loading (isPending), don't show defaults yet
-  const isLoading = isPending && !hasLoadedData
+  // Ensure isLoading is always a boolean to prevent React errors
+  const isLoading = Boolean(isPending && !hasLoadedData)
   
   // Check if ANY custom brand setting has been set
   // This is the key: if custom branding exists, use it instead of defaults
@@ -100,16 +101,36 @@ export function useBrandSettings(): BrandSettings & { isLoading: boolean } {
   }
   
   // Return values - components will check isLoading before using defaults
+  // CRITICAL: When isLoading is true, return empty strings so components show placeholders
+  // When isLoading is false, return actual values (custom or defaults)
+  // This prevents hydration mismatches and React errors
+  if (isLoading) {
+    // Return empty strings during loading - components will show placeholders
+    return {
+      platformName: "",
+      platformDescription: "",
+      logoBlack: "",
+      logoWhite: "",
+      favicon: "",
+      seoTitle: undefined,
+      seoDescription: undefined,
+      seoKeywords: undefined,
+      seoImage: undefined,
+      isLoading: true,
+    }
+  }
+  
+  // Data is loaded - return actual values
   return {
-    platformName: isLoading ? "" : (getValue(platformSettings?.platform_name, DEFAULT_BRAND_SETTINGS.platformName) || DEFAULT_BRAND_SETTINGS.platformName),
-    platformDescription: isLoading ? "" : (getValue(platformSettings?.platform_description, DEFAULT_BRAND_SETTINGS.platformDescription) || DEFAULT_BRAND_SETTINGS.platformDescription),
-    logoBlack: isLoading ? "" : (getValue(platformSettings?.logo_black, DEFAULT_BRAND_SETTINGS.logoBlack) || DEFAULT_BRAND_SETTINGS.logoBlack),
-    logoWhite: isLoading ? "" : (getValue(platformSettings?.logo_white, DEFAULT_BRAND_SETTINGS.logoWhite) || DEFAULT_BRAND_SETTINGS.logoWhite),
-    favicon: isLoading ? "" : (getValue(platformSettings?.favicon, DEFAULT_BRAND_SETTINGS.favicon) || DEFAULT_BRAND_SETTINGS.favicon),
+    platformName: getValue(platformSettings?.platform_name, DEFAULT_BRAND_SETTINGS.platformName) || DEFAULT_BRAND_SETTINGS.platformName,
+    platformDescription: getValue(platformSettings?.platform_description, DEFAULT_BRAND_SETTINGS.platformDescription) || DEFAULT_BRAND_SETTINGS.platformDescription,
+    logoBlack: getValue(platformSettings?.logo_black, DEFAULT_BRAND_SETTINGS.logoBlack) || DEFAULT_BRAND_SETTINGS.logoBlack,
+    logoWhite: getValue(platformSettings?.logo_white, DEFAULT_BRAND_SETTINGS.logoWhite) || DEFAULT_BRAND_SETTINGS.logoWhite,
+    favicon: getValue(platformSettings?.favicon, DEFAULT_BRAND_SETTINGS.favicon) || DEFAULT_BRAND_SETTINGS.favicon,
     seoTitle: platformSettings?.seo_title || undefined,
     seoDescription: platformSettings?.seo_description || undefined,
     seoKeywords: platformSettings?.seo_keywords || undefined,
     seoImage: platformSettings?.seo_image || undefined,
-    isLoading,
+    isLoading: false,
   }
 }
