@@ -328,7 +328,7 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 <div align="center">
 
-**Made with ❤️ by the EaseLMS team**
+**Made with ❤️ to power learning**
 
 <a href="https://www.easelms.org" target="_blank" rel="noopener noreferrer">Website</a> • <a href="https://x.com/enyosaam" target="_blank" rel="noopener noreferrer">Twitter (X)</a>
 
