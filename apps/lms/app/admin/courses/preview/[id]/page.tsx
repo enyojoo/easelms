@@ -354,7 +354,7 @@ export default function InstructorCoursePreviewPage() {
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Overview</h2>
-              <ReadMore text={course.description || ""} maxLength={350} className="mb-4 leading-relaxed" />
+              <ReadMore text={course.description || ""} maxLength={1000} className="mb-4 leading-relaxed" />
               <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-4 border-t">
                 <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
                   <span>{lessons.length} lessons</span>
@@ -428,7 +428,7 @@ export default function InstructorCoursePreviewPage() {
             <Card className="mb-4 md:mb-6">
               <CardContent className="p-4 md:p-6">
                 <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
-                <ReadMore text={course.who_is_this_for || course.whoIsThisFor || ""} maxLength={350} className="leading-relaxed whitespace-pre-line" />
+                <ReadMore text={course.who_is_this_for || course.whoIsThisFor || ""} maxLength={1000} className="leading-relaxed whitespace-pre-line" />
               </CardContent>
             </Card>
           )}
@@ -438,7 +438,7 @@ export default function InstructorCoursePreviewPage() {
               <CardContent className="p-4 md:p-6">
                 <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
                 {course.requirements ? (
-                  <ReadMore text={course.requirements} maxLength={350} className="leading-relaxed whitespace-pre-line" />
+                  <ReadMore text={course.requirements} maxLength={1000} className="leading-relaxed whitespace-pre-line" />
                 ) : (
                   <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
                     <li>Open heart and willingness to learn</li>
