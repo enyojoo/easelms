@@ -66,10 +66,12 @@ export default function SettingsPage() {
   }, [user, userType, authLoading, router])
 
   // Pre-fetch users and team data when user is authenticated (only if not already cached)
+  // This ensures data is available immediately when tabs are opened
   useEffect(() => {
     if (authLoading || !user || userType !== "admin") return
     
-    // Only prefetch if data is not already cached
+    // Prefetch both queries to ensure data is cached before tabs are opened
+    // React Query will use cached data instantly when hooks are called in child components
     const platformUsersData = queryClient.getQueryData(["platformUsers"])
     const teamMembersData = queryClient.getQueryData(["teamMembers"])
     
@@ -84,6 +86,7 @@ export default function SettingsPage() {
           }
           return response.json()
         },
+        staleTime: 5 * 60 * 1000, // 5 minutes
       })
     }
     
@@ -98,6 +101,7 @@ export default function SettingsPage() {
           }
           return response.json()
         },
+        staleTime: 5 * 60 * 1000, // 5 minutes
       })
     }
   }, [authLoading, user, userType, queryClient])

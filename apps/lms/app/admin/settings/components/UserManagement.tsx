@@ -29,6 +29,7 @@ export default function UserManagement() {
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   
+  // Call hook directly - React Query will use cached data instantly if available
   const { data: usersData, isPending: usersPending, error: usersError } = usePlatformUsers()
   const deleteUserMutation = useDeleteUser()
 
@@ -50,12 +51,13 @@ export default function UserManagement() {
     created_at: user.created_at || new Date().toISOString(),
   }))
 
-  // Check if we have cached data
+  // Check if we have cached data - show data instantly if available
   const hasCachedData = !!usersData?.users?.length
   
-  // Show skeleton only on true initial load (no cached data exists and pending)
-  // Once mounted and we have cached data, always show data (even if refetching)
-  const showSkeleton = !mounted || (usersPending && !hasCachedData)
+  // Show skeleton ONLY on true initial load (no cached data exists and pending)
+  // Once we have data, never show skeleton again (even during refetches)
+  // Show cached data instantly even if isPending is true
+  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasCachedData && usersPending
   
   // Show error only if we have no cached data
   const error = usersError && !hasCachedData ? (usersError as Error).message : null

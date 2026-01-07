@@ -35,6 +35,7 @@ export default function TeamManagement() {
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
+  // Call hook directly - React Query will use cached data instantly if available
   const { data: teamData, isPending: teamPending, error: teamError } = useTeamMembers()
   const createMemberMutation = useCreateTeamMember()
   const deleteUserMutation = useDeleteUser()
@@ -55,11 +56,13 @@ export default function TeamManagement() {
     user_type: user.user_type || "admin",
   }))
 
-  // Check if we have cached data
+  // Check if we have cached data - show data instantly if available
   const hasCachedData = !!teamData?.users?.length
   
-  // Show skeleton only on true initial load (no cached data exists and pending)
-  const showSkeleton = !mounted || (teamPending && !hasCachedData)
+  // Show skeleton ONLY on true initial load (no cached data exists and pending)
+  // Once we have data, never show skeleton again (even during refetches)
+  // Show cached data instantly even if isPending is true
+  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasCachedData && teamPending
   
   // Show error only if we have no cached data
   const error = teamError && !hasCachedData ? (teamError as Error).message : null
