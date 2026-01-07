@@ -237,25 +237,6 @@ easelms/
 
 ---
 
-## 🎨 Screenshots
-
-<div align="center">
-
-### Dashboard
-![Dashboard](https://via.placeholder.com/800x450/1e293b/ffffff?text=Dashboard+Preview)
-
-### Course Creation
-![Course Creation](https://via.placeholder.com/800x450/1e293b/ffffff?text=Course+Creation+Interface)
-
-### Learning Interface
-![Learning Interface](https://via.placeholder.com/800x450/1e293b/ffffff?text=Course+Player)
-
-</div>
-
-*Add your actual screenshots here*
-
----
-
 ## 🌐 Hosted Service
 
 Don't want to manage infrastructure? We offer a fully managed hosted service with:
