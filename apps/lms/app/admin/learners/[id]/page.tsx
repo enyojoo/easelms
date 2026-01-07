@@ -168,7 +168,7 @@ function LearnerDetailsPage() {
 
   useEffect(() => {
     const fetchPurchases = async () => {
-      if (!mounted || authLoading || !user || !params.id) return
+      if (authLoading || !user || !params.id) return
 
       try {
         const response = await fetch(`/api/learners/${params.id}/purchases`)
@@ -186,7 +186,7 @@ function LearnerDetailsPage() {
     }
 
     fetchPurchases()
-  }, [params.id, mounted, authLoading, user])
+  }, [params.id, authLoading, user])
 
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Show skeleton ONLY on true initial load (no cached data exists)

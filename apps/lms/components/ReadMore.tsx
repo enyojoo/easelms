@@ -38,6 +38,16 @@ export default function ReadMore({
   const displayText = isExpanded ? text : text.slice(0, maxLength)
   const isTruncated = !isExpanded && shouldShowButton
 
+  // Debug logging
+  console.log("ReadMore Debug:", {
+    textLength: text.length,
+    maxLength,
+    shouldShowButton,
+    isExpanded,
+    isTruncated,
+    displayTextLength: displayText.length
+  })
+
   return (
     <div className={cn("space-y-2", className)}>
       <div className="relative">
