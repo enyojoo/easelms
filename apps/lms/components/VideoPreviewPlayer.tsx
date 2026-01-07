@@ -340,11 +340,8 @@ export default function VideoPreviewPlayer({
     >
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 text-white animate-spin" />
-            <p className="text-white text-sm">Loading video...</p>
-          </div>
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+          <Loader2 className="h-10 w-10 text-white animate-spin" />
         </div>
       )}
       <video
