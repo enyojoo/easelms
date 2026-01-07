@@ -131,7 +131,7 @@ export default function FileUpload({
   const getAcceptTypes = (): Record<string, string[]> | undefined => {
     switch (type) {
       case "image":
-        return { "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp"] }
+        return { "image/*": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"] }
       case "video":
         return { "video/*": [".mp4", ".webm", ".ogg"] }
       case "document":

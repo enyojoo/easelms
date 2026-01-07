@@ -304,8 +304,8 @@ export function isValidVideoFile(file: File): boolean {
  * Validate image file type
  */
 export function isValidImageFile(file: File): boolean {
-  const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
-  const validExtensions = ["jpg", "jpeg", "png", "gif", "webp"]
+  const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/svg+xml"]
+  const validExtensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
   const extension = file.name.split(".").pop()?.toLowerCase()
   
   return validTypes.includes(file.type) || (extension ? validExtensions.includes(extension) : false)

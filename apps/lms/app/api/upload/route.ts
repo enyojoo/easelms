@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       isValid = isValidDocumentFile(file) || isValidImageFile(file) // Templates can be PDF or image
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid certificate template file type. Supported formats: PDF, PNG, JPG, JPEG" },
+          { error: "Invalid certificate template file type. Supported formats: PDF, PNG, JPG, JPEG, SVG" },
           { status: 400 }
         )
       }
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       isValid = isValidImageFile(file)
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid signature file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { error: "Invalid signature file type. Supported formats: JPG, PNG, GIF, WebP, SVG" },
           { status: 400 }
         )
       }
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       isValid = isValidImageFile(file)
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid quiz image file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { error: "Invalid quiz image file type. Supported formats: JPG, PNG, GIF, WebP, SVG" },
           { status: 400 }
         )
       }
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       isValid = isValidDocumentFile(file) || isValidImageFile(file) || isValidVideoFile(file) // Resources can be various types
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid resource file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG, MP4, WebM" },
+          { error: "Invalid resource file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG, SVG, MP4, WebM" },
           { status: 400 }
         )
       }
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       isValid = isValidImageFile(file)
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid quiz image file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { error: "Invalid quiz image file type. Supported formats: JPG, PNG, GIF, WebP, SVG" },
           { status: 400 }
         )
       }
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       isValid = isValidImageFile(file)
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid image file type. Supported formats: JPG, PNG, GIF, WebP" },
+          { error: "Invalid image file type. Supported formats: JPG, PNG, GIF, WebP, SVG" },
           { status: 400 }
         )
       }
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       isValid = isValidDocumentFile(file) || isValidImageFile(file) // Certificates can be PDF or image
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid certificate file type. Supported formats: PDF, PNG, JPG, JPEG" },
+          { error: "Invalid certificate file type. Supported formats: PDF, PNG, JPG, JPEG, SVG" },
           { status: 400 }
         )
       }
@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       isValid = isValidDocumentFile(file) || isValidImageFile(file) || isValidVideoFile(file)
       if (!isValid) {
         return NextResponse.json(
-          { error: "Invalid file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG, MP4, WebM" },
+          { error: "Invalid file type. Supported formats: PDF, DOC, DOCX, TXT, ZIP, JPG, PNG, SVG, MP4, WebM" },
           { status: 400 }
         )
       }
