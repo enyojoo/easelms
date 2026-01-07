@@ -5,10 +5,6 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useTheme } from "./ThemeProvider"
 
-/**
- * Brand indicator component
- * This component displays platform branding information
- */
 export default function Indicator() {
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)

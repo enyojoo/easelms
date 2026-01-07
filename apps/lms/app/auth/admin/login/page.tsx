@@ -143,7 +143,7 @@ export default function AdminLoginPage() {
             </CardFooter>
           </form>
         </Card>
-        <BrandIndicator />
+        <Indicator />
       </div>
     </div>
   )
