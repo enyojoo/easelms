@@ -46,15 +46,24 @@ interface CourseInstructorSettingsProps {
   }
   onUpdate: (settings: any) => void
   courseId?: string | number
+  instructors?: Array<{
+    id: string
+    name: string
+    image?: string | null
+    bio?: string | null
+  }>
+  onInstructorsChange?: (instructors: Array<{ id: string; name: string; image?: string | null; bio?: string | null }>) => void
 }
 
 export default function CourseInstructorSettings({
   settings,
   onUpdate,
   courseId,
+  instructors: propsInstructors,
+  onInstructorsChange,
 }: CourseInstructorSettingsProps) {
-  const [instructors, setInstructors] = useState<Instructor[]>([])
-  const [loading, setLoading] = useState(true)
+  const [instructors, setInstructors] = useState<Instructor[]>(propsInstructors || [])
+  const [loading, setLoading] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null)
@@ -68,33 +77,14 @@ export default function CourseInstructorSettings({
     bio: "",
   })
 
-  // Fetch all instructors only when instructor settings are enabled
+  // Sync instructors from props
   useEffect(() => {
-    const fetchInstructors = async () => {
-      if (!settings.instructorEnabled) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        const response = await fetch("/api/instructors")
-        if (!response.ok) {
-          throw new Error("Failed to fetch instructors")
-        }
-        const data = await response.json()
-        setInstructors(data.instructors || [])
-      } catch (error: any) {
-        console.error("Error fetching instructors:", error)
-        toast.error("Failed to load instructors")
-      } finally {
-        setLoading(false)
-      }
+    if (propsInstructors) {
+      setInstructors(propsInstructors)
     }
+  }, [propsInstructors])
 
-    fetchInstructors()
-  }, [settings.instructorEnabled])
-
+  // Fetch instructors only when needed (create/edit/delete operations)
   const fetchInstructors = async () => {
     try {
       setLoading(true)
@@ -139,6 +129,11 @@ export default function CourseInstructorSettings({
       setIsDialogOpen(false)
       setFormData({ name: "", image: "", bio: "" })
       await fetchInstructors()
+      // Notify parent component of instructors change
+      if (onInstructorsChange) {
+        const updatedInstructors = await fetch("/api/instructors").then(r => r.json()).then(d => d.instructors || [])
+        onInstructorsChange(updatedInstructors)
+      }
     } catch (error: any) {
       console.error("Error creating instructor:", error)
       toast.error(error.message || "Failed to create instructor")
@@ -172,6 +167,11 @@ export default function CourseInstructorSettings({
       setEditingInstructor(null)
       setFormData({ name: "", image: "", bio: "" })
       await fetchInstructors()
+      // Notify parent component of instructors change
+      if (onInstructorsChange) {
+        const updatedInstructors = await fetch("/api/instructors").then(r => r.json()).then(d => d.instructors || [])
+        onInstructorsChange(updatedInstructors)
+      }
     } catch (error: any) {
       console.error("Error updating instructor:", error)
       toast.error(error.message || "Failed to update instructor")
@@ -200,6 +200,11 @@ export default function CourseInstructorSettings({
       onUpdate({ ...settings, instructorIds: updatedIds })
       
       await fetchInstructors()
+      // Notify parent component of instructors change
+      if (onInstructorsChange) {
+        const updatedInstructors = await fetch("/api/instructors").then(r => r.json()).then(d => d.instructors || [])
+        onInstructorsChange(updatedInstructors)
+      }
     } catch (error: any) {
       console.error("Error deleting instructor:", error)
       toast.error(error.message || "Failed to delete instructor")
@@ -325,7 +330,7 @@ export default function CourseInstructorSettings({
             </div>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading && instructors.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin" />
               </div>

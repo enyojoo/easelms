@@ -133,6 +133,13 @@ function NewCourseContent() {
   const [loading, setLoading] = useState(false)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [instructors, setInstructors] = useState<Array<{
+    id: string
+    name: string
+    image?: string | null
+    bio?: string | null
+  }>>([])
+  const [instructorsLoading, setInstructorsLoading] = useState(false)
   
   // Update last saved time when lastSaved changes
   useEffect(() => {
@@ -149,6 +156,36 @@ function NewCourseContent() {
       setCurrentCourseId(null)
     }
   }, [editCourseId])
+
+  // Fetch instructors once when instructor settings are enabled
+  useEffect(() => {
+    const fetchInstructors = async () => {
+      if (!courseData.settings.instructor?.instructorEnabled) {
+        return
+      }
+
+      // Only fetch if we don't already have instructors
+      if (instructors.length > 0) {
+        return
+      }
+
+      try {
+        setInstructorsLoading(true)
+        const response = await fetch("/api/instructors")
+        if (!response.ok) {
+          throw new Error("Failed to fetch instructors")
+        }
+        const data = await response.json()
+        setInstructors(data.instructors || [])
+      } catch (error: any) {
+        console.error("Error fetching instructors:", error)
+      } finally {
+        setInstructorsLoading(false)
+      }
+    }
+
+    fetchInstructors()
+  }, [courseData.settings.instructor?.instructorEnabled, instructors.length])
 
   // Load course data on mount
   useEffect(() => {
@@ -673,6 +710,8 @@ function NewCourseContent() {
                 settings={courseData.settings}
                 onUpdate={(settings) => updateCourseData("settings", settings)}
                 courseId={currentCourseId || editCourseId}
+                instructors={instructors}
+                onInstructorsChange={setInstructors}
               />
             </TabsContent>
 

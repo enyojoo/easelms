@@ -39,9 +39,16 @@ interface CourseSettingsProps {
   }
   onUpdate: (settings: any) => void
   courseId?: string | number
+  instructors?: Array<{
+    id: string
+    name: string
+    image?: string | null
+    bio?: string | null
+  }>
+  onInstructorsChange?: (instructors: Array<{ id: string; name: string; image?: string | null; bio?: string | null }>) => void
 }
 
-export default function CourseSettings({ settings, onUpdate, courseId }: CourseSettingsProps) {
+export default function CourseSettings({ settings, onUpdate, courseId, instructors, onInstructorsChange }: CourseSettingsProps) {
   const handleSwitchChange = (field: string, checked: boolean) => {
     onUpdate({ ...settings, [field]: checked })
   }
@@ -141,6 +148,8 @@ export default function CourseSettings({ settings, onUpdate, courseId }: CourseS
           settings={settings.instructor || { instructorEnabled: false, instructorIds: [] }}
           onUpdate={(data) => handleSectionUpdate("instructor", data)}
           courseId={courseId}
+          instructors={instructors}
+          onInstructorsChange={onInstructorsChange}
         />
       </div>
     </div>
