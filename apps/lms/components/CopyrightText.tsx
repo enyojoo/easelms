@@ -6,39 +6,14 @@ import { useQueryClient } from "@tanstack/react-query"
 
 export default function CopyrightText() {
   const brandSettings = useBrandSettings()
-  const queryClient = useQueryClient()
-  const [mounted, setMounted] = useState(false)
-  const [initialized, setInitialized] = useState(false)
   
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  
-  // Check if settings data is loaded
-  const settingsData = queryClient.getQueryData<{ platformSettings: any }>(["settings"])
-  const hasData = settingsData !== undefined
-  
-  // Initialize once we have data (similar to DynamicTitle)
-  useEffect(() => {
-    if (hasData && !initialized) {
-      setInitialized(true)
-    }
-  }, [hasData, initialized])
-  
-  // Wait for data before showing platform name to prevent default flash
-  // Show year immediately to prevent layout shift
-  // This matches the behavior of DynamicTitle - wait for data before rendering custom values
-  if (!mounted || !hasData || !initialized) {
-    return (
-      <p className="text-xs text-muted-foreground text-center">
-        © {new Date().getFullYear()}
-      </p>
-    )
-  }
+  // Always show platform name - use brand settings or default
+  // If custom branding exists but platform name is empty, still show default
+  const platformName = brandSettings.platformName || "EaseLMS"
   
   return (
     <p className="text-xs text-muted-foreground text-center">
-      © {new Date().getFullYear()} {brandSettings.platformName}
+      © {new Date().getFullYear()} {platformName}
     </p>
   )
 }

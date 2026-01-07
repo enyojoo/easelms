@@ -61,12 +61,25 @@ export function useUpdateSettings() {
       }
       return response.json()
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       // Update cache immediately with new data instead of invalidating
       // This prevents flickering to defaults
-      queryClient.setQueryData(["settings"], data)
-      // Also trigger a background refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["settings"] })
+      // Merge the new platformSettings with existing data to preserve structure
+      const currentData = queryClient.getQueryData<SettingsResponse>(["settings"])
+      const updatedData: SettingsResponse = {
+        ...currentData,
+        platformSettings: {
+          ...currentData?.platformSettings,
+          ...variables.platformSettings,
+        },
+        userSettings: {
+          ...currentData?.userSettings,
+          ...variables.userSettings,
+        },
+      }
+      queryClient.setQueryData(["settings"], updatedData)
+      // DON'T invalidate - this causes refetch and flicker
+      // The cache is already updated with the new data
     },
   })
 }

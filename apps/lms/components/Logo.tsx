@@ -16,7 +16,7 @@ interface LogoProps {
 export default function Logo({ className = "", variant = "full" }: LogoProps) {
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [initialized, setInitialized] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const brandSettings = useBrandSettings()
   const queryClient = useQueryClient()
 
@@ -24,67 +24,69 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
     setMounted(true)
   }, [])
 
-  // Check if settings data is loaded (similar to CopyrightText)
-  const settingsData = queryClient.getQueryData<{ platformSettings: any }>(["settings"])
-  const hasData = settingsData !== undefined
-
-  // Initialize once we have data (similar to DynamicTitle and CopyrightText)
-  useEffect(() => {
-    if (hasData && !initialized) {
-      setInitialized(true)
-    }
-  }, [hasData, initialized])
-
   // Determine which logo to show based on theme
   const isDark = mounted && (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches))
 
-  // Wait for data before rendering to prevent default logo flash
-  // Show a skeleton placeholder to prevent layout shift
-  // Only show placeholder if we don't have data yet
-  if (!mounted || !hasData || !initialized) {
-    return (
-      <div 
-        className={cn("flex items-center animate-pulse bg-muted rounded", className)} 
-        style={{ 
-          minHeight: variant === "icon" ? "32px" : "40px", 
-          minWidth: variant === "icon" ? "32px" : "120px",
-          height: variant === "icon" ? "32px" : "40px",
-          width: variant === "icon" ? "32px" : "120px"
-        }} 
-      />
-    )
+  // Get logo source - prefer custom, fallback to default if empty or error
+  const getLogoSrc = () => {
+    if (variant === "icon") {
+      // Mobile header icon variant - use favicon
+      return brandSettings.favicon || "https://cldup.com/6yEKvPtX22.svg"
+    }
+    // Full logo variant (default) - use logo based on theme
+    const customLogo = isDark ? brandSettings.logoWhite : brandSettings.logoBlack
+    // If custom logo exists and is not empty, use it; otherwise use default
+    return customLogo || (isDark ? "https://cldup.com/bwlFqC4f8I.svg" : "https://cldup.com/VQGhFU5kd6.svg")
   }
 
-  if (variant === "icon") {
-    // Mobile header icon variant - use favicon
-    const logoSrc = brandSettings.favicon
+  const logoSrc = getLogoSrc()
+  const platformName = brandSettings.platformName || "EaseLMS"
 
+  // Handle image load error - fallback to default
+  const handleImageError = () => {
+    if (!imageError) {
+      setImageError(true)
+    }
+  }
+
+  // Reset error when logo source changes
+  useEffect(() => {
+    setImageError(false)
+  }, [logoSrc])
+
+  // Use default logo if image error occurred or if custom logo is empty
+  const finalLogoSrc = imageError || !logoSrc
+    ? (variant === "icon" 
+        ? "https://cldup.com/6yEKvPtX22.svg"
+        : (isDark ? "https://cldup.com/bwlFqC4f8I.svg" : "https://cldup.com/VQGhFU5kd6.svg"))
+    : logoSrc
+
+  if (variant === "icon") {
     return (
       <Link href="/" className={cn("flex items-center", className)}>
         <Image
-          src={logoSrc}
-          alt={`${brandSettings.platformName} Logo`}
+          src={finalLogoSrc}
+          alt={`${platformName} Logo`}
           width={32}
           height={32}
           className="h-auto w-auto object-contain"
           priority
+          onError={handleImageError}
         />
       </Link>
     )
   }
 
-  // Full logo variant (default) - use logo based on theme
-  const logoSrc = isDark ? brandSettings.logoWhite : brandSettings.logoBlack
-
   return (
     <Link href="/" className={cn("flex items-center", className)}>
       <Image
-        src={logoSrc}
-        alt={`${brandSettings.platformName} Logo`}
+        src={finalLogoSrc}
+        alt={`${platformName} Logo`}
         width={120}
         height={40}
         className="h-auto w-auto object-contain"
         priority
+        onError={handleImageError}
       />
     </Link>
   )

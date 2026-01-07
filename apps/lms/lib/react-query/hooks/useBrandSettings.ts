@@ -29,11 +29,22 @@ export function useBrandSettings(): BrandSettings {
   const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["settings"],
     queryFn: async () => {
-      const response = await fetch("/api/settings")
-      if (!response.ok) {
+      try {
+        // Try public brand settings endpoint first (works on auth pages)
+        const publicResponse = await fetch("/api/brand-settings")
+        if (publicResponse.ok) {
+          return await publicResponse.json()
+        }
+        // Fallback to authenticated endpoint if public fails
+        const response = await fetch("/api/settings")
+        if (!response.ok) {
+          return { platformSettings: null }
+        }
+        return response.json()
+      } catch (error) {
+        // If fetch fails, return null to use defaults
         return { platformSettings: null }
       }
-      return response.json()
     },
     staleTime: Infinity, // Never consider data stale - brand settings don't change often
     gcTime: Infinity, // Keep cache forever - once loaded, always use it
@@ -49,7 +60,7 @@ export function useBrandSettings(): BrandSettings {
   const hasCachedData = data !== undefined
   
   // Check if ANY custom brand setting has been set
-  // This is the key: if custom branding exists, NEVER use defaults
+  // This is the key: if custom branding exists, use it instead of defaults
   const hasCustomBranding = hasCachedData && platformSettings && !!(
     platformSettings.platform_name ||
     platformSettings.logo_black ||
@@ -61,27 +72,15 @@ export function useBrandSettings(): BrandSettings {
     platformSettings.seo_image
   )
   
-  // Helper function to get value - NEVER uses defaults if custom branding exists
-  const getValue = <T,>(dbValue: T | null | undefined, defaultValue: T): T => {
-    // If custom branding exists, ALWAYS prefer custom values (even if null/undefined)
-    // Only fall back to defaults if the field is required and no custom value exists
-    if (hasCustomBranding) {
-      // Custom branding exists - use custom value, fallback to default only for required fields
-      return (dbValue ?? defaultValue) as T
+  // Helper to get value: use custom if set, otherwise use default
+  // This ensures custom values replace defaults, but empty custom values fallback to defaults
+  const getValue = (customValue: string | null | undefined, defaultValue: string): string => {
+    if (hasCustomBranding && customValue) {
+      return customValue
     }
-    
-    // No custom branding exists yet
-    if (hasCachedData) {
-      // We have data but no custom branding - use defaults
-      // This handles the case where platformSettings is null (no record) or all fields are null
-      return defaultValue
-    }
-    
-    // No cached data yet (first load) - use defaults temporarily
-    // Once data loads, this will be recalculated
     return defaultValue
   }
-
+  
   return {
     platformName: getValue(platformSettings?.platform_name, DEFAULT_BRAND_SETTINGS.platformName),
     platformDescription: getValue(platformSettings?.platform_description, DEFAULT_BRAND_SETTINGS.platformDescription),

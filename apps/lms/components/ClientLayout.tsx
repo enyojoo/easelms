@@ -19,8 +19,10 @@ import { useQueryClient } from "@tanstack/react-query"
 
 export default function ClientLayout({
   children,
+  initialSettingsData,
 }: {
   children: React.ReactNode
+  initialSettingsData?: { platformSettings: any }
 }) {
   const pathname = usePathname()
   
@@ -258,7 +260,7 @@ export default function ClientLayout({
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <BrandSettingsPrefetcher>
+        <BrandSettingsPrefetcher initialData={initialSettingsData}>
           <ThemeProvider defaultTheme="dark" storageKey="easelms-theme">
             <DynamicTitle />
             <DynamicFavicon />
@@ -296,35 +298,57 @@ export default function ClientLayout({
 }
 
 // Component to prefetch brand settings on mount to prevent defaults from showing
-function BrandSettingsPrefetcher({ children }: { children: React.ReactNode }) {
+function BrandSettingsPrefetcher({ 
+  children, 
+  initialData 
+}: { 
+  children: React.ReactNode
+  initialData?: { platformSettings: any }
+}) {
   const queryClient = useQueryClient()
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    // Set initial data from server-side if provided
+    // This ensures data is available immediately on client-side, preventing flicker
+    if (initialData) {
+      queryClient.setQueryData(["settings"], initialData)
+    }
     
     // Check if data already exists in cache
     const cachedData = queryClient.getQueryData<{ platformSettings: any }>(["settings"])
     
-    // Only prefetch if data doesn't exist in cache
+    // Only prefetch if data doesn't exist in cache AND initialData wasn't provided
     // This ensures we don't refetch unnecessarily and data is available immediately
-    if (!cachedData) {
+    // Data persists in cache forever (gcTime: Infinity), so we only fetch once
+    if (!cachedData && !initialData) {
       // Prefetch brand settings immediately on mount to ensure data is available
       // This prevents defaults from showing even briefly
+      // Use public endpoint that works on auth pages too
       queryClient.prefetchQuery({
         queryKey: ["settings"],
         queryFn: async () => {
-          const response = await fetch("/api/settings")
-          if (!response.ok) {
+          try {
+            // Try public brand settings endpoint first (works on auth pages)
+            const publicResponse = await fetch("/api/brand-settings")
+            if (publicResponse.ok) {
+              return await publicResponse.json()
+            }
+            // Fallback to authenticated endpoint if public fails
+            const response = await fetch("/api/settings")
+            if (!response.ok) {
+              return { platformSettings: null }
+            }
+            return response.json()
+          } catch (error) {
+            // If fetch fails, return null to use defaults
             return { platformSettings: null }
           }
-          return response.json()
         },
-        staleTime: Infinity,
-        gcTime: Infinity,
+        staleTime: Infinity, // Never consider stale
+        gcTime: Infinity, // Keep forever
       })
     }
-  }, [queryClient])
+  }, [queryClient, initialData])
 
   return <>{children}</>
 }

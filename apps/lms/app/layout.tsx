@@ -70,6 +70,24 @@ export default async function RootLayout({
   const brandSettings = await getBrandSettings()
   const initialTitle = brandSettings.seoTitle || `${brandSettings.platformName} - Learning Management System`
   
+  // Prepare initial data for React Query to prevent flicker
+  // Fetch actual platform settings from database to pass to client
+  let initialSettingsData: { platformSettings: any } | undefined
+  
+  try {
+    const { createServiceRoleClient } = await import("@/lib/supabase/server")
+    const supabase = createServiceRoleClient()
+    const { data: platformSettings } = await supabase
+      .from("platform_settings")
+      .select("*")
+      .single()
+    
+    initialSettingsData = { platformSettings: platformSettings || null }
+  } catch (error) {
+    // If fetch fails, pass null to let client-side handle it
+    initialSettingsData = { platformSettings: null }
+  }
+  
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.className} bg-background text-text-primary`}>
@@ -98,7 +116,7 @@ export default async function RootLayout({
             `,
           }}
         />
-        <ClientLayout>{children}</ClientLayout>
+        <ClientLayout initialSettingsData={initialSettingsData}>{children}</ClientLayout>
       </body>
     </html>
   )

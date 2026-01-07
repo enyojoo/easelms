@@ -93,7 +93,19 @@ export default function BrandSettings() {
       }
 
       await updateSettingsMutation.mutateAsync({ platformSettings })
+      
+      // Update local state and ref
       initialSettingsRef.current = { ...brandSettings }
+      
+      // Update the settings data in the component to reflect changes immediately
+      // The mutation already updates the cache, but we need to ensure UI reflects it
+      if (settingsData) {
+        settingsData.platformSettings = {
+          ...settingsData.platformSettings,
+          ...platformSettings,
+        }
+      }
+      
       setIsEditing(false)
       toast.success("Brand settings saved successfully")
     } catch (err: any) {
