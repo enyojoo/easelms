@@ -7,10 +7,16 @@ import { useBrandSettings } from "@/lib/react-query/hooks/useBrandSettings"
 /**
  * Get page name from pathname for immediate title setting
  */
-function getPageNameFromPath(pathname: string): string {
-  // Course pages - will be handled separately with course title
-  if (pathname.match(/\/courses\/\d+/)) {
-    return "" // Will be set by course layout metadata
+function getPageNameFromPath(pathname: string): string | null {
+  // Course detail pages - these will be handled by layout metadata with course title
+  // Return null so we read from HTML head instead
+  if (pathname.match(/\/courses\/[^/]+$/)) {
+    return null // Will be set by course layout metadata
+  }
+  
+  // Course learn pages - also handled by layout
+  if (pathname.match(/\/courses\/[^/]+\/learn/)) {
+    return null // Will be set by course layout metadata
   }
   
   // Map common routes to page names
@@ -35,7 +41,38 @@ function getPageNameFromPath(pathname: string): string {
     "/forgot-password/new-password": "New Password",
   }
   
-  return routeMap[pathname] || ""
+  // Check exact match first
+  if (routeMap[pathname]) {
+    return routeMap[pathname]
+  }
+  
+  // Check for admin learner detail pages
+  if (pathname.match(/^\/admin\/learners\/[^/]+$/)) {
+    return "Learner Details"
+  }
+  
+  // Check for course preview pages
+  if (pathname.match(/^\/admin\/courses\/preview\/[^/]+$/)) {
+    return null // Will be set by layout metadata
+  }
+  
+  // Check for course preview-learn pages
+  if (pathname.match(/^\/admin\/courses\/[^/]+\/preview-learn$/)) {
+    return null // Will be set by layout metadata
+  }
+  
+  // Check for admin course learn pages
+  if (pathname.match(/^\/admin\/courses\/[^/]+\/learn$/)) {
+    return null // Will be set by layout metadata
+  }
+  
+  // Check for course summary pages
+  if (pathname.match(/\/courses\/[^/]+\/learn\/summary$/)) {
+    return null // Will be set by layout metadata
+  }
+  
+  // Unknown route - return null to read from HTML head
+  return null
 }
 
 /**
@@ -56,9 +93,25 @@ export default function DynamicTitle() {
 
     // On pathname change, set title immediately to prevent flicker
     if (pathname !== lastPathnameRef.current) {
-      // Set title synchronously - don't wait for anything
-      const pageName = getPageNameFromPath(pathname)
+      // First, try to read title from HTML head (set by server-side metadata)
+      // This is the most accurate as it includes course titles, etc.
+      const metaTitle = document.querySelector('title')
+      if (metaTitle && metaTitle.textContent) {
+        const serverTitle = metaTitle.textContent.trim()
+        // Only use if it's not the default/root title and looks like a page title
+        if (serverTitle && 
+            serverTitle !== lastTitleRef.current && 
+            serverTitle.includes(" - ")) {
+          document.title = serverTitle
+          lastTitleRef.current = serverTitle
+          lastPathnameRef.current = pathname
+          return // Use server-set title immediately
+        }
+      }
       
+      // If no server title yet or it's the default, set title based on pathname
+      // This prevents showing domain URL
+      const pageName = getPageNameFromPath(pathname)
       if (pageName) {
         // Get platform name - use cached value if available, otherwise use placeholder
         const platformName = (brandSettings.hasData && brandSettings.platformName) 
@@ -73,14 +126,21 @@ export default function DynamicTitle() {
           lastTitleRef.current = newTitle
         }
       } else {
-        // For course pages or unknown routes, try to read from HTML head
-        // Next.js should have set it via generateMetadata
-        const metaTitle = document.querySelector('title')
+        // For course pages or routes without mapping, try HTML head again
+        // or set a generic title to prevent domain URL flash
         if (metaTitle && metaTitle.textContent) {
           const serverTitle = metaTitle.textContent.trim()
           if (serverTitle && serverTitle !== lastTitleRef.current) {
             document.title = serverTitle
             lastTitleRef.current = serverTitle
+          }
+        } else {
+          // Last resort: set generic title to prevent domain URL
+          const platformName = brandSettings.platformName || "Platform"
+          const fallbackTitle = `Page - ${platformName}`
+          if (fallbackTitle !== lastTitleRef.current) {
+            document.title = fallbackTitle
+            lastTitleRef.current = fallbackTitle
           }
         }
       }
