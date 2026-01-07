@@ -355,7 +355,13 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=enyojoo/easelms&type=Date)](https://star-history.com/#enyojoo/easelms&Date)
+<a href="https://www.star-history.com/#enyojoo/easelms&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=enyojoo/easelms&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=enyojoo/easelms&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=enyojoo/easelms&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ---
 
