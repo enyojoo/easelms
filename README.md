@@ -186,10 +186,14 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
    ```bash
    npm run dev
    ```
+   
+   This will start both applications:
+   - **LMS Application**: [http://localhost:3000](http://localhost:3000) (apps/lms)
+   - **Website**: [http://localhost:3001](http://localhost:3001) (apps/website)
 
 6. **Open your browser**
    
-   Navigate to [http://localhost:3000](http://localhost:3000)
+   Navigate to [http://localhost:3000](http://localhost:3000) for the LMS application
 
 ### First Admin User
 
