@@ -173,40 +173,49 @@ export default function ModernVideoPlayer({
   // Reset autoplay processed flag when src changes
   useEffect(() => {
     autoplayProcessedRef.current = false
-    setIsLoading(true) // Reset loading state when src changes
+    setIsLoading(false) // Start with loading false - only show spinner when actually buffering
   }, [src])
 
-  // Track video loading state
+  // Track video loading state - only show spinner when actually buffering
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
     const handleLoadStart = () => {
-      setIsLoading(true)
+      // Only show loading if video is not already ready (cached videos won't need loading)
+      // Check if video has enough data to play
+      if (video.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+        setIsLoading(true)
+      }
     }
 
     const handleWaiting = () => {
-      // Video is waiting for data (buffering)
+      // Video is waiting for data (buffering) - this is the key event for showing spinner
       setIsLoading(true)
     }
 
     const handleCanPlay = () => {
-      // Video can start playing
+      // Video can start playing - hide spinner
       setIsLoading(false)
     }
 
     const handleCanPlayThrough = () => {
-      // Video can play through without stopping
+      // Video can play through without stopping - hide spinner
       setIsLoading(false)
     }
 
     const handlePlaying = () => {
-      // Video is actually playing (not buffering)
+      // Video is actually playing (not buffering) - hide spinner
       setIsLoading(false)
     }
 
     const handleError = () => {
       // Stop loading on error
+      setIsLoading(false)
+    }
+
+    // Check initial state - if video is already ready (cached), don't show loading
+    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
       setIsLoading(false)
     }
 
