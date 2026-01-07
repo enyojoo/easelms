@@ -10,14 +10,16 @@ export interface BrandSettings {
   seoDescription?: string
   seoKeywords?: string
   seoImage?: string
+  creditsEnabled?: boolean
 }
 
 const DEFAULT_BRAND_SETTINGS: BrandSettings = {
-  platformName: "EaseLMS",
-  platformDescription: "EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.",
-  logoBlack: "https://cldup.com/VQGhFU5kd6.svg",
-  logoWhite: "https://cldup.com/bwlFqC4f8I.svg",
-  favicon: "https://cldup.com/6yEKvPtX22.svg",
+  platformName: PLATFORM_DEFAULTS.platformName,
+  platformDescription: PLATFORM_DEFAULTS.platformDescription,
+  logoBlack: PLATFORM_DEFAULTS.logoBlack,
+  logoWhite: PLATFORM_DEFAULTS.logoWhite,
+  favicon: PLATFORM_DEFAULTS.favicon,
+  creditsEnabled: PLATFORM_DEFAULTS.credits.enabled,
 }
 
 export async function getBrandSettings(): Promise<BrandSettings> {
@@ -42,9 +44,13 @@ export async function getBrandSettings(): Promise<BrandSettings> {
       seoDescription: platformSettings.seo_description,
       seoKeywords: platformSettings.seo_keywords,
       seoImage: platformSettings.seo_image,
+      creditsEnabled: platformSettings.credits_enabled !== undefined ? platformSettings.credits_enabled : true,
     }
   } catch (error) {
     console.error("Error fetching brand settings:", error)
     return DEFAULT_BRAND_SETTINGS
+  }
+}
+
   }
 }

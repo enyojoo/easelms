@@ -53,6 +53,11 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'seo_image') THEN
     ALTER TABLE platform_settings ADD COLUMN seo_image TEXT;
   END IF;
+  
+  -- Credits settings (for open-source attribution)
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'platform_settings' AND column_name = 'credits_enabled') THEN
+    ALTER TABLE platform_settings ADD COLUMN credits_enabled BOOLEAN DEFAULT true;
+  END IF;
 END $$;
 
 -- Create or update the update_updated_at_column function if it doesn't exist
@@ -77,12 +82,14 @@ INSERT INTO platform_settings (
   platform_description,
   logo_black,
   logo_white,
-  favicon
+  favicon,
+  credits_enabled
 )
 SELECT 
   'EaseLMS',
   'EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.',
   'https://cldup.com/VQGhFU5kd6.svg',
   'https://cldup.com/bwlFqC4f8I.svg',
-  'https://cldup.com/6yEKvPtX22.svg'
+  'https://cldup.com/6yEKvPtX22.svg',
+  true
 WHERE NOT EXISTS (SELECT 1 FROM platform_settings);

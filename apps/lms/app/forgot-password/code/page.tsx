@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import Logo from "@/components/Logo"
+import PoweredByEaseLMS from "@/components/PoweredByEaseLMS"
 
 export default function ResetCodePage() {
   const [code, setCode] = useState(["", "", "", "", "", ""])
@@ -92,6 +93,7 @@ export default function ResetCodePage() {
             </CardFooter>
           </form>
         </Card>
+        <PoweredByEaseLMS className="mt-4" />
       </div>
     </div>
   )

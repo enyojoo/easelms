@@ -1,13 +1,14 @@
 import { useQuery } from "@tanstack/react-query"
 import { PlatformSettings } from "./useSettings"
+import { PLATFORM_DEFAULTS } from "@/lib/config/platform-defaults"
 
-// Default brand settings
+// Default brand settings (from hidden config)
 export const DEFAULT_BRAND_SETTINGS = {
-  platformName: "EaseLMS",
-  platformDescription: "EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.",
-  logoBlack: "https://cldup.com/VQGhFU5kd6.svg",
-  logoWhite: "https://cldup.com/bwlFqC4f8I.svg",
-  favicon: "https://cldup.com/6yEKvPtX22.svg",
+  platformName: PLATFORM_DEFAULTS.platformName,
+  platformDescription: PLATFORM_DEFAULTS.platformDescription,
+  logoBlack: PLATFORM_DEFAULTS.logoBlack,
+  logoWhite: PLATFORM_DEFAULTS.logoWhite,
+  favicon: PLATFORM_DEFAULTS.favicon,
 }
 
 export interface BrandSettings {
@@ -20,6 +21,7 @@ export interface BrandSettings {
   seoDescription?: string
   seoKeywords?: string
   seoImage?: string
+  creditsEnabled?: boolean
 }
 
 // Hook to get brand settings with defaults
@@ -49,5 +51,9 @@ export function useBrandSettings(): BrandSettings {
     seoDescription: platformSettings?.seo_description,
     seoKeywords: platformSettings?.seo_keywords,
     seoImage: platformSettings?.seo_image,
+    creditsEnabled: platformSettings?.credits_enabled !== undefined ? platformSettings.credits_enabled : true,
+  }
+}
+
   }
 }

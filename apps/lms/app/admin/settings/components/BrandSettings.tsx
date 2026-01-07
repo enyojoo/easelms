@@ -20,15 +20,16 @@ export default function BrandSettings() {
   const [isSaving, setIsSaving] = useState(false)
   
   const [brandSettings, setBrandSettings] = useState({
-    platformName: "EaseLMS",
-    platformDescription: "EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.",
-    logoBlack: "https://cldup.com/VQGhFU5kd6.svg",
-    logoWhite: "https://cldup.com/bwlFqC4f8I.svg",
-    favicon: "https://cldup.com/6yEKvPtX22.svg",
+    platformName: PLATFORM_DEFAULTS.platformName,
+    platformDescription: PLATFORM_DEFAULTS.platformDescription,
+    logoBlack: PLATFORM_DEFAULTS.logoBlack,
+    logoWhite: PLATFORM_DEFAULTS.logoWhite,
+    favicon: PLATFORM_DEFAULTS.favicon,
     seoTitle: "",
     seoDescription: "",
     seoKeywords: "",
     seoImage: "",
+    creditsEnabled: PLATFORM_DEFAULTS.credits.enabled,
   })
   
   const initialSettingsRef = useRef<typeof brandSettings | null>(null)
@@ -39,11 +40,11 @@ export default function BrandSettings() {
     if (settingsData?.platformSettings) {
       const platformSettings = settingsData.platformSettings
       const loadedSettings = {
-        platformName: platformSettings.platform_name || "EaseLMS",
-        platformDescription: platformSettings.platform_description || "EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.",
-        logoBlack: platformSettings.logo_black || "https://cldup.com/VQGhFU5kd6.svg",
-        logoWhite: platformSettings.logo_white || "https://cldup.com/bwlFqC4f8I.svg",
-        favicon: platformSettings.favicon || "https://cldup.com/6yEKvPtX22.svg",
+        platformName: platformSettings.platform_name || PLATFORM_DEFAULTS.platformName,
+        platformDescription: platformSettings.platform_description || PLATFORM_DEFAULTS.platformDescription,
+        logoBlack: platformSettings.logo_black || PLATFORM_DEFAULTS.logoBlack,
+        logoWhite: platformSettings.logo_white || PLATFORM_DEFAULTS.logoWhite,
+        favicon: platformSettings.favicon || PLATFORM_DEFAULTS.favicon,
         seoTitle: platformSettings.seo_title || "",
         seoDescription: platformSettings.seo_description || "",
         seoKeywords: platformSettings.seo_keywords || "",
@@ -80,17 +81,18 @@ export default function BrandSettings() {
     setError(null)
 
     try {
-      const platformSettings = {
-        platform_name: brandSettings.platformName,
-        platform_description: brandSettings.platformDescription,
-        logo_black: brandSettings.logoBlack,
-        logo_white: brandSettings.logoWhite,
-        favicon: brandSettings.favicon,
-        seo_title: brandSettings.seoTitle || null,
-        seo_description: brandSettings.seoDescription || null,
-        seo_keywords: brandSettings.seoKeywords || null,
-        seo_image: brandSettings.seoImage || null,
-      }
+        const platformSettings = {
+          platform_name: brandSettings.platformName,
+          platform_description: brandSettings.platformDescription,
+          logo_black: brandSettings.logoBlack,
+          logo_white: brandSettings.logoWhite,
+          favicon: brandSettings.favicon,
+          seo_title: brandSettings.seoTitle || null,
+          seo_description: brandSettings.seoDescription || null,
+          seo_keywords: brandSettings.seoKeywords || null,
+          seo_image: brandSettings.seoImage || null,
+          credits_enabled: brandSettings.creditsEnabled,
+        }
 
       await updateSettingsMutation.mutateAsync({ platformSettings })
       initialSettingsRef.current = { ...brandSettings }

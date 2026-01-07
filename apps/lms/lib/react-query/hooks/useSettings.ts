@@ -16,6 +16,7 @@ export interface PlatformSettings {
   seo_description?: string
   seo_keywords?: string
   seo_image?: string
+  credits_enabled?: boolean
 }
 
 interface SettingsResponse {

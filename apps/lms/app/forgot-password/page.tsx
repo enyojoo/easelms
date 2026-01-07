@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import Logo from "@/components/Logo"
+import PoweredByEaseLMS from "@/components/PoweredByEaseLMS"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
