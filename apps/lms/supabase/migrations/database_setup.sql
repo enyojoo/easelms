@@ -346,6 +346,51 @@ CREATE TRIGGER update_instructors_updated_at BEFORE UPDATE ON instructors
   FOR EACH ROW EXECUTE FUNCTION update_instructors_updated_at();
 
 -- ============================================================================
+-- PLATFORM_SETTINGS TABLE
+-- Stores platform-wide settings including branding and notifications
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id SERIAL PRIMARY KEY,
+  default_currency TEXT DEFAULT 'USD',
+  course_enrollment_notifications BOOLEAN DEFAULT true,
+  course_completion_notifications BOOLEAN DEFAULT true,
+  platform_announcements BOOLEAN DEFAULT true,
+  user_email_notifications BOOLEAN DEFAULT true,
+  -- Brand settings
+  platform_name TEXT DEFAULT 'EaseLMS',
+  platform_description TEXT DEFAULT 'EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.',
+  logo_black TEXT DEFAULT 'https://cldup.com/VQGhFU5kd6.svg',
+  logo_white TEXT DEFAULT 'https://cldup.com/bwlFqC4f8I.svg',
+  favicon TEXT DEFAULT 'https://cldup.com/6yEKvPtX22.svg',
+  -- SEO settings
+  seo_title TEXT,
+  seo_description TEXT,
+  seo_keywords TEXT,
+  seo_image TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TRIGGER update_platform_settings_updated_at BEFORE UPDATE ON platform_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insert default platform settings if none exist
+INSERT INTO platform_settings (
+  platform_name,
+  platform_description,
+  logo_black,
+  logo_white,
+  favicon
+)
+SELECT 
+  'EaseLMS',
+  'EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.',
+  'https://cldup.com/VQGhFU5kd6.svg',
+  'https://cldup.com/bwlFqC4f8I.svg',
+  'https://cldup.com/6yEKvPtX22.svg'
+WHERE NOT EXISTS (SELECT 1 FROM platform_settings);
+
+-- ============================================================================
 -- COURSE_INSTRUCTORS TABLE
 -- Junction table for courses and instructors (many-to-many)
 -- ============================================================================
@@ -468,6 +513,7 @@ ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE instructors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_instructors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE course_prerequisites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE platform_settings ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view their own profile"
@@ -762,6 +808,20 @@ CREATE POLICY "Anyone can view course prerequisites"
 
 CREATE POLICY "Admins can manage course prerequisites"
   ON course_prerequisites FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND user_type = 'admin'
+    )
+  );
+
+-- Platform settings policies
+CREATE POLICY "Anyone can view platform settings"
+  ON platform_settings FOR SELECT
+  USING (TRUE);
+
+CREATE POLICY "Admins can manage platform settings"
+  ON platform_settings FOR ALL
   USING (
     EXISTS (
       SELECT 1 FROM profiles

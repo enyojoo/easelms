@@ -182,16 +182,7 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
       - Click "Run" (or press Cmd/Ctrl + Enter)
       - Wait for the migration to complete (you should see "Success. No rows returned")
    
-   d. **Run the brand settings migration (optional)**
-      - In your Supabase project, go to SQL Editor
-      - Click "New Query"
-      - Open the file `apps/lms/supabase/migrations/add_brand_settings.sql` from this repository
-      - Copy the entire contents of the file
-      - Paste it into the SQL Editor
-      - Click "Run" (or press Cmd/Ctrl + Enter)
-      - This adds brand settings columns to the `platform_settings` table
-   
-   e. **Verify the migration**
+   d. **Verify the migration**
       - Go to Table Editor in Supabase
       - You should see all the tables created: `profiles`, `courses`, `lessons`, `enrollments`, `progress`, `payments`, `certificates`, `instructors`, `resources`, `quiz_questions`, `quiz_settings`, `quiz_attempts`, `quiz_results`, `course_instructors`, `course_prerequisites`, `lesson_resources`, and `platform_settings`
 
