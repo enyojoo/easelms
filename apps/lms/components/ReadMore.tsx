@@ -19,7 +19,7 @@ export default function ReadMore({ text, maxLength = 350, className }: ReadMoreP
 
   // If text is shorter than maxLength, no need for expand/collapse
   if (text.length <= maxLength) {
-    return <p className={cn("text-sm text-muted-foreground", className)}>{text}</p>
+    return <p className={cn("text-sm md:text-base text-muted-foreground", className)}>{text}</p>
   }
 
   const truncatedText = text.slice(0, maxLength).trim()
@@ -27,7 +27,7 @@ export default function ReadMore({ text, maxLength = 350, className }: ReadMoreP
   const hasMore = text.length > maxLength
 
   return (
-    <div className={cn("text-sm text-muted-foreground", className)}>
+    <div className={cn("text-sm md:text-base text-muted-foreground", className)}>
       <p>
         {displayText}
         {!isExpanded && hasMore && "..."}

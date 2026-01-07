@@ -318,50 +318,43 @@ export default function CourseInstructorSettings({
                   return (
                     <div
                       key={instructor.id}
-                      className="flex items-start gap-4 p-4 border rounded-lg"
+                      className="flex items-center gap-3 p-3 border rounded-lg"
                     >
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => handleToggleInstructor(instructor.id)}
                       />
-                      <div className="flex-1 flex items-start gap-4">
-                        {instructor.image ? (
-                          <SafeImage
-                            src={instructor.image}
-                            alt={instructor.name}
-                            className="w-16 h-16 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">
-                              No image
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <h4 className="font-semibold">{instructor.name}</h4>
-                          {instructor.bio && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {instructor.bio}
-                            </p>
-                          )}
+                      {instructor.image ? (
+                        <SafeImage
+                          src={instructor.image}
+                          alt={instructor.name}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                          <span className="text-xs text-muted-foreground">
+                            No image
+                          </span>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEditDialog(instructor)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openDeleteDialog(instructor.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm truncate">{instructor.name}</h4>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openEditDialog(instructor)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDeleteDialog(instructor.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   )

@@ -64,6 +64,10 @@ function NewCourseContent() {
         enabled: boolean
         courseIds: number[]
       }
+      instructor?: {
+        instructorEnabled: boolean
+        instructorIds: string[]
+      }
       currency: string
     }
   }>({
@@ -99,6 +103,10 @@ function NewCourseContent() {
       prerequisites: {
         enabled: false,
         courseIds: [],
+      },
+      instructor: {
+        instructorEnabled: false,
+        instructorIds: [],
       },
       currency: "USD",
     },
@@ -299,6 +307,7 @@ function NewCourseContent() {
                     certificateType: course.certificate_type || "completion",
                   },
                   prerequisites: course.prerequisites || { enabled: false, courseIds: [] },
+                  instructor: course.settings?.instructor || { instructorEnabled: false, instructorIds: [] },
                   currency: course.currency || "USD",
                 },
               })
