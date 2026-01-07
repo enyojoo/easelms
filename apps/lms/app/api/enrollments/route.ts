@@ -115,15 +115,27 @@ export async function POST(request: Request) {
 
   const { courseId, userId } = await request.json()
 
+  // Use service role client for admin checks and enrollment operations to bypass RLS
+  const serviceSupabase = createServiceRoleClient()
+
   // Check if user is admin if userId is provided (admin enrolling another user)
   let targetUserId = user.id
   if (userId && userId !== user.id) {
-    // Verify the requesting user is an admin
-    const { data: profile } = await supabase
+    // Verify the requesting user is an admin using service role client to bypass RLS
+    const { data: profile, error: profileError } = await serviceSupabase
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
       .single()
+
+    if (profileError) {
+      logError("Enrollments API: Error checking admin status", profileError, {
+        component: "enrollments/route",
+        action: "POST",
+        userId: user.id,
+      })
+      return NextResponse.json({ error: "Failed to verify admin status" }, { status: 500 })
+    }
 
     if (profile?.user_type !== "admin") {
       return NextResponse.json({ error: "Forbidden: Only admins can enroll other users" }, { status: 403 })
@@ -136,8 +148,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "courseId is required" }, { status: 400 })
   }
 
+  // Check if user is already enrolled in this course
+  const { data: existingEnrollment, error: checkEnrollmentError } = await serviceSupabase
+    .from("enrollments")
+    .select("id, status")
+    .eq("user_id", targetUserId)
+    .eq("course_id", courseId)
+    .maybeSingle()
+
+  if (checkEnrollmentError && checkEnrollmentError.code !== "PGRST116") {
+    logError("Enrollments API: Error checking existing enrollment", checkEnrollmentError, {
+      component: "enrollments/route",
+      action: "POST",
+      userId: targetUserId,
+      courseId,
+    })
+    return NextResponse.json({ error: "Failed to check enrollment status" }, { status: 500 })
+  }
+
+  if (existingEnrollment) {
+    return NextResponse.json({ 
+      error: "User is already enrolled in this course",
+      enrollment: existingEnrollment 
+    }, { status: 409 }) // 409 Conflict
+  }
+
   // Check prerequisites before enrollment
-  const { data: prerequisitesData } = await supabase
+  const { data: prerequisitesData } = await serviceSupabase
     .from("course_prerequisites")
     .select(`
       prerequisite_course_id,
@@ -153,7 +190,7 @@ export async function POST(request: Request) {
     const prerequisiteIds = prerequisitesData.map((p: any) => p.prerequisite_course_id)
 
     // Check if user has completed all prerequisites
-    const { data: completedEnrollments } = await supabase
+    const { data: completedEnrollments } = await serviceSupabase
       .from("enrollments")
       .select("course_id, completed_at, progress")
       .eq("user_id", targetUserId)
@@ -191,7 +228,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await serviceSupabase
     .from("enrollments")
     .insert({
       user_id: targetUserId,
@@ -203,18 +240,24 @@ export async function POST(request: Request) {
     .single()
 
   if (error) {
+    logError("Enrollments API: Error creating enrollment", error, {
+      component: "enrollments/route",
+      action: "POST",
+      userId: targetUserId,
+      courseId,
+    })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
   // Update enrolled_students count in courses table
   // Recalculate the count to ensure accuracy
-  const { count: currentCount } = await supabase
+  const { count: currentCount } = await serviceSupabase
     .from("enrollments")
     .select("*", { count: "exact", head: true })
     .eq("course_id", courseId)
 
   // Update the courses table with the new count
-  await supabase
+  await serviceSupabase
     .from("courses")
     .update({ enrolled_students: currentCount || 0 })
     .eq("id", courseId)

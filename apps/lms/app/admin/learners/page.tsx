@@ -139,7 +139,15 @@ export default function LearnersPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || "Failed to enroll learner")
+        const errorMessage = errorData.error || "Failed to enroll learner"
+        
+        // Check if user is already enrolled (409 Conflict)
+        if (response.status === 409) {
+          toast.error(`${selectedUser.name} is already enrolled in this course`)
+        } else {
+          toast.error(errorMessage)
+        }
+        throw new Error(errorMessage)
       }
 
       toast.success(`Enrolled ${selectedUser.name} in course`)
