@@ -17,6 +17,7 @@ import {
 import Logo from "./Logo"
 import { ThemeToggle } from "./ThemeToggle"
 import { logout } from "../utils/logout"
+import CopyrightText from "./CopyrightText"
 
 interface LeftSidebarProps {
   userType: "user" | "admin" | "instructor"
@@ -138,9 +139,7 @@ export default function LeftSidebar({ userType }: LeftSidebarProps) {
           <ThemeToggle />
         </div>
         <div className="px-4 pb-4">
-          <p className="text-xs text-muted-foreground text-center">
-            © {new Date().getFullYear()} Enthronement University
-          </p>
+          <CopyrightText />
         </div>
       </div>
     </div>

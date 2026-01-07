@@ -33,7 +33,7 @@ export default function TeamManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null)
 
-  const { data: teamData, isPending: loading, error: queryError } = useTeamMembers()
+  const { data: teamData, isPending: teamPending, error: teamError } = useTeamMembers()
   const createMemberMutation = useCreateTeamMember()
   const deleteUserMutation = useDeleteUser()
 
@@ -49,10 +49,14 @@ export default function TeamManagement() {
     user_type: user.user_type || "admin",
   }))
 
-  const error = queryError ? (queryError as Error).message : null
+  // Check if we have cached data
+  const hasCachedData = !!teamData?.users
   
-  // Show loading spinner only if we have no data at all
-  const showLoading = loading && !teamData
+  // Show skeleton only on true initial load (no cached data exists)
+  const showSkeleton = teamPending && !hasCachedData
+  
+  // Show error only if we have no cached data
+  const error = teamError && !hasCachedData ? (teamError as Error).message : null
 
   const handleAddMember = async () => {
     if (!newMember.name || !newMember.email || !newMember.password) {
@@ -170,7 +174,7 @@ export default function TeamManagement() {
           </Button>
         </div>
         <div className="mt-6">
-          {showLoading ? (
+          {showSkeleton ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>

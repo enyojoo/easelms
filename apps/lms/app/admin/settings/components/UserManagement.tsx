@@ -27,7 +27,7 @@ export default function UserManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
   
-  const { data: usersData, isPending: loading, error: queryError } = usePlatformUsers()
+  const { data: usersData, isPending: usersPending, error: usersError } = usePlatformUsers()
   const deleteUserMutation = useDeleteUser()
 
   // Don't render if not authenticated or not admin
@@ -44,10 +44,14 @@ export default function UserManagement() {
     created_at: user.created_at || new Date().toISOString(),
   }))
 
-  const error = queryError ? (queryError as Error).message : null
+  // Check if we have cached data
+  const hasCachedData = !!usersData?.users
   
-  // Show loading spinner only if we have no data at all
-  const showLoading = loading && !usersData
+  // Show skeleton only on true initial load (no cached data exists)
+  const showSkeleton = usersPending && !hasCachedData
+  
+  // Show error only if we have no cached data
+  const error = usersError && !hasCachedData ? (usersError as Error).message : null
 
   // Note: Suspend/Activate functionality requires a status field in the profiles table
   // For now, this is commented out until the database schema supports it
@@ -134,7 +138,7 @@ export default function UserManagement() {
           </div>
         </div>
         <div className="mt-6">
-          {showLoading ? (
+          {showSkeleton ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>

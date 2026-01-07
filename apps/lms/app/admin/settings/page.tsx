@@ -65,34 +65,41 @@ export default function SettingsPage() {
     }
   }, [user, userType, authLoading, router])
 
-  // Pre-fetch users and team data when user is authenticated
+  // Pre-fetch users and team data when user is authenticated (only if not already cached)
   useEffect(() => {
     if (authLoading || !user || userType !== "admin") return
     
-    // Pre-fetch users and team members in the background
-    queryClient.prefetchQuery({
-      queryKey: ["platformUsers"],
-      queryFn: async () => {
-        const response = await fetch("/api/users?userType=user")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch users")
-        }
-        return response.json()
-      },
-    })
+    // Only prefetch if data is not already cached
+    const platformUsersData = queryClient.getQueryData(["platformUsers"])
+    const teamMembersData = queryClient.getQueryData(["teamMembers"])
     
-    queryClient.prefetchQuery({
-      queryKey: ["teamMembers"],
-      queryFn: async () => {
-        const response = await fetch("/api/users?userType=admin")
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch team members")
-        }
-        return response.json()
-      },
-    })
+    if (!platformUsersData) {
+      queryClient.prefetchQuery({
+        queryKey: ["platformUsers"],
+        queryFn: async () => {
+          const response = await fetch("/api/users?userType=user")
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || "Failed to fetch users")
+          }
+          return response.json()
+        },
+      })
+    }
+    
+    if (!teamMembersData) {
+      queryClient.prefetchQuery({
+        queryKey: ["teamMembers"],
+        queryFn: async () => {
+          const response = await fetch("/api/users?userType=admin")
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || "Failed to fetch team members")
+          }
+          return response.json()
+        },
+      })
+    }
   }, [authLoading, user, userType, queryClient])
 
   // Process settings data from React Query
