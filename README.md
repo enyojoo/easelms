@@ -329,8 +329,7 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 ## 🙏 Acknowledgments
 
 - Built with [Next.js](https://nextjs.org/)
-- Developed with [v0.dev](https://v0.dev/)
-- AI-powered development with [Cursor AI](https://cursor.sh/)
+- Developed with [v0.dev](https://v0.dev/) and [Cursor](https://cursor.com/)
 - UI components from [shadcn/ui](https://ui.shadcn.com/)
 - Database powered by [Supabase](https://supabase.com/)
 - Icons from [Lucide](https://lucide.dev/)
