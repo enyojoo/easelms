@@ -244,7 +244,7 @@ export default function UserSignUpPage() {
             </CardFooter>
           </form>
         </Card>
-        <Indicator />
+        <BrandIndicator />
       </div>
     </div>
   )

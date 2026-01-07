@@ -93,7 +93,7 @@ export default function ResetCodePage() {
             </CardFooter>
           </form>
         </Card>
-        <Indicator />
+        <BrandIndicator />
       </div>
     </div>
   )
