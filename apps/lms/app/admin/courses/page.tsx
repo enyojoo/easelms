@@ -291,8 +291,9 @@ export default function ManageCoursesPage() {
   // Show skeleton ONLY on true initial load (no cached data exists)
   // Once we have data, never show skeleton again (even during refetches)
   // Show cached data instantly even if isPending is true
-  const hasCachedData = !!coursesData?.courses
-  const showSkeleton = (authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasCachedData && coursesPending
+  const hasCachedData = !!coursesData?.courses && coursesData.courses.length > 0
+  const hasAnyData = hasCachedData || draftCourses.length > 0
+  const showSkeleton = (!mounted || authLoading || !user || (userType !== "admin" && userType !== "instructor")) && !hasAnyData
 
   const handleDeleteClick = (courseId: number) => {
     setCourseToDelete(courseId)
@@ -388,6 +389,9 @@ export default function ManageCoursesPage() {
     ...supabaseDrafts,
     ...localStorageDrafts
   ]
+  
+  // Don't show empty state if we're still loading or have cached data
+  const shouldShowEmptyState = mounted && !coursesPending && !hasCachedData && allCourses.length === 0
   
   const filteredCourses = allCourses.filter((course) => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -579,7 +583,7 @@ export default function ManageCoursesPage() {
     <div className="pt-4 md:pt-8">
       {showSkeleton ? (
         <AdminCoursesSkeleton />
-      ) : coursesError && !hasCachedData ? (
+      ) : coursesError && !hasAnyData ? (
         <div className="text-center py-12">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">Error loading courses</h3>
@@ -645,7 +649,7 @@ export default function ManageCoursesPage() {
         )}
       </div>
 
-      {filteredCourses.length === 0 ? (
+      {shouldShowEmptyState && filteredCourses.length === 0 ? (
         <div className="text-center py-12">
           <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No courses found</h3>
@@ -663,11 +667,11 @@ export default function ManageCoursesPage() {
             </Link>
           )}
         </div>
-      ) : (
+      ) : filteredCourses.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-4 lg:gap-5">
           {filteredCourses.map(renderCourseCard)}
         </div>
-      )}
+      ) : null}
 
       <AlertDialog 
         open={deleteDialogOpen} 
