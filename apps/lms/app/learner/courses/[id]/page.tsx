@@ -298,6 +298,14 @@ export default function CoursePage() {
             setIsEnrolling(false)
             return
           }
+          // Show error toast for other enrollment errors
+          if (errorData.error === "User is already enrolled in this course") {
+            toast.error("You are already enrolled in this course")
+          } else {
+            toast.error(errorData.error || "Failed to enroll in course")
+          }
+          setIsEnrolling(false)
+          return
         }
 
         const success = await handleCoursePayment(

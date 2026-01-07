@@ -14,6 +14,7 @@ import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
 import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchases"
 import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
+import { toast } from "sonner"
 
 export default function PurchaseHistoryPage() {
   const router = useRouter()
@@ -199,10 +200,15 @@ export default function PurchaseHistoryPage() {
                               size="sm"
                               onClick={async () => {
                                 if (window.confirm("Are you sure you want to cancel this subscription? You will be redirected to support to complete the cancellation.")) {
-                                  cancelSubscription(purchase.id)
-                                  // Refetch purchases cache to get updated data
-                                  await queryClient.refetchQueries({ queryKey: ["purchases"] })
-                                  router.push("/learner/support")
+                                  try {
+                                    cancelSubscription(purchase.id)
+                                    // Refetch purchases cache to get updated data
+                                    await queryClient.refetchQueries({ queryKey: ["purchases"] })
+                                    toast.success("Subscription cancellation initiated. Please contact support to complete the process.")
+                                    router.push("/learner/support")
+                                  } catch (error: any) {
+                                    toast.error(error?.message || "Failed to cancel subscription. Please try again.")
+                                  }
                                 }
                               }}
                               className="w-full sm:w-auto min-h-[44px]"

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Mail, MessageSquare, Send } from "lucide-react"
+import { toast } from "sonner"
 
 export default function SupportPage() {
   const [formData, setFormData] = useState({
@@ -16,21 +17,23 @@ export default function SupportPage() {
     message: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    
-    setIsSubmitting(false)
-    setSubmitted(true)
-    setFormData({ name: "", email: "", subject: "", message: "" })
-    
-    // Reset success message after 5 seconds
-    setTimeout(() => setSubmitted(false), 5000)
+    try {
+      // TODO: Replace with actual API call when support API is implemented
+      // Simulate form submission
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      
+      toast.success("Thank you! Your message has been sent. We'll get back to you soon.")
+      setFormData({ name: "", email: "", subject: "", message: "" })
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to send message. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -97,14 +100,7 @@ export default function SupportPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {submitted ? (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-              <p className="text-green-800 dark:text-green-200 font-medium">
-                Thank you! Your message has been sent. We'll get back to you soon.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Name</Label>
@@ -166,7 +162,6 @@ export default function SupportPage() {
                 )}
               </Button>
             </form>
-          )}
         </CardContent>
       </Card>
     </div>

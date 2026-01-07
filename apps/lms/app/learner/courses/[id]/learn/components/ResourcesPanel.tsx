@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { toast } from "sonner"
 
 interface Resource {
   id?: string
@@ -146,12 +147,8 @@ export default function ResourcesPanel({ resources }: ResourcesPanelProps) {
       // Clean up blob URL
       window.URL.revokeObjectURL(blobUrl)
     } catch (error: any) {
-      logError("Error downloading file", error, {
-        component: "ResourcesPanel",
-        action: "handleDownload",
-        resourceId: resource.id,
-      })
-      alert(error.message || "Failed to download file. Please try again.")
+      console.error("Error downloading file:", error)
+      toast.error(error.message || "Failed to download file. Please try again.")
     } finally {
       setDownloadingIndex(null)
     }

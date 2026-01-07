@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { US } from "country-flag-icons/react/3x2"
 import { useProfile, useUpdateProfile, useSettings } from "@/lib/react-query/hooks"
+import { toast } from "sonner"
 
 const NigeriaFlag = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6 3" className="w-4 h-4 mr-2">
@@ -158,11 +159,13 @@ export default function LearnerProfilePage() {
         name: formData.name,
         bio: formData.bio,
       })
+      toast.success("Profile updated successfully")
       setIsEditing(false)
       // Dispatch event to refresh header
       window.dispatchEvent(new CustomEvent("profileUpdated"))
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error)
+      toast.error(error?.message || "Failed to update profile. Please try again.")
     }
   }
 
@@ -172,13 +175,13 @@ export default function LearnerProfilePage() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file")
+      toast.error("Please select an image file")
       return
     }
 
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be less than 5MB")
+      toast.error("Image size must be less than 5MB")
       return
     }
 
@@ -214,6 +217,7 @@ export default function LearnerProfilePage() {
       })
 
       if (updateResponse.ok) {
+        toast.success("Profile picture updated successfully")
         // Reset image error state when new image is uploaded
         setImageError(false)
         // Invalidate profile cache to refresh
@@ -227,7 +231,7 @@ export default function LearnerProfilePage() {
       }
     } catch (error: any) {
       console.error("Error uploading image:", error)
-      alert(error.message || "Failed to upload image")
+      toast.error(error.message || "Failed to upload image")
     } finally {
       setUploadingImage(false)
       // Reset file input
@@ -451,9 +455,26 @@ export default function LearnerProfilePage() {
                         day: "numeric",
                       })}
                       certificateId={cert.certificateNumber}
-                      onDownload={() => {
-                        console.log("Downloading certificate:", cert.certificateNumber)
-                        alert("Certificate download started!")
+                      onDownload={async () => {
+                        try {
+                          const response = await fetch(`/api/certificates/${cert.id}/download`)
+                          if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}))
+                            throw new Error(errorData.error || "Failed to download certificate")
+                          }
+                          const blob = await response.blob()
+                          const url = window.URL.createObjectURL(blob)
+                          const a = document.createElement("a")
+                          a.href = url
+                          a.download = `certificate-${cert.courseTitle || "course"}.pdf`
+                          document.body.appendChild(a)
+                          a.click()
+                          window.URL.revokeObjectURL(url)
+                          document.body.removeChild(a)
+                          toast.success("Certificate downloaded successfully")
+                        } catch (error: any) {
+                          toast.error(error.message || "Failed to download certificate")
+                        }
                       }}
                     />
                   ))}
@@ -507,10 +528,13 @@ export default function LearnerProfilePage() {
                           }),
                         })
                         if (!response.ok) {
-                          console.error("Failed to save notification settings")
+                          const errorData = await response.json().catch(() => ({}))
+                          throw new Error(errorData.error || "Failed to save notification settings")
                         }
-                      } catch (error) {
+                        toast.success("Notification settings updated")
+                      } catch (error: any) {
                         console.error("Error saving notification settings:", error)
+                        toast.error(error?.message || "Failed to save notification settings")
                       }
                     }}
                     className="flex-shrink-0 sm:ml-4"
@@ -539,11 +563,17 @@ export default function LearnerProfilePage() {
                         body: JSON.stringify({ currency }),
                       })
                       if (response.ok) {
-                        await loadProfileData()
+                        toast.success("Currency preference updated")
+                        // Invalidate profile cache to refresh
+                        updateProfileMutation.mutate({ currency })
                         window.dispatchEvent(new CustomEvent("profileUpdated"))
+                      } else {
+                        const errorData = await response.json().catch(() => ({}))
+                        throw new Error(errorData.error || "Failed to update currency")
                       }
-                    } catch (error) {
+                    } catch (error: any) {
                       console.error("Error updating currency:", error)
+                      toast.error(error?.message || "Failed to update currency preference")
                     }
                   }}>
                     <SelectTrigger className="w-full min-h-[44px]">
@@ -590,10 +620,28 @@ export default function LearnerProfilePage() {
                       className="flex-grow min-h-[44px]"
                     />
                     <Button 
-                      onClick={() => {
-                        console.log("Saving new password:", newPassword)
-                        setNewPassword("")
-                        alert("Password updated successfully!")
+                      onClick={async () => {
+                        if (!newPassword || newPassword.length < 8) {
+                          toast.error("Password must be at least 8 characters long")
+                          return
+                        }
+                        try {
+                          const response = await fetch("/api/profile", {
+                            method: "PUT",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ password: newPassword }),
+                          })
+                          if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}))
+                            throw new Error(errorData.error || "Failed to update password")
+                          }
+                          toast.success("Password updated successfully")
+                          setNewPassword("")
+                        } catch (error: any) {
+                          toast.error(error?.message || "Failed to update password")
+                        }
                       }} 
                       className="w-full sm:w-auto min-h-[44px]"
                     >

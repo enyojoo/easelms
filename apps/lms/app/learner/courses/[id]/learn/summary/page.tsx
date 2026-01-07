@@ -11,6 +11,7 @@ import CourseSummarySkeleton from "@/components/CourseSummarySkeleton"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import { useCourse, useEnrollments, useQuizResults, useProgress } from "@/lib/react-query/hooks"
+import { toast } from "sonner"
 
 interface Course {
   id: number
@@ -228,7 +229,7 @@ export default function CourseCompletionPage() {
 
   const handleDownloadCertificate = async () => {
     if (!course || !id) {
-      alert("Course information is not available.")
+      toast.error("Course information is not available")
       return
     }
 
@@ -247,7 +248,7 @@ export default function CourseCompletionPage() {
       })
       
       if (!certificateEnabled) {
-        alert("Certificate is not enabled for this course.")
+        toast.error("Certificate is not enabled for this course")
         setDownloadingCertificate(false)
         return
       }
@@ -311,9 +312,10 @@ export default function CourseCompletionPage() {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+      toast.success("Certificate downloaded successfully")
     } catch (error: any) {
       console.error("Error downloading certificate:", error)
-      alert(error.message || "Failed to download certificate. Please try again later.")
+      toast.error(error.message || "Failed to download certificate. Please try again later.")
     } finally {
       setDownloadingCertificate(false)
     }
