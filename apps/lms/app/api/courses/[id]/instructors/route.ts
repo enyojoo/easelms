@@ -80,8 +80,20 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin or instructor
-    const { data: profile } = await supabase
+    // Use service role client to bypass RLS for checking permissions
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      logError("Service role key not available", serviceError, {
+        component: "courses/[id]/instructors/route",
+        action: "POST",
+      })
+      return NextResponse.json({ error: "Service unavailable" }, { status: 503 })
+    }
+
+    // Check if user is admin or instructor (use service client to bypass RLS)
+    const { data: profile } = await serviceClient
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
@@ -100,7 +112,7 @@ export async function POST(
       )
     }
 
-    const serviceSupabase = createServiceRoleClient()
+    const serviceSupabase = serviceClient
 
     // Delete existing course instructors
     const { error: deleteError } = await serviceSupabase

@@ -18,8 +18,20 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin or instructor
-    const { data: profile } = await supabase
+    // Use service role client to bypass RLS for checking permissions
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      logError("Service role key not available", serviceError, {
+        component: "instructors/[id]/route",
+        action: "PUT",
+      })
+      return NextResponse.json({ error: "Service unavailable" }, { status: 503 })
+    }
+
+    // Check if user is admin or instructor (use service client to bypass RLS)
+    const { data: profile } = await serviceClient
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
@@ -39,7 +51,7 @@ export async function PUT(
     }
 
     // Use service role client to bypass RLS
-    const serviceSupabase = createServiceRoleClient()
+    const serviceSupabase = serviceClient
 
     const { data: instructor, error } = await serviceSupabase
       .from("instructors")
@@ -90,8 +102,20 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabase
+    // Use service role client to bypass RLS for checking permissions
+    let serviceClient
+    try {
+      serviceClient = createServiceRoleClient()
+    } catch (serviceError: any) {
+      logError("Service role key not available", serviceError, {
+        component: "instructors/[id]/route",
+        action: "DELETE",
+      })
+      return NextResponse.json({ error: "Service unavailable" }, { status: 503 })
+    }
+
+    // Check if user is admin (use service client to bypass RLS)
+    const { data: profile } = await serviceClient
       .from("profiles")
       .select("user_type")
       .eq("id", user.id)
@@ -102,7 +126,7 @@ export async function DELETE(
     }
 
     // Use service role client to bypass RLS
-    const serviceSupabase = createServiceRoleClient()
+    const serviceSupabase = serviceClient
 
     // Check if instructor is used in any courses
     const { data: courseInstructors } = await serviceSupabase
