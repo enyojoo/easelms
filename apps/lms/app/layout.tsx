@@ -11,6 +11,10 @@ const poppins = Poppins({
   display: "swap",
 })
 
+// Force dynamic rendering to ensure metadata updates when SEO data changes
+export const dynamic = 'force-dynamic'
+export const revalidate = 0 // Disable caching for metadata
+
 export async function generateMetadata(): Promise<Metadata> {
   const brandSettings = await getBrandSettings()
   
