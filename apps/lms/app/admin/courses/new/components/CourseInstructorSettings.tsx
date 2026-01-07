@@ -68,10 +68,32 @@ export default function CourseInstructorSettings({
     bio: "",
   })
 
-  // Fetch all instructors
+  // Fetch all instructors only when instructor settings are enabled
   useEffect(() => {
+    const fetchInstructors = async () => {
+      if (!settings.instructorEnabled) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        const response = await fetch("/api/instructors")
+        if (!response.ok) {
+          throw new Error("Failed to fetch instructors")
+        }
+        const data = await response.json()
+        setInstructors(data.instructors || [])
+      } catch (error: any) {
+        console.error("Error fetching instructors:", error)
+        toast.error("Failed to load instructors")
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchInstructors()
-  }, [])
+  }, [settings.instructorEnabled])
 
   const fetchInstructors = async () => {
     try {
