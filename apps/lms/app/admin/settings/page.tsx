@@ -86,7 +86,8 @@ export default function SettingsPage() {
           }
           return response.json()
         },
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: Infinity, // Never consider data stale
+        gcTime: Infinity, // Keep cache forever
       })
     }
     
@@ -101,7 +102,8 @@ export default function SettingsPage() {
           }
           return response.json()
         },
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: Infinity, // Never consider data stale
+        gcTime: Infinity, // Keep cache forever
       })
     }
   }, [authLoading, user, userType, queryClient])

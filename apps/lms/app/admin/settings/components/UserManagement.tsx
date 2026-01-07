@@ -52,12 +52,13 @@ export default function UserManagement() {
   }))
 
   // Check if we have cached data - show data instantly if available
-  const hasCachedData = !!usersData?.users?.length
+  // Check if property exists, not length (empty array is still valid cached data)
+  const hasCachedData = usersData?.users !== undefined
   
   // Show skeleton ONLY on true initial load (no cached data exists and pending)
   // Once we have data, never show skeleton again (even during refetches)
   // Show cached data instantly even if isPending is true
-  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasCachedData && usersPending
+  const showSkeleton = !hasCachedData && usersPending
   
   // Show error only if we have no cached data
   const error = usersError && !hasCachedData ? (usersError as Error).message : null

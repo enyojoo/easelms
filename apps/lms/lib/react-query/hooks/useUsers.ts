@@ -32,8 +32,12 @@ export function usePlatformUsers() {
       }
       return response.json()
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    placeholderData: (previousData) => previousData,
+    staleTime: Infinity, // Never consider data stale - users don't change frequently
+    gcTime: Infinity, // Keep cache forever - once loaded, always use it
+    placeholderData: (previousData) => previousData, // Always use cached data if available
+    refetchOnMount: false, // Don't refetch on mount if we have cached data
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   })
 }
 
@@ -49,8 +53,12 @@ export function useTeamMembers() {
       }
       return response.json()
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    placeholderData: (previousData) => previousData,
+    staleTime: Infinity, // Never consider data stale - team members don't change frequently
+    gcTime: Infinity, // Keep cache forever - once loaded, always use it
+    placeholderData: (previousData) => previousData, // Always use cached data if available
+    refetchOnMount: false, // Don't refetch on mount if we have cached data
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
   })
 }
 

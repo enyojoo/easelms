@@ -57,12 +57,13 @@ export default function TeamManagement() {
   }))
 
   // Check if we have cached data - show data instantly if available
-  const hasCachedData = !!teamData?.users?.length
+  // Check if property exists, not length (empty array is still valid cached data)
+  const hasCachedData = teamData?.users !== undefined
   
   // Show skeleton ONLY on true initial load (no cached data exists and pending)
   // Once we have data, never show skeleton again (even during refetches)
   // Show cached data instantly even if isPending is true
-  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasCachedData && teamPending
+  const showSkeleton = !hasCachedData && teamPending
   
   // Show error only if we have no cached data
   const error = teamError && !hasCachedData ? (teamError as Error).message : null
