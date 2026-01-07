@@ -199,13 +199,13 @@ After setting up the database, create your first admin user through the Supabase
 
 ## 📖 Documentation
 
-- [Installation Guide](https://easelms.org/docs/installation)
-- [Configuration](https://easelms.org/docs/configuration)
-- [Deployment](https://easelms.org/docs/deployment)
-- [API Reference](https://easelms.org/docs/api)
+- <a href="https://www.easelms.org/docs/installation" target="_blank" rel="noopener noreferrer">Installation Guide</a>
+- <a href="https://www.easelms.org/docs/configuration" target="_blank" rel="noopener noreferrer">Configuration</a>
+- <a href="https://www.easelms.org/docs/deployment" target="_blank" rel="noopener noreferrer">Deployment</a>
+- <a href="https://www.easelms.org/docs/api" target="_blank" rel="noopener noreferrer">API Reference</a>
 - [Contributing Guide](CONTRIBUTING.md)
 
-For detailed documentation, visit [easelms.org/docs](https://easelms.org/docs)
+For detailed documentation, visit <a href="https://www.easelms.org/docs" target="_blank" rel="noopener noreferrer">www.easelms.org/docs</a>
 
 ---
 
@@ -275,7 +275,7 @@ Don't want to manage infrastructure? We offer a fully managed hosted service wit
 | **Professional** | $299/mo | Up to 500 | 200GB | 500GB/mo |
 | **Enterprise** | Custom | Unlimited | Custom | Custom |
 
-[View Full Pricing →](https://easelms.org/pricing) | [Start Free Trial →](https://easelms.org/trial)
+<a href="https://www.easelms.org/pricing" target="_blank" rel="noopener noreferrer">View Full Pricing →</a> | <a href="https://www.easelms.org/trial" target="_blank" rel="noopener noreferrer">Start Free Trial →</a>
 
 ---
 
@@ -315,17 +315,17 @@ This project is licensed under the **AGPL-3.0 License** - see the [LICENSE](LICE
 
 ### Commercial License
 
-If you need to use EaseLMS in a proprietary application without open-sourcing your code, commercial licenses are available. [Contact us](https://easelms.org/contact) for more information.
+If you need to use EaseLMS in a proprietary application without open-sourcing your code, commercial licenses are available. <a href="https://www.easelms.org/contact" target="_blank" rel="noopener noreferrer">Contact us</a> for more information.
 
 ---
 
 ## 🆘 Support
 
-- 📚 [Documentation](https://easelms.org/docs)
-- 💬 [GitHub Discussions](https://github.com/enyojoo/easelms/discussions)
-- 🐛 [Issue Tracker](https://github.com/enyojoo/easelms/issues)
+- 📚 <a href="https://www.easelms.org/docs" target="_blank" rel="noopener noreferrer">Documentation</a>
+- 💬 <a href="https://github.com/enyojoo/easelms/discussions" target="_blank" rel="noopener noreferrer">GitHub Discussions</a>
+- 🐛 <a href="https://github.com/enyojoo/easelms/issues" target="_blank" rel="noopener noreferrer">Issue Tracker</a>
 - 📧 [Email Support](mailto:support@easelms.org)
-- 💼 [Enterprise Support](https://easelms.org/enterprise)
+- 💼 <a href="https://www.easelms.org/enterprise" target="_blank" rel="noopener noreferrer">Enterprise Support</a>
 
 ---
 
@@ -340,7 +340,7 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 - [ ] Advanced quiz types (drag-and-drop, matching, etc.)
 - [ ] Learning paths and curriculum builder
 
-[View Full Roadmap →](https://github.com/enyojoo/easelms/projects)
+<a href="https://github.com/enyojoo/easelms/projects" target="_blank" rel="noopener noreferrer">View Full Roadmap →</a>
 
 ---
 
@@ -369,6 +369,6 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 **Made with ❤️ by the EaseLMS team**
 
-[Website](https://easelms.org) • [Twitter (X)](https://x.com/enyosaam)
+<a href="https://www.easelms.org" target="_blank" rel="noopener noreferrer">Website</a> • <a href="https://x.com/enyosaam" target="_blank" rel="noopener noreferrer">Twitter (X)</a>
 
 </div>
