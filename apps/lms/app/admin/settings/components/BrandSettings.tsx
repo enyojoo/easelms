@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import FileUpload from "@/components/FileUpload"
-import { Image, Globe, Search, Save, Edit, X } from "lucide-react"
+import { Palette, Globe, Search, Save, Edit, X } from "lucide-react"
 import { toast } from "sonner"
 import { useSettings, useUpdateSettings } from "@/lib/react-query/hooks"
 import { useTheme } from "@/components/ThemeProvider"
@@ -131,9 +131,9 @@ export default function BrandSettings() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center">
-                <Image className="mr-2 h-5 w-5" /> Platform Branding
-              </CardTitle>
+          <CardTitle className="flex items-center">
+            <Palette className="mr-2 h-5 w-5" /> Platform Branding
+          </CardTitle>
               <CardDescription>
                 Customize your platform's visual identity. These settings will replace the default EaseLMS branding.
               </CardDescription>
@@ -160,8 +160,8 @@ export default function BrandSettings() {
         <CardContent className="space-y-6">
           {/* Platform Name */}
           <div className="space-y-2">
-            <Label htmlFor="platform-name" className="text-base font-semibold flex items-center">
-              <Globe className="mr-2 h-4 w-4" /> Platform Name
+            <Label htmlFor="platform-name" className="text-base font-semibold">
+              Platform Name
             </Label>
             <Input
               id="platform-name"
