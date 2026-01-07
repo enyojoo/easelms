@@ -283,7 +283,7 @@ export default function BrandSettings() {
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              The small icon displayed in browser tabs. Recommended: 32x32px or 64x64px PNG/SVG.
+              The small icon displayed in browser tabs. Recommended: 512x512px PNG/SVG.
             </p>
           </div>
         </CardContent>
