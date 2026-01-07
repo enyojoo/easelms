@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useCourse, useEnrollments, useProgress, useQuizResults, useRealtimeProgress, useRealtimeQuizResults, useSaveProgress } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useQuizData } from "./hooks/useQuizData"
 import { useCourseProgress } from "./hooks/useCourseProgress"
@@ -124,11 +124,7 @@ export default function CourseLearningPage() {
               courseId: parseInt(id),
             })
             enrollmentMarkedRef.current = false // Reset on error so we can retry
-            toast({
-              title: "Error",
-              description: formatErrorMessage(error, "Failed to mark course as completed"),
-              variant: "destructive",
-            })
+            toast.error(formatErrorMessage(error, "Failed to mark course as completed"))
           }
         } catch (error) {
           logError("Error marking course as completed", error, {
@@ -137,11 +133,7 @@ export default function CourseLearningPage() {
             courseId: parseInt(id),
           })
           enrollmentMarkedRef.current = false // Reset on error so we can retry
-          toast({
-            title: "Error",
-            description: formatErrorMessage(error, "Failed to mark course as completed"),
-            variant: "destructive",
-          })
+          toast.error(formatErrorMessage(error, "Failed to mark course as completed"))
         }
       }
       markEnrollmentCompleted()
@@ -184,11 +176,7 @@ export default function CourseLearningPage() {
               action: "revertEnrollmentStatus",
               courseId: parseInt(id),
             })
-            toast({
-              title: "Error",
-              description: formatErrorMessage(error, "Failed to update course status"),
-              variant: "destructive",
-            })
+            toast.error(formatErrorMessage(error, "Failed to update course status"))
           }
         } catch (error) {
           logError("Error reverting enrollment status", error, {
@@ -625,11 +613,7 @@ export default function CourseLearningPage() {
         lessonId,
         courseId: id,
       })
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to reset quiz. Please refresh the page.",
-        variant: "destructive",
-      })
+      toast.error(error?.message || "Failed to reset quiz. Please refresh the page.")
       throw error
     }
   }
@@ -706,11 +690,7 @@ export default function CourseLearningPage() {
         lessonId: lesson.id,
         courseId: parseInt(id),
       })
-      toast({
-        title: "Error",
-        description: formatErrorMessage(error, "Failed to save quiz progress"),
-        variant: "destructive",
-      })
+      toast.error(formatErrorMessage(error, "Failed to save quiz progress"))
     }
 
     // Mark lesson as completed ONLY if quiz was passed
@@ -736,11 +716,7 @@ export default function CourseLearningPage() {
       // Go to next lesson
       const nextIndex = currentLessonIndex + 1
       if (!canAccessLesson(nextIndex)) {
-        toast({
-          title: "Lesson Locked",
-          description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-          variant: "destructive",
-        })
+        toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
         return
       }
       const nextLesson = course.lessons[nextIndex]
@@ -783,11 +759,7 @@ export default function CourseLearningPage() {
         if (currentLessonIndex < course.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
-            toast({
-              title: "Lesson Locked",
-              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-              variant: "destructive",
-            })
+            toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
             return
           }
           const nextLesson = course.lessons[nextIndex]
@@ -808,11 +780,7 @@ export default function CourseLearningPage() {
         if (currentLessonIndex < course.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
-            toast({
-              title: "Lesson Locked",
-              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-              variant: "destructive",
-            })
+            toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
             return
           }
           const nextLesson = course.lessons[nextIndex]
@@ -828,11 +796,7 @@ export default function CourseLearningPage() {
         const nextIndex = currentLessonIndex + 1
         // Check if can access next lesson
         if (!canAccessLesson(nextIndex)) {
-          toast({
-            title: "Lesson Locked",
-            description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-            variant: "destructive",
-          })
+          toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
           return
         }
         const nextLesson = course.lessons[nextIndex]
@@ -851,11 +815,7 @@ export default function CourseLearningPage() {
       const prevIndex = currentLessonIndex - 1
       // Check if can access previous lesson
       if (!canAccessLesson(prevIndex)) {
-        toast({
-          title: "Lesson Locked",
-          description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-          variant: "destructive",
-        })
+        toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
         return
       }
       const prevLesson = course.lessons[prevIndex]
@@ -1167,11 +1127,7 @@ export default function CourseLearningPage() {
                             action: "completeCourse",
                             courseId: parseInt(id),
                           })
-                          toast({
-                            title: "Error",
-                            description: formatErrorMessage(error, "Failed to mark course as completed. Please try again."),
-                            variant: "destructive",
-                          })
+                          toast.error(formatErrorMessage(error, "Failed to mark course as completed. Please try again."))
                         }
                       } catch (error) {
                         logError("Error marking course as completed", error, {
@@ -1179,11 +1135,7 @@ export default function CourseLearningPage() {
                           action: "completeCourse",
                           courseId: parseInt(id),
                         })
-                        toast({
-                          title: "Error",
-                          description: formatErrorMessage(error, "An error occurred while completing the course. Please try again."),
-                          variant: "destructive",
-                        })
+                        toast.error(formatErrorMessage(error, "An error occurred while completing the course. Please try again."))
                       }
                     } else {
                       handleNextLesson()
@@ -1250,11 +1202,7 @@ export default function CourseLearningPage() {
                       key={index}
                       onClick={() => {
                         if (!canAccess) {
-                          toast({
-              title: "Lesson Locked",
-              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-              variant: "destructive",
-            })
+                          toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
                           return
                         }
                         const lesson = course.lessons[index]
@@ -1341,11 +1289,7 @@ export default function CourseLearningPage() {
                         )}
                         onClick={() => {
                           if (!canAccess) {
-                            toast({
-                              title: "Lesson Locked",
-                              description: "You must complete all current lesson requirments like passing the quiz before moving to the next lesson",
-                              variant: "destructive",
-                            })
+                            toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
                             return
                           }
                           setCurrentLessonIndex(index)

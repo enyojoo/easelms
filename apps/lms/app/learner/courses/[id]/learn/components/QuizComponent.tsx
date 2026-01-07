@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, XCircle, Loader2, Info, ArrowRight, RotateCcw } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 import { logError, logInfo, logWarning, formatErrorMessage, handleApiError } from "../utils/errorHandler"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner"
 import { useQuizAttempt } from "@/lib/react-query/hooks/useQuizAttempts"
 
 interface QuizQuestion {
@@ -370,11 +370,7 @@ export default function QuizComponent({
       const maxAttempts = quiz.maxAttempts || 3
       if (currentAttemptCount >= maxAttempts) {
         logInfo(`Max attempts (${maxAttempts}) reached. Cannot retry.`, { currentAttemptCount, maxAttempts })
-        toast({
-          title: "Max Attempts Reached",
-          description: `You have reached the maximum number of attempts (${maxAttempts}) for this quiz.`,
-          variant: "destructive",
-        })
+        toast.error(`You have reached the maximum number of attempts (${maxAttempts}) for this quiz.`)
         return // Don't allow retry if max attempts reached
       }
       

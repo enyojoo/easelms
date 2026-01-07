@@ -16,6 +16,7 @@ import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
 import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -254,6 +255,7 @@ export default function CoursePage() {
         // Enroll directly for free courses using React Query mutation
         try {
           await enrollCourseMutation.mutateAsync(Number.parseInt(id))
+          toast.success(`Successfully enrolled in ${course?.title || "course"}`)
           // Refetch enrollments to ensure cache is updated before redirect
           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Redirect to learn page after enrollment and cache update
@@ -268,6 +270,12 @@ export default function CoursePage() {
             })
             setIsEnrolling(false)
             return
+          }
+          // Check if already enrolled
+          if (error?.errorData?.error === "User is already enrolled in this course") {
+            toast.error("You are already enrolled in this course")
+          } else {
+            toast.error(error?.errorData?.error || error?.message || "Failed to enroll in course")
           }
           setIsEnrolling(false)
         }
@@ -301,11 +309,13 @@ export default function CoursePage() {
           user
         )
         if (success) {
+          toast.success(`Successfully enrolled in ${course?.title || "course"}`)
           // Refetch enrollments after payment (payment webhook should create enrollment)
           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Redirect to learn page after successful payment
           router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
         } else {
+          toast.error("Payment failed. Please try again.")
           setIsEnrolling(false)
         }
       }
