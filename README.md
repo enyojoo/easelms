@@ -182,9 +182,18 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
       - Click "Run" (or press Cmd/Ctrl + Enter)
       - Wait for the migration to complete (you should see "Success. No rows returned")
    
-   d. **Verify the migration**
+   d. **Run the brand settings migration (optional)**
+      - In your Supabase project, go to SQL Editor
+      - Click "New Query"
+      - Open the file `apps/lms/supabase/migrations/add_brand_settings.sql` from this repository
+      - Copy the entire contents of the file
+      - Paste it into the SQL Editor
+      - Click "Run" (or press Cmd/Ctrl + Enter)
+      - This adds brand settings columns to the `platform_settings` table
+   
+   e. **Verify the migration**
       - Go to Table Editor in Supabase
-      - You should see all the tables created: `profiles`, `courses`, `lessons`, `enrollments`, `progress`, `payments`, `certificates`, `instructors`, `resources`, `quiz_questions`, `quiz_settings`, `quiz_attempts`, `quiz_results`, `course_instructors`, `course_prerequisites`, and `lesson_resources`
+      - You should see all the tables created: `profiles`, `courses`, `lessons`, `enrollments`, `progress`, `payments`, `certificates`, `instructors`, `resources`, `quiz_questions`, `quiz_settings`, `quiz_attempts`, `quiz_results`, `course_instructors`, `course_prerequisites`, `lesson_resources`, and `platform_settings`
 
 5. **Start the development server**
    ```bash
@@ -202,6 +211,16 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 ### First Admin User
 
 After setting up the database, create your first admin user through the Supabase dashboard or by using the signup API endpoint.
+
+### Customize Branding
+
+Once logged in as an admin, navigate to **Settings → Brand** to customize your platform:
+- Set your platform name and description
+- Upload custom logos for light and dark modes
+- Set a custom favicon
+- Configure SEO metadata (title, description, keywords, and image)
+
+These settings will automatically update across your entire platform, including the logo in the sidebar, favicon in browser tabs, and SEO tags for better search engine visibility.
 
 ---
 
