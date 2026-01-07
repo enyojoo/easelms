@@ -10,4 +10,5 @@ export * from "./useUsers"
 export * from "./usePurchases"
 export * from "./useProfile"
 export * from "./useSettings"
+export * from "./useBrandSettings"
 

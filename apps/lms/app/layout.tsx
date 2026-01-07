@@ -1,7 +1,9 @@
 import type React from "react"
 import { Poppins } from "next/font/google"
+import type { Metadata } from "next"
 import "./globals.css"
 import ClientLayout from "@/components/ClientLayout"
+import { getBrandSettings } from "@/lib/supabase/brand-settings"
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
@@ -9,13 +11,32 @@ const poppins = Poppins({
   display: "swap",
 })
 
-export const metadata = {
-  title: "Enthronement University - Learning Management System",
-  description: "A modern, easy-to-use Learning Management System for creating and managing courses and educational content.",
-  generator: "Next.js",
-  icons: {
-    icon: "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Faviconn.svg",
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const brandSettings = await getBrandSettings()
+  
+  const title = brandSettings.seoTitle || `${brandSettings.platformName} - Learning Management System`
+  const description = brandSettings.seoDescription || brandSettings.platformDescription
+  
+  return {
+    title,
+    description,
+    generator: "Next.js",
+    icons: {
+      icon: brandSettings.favicon,
+    },
+    keywords: brandSettings.seoKeywords?.split(",").map(k => k.trim()).filter(Boolean),
+    openGraph: {
+      title,
+      description,
+      images: brandSettings.seoImage ? [brandSettings.seoImage] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: brandSettings.seoImage ? [brandSettings.seoImage] : undefined,
+    },
+  }
 }
 
 export const viewport = {

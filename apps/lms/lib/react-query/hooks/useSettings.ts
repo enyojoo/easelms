@@ -6,6 +6,16 @@ export interface PlatformSettings {
   course_completion_notifications?: boolean
   platform_announcements?: boolean
   user_email_notifications?: boolean
+  // Brand settings
+  platform_name?: string
+  platform_description?: string
+  logo_black?: string
+  logo_white?: string
+  favicon?: string
+  seo_title?: string
+  seo_description?: string
+  seo_keywords?: string
+  seo_image?: string
 }
 
 interface SettingsResponse {

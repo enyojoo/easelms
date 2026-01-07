@@ -5,6 +5,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
 import { useTheme } from "./ThemeProvider"
+import { useBrandSettings } from "@/lib/react-query/hooks/useBrandSettings"
 
 interface LogoProps {
   className?: string
@@ -14,6 +15,7 @@ interface LogoProps {
 export default function Logo({ className = "", variant = "full" }: LogoProps) {
   const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const brandSettings = useBrandSettings()
 
   useEffect(() => {
     setMounted(true)
@@ -23,17 +25,15 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
   const isDark = mounted && (theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches))
 
   if (variant === "icon") {
-    // Mobile header icon variant
-    const logoSrc = isDark
-      ? "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Faviconn.svg"
-      : "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Faviconb.svg"
+    // Mobile header icon variant - use favicon
+    const logoSrc = brandSettings.favicon
 
     return (
       <Link href="/" className={cn("flex items-center", className)}>
         {mounted && (
           <Image
             src={logoSrc}
-            alt="Enthronement University Logo"
+            alt={`${brandSettings.platformName} Logo`}
             width={40}
             height={40}
             className="h-auto w-auto object-contain"
@@ -44,17 +44,15 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
     )
   }
 
-  // Full logo variant (default)
-  const logoSrc = isDark
-    ? "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20wh.svg"
-    : "https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk.svg"
+  // Full logo variant (default) - use logo based on theme
+  const logoSrc = isDark ? brandSettings.logoWhite : brandSettings.logoBlack
 
   return (
     <Link href="/" className={cn("flex items-center", className)}>
       {mounted && (
         <Image
           src={logoSrc}
-          alt="Enthronement University Logo"
+          alt={`${brandSettings.platformName} Logo`}
           width={180}
           height={60}
           className="h-auto w-auto object-contain"
