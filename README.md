@@ -369,6 +369,6 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 **Made with ❤️ by the EaseLMS team**
 
-[Website](https://easelms.org) • [Documentation](https://easelms.org/docs) • [Twitter](https://twitter.com/easelms) • [Discord](https://discord.gg/easelms)
+[Website](https://easelms.org) • [Twitter (X)](https://x.com/enyosaam)
 
 </div>
