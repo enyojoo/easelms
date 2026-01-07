@@ -14,6 +14,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { QueryProvider } from "@/lib/react-query/QueryProvider"
 import { ErrorBoundary } from "./ErrorBoundary"
 import DynamicTitle from "./DynamicTitle"
+import DynamicFavicon from "./DynamicFavicon"
 
 export default function ClientLayout({
   children,
@@ -258,6 +259,7 @@ export default function ClientLayout({
       <QueryProvider>
         <ThemeProvider defaultTheme="dark" storageKey="easelms-theme">
           <DynamicTitle />
+          <DynamicFavicon />
           {shouldShowLayout ? (
             <div className="flex flex-col h-screen">
               <div className="lg:hidden">
