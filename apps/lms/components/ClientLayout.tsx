@@ -15,6 +15,7 @@ import { QueryProvider } from "@/lib/react-query/QueryProvider"
 import { ErrorBoundary } from "./ErrorBoundary"
 import DynamicTitle from "./DynamicTitle"
 import DynamicFavicon from "./DynamicFavicon"
+import { useQueryClient } from "@tanstack/react-query"
 
 export default function ClientLayout({
   children,
@@ -257,37 +258,65 @@ export default function ClientLayout({
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <ThemeProvider defaultTheme="dark" storageKey="easelms-theme">
-          <DynamicTitle />
-          <DynamicFavicon />
-          {shouldShowLayout ? (
-            <div className="flex flex-col h-screen">
-              <div className="lg:hidden">
-                <MobileMenu userType={derivedUserType} user={user} />
-              </div>
-              <div className="hidden lg:flex h-screen">
-                <LeftSidebar userType={derivedUserType} />
-                <div className="flex flex-col flex-grow lg:ml-64">
-                  <Header isLoggedIn={isLoggedIn} userType={derivedUserType === "instructor" ? "admin" : derivedUserType} user={user} />
-                  <div className="flex-grow lg:pt-16 pb-8">
-                    <main className="container-fluid">
-                      {children}
-                    </main>
+        <BrandSettingsPrefetcher>
+          <ThemeProvider defaultTheme="dark" storageKey="easelms-theme">
+            <DynamicTitle />
+            <DynamicFavicon />
+            {shouldShowLayout ? (
+              <div className="flex flex-col h-screen">
+                <div className="lg:hidden">
+                  <MobileMenu userType={derivedUserType} user={user} />
+                </div>
+                <div className="hidden lg:flex h-screen">
+                  <LeftSidebar userType={derivedUserType} />
+                  <div className="flex flex-col flex-grow lg:ml-64">
+                    <Header isLoggedIn={isLoggedIn} userType={derivedUserType === "instructor" ? "admin" : derivedUserType} user={user} />
+                    <div className="flex-grow lg:pt-16 pb-8">
+                      <main className="container-fluid">
+                        {children}
+                      </main>
+                    </div>
                   </div>
                 </div>
+                <div className="lg:hidden flex-grow mt-16 mb-16 pb-4">
+                  <main className="container-fluid">
+                    {children}
+                  </main>
+                </div>
               </div>
-              <div className="lg:hidden flex-grow mt-16 mb-16 pb-4">
-                <main className="container-fluid">
-                  {children}
-                </main>
-              </div>
-            </div>
-          ) : (
-            <PageTransition>{children}</PageTransition>
-          )}
-          <Toaster />
-        </ThemeProvider>
+            ) : (
+              <PageTransition>{children}</PageTransition>
+            )}
+            <Toaster />
+          </ThemeProvider>
+        </BrandSettingsPrefetcher>
       </QueryProvider>
     </ErrorBoundary>
   )
+}
+
+// Component to prefetch brand settings on mount to prevent defaults from showing
+function BrandSettingsPrefetcher({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // Prefetch brand settings immediately on mount to ensure data is available
+    // This prevents defaults from showing even briefly
+    queryClient.prefetchQuery({
+      queryKey: ["settings"],
+      queryFn: async () => {
+        const response = await fetch("/api/settings")
+        if (!response.ok) {
+          return { platformSettings: null }
+        }
+        return response.json()
+      },
+      staleTime: Infinity,
+      gcTime: Infinity,
+    })
+  }, [queryClient])
+
+  return <>{children}</>
 }

@@ -46,15 +46,17 @@ export async function getBrandSettings(): Promise<BrandSettings> {
       platformSettings.seo_image
     )
 
-    // If admin has set custom branding, only use defaults for fields that are explicitly null/empty
-    // Otherwise, if no custom branding exists, use all defaults
+    // If admin has set custom branding, NEVER use defaults for fields that have custom values
+    // Only use defaults for fields that are explicitly null/empty AND no custom branding exists
     if (hasCustomBranding) {
       return {
-        platformName: platformSettings.platform_name || DEFAULT_BRAND_SETTINGS.platformName,
-        platformDescription: platformSettings.platform_description || DEFAULT_BRAND_SETTINGS.platformDescription,
-        logoBlack: platformSettings.logo_black || DEFAULT_BRAND_SETTINGS.logoBlack,
-        logoWhite: platformSettings.logo_white || DEFAULT_BRAND_SETTINGS.logoWhite,
-        favicon: platformSettings.favicon || DEFAULT_BRAND_SETTINGS.favicon,
+        // If custom branding exists, prefer custom values, but still fallback to defaults for required fields
+        // This ensures once custom branding is set, defaults NEVER show for fields that have custom values
+        platformName: platformSettings.platform_name ?? DEFAULT_BRAND_SETTINGS.platformName,
+        platformDescription: platformSettings.platform_description ?? DEFAULT_BRAND_SETTINGS.platformDescription,
+        logoBlack: platformSettings.logo_black ?? DEFAULT_BRAND_SETTINGS.logoBlack,
+        logoWhite: platformSettings.logo_white ?? DEFAULT_BRAND_SETTINGS.logoWhite,
+        favicon: platformSettings.favicon ?? DEFAULT_BRAND_SETTINGS.favicon,
         seoTitle: platformSettings.seo_title || undefined,
         seoDescription: platformSettings.seo_description || undefined,
         seoKeywords: platformSettings.seo_keywords || undefined,
