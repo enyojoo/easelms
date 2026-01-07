@@ -1343,13 +1343,8 @@ export async function GET(request: Request) {
 
     const instructorIds = (courseInstructorsData || []).map((ci: any) => ci.instructor_id)
 
-    // Add instructor settings to course data
-    data.settings.instructor = {
-      instructorEnabled: instructorIds.length > 0,
-      instructorIds: instructorIds,
-    }
-    
     // Transform course settings from database columns to nested structure (for frontend compatibility)
+    // Include instructor settings in the transformation
     data.settings = {
       enrollment: {
         enrollmentMode: data.enrollment_mode || "free",
@@ -1366,6 +1361,10 @@ export async function GET(request: Request) {
         signatureTitle: data.signature_title || null,
         additionalText: data.additional_text || null,
         certificateType: data.certificate_type || null,
+      },
+      instructor: {
+        instructorEnabled: instructorIds.length > 0,
+        instructorIds: instructorIds,
       },
       minimumQuizScore: data.minimum_quiz_score || null,
       requiresSequentialProgress: data.requires_sequential_progress || false,

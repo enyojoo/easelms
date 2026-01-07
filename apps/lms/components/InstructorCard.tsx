@@ -3,7 +3,6 @@
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import ReadMore from "./ReadMore"
 
 interface InstructorCardProps {
   name: string
@@ -47,7 +46,7 @@ export default function InstructorCard({
             <p className="text-sm text-muted-foreground">{title}</p>
           </div>
         </div>
-        {bio && <ReadMore text={bio} maxLength={350} className="mt-4" />}
+        {bio && <p className="text-sm text-muted-foreground mt-4">{bio}</p>}
       </CardContent>
     </Card>
   )
