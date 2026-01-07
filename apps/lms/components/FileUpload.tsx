@@ -610,8 +610,12 @@ export default function FileUpload({
       {showDropzone && (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors w-full max-w-full ${
-            isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors w-full max-w-full ${
+            disabled || uploading || uploaded
+              ? "border-muted-foreground/10 cursor-not-allowed opacity-50"
+              : isDragActive
+              ? "border-primary bg-primary/5 cursor-pointer"
+              : "border-muted-foreground/25 cursor-pointer"
           }`}
         >
           <input {...getInputProps()} />
