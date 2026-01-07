@@ -36,7 +36,7 @@ export default function ReadMore({ text, maxLength = 350, className }: ReadMoreP
             {" "}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-primary hover:underline text-sm font-medium inline"
+              className="text-primary hover:underline text-xs font-medium inline"
               type="button"
             >
               {isExpanded ? "Read less" : "Read more"}
