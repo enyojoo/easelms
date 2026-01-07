@@ -374,22 +374,6 @@ CREATE TABLE IF NOT EXISTS platform_settings (
 CREATE TRIGGER update_platform_settings_updated_at BEFORE UPDATE ON platform_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert default platform settings if none exist
-INSERT INTO platform_settings (
-  platform_name,
-  platform_description,
-  logo_black,
-  logo_white,
-  favicon
-)
-SELECT 
-  'EaseLMS',
-  'EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.',
-  'https://cldup.com/VQGhFU5kd6.svg',
-  'https://cldup.com/bwlFqC4f8I.svg',
-  'https://cldup.com/6yEKvPtX22.svg'
-WHERE NOT EXISTS (SELECT 1 FROM platform_settings);
-
 -- ============================================================================
 -- COURSE_INSTRUCTORS TABLE
 -- Junction table for courses and instructors (many-to-many)
@@ -820,8 +804,26 @@ CREATE POLICY "Anyone can view platform settings"
   ON platform_settings FOR SELECT
   USING (TRUE);
 
-CREATE POLICY "Admins can manage platform settings"
-  ON platform_settings FOR ALL
+CREATE POLICY "Admins can insert platform settings"
+  ON platform_settings FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND user_type = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can update platform settings"
+  ON platform_settings FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid() AND user_type = 'admin'
+    )
+  );
+
+CREATE POLICY "Admins can delete platform settings"
+  ON platform_settings FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM profiles
