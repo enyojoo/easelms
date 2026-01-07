@@ -316,7 +316,6 @@ If you need to use EaseLMS in a proprietary application without open-sourcing yo
 
 - 📧 [Email Support](mailto:contact@easelms.org)
 - 💬 [Contact Us](https://www.easelms.org/contact) - Schedule a meeting or send us a message
-- 💼 <a href="https://www.easelms.org/enterprise" target="_blank" rel="noopener noreferrer">Enterprise Support</a>
 - 🐦 [Twitter (X)](https://x.com/enyosaam) - Follow us for updates
 
 ---
