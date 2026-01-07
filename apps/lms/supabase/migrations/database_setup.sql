@@ -356,12 +356,12 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   course_completion_notifications BOOLEAN DEFAULT true,
   platform_announcements BOOLEAN DEFAULT true,
   user_email_notifications BOOLEAN DEFAULT true,
-  -- Brand settings
-  platform_name TEXT DEFAULT 'EaseLMS',
-  platform_description TEXT DEFAULT 'EaseLMS is a modern, open-source Learning Management System built with modern tech stack. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.',
-  logo_black TEXT DEFAULT 'https://cldup.com/VQGhFU5kd6.svg',
-  logo_white TEXT DEFAULT 'https://cldup.com/bwlFqC4f8I.svg',
-  favicon TEXT DEFAULT 'https://cldup.com/6yEKvPtX22.svg',
+  -- Brand settings (defaults are hardcoded in application code)
+  platform_name TEXT,
+  platform_description TEXT,
+  logo_black TEXT,
+  logo_white TEXT,
+  favicon TEXT,
   -- SEO settings
   seo_title TEXT,
   seo_description TEXT,
