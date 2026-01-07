@@ -22,7 +22,18 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     generator: "Next.js",
     icons: {
-      icon: brandSettings.favicon,
+      icon: [
+        { url: brandSettings.favicon, sizes: "512x512", type: "image/png" },
+        { url: brandSettings.favicon, sizes: "192x192", type: "image/png" },
+        { url: brandSettings.favicon, sizes: "32x32", type: "image/png" },
+        { url: brandSettings.favicon, sizes: "16x16", type: "image/png" },
+      ],
+      apple: [
+        { url: brandSettings.favicon, sizes: "180x180", type: "image/png" },
+        { url: brandSettings.favicon, sizes: "152x152", type: "image/png" },
+        { url: brandSettings.favicon, sizes: "120x120", type: "image/png" },
+      ],
+      shortcut: brandSettings.favicon,
     },
     keywords: brandSettings.seoKeywords?.split(",").map(k => k.trim()).filter(Boolean),
     openGraph: {
