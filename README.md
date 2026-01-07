@@ -59,6 +59,10 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - 📊 Comprehensive analytics dashboard
 - 💳 Purchase and payment management
 - 🎨 Custom branding and theming
+  - Platform name and description
+  - Custom logos (light and dark mode)
+  - Favicon customization
+  - SEO metadata (title, description, keywords, image)
 - ⚙️ Flexible course settings and enrollment modes
 - 📧 Email notifications
 - 🔐 Role-based access control
@@ -251,7 +255,7 @@ Don't want to manage infrastructure? We offer a fully managed hosted service wit
 - ✅ **Managed Infrastructure** - We handle Supabase, S3, and hosting
 - ✅ **Automatic Updates** - Always on the latest version
 - ✅ **Professional Support** - Priority email and chat support
-- ✅ **Custom Branding** - Your logo, colors, and domain
+- ✅ **Custom Branding** - Platform name, logos, favicon, and SEO metadata
 - ✅ **Backups & Security** - Automated backups and security updates
 
 ### Pricing
