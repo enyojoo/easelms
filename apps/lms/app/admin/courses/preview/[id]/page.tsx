@@ -31,8 +31,22 @@ interface Course {
       price?: number
       recurringPrice?: number
     }
-    certificate?: any
+    certificate?: {
+      certificateEnabled?: boolean
+      certificateType?: string
+      certificateTitle?: string
+    }
+    instructor?: {
+      instructorEnabled?: boolean
+      instructorIds?: string[]
+    }
   }
+  instructors?: Array<{
+    id: string
+    name: string
+    image?: string
+    bio?: string
+  }>
   lessons?: Array<{
     id: number
     title: string
@@ -188,18 +202,32 @@ export default function InstructorCoursePreviewPage() {
 
   const { price, buttonText, access } = getAccessDetails()
 
-  // Instructor information from creator
-  const instructor = course.creator
-    ? {
+  // Instructor information - use assigned instructors if available, otherwise fallback to creator
+  const hasInstructors = course?.instructors && course.instructors.length > 0
+  const instructorsEnabled = course?.settings?.instructor?.instructorEnabled || hasInstructors
+  
+  // If instructors are enabled and there are instructors, use them
+  // Otherwise, fallback to course creator
+  const instructors = hasInstructors && instructorsEnabled
+    ? course.instructors.map((inst: any) => ({
+        name: inst.name || "Instructor",
+        profileImage: inst.image || "/placeholder.svg?height=200&width=200",
+        bio: inst.bio || "",
+        title: "Course Instructor"
+      }))
+    : course?.creator ? [{
         name: course.creator.name || "Instructor",
+        profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
         bio: course.creator.bio || "",
-        profileImage: course.creator.profile_image || "",
-      }
-    : {
+        title: course.creator.user_type === "admin" || course.creator.user_type === "instructor" 
+          ? "Course Instructor" 
+          : "Course Creator"
+      }] : [{
         name: "Instructor",
+        profileImage: "/placeholder.svg?height=200&width=200",
         bio: "",
-        profileImage: "",
-      }
+        title: "Course Instructor"
+      }]
 
   return (
     <div className="pt-4 md:pt-8">
@@ -310,13 +338,21 @@ export default function InstructorCoursePreviewPage() {
             </Card>
           )}
 
-          {/* Instructor Profile Card */}
-          <InstructorCard
-            name={instructor.name}
-            image={instructor.profileImage}
-            bio={instructor.bio}
-            className="mb-4"
-          />
+          {/* Instructor Profile Cards */}
+          {instructors && instructors.length > 0 && (
+            <div className="space-y-4">
+              {instructors.map((instructor: any, index: number) => (
+                <InstructorCard
+                  key={index}
+                  name={instructor.name}
+                  image={instructor.profileImage}
+                  bio={instructor.bio}
+                  title={instructor.title}
+                  className="mb-4"
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-1">
@@ -358,12 +394,43 @@ export default function InstructorCoursePreviewPage() {
                   <Globe className="w-5 h-5 mr-2 text-primary" />
                   <span>{access}</span>
                 </div>
-                {course.settings?.certificate && (
+                {course.settings?.certificate?.certificateEnabled && (() => {
+                  // Only show certificate info if enabled
+                  const certType = course.settings?.certificate?.certificateType
+                  const certTitle = course.settings?.certificate?.certificateTitle
+                  let displayText = ""
+                  
+                  // Use custom title if provided, otherwise use type-based title
+                  if (certTitle && certTitle.trim() !== "") {
+                    displayText = certTitle
+                  } else if (certType) {
+                    // Use the certificate type from database
+                    switch (certType.toLowerCase()) {
+                      case "participation":
+                        displayText = "Certificate of Participation"
+                        break
+                      case "achievement":
+                        displayText = "Certificate of Achievement"
+                        break
+                      case "completion":
+                        displayText = "Certificate of Completion"
+                        break
+                      default:
+                        displayText = "Certificate of Completion"
+                        break
+                    }
+                  } else {
+                    // Fallback if no type specified
+                    displayText = "Certificate of Completion"
+                  }
+                  
+                  return (
                   <div className="flex items-center">
                     <Award className="w-5 h-5 mr-2 text-primary" />
-                    <span>Certificate of completion</span>
+                    <span>{displayText}</span>
                   </div>
-                )}
+                  )
+                })()}
               </div>
             </CardContent>
           </Card>
