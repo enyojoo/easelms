@@ -6,7 +6,7 @@ import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import SafeImage from "@/components/SafeImage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { PlayCircle, FileText, Award, Clock, Globe } from "lucide-react"
+import { PlayCircle, FileText, Award, Clock, Globe, Users } from "lucide-react"
 import VideoModal from "@/components/VideoModal"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { BrainCircuit, Link as LinkIcon } from "lucide-react"
@@ -376,8 +376,8 @@ export default function InstructorCoursePreviewPage() {
               </div>
               <div className="mt-4 mb-4 flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <span className="text-2xl font-bold text-primary">{price}</span>
-                  {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+                  <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
+                  {enrollmentMode === "recurring" && <span className="text-xs md:text-sm text-muted-foreground">/month</span>}
                 </div>
               </div>
               <Button 
@@ -386,16 +386,20 @@ export default function InstructorCoursePreviewPage() {
               >
                 View Course
               </Button>
-              <div className="space-y-2 text-muted-foreground">
+              <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
                 {totalResources > 0 && (
                   <div className="flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-primary" />
-                    <span>{totalResources} resources</span>
+                    <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                    <span className="text-xs md:text-sm">{totalResources} resources</span>
                   </div>
                 )}
                 <div className="flex items-center">
-                  <Globe className="w-5 h-5 mr-2 text-primary" />
-                  <span>{access}</span>
+                  <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                  <span className="text-xs md:text-sm break-words">{access}</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                  <span className="text-xs md:text-sm">{course?.enrolledStudents || 0} learners enrolled</span>
                 </div>
                 {course.settings?.certificate?.certificateEnabled && (() => {
                   // Only show certificate info if enabled
@@ -429,8 +433,8 @@ export default function InstructorCoursePreviewPage() {
                   
                   return (
                   <div className="flex items-center">
-                    <Award className="w-5 h-5 mr-2 text-primary" />
-                    <span>{displayText}</span>
+                    <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                    <span className="text-xs md:text-sm">{displayText}</span>
                   </div>
                   )
                 })()}
