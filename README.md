@@ -205,10 +205,12 @@ After setting up the database, create your first admin user through the Supabase
 
 ## 🏗️ Project Structure
 
+EaseLMS is a monorepo containing two main applications:
+
 ```
 easelms/
 ├── apps/
-│   ├── lms/              # Main LMS application
+│   ├── lms/              # Main LMS application (deploy this for the learning platform)
 │   │   ├── app/          # Next.js app router pages
 │   │   │   ├── admin/    # Admin dashboard pages
 │   │   │   ├── learner/  # Learner-facing pages
@@ -223,11 +225,17 @@ easelms/
 │   │   ├── hooks/        # Custom React hooks
 │   │   ├── utils/        # Utility functions
 │   │   └── supabase/     # Database migrations
-│   └── website/          # Marketing website
+│   └── website/          # Landing page website (deploy this for marketing site)
+│       ├── app/          # Next.js app router pages
+│       └── components/   # Landing page components
 ├── components/           # Shared components
 ├── package.json          # Root package.json
 └── turbo.json           # Turborepo configuration
 ```
+
+**Applications:**
+- **`apps/lms`** - The main Learning Management System application. Deploy this for your course platform.
+- **`apps/website`** - The marketing landing page. Deploy this separately for your public-facing website.
 
 ---
 
