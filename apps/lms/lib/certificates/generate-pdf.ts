@@ -106,6 +106,13 @@ function getPoppinsFontPath(fontName: string): string | null {
 export async function generateCertificatePDF(data: CertificateData): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     try {
+      console.log("[PDF Generation] Starting certificate generation with data:", {
+        learnerName: data.learnerName,
+        courseTitle: data.courseTitle,
+        logoUrl: data.logoUrl,
+        organizationName: data.organizationName,
+        certificateDescription: data.certificateDescription,
+      })
       // Verify fonts are available before initializing PDFDocument
       // PDFKit initializes default fonts (Helvetica, Times, Courier) on creation
       // even if we use custom fonts, so we need the .afm files available
@@ -184,13 +191,27 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       try {
         if (data.logoUrl && data.logoUrl.trim() !== "") {
-          console.log("[PDF Generation] Fetching logo from URL:", data.logoUrl)
+          console.log("[PDF Generation] ===== LOGO FETCH START =====")
+          console.log("[PDF Generation] Logo URL:", data.logoUrl)
+          console.log("[PDF Generation] Logo URL type:", {
+            isS3: data.logoUrl.includes('s3') || data.logoUrl.includes('amazonaws'),
+            isSVG: data.logoUrl.toLowerCase().endsWith('.svg'),
+            isPNG: data.logoUrl.toLowerCase().endsWith('.png'),
+            isJPG: data.logoUrl.toLowerCase().endsWith('.jpg') || data.logoUrl.toLowerCase().endsWith('.jpeg'),
+            urlLength: data.logoUrl.length,
+          })
+          
           try {
-          logoBuffer = await fetchImageBuffer(data.logoUrl)
-            console.log("[PDF Generation] Logo fetched successfully, size:", logoBuffer.length, "bytes")
+            logoBuffer = await fetchImageBuffer(data.logoUrl)
+            console.log("[PDF Generation] Logo fetched successfully!")
+            console.log("[PDF Generation] Logo buffer size:", logoBuffer.length, "bytes")
+            console.log("[PDF Generation] Logo buffer first 100 bytes:", logoBuffer.toString('utf8', 0, Math.min(100, logoBuffer.length)))
+            
             if (!logoBuffer || logoBuffer.length === 0) {
               console.error("[PDF Generation] Logo buffer is empty after fetch")
               logoBuffer = null
+            } else {
+              console.log("[PDF Generation] Logo buffer is valid, will attempt to render")
             }
           } catch (fetchError) {
             console.error("[PDF Generation] Error fetching logo:", fetchError)
@@ -198,6 +219,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             console.error("[PDF Generation] Error details:", fetchError instanceof Error ? fetchError.message : String(fetchError))
             logoBuffer = null
           }
+          console.log("[PDF Generation] ===== LOGO FETCH END =====")
         } else {
           console.log("[PDF Generation] No logo URL provided or URL is empty")
           console.log("[PDF Generation] logoUrl value:", data.logoUrl)
@@ -290,11 +312,19 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       })
       
       // Helper function to convert Y from top to PDFKit's bottom-origin coordinate system
-      const yFromTop = (y: number) => pageHeight - y
+      // PDFKit: Y=0 is bottom, Y=pageHeight is top
+      // For text: Y is the baseline of the text
+      // For images: Y is the bottom of the image
+      const yFromTop = (yFromTop: number) => {
+        // Convert from top coordinate to PDFKit's bottom coordinate
+        // yFromTop: distance from top of page
+        // Return: Y coordinate from bottom (PDFKit's system)
+        return pageHeight - yFromTop
+      }
       
       // Start from top with proper margins
       const topMargin = 60
-      let currentY = topMargin
+      let currentY = topMargin // This is distance from top
       
       // Add logo (if available) - centered at top
       if (logoBuffer && logoBuffer.length > 0) {
@@ -321,16 +351,9 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             currentPage: doc.page,
           })
           
-          // Check if logo URL is SVG - PDFKit doesn't support SVG directly
-          const isSVG = data.logoUrl?.toLowerCase().endsWith('.svg') || 
-                       (logoBuffer.toString('utf8', 0, Math.min(100, logoBuffer.length)).includes('<svg'))
-          
-          if (isSVG) {
-            console.warn("[PDF Generation] Logo is SVG format - PDFKit doesn't support SVG. Converting or skipping.")
-            // For SVG, we could convert to PNG or skip. For now, skip and show org name
-            logoBuffer = null
-          } else {
-            // Render the image
+          // Try to render the image (PDFKit will throw error if format not supported)
+          // Don't pre-check for SVG - let PDFKit handle it
+          try {
             doc.image(logoBuffer, logoX, logoYFromBottom, {
               width: logoWidth,
               height: logoHeight,
@@ -339,6 +362,13 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             
             currentY += logoHeight + 30 // Space after logo
             console.log("[PDF Generation] Logo embedded successfully at Y:", logoYFromBottom)
+            console.log("[PDF Generation] Logo rendered, logoBuffer will remain set")
+          } catch (imageError) {
+            console.error("[PDF Generation] Failed to embed logo image in PDF:", imageError)
+            console.error("[PDF Generation] Image error details:", imageError instanceof Error ? imageError.message : String(imageError))
+            // If it's an SVG or unsupported format, PDFKit will throw an error here
+            // Set logoBuffer to null so org name shows as fallback
+            logoBuffer = null
           }
         } catch (error) {
           console.error("[PDF Generation] Failed to embed logo in PDF:", error)
@@ -423,173 +453,42 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       if (data.certificateDescription) {
         // Replace placeholders: [Student Name] and [Course Name]
-        // Both placeholders will be rendered at 24pt Bold inline with the text
-        // Supports: [student_name], [Student Name], [course_name], [Course Name], etc.
-        // Case-insensitive, handles spaces, underscores, or no separator
-        
+        // Replace placeholders with actual values
         const courseNamePattern = /\[course[\s_]*name\]/gi
         const studentNamePattern = /\[student[\s_]*name\]/gi
         
-        // Build array of text segments with formatting info
-        const segments: Array<{ text: string; isPlaceholder: boolean; isStudent: boolean }> = []
-        let remainingText = data.certificateDescription
-        
-        // Find all placeholder positions
-        const placeholders: Array<{ index: number; type: 'student' | 'course'; length: number }> = []
-        
-        // Find student name placeholders
-        let match
-        const studentRegex = /\[student[\s_]*name\]/gi
-        while ((match = studentRegex.exec(data.certificateDescription)) !== null) {
-          placeholders.push({
-            index: match.index,
-            type: 'student',
-            length: match[0].length
-          })
-        }
-        
-        // Find course name placeholders
-        const courseRegex = /\[course[\s_]*name\]/gi
-        while ((match = courseRegex.exec(data.certificateDescription)) !== null) {
-          placeholders.push({
-            index: match.index,
-            type: 'course',
-            length: match[0].length
-          })
-        }
-        
-        // Sort by index
-        placeholders.sort((a, b) => a.index - b.index)
-        
-        // Build segments array
-        let currentIndex = 0
-        for (const placeholder of placeholders) {
-          // Add text before placeholder
-          if (placeholder.index > currentIndex) {
-            const textBefore = data.certificateDescription.substring(currentIndex, placeholder.index)
-            if (textBefore.trim().length > 0) {
-              segments.push({
-                text: textBefore,
-                isPlaceholder: false,
-                isStudent: false
-              })
-            }
-          }
-          
-          // Add placeholder
-          segments.push({
-            text: placeholder.type === 'student' ? data.learnerName : data.courseTitle,
-            isPlaceholder: true,
-            isStudent: placeholder.type === 'student'
-          })
-          
-          currentIndex = placeholder.index + placeholder.length
-        }
-        
-        // Add remaining text
-        if (currentIndex < data.certificateDescription.length) {
-          const textAfter = data.certificateDescription.substring(currentIndex)
-          if (textAfter.trim().length > 0) {
-            segments.push({
-              text: textAfter,
-              isPlaceholder: false,
-              isStudent: false
-            })
-          }
-        }
+        descriptionText = data.certificateDescription
+          .replace(courseNamePattern, data.courseTitle)
+          .replace(studentNamePattern, data.learnerName)
         
         console.log("[PDF Generation] Certificate description processing:", {
           original: data.certificateDescription,
-          segments,
+          replaced: descriptionText,
           learnerName: data.learnerName,
           courseTitle: data.courseTitle,
         })
         
-        // Render description with mixed formatting inline
-        // Calculate positions to keep segments inline and centered
-        const descY = yFromTop(currentY)
-        const placeholderFontSize = 24
-        const regularFontSize = 16
+        // Render description text centered
+        // NOTE: For now, rendering as single text block (16pt)
+        // TODO: Implement inline 24pt Bold for placeholders
+        const descriptionY = yFromTop(currentY)
         const maxWidth = doc.page.width - 200
-        const lineHeight = 28
         
-        // Build lines of segments that fit within maxWidth
-        const lines: Array<Array<{ text: string; isPlaceholder: boolean; width: number }>> = []
-        let currentLine: Array<{ text: string; isPlaceholder: boolean; width: number }> = []
-        let currentLineWidth = 0
+        doc.fontSize(16)
+          .fillColor("#34495E")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text(descriptionText, pageCenterX, descriptionY, {
+            align: "center",
+            width: maxWidth,
+          })
         
-        // Set up fonts for width calculation
-        doc.fontSize(regularFontSize)
-        doc.font(usePoppins ? "Poppins" : "Helvetica")
-        
-        for (const segment of segments) {
-          // Set appropriate font for width calculation
-          if (segment.isPlaceholder) {
-            doc.fontSize(placeholderFontSize)
-            doc.font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-          } else {
-            doc.fontSize(regularFontSize)
-            doc.font(usePoppins ? "Poppins" : "Helvetica")
-          }
-          
-          const segmentWidth = doc.widthOfString(segment.text)
-          
-          // Check if segment fits on current line
-          if (currentLineWidth + segmentWidth <= maxWidth || currentLine.length === 0) {
-            currentLine.push({ text: segment.text, isPlaceholder: segment.isPlaceholder, width: segmentWidth })
-            currentLineWidth += segmentWidth
-          } else {
-            // Start new line
-            lines.push(currentLine)
-            currentLine = [{ text: segment.text, isPlaceholder: segment.isPlaceholder, width: segmentWidth }]
-            currentLineWidth = segmentWidth
-          }
-        }
-        
-        // Add last line
-        if (currentLine.length > 0) {
-          lines.push(currentLine)
-        }
-        
-        // Render lines
-        let lineY = descY
-        for (const line of lines) {
-          // Calculate total width of line
-          const totalLineWidth = line.reduce((sum, seg) => sum + seg.width, 0)
-          
-          // Start X position (centered)
-          let currentX = pageCenterX - (totalLineWidth / 2)
-          
-          // Render each segment in the line
-          for (const segment of line) {
-            if (segment.isPlaceholder) {
-              // Render placeholder (24pt Bold)
-              doc.fontSize(placeholderFontSize)
-              doc.font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-              doc.fillColor("#2C3E50")
-        } else {
-              // Render regular text (16pt)
-              doc.fontSize(regularFontSize)
-              doc.font(usePoppins ? "Poppins" : "Helvetica")
-              doc.fillColor("#34495E")
-            }
-            
-            // Render segment at calculated X position
-            doc.text(segment.text, currentX, lineY, {
-              width: segment.width + 10, // Small buffer for spacing
-            })
-            
-            // Move X position for next segment
-            currentX += segment.width
-          }
-          
-          // Move to next line
-          lineY -= lineHeight
-        }
-        
-        // Calculate total height used
-        const totalHeight = lines.length * lineHeight
+        // Estimate height used (approximate)
+        const lineHeight = 24
+        const estimatedLines = Math.max(1, Math.ceil(descriptionText.length / 80))
+        const totalHeight = estimatedLines * lineHeight
         currentY += totalHeight + 20
+        
+        console.log("[PDF Generation] Description rendered, estimated lines:", estimatedLines)
       } else {
         // Default description format
       // This is to certify that
