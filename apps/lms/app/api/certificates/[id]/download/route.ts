@@ -187,8 +187,19 @@ export async function GET(
     try {
       const brandSettings = await getBrandSettings()
       // Use black logo for certificates (white background)
-      logoUrl = brandSettings.logoBlack || undefined
-      organizationName = brandSettings.platformName || undefined
+      // Check for valid non-empty URL
+      logoUrl = (brandSettings.logoBlack && brandSettings.logoBlack.trim() !== "") 
+        ? brandSettings.logoBlack 
+        : undefined
+      organizationName = (brandSettings.platformName && brandSettings.platformName.trim() !== "")
+        ? brandSettings.platformName
+        : undefined
+      
+      console.log("[Certificates API] Brand settings loaded:", {
+        logoUrl,
+        organizationName,
+        logoBlack: brandSettings.logoBlack,
+      })
     } catch (brandError) {
       // If brand settings fetch fails, log warning but continue with defaults
       logWarning("Failed to fetch brand settings for certificate", {
@@ -207,6 +218,8 @@ export async function GET(
       learnerName: certificate.profiles?.name,
       courseTitle: course.title,
       certificateType: course.certificate_type,
+      logoUrl,
+      organizationName,
     })
 
     // Generate PDF certificate

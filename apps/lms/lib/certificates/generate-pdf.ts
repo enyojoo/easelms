@@ -160,11 +160,16 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       let templateBuffer: Buffer | null = null
 
       try {
-        if (data.logoUrl) {
+        if (data.logoUrl && data.logoUrl.trim() !== "") {
+          console.log("[PDF Generation] Fetching logo from URL:", data.logoUrl)
           logoBuffer = await fetchImageBuffer(data.logoUrl)
+          console.log("[PDF Generation] Logo fetched successfully, size:", logoBuffer.length)
+        } else {
+          console.log("[PDF Generation] No logo URL provided or URL is empty")
         }
       } catch (error) {
-        console.warn("Failed to fetch logo image:", error)
+        console.warn("[PDF Generation] Failed to fetch logo image:", error)
+        console.warn("[PDF Generation] Logo URL was:", data.logoUrl)
       }
 
       try {
@@ -233,25 +238,36 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           // Place logo at top center
           const logoWidth = 120
           const logoHeight = 40
+          console.log("[PDF Generation] Embedding logo at position:", {
+            x: pageCenterX - logoWidth / 2,
+            y: logoY,
+            width: logoWidth,
+            height: logoHeight,
+          })
           doc.image(logoBuffer, pageCenterX - logoWidth / 2, logoY, {
             width: logoWidth,
             height: logoHeight,
             fit: [logoWidth, logoHeight],
           })
           headerY = logoY + logoHeight + 20 // Adjust header position if logo is present
+          console.log("[PDF Generation] Logo embedded successfully")
         } catch (error) {
-          console.warn("Failed to embed logo in PDF:", error)
+          console.warn("[PDF Generation] Failed to embed logo in PDF:", error)
+          console.warn("[PDF Generation] Error details:", error instanceof Error ? error.message : String(error))
         }
-      } else if (data.organizationName && !templateBuffer) {
-        // Only show organization name if no logo AND no template (template may have its own branding)
-        doc
-          .fontSize(24)
-          .fillColor("#2C3E50")
-          .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-          .text(data.organizationName, pageCenterX, headerY, {
-            align: "center",
-          })
-        headerY += 40
+      } else {
+        console.log("[PDF Generation] No logo buffer available, logoUrl:", data.logoUrl)
+        if (data.organizationName && !templateBuffer) {
+          // Only show organization name if no logo AND no template (template may have its own branding)
+          doc
+            .fontSize(24)
+            .fillColor("#2C3E50")
+            .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+            .text(data.organizationName, pageCenterX, headerY, {
+              align: "center",
+            })
+          headerY += 40
+        }
       }
 
       // Title - Certificate of Completion/Participation
