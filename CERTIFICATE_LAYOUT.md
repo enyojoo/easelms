@@ -181,10 +181,10 @@ Runs:
 - **Spacing**: +6pt between image and line (if image present)
 
 ### 8. **Signature Name & Title**
-- **Signature Name**: 14pt Bold, #7F8C8D (gray)
-- **Signature Title**: 12pt Regular, #7F8C8D (gray)
+- **Signature Name**: 14pt Bold, Black (#000000)
+- **Signature Title**: 12pt Regular, Gray (#7F8C8D)
 - **Spacing**: 8pt between name and title
-- **Fallback**: "Authorized Signature" (12pt) if neither provided
+- **Fallback**: "Authorized Signature" (12pt, gray) if neither provided
 
 ### 9. **Certificate Number**
 - **Font**: 10pt Regular
