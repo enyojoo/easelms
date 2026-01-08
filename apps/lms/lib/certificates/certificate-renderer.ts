@@ -265,7 +265,7 @@ export function renderCertificate(
 ): void {
   // Layout constants from spec
   const TOP_MARGIN = 60
-  const BOTTOM_MARGIN = 25
+  const BOTTOM_MARGIN = 60
 
   const LOGO_W = 120
   const LOGO_H = 40

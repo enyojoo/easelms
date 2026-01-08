@@ -14,7 +14,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 
 ### Layout Constants
 - **TOP_MARGIN**: 60pt
-- **BOTTOM_MARGIN**: 25pt
+- **BOTTOM_MARGIN**: 60pt
 - **MAX_TEXT_WIDTH**: pageWidth - 200pt (592pt for LETTER landscape)
 
 ---
@@ -91,7 +91,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │    "Certificate Number: [number]"                       │
 │              Centered horizontally                       │
 │                                                          │
-│                    BOTTOM MARGIN (25pt)                 │
+│                    BOTTOM MARGIN (60pt)                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
