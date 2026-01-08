@@ -178,22 +178,23 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
             <Textarea
               placeholder={
                 settings.certificateType === "completion"
-                  ? "e.g., This is to certify that [student_name] has successfully completed the course..."
+                  ? "e.g., This certifies that [Student Name] has successfully completed the [Course Name], demonstrating commitment to personal growth and self-awareness."
                   : settings.certificateType === "participation"
-                  ? "e.g., This is to certify that [student_name] has successfully participated in the course..."
+                  ? "e.g., This certifies that [Student Name] has successfully participated in the [Course Name], demonstrating commitment to personal growth and self-awareness."
                   : settings.certificateType === "achievement"
-                  ? "e.g., This is to certify that [student_name] has successfully achieved excellence in the course..."
-                  : "e.g., This is to certify that [student_name] has successfully completed the course..."
+                  ? "e.g., This certifies that [Student Name] has successfully achieved excellence in the [Course Name], demonstrating commitment to personal growth and self-awareness."
+                  : "e.g., This certifies that [Student Name] has successfully completed the [Course Name], demonstrating commitment to personal growth and self-awareness."
               }
               value={settings.certificateDescription}
               onChange={(e) => onUpdate({ ...settings, certificateDescription: e.target.value })}
             />
             <p className="text-sm text-muted-foreground">
-              Use <strong>[student_name]</strong> as a placeholder for the student's name (from their profile).<br />
-              <strong>Examples by type:</strong><br />
-              • <strong>Completion:</strong> "This is to certify that [student_name] has successfully completed the course..."<br />
-              • <strong>Participation:</strong> "This is to certify that [student_name] has successfully participated in the course..."<br />
-              • <strong>Achievement:</strong> "This is to certify that [student_name] has successfully achieved excellence in the course..."
+              Use placeholders for dynamic content. Both placeholders will be rendered in <strong>24pt Bold</strong>.<br />
+              <strong>Supported placeholders:</strong><br />
+              • <code>[Student Name]</code> or <code>[student_name]</code> - Student's name from their profile<br />
+              • <code>[Course Name]</code> or <code>[course_name]</code> - Course title<br />
+              <strong>Supported formats:</strong> <code>[student_name]</code>, <code>[Student Name]</code>, <code>[course_name]</code>, <code>[Course Name]</code>, etc.<br />
+              <strong>Example:</strong> "This certifies that [Student Name] has successfully completed the [Course Name], demonstrating commitment to personal growth and self-awareness."
             </p>
           </div>
 

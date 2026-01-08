@@ -215,11 +215,13 @@ export async function GET(
 
     console.log("[Certificates API] Generating PDF with data:", {
       certificateNumber: certificate.certificate_number,
-      learnerName: certificate.profiles?.name,
+      learnerName: certificate.profiles?.name || "Student",
       courseTitle: course.title,
       certificateType: course.certificate_type,
-      logoUrl,
-      organizationName,
+      logoUrl: logoUrl || "NOT PROVIDED",
+      organizationName: organizationName || "NOT PROVIDED",
+      hasLogoUrl: !!logoUrl,
+      logoUrlLength: logoUrl?.length || 0,
     })
 
     // Generate PDF certificate

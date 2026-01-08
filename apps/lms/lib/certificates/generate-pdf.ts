@@ -225,48 +225,76 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       }
 
       // Calculate center positions for landscape layout
+      // PDFKit uses bottom-left origin, so Y coordinates are from bottom
       const pageCenterX = doc.page.width / 2
       const pageCenterY = doc.page.height / 2
+      const pageWidth = doc.page.width
+      const pageHeight = doc.page.height
       
-      // Header - Logo (centered, no organization name if logo is present)
-      const logoY = 60
-      let headerY = 80
+      console.log("[PDF Generation] Page dimensions:", {
+        width: pageWidth,
+        height: pageHeight,
+        centerX: pageCenterX,
+        centerY: pageCenterY,
+      })
+      
+      // Helper function to convert Y from top to PDFKit's bottom-origin coordinate system
+      const yFromTop = (y: number) => pageHeight - y
+      
+      // Start from top with proper margins
+      const topMargin = 60
+      let currentY = topMargin
       
       // Add logo (if available) - centered at top
       if (logoBuffer) {
         try {
           // Place logo at top center
+          // PDFKit: Y coordinate for images is the bottom of the image
           const logoWidth = 120
           const logoHeight = 40
+          const logoX = pageCenterX - logoWidth / 2
+          const logoYFromTop = currentY
+          // For images: Y is bottom, so convert: pageHeight - (yFromTop + height)
+          const logoYFromBottom = pageHeight - (logoYFromTop + logoHeight)
+          
           console.log("[PDF Generation] Embedding logo at position:", {
-            x: pageCenterX - logoWidth / 2,
-            y: logoY,
+            x: logoX,
+            yFromTop: logoYFromTop,
+            yFromBottom: logoYFromBottom,
             width: logoWidth,
             height: logoHeight,
+            logoUrl: data.logoUrl,
+            pageHeight,
           })
-          doc.image(logoBuffer, pageCenterX - logoWidth / 2, logoY, {
+          
+          doc.image(logoBuffer, logoX, logoYFromBottom, {
             width: logoWidth,
             height: logoHeight,
             fit: [logoWidth, logoHeight],
           })
-          headerY = logoY + logoHeight + 20 // Adjust header position if logo is present
-          console.log("[PDF Generation] Logo embedded successfully")
+          
+          currentY += logoHeight + 30 // Space after logo
+          console.log("[PDF Generation] Logo embedded successfully at Y:", logoYFromBottom)
         } catch (error) {
-          console.warn("[PDF Generation] Failed to embed logo in PDF:", error)
-          console.warn("[PDF Generation] Error details:", error instanceof Error ? error.message : String(error))
+          console.error("[PDF Generation] Failed to embed logo in PDF:", error)
+          console.error("[PDF Generation] Error details:", error instanceof Error ? error.message : String(error))
+          console.error("[PDF Generation] Logo buffer size:", logoBuffer?.length)
+          // Continue without logo
         }
       } else {
-        console.log("[PDF Generation] No logo buffer available, logoUrl:", data.logoUrl)
+        console.log("[PDF Generation] No logo buffer available")
+        console.log("[PDF Generation] Logo URL was:", data.logoUrl)
         if (data.organizationName && !templateBuffer) {
           // Only show organization name if no logo AND no template (template may have its own branding)
+          const orgNameY = yFromTop(currentY)
           doc
             .fontSize(24)
             .fillColor("#2C3E50")
             .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-            .text(data.organizationName, pageCenterX, headerY, {
+            .text(data.organizationName, pageCenterX, orgNameY, {
               align: "center",
             })
-          headerY += 40
+          currentY += 50
         }
       }
 
@@ -288,7 +316,9 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         }
       }
 
-      const titleY = headerY + 30
+      // Certificate Title
+      currentY += 20
+      const titleY = yFromTop(currentY)
       doc
         .fontSize(36)
         .fillColor("#2C3E50")
@@ -301,97 +331,222 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             align: "center",
           }
         )
+      console.log("[PDF Generation] Certificate title rendered at Y:", titleY)
 
       // Decorative line (only if no template)
-      const decorativeLineY = titleY + 50
+      currentY += 60
+      const decorativeLineY = yFromTop(currentY)
       if (!templateBuffer) {
-      doc
-        .lineWidth(2)
-        .strokeColor("#3498DB")
-        .moveTo(pageCenterX - 150, decorativeLineY)
-        .lineTo(pageCenterX + 150, decorativeLineY)
-        .stroke()
+        doc
+          .lineWidth(2)
+          .strokeColor("#3498DB")
+          .moveTo(pageCenterX - 150, decorativeLineY)
+          .lineTo(pageCenterX + 150, decorativeLineY)
+          .stroke()
       }
 
       // Certificate Description - use custom description if provided, otherwise use default
       let descriptionText: string
-      let currentY = decorativeLineY + 40
+      currentY += 40
 
       if (data.certificateDescription) {
-        // Replace [student_name] placeholder with actual learner name
-        descriptionText = data.certificateDescription.replace(/\[student_name\]/gi, data.learnerName)
+        // Replace placeholders: [Student Name] and [Course Name]
+        // Both placeholders will be rendered at 24pt Bold inline with the text
+        // Supports: [student_name], [Student Name], [course_name], [Course Name], etc.
+        // Case-insensitive, handles spaces, underscores, or no separator
         
-        // Split description into lines if it contains the learner name (for better formatting)
-        const parts = descriptionText.split(data.learnerName)
+        const courseNamePattern = /\[course[\s_]*name\]/gi
+        const studentNamePattern = /\[student[\s_]*name\]/gi
         
-        if (parts.length === 2) {
-          // Description has learner name in the middle: "This is to certify that [name] has completed..."
-          doc
-            .fontSize(16)
-            .fillColor("#34495E")
-            .font(usePoppins ? "Poppins" : "Helvetica")
-            .text(parts[0].trim(), pageCenterX, currentY, {
-              align: "center",
-            })
-          
-          currentY += 30
-          
-          // Learner Name (prominent)
-          doc
-            .fontSize(32)
-            .fillColor("#2C3E50")
-            .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-            .text(data.learnerName, pageCenterX, currentY, {
-              align: "center",
-            })
-          
-          currentY += 40
-          
-          // Rest of description
-          doc
-            .fontSize(16)
-            .fillColor("#34495E")
-            .font(usePoppins ? "Poppins" : "Helvetica")
-            .text(parts[1].trim(), pageCenterX, currentY, {
-              align: "center",
-              width: doc.page.width - 200,
-            })
-          
-          currentY += 40
-        } else {
-          // Description doesn't have learner name or has it in a different format
-          // Just replace and display as is
-          doc
-            .fontSize(16)
-            .fillColor("#34495E")
-            .font(usePoppins ? "Poppins" : "Helvetica")
-            .text(descriptionText, pageCenterX, currentY, {
-              align: "center",
-              width: doc.page.width - 200,
-            })
-          currentY += 60
+        // Build array of text segments with formatting info
+        const segments: Array<{ text: string; isPlaceholder: boolean; isStudent: boolean }> = []
+        let remainingText = data.certificateDescription
+        
+        // Find all placeholder positions
+        const placeholders: Array<{ index: number; type: 'student' | 'course'; length: number }> = []
+        
+        // Find student name placeholders
+        let match
+        const studentRegex = /\[student[\s_]*name\]/gi
+        while ((match = studentRegex.exec(data.certificateDescription)) !== null) {
+          placeholders.push({
+            index: match.index,
+            type: 'student',
+            length: match[0].length
+          })
         }
+        
+        // Find course name placeholders
+        const courseRegex = /\[course[\s_]*name\]/gi
+        while ((match = courseRegex.exec(data.certificateDescription)) !== null) {
+          placeholders.push({
+            index: match.index,
+            type: 'course',
+            length: match[0].length
+          })
+        }
+        
+        // Sort by index
+        placeholders.sort((a, b) => a.index - b.index)
+        
+        // Build segments array
+        let currentIndex = 0
+        for (const placeholder of placeholders) {
+          // Add text before placeholder
+          if (placeholder.index > currentIndex) {
+            const textBefore = data.certificateDescription.substring(currentIndex, placeholder.index)
+            if (textBefore.trim().length > 0) {
+              segments.push({
+                text: textBefore,
+                isPlaceholder: false,
+                isStudent: false
+              })
+            }
+          }
+          
+          // Add placeholder
+          segments.push({
+            text: placeholder.type === 'student' ? data.learnerName : data.courseTitle,
+            isPlaceholder: true,
+            isStudent: placeholder.type === 'student'
+          })
+          
+          currentIndex = placeholder.index + placeholder.length
+        }
+        
+        // Add remaining text
+        if (currentIndex < data.certificateDescription.length) {
+          const textAfter = data.certificateDescription.substring(currentIndex)
+          if (textAfter.trim().length > 0) {
+            segments.push({
+              text: textAfter,
+              isPlaceholder: false,
+              isStudent: false
+            })
+          }
+        }
+        
+        console.log("[PDF Generation] Certificate description processing:", {
+          original: data.certificateDescription,
+          segments,
+          learnerName: data.learnerName,
+          courseTitle: data.courseTitle,
+        })
+        
+        // Render description with mixed formatting inline
+        // Calculate positions to keep segments inline and centered
+        const descY = yFromTop(currentY)
+        const placeholderFontSize = 24
+        const regularFontSize = 16
+        const maxWidth = doc.page.width - 200
+        const lineHeight = 28
+        
+        // Build lines of segments that fit within maxWidth
+        const lines: Array<Array<{ text: string; isPlaceholder: boolean; width: number }>> = []
+        let currentLine: Array<{ text: string; isPlaceholder: boolean; width: number }> = []
+        let currentLineWidth = 0
+        
+        // Set up fonts for width calculation
+        doc.fontSize(regularFontSize)
+        doc.font(usePoppins ? "Poppins" : "Helvetica")
+        
+        for (const segment of segments) {
+          // Set appropriate font for width calculation
+          if (segment.isPlaceholder) {
+            doc.fontSize(placeholderFontSize)
+            doc.font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+          } else {
+            doc.fontSize(regularFontSize)
+            doc.font(usePoppins ? "Poppins" : "Helvetica")
+          }
+          
+          const segmentWidth = doc.widthOfString(segment.text)
+          
+          // Check if segment fits on current line
+          if (currentLineWidth + segmentWidth <= maxWidth || currentLine.length === 0) {
+            currentLine.push({ text: segment.text, isPlaceholder: segment.isPlaceholder, width: segmentWidth })
+            currentLineWidth += segmentWidth
+          } else {
+            // Start new line
+            lines.push(currentLine)
+            currentLine = [{ text: segment.text, isPlaceholder: segment.isPlaceholder, width: segmentWidth }]
+            currentLineWidth = segmentWidth
+          }
+        }
+        
+        // Add last line
+        if (currentLine.length > 0) {
+          lines.push(currentLine)
+        }
+        
+        // Render lines
+        let lineY = descY
+        for (const line of lines) {
+          // Calculate total width of line
+          const totalLineWidth = line.reduce((sum, seg) => sum + seg.width, 0)
+          
+          // Start X position (centered)
+          let currentX = pageCenterX - (totalLineWidth / 2)
+          
+          // Render each segment in the line
+          for (const segment of line) {
+            if (segment.isPlaceholder) {
+              // Render placeholder (24pt Bold)
+              doc.fontSize(placeholderFontSize)
+              doc.font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+              doc.fillColor("#2C3E50")
+            } else {
+              // Render regular text (16pt)
+              doc.fontSize(regularFontSize)
+              doc.font(usePoppins ? "Poppins" : "Helvetica")
+              doc.fillColor("#34495E")
+            }
+            
+            // Render segment at calculated X position
+            doc.text(segment.text, currentX, lineY, {
+              width: segment.width + 10, // Small buffer for spacing
+            })
+            
+            // Move X position for next segment
+            currentX += segment.width
+          }
+          
+          // Move to next line
+          lineY -= lineHeight
+        }
+        
+        // Calculate total height used
+        const totalHeight = lines.length * lineHeight
+        currentY += totalHeight + 20
       } else {
         // Default description format
-      // This is to certify that
-      doc
-        .fontSize(16)
-        .fillColor("#34495E")
-        .font(usePoppins ? "Poppins" : "Helvetica")
-          .text("This is to certify that", pageCenterX, currentY, {
-          align: "center",
-        })
+        // This is to certify that
+        const certifyY = yFromTop(currentY)
+        doc
+          .fontSize(16)
+          .fillColor("#34495E")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text("This is to certify that", pageCenterX, certifyY, {
+            align: "center",
+          })
 
         currentY += 30
 
-      // Learner Name (prominent)
-      doc
-        .fontSize(32)
-        .fillColor("#2C3E50")
-        .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-          .text(data.learnerName, pageCenterX, currentY, {
-          align: "center",
+        // Learner Name (prominent)
+        const nameY = yFromTop(currentY)
+        console.log("[PDF Generation] Rendering learner name (default format):", {
+          name: data.learnerName,
+          y: nameY,
+          yFromTop: currentY,
         })
+        doc
+          .fontSize(32)
+          .fillColor("#2C3E50")
+          .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+          .text(data.learnerName, pageCenterX, nameY, {
+            align: "center",
+          })
+        console.log("[PDF Generation] Learner name rendered successfully (default format)")
 
         currentY += 40
 
@@ -409,28 +564,30 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           }
         }
 
-      doc
-        .fontSize(16)
-        .fillColor("#34495E")
-        .font(usePoppins ? "Poppins" : "Helvetica")
-        .text(
+        const actionY = yFromTop(currentY)
+        doc
+          .fontSize(16)
+          .fillColor("#34495E")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text(
             `has successfully ${getActionText()}`,
-          pageCenterX,
-            currentY,
-          {
-            align: "center",
-          }
-        )
+            pageCenterX,
+            actionY,
+            {
+              align: "center",
+            }
+          )
 
         currentY += 40
       }
 
       // Course Title
+      const courseTitleY = yFromTop(currentY)
       doc
         .fontSize(24)
         .fillColor("#2C3E50")
         .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-        .text(data.courseTitle, pageCenterX, currentY, {
+        .text(data.courseTitle, pageCenterX, courseTitleY, {
           align: "center",
           width: doc.page.width - 200,
         })
@@ -439,11 +596,12 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Additional text (if provided)
       if (data.additionalText) {
+        const additionalY = yFromTop(currentY)
         doc
           .fontSize(14)
           .fillColor("#34495E")
           .font(usePoppins ? "Poppins" : "Helvetica")
-          .text(data.additionalText, pageCenterX, currentY, {
+          .text(data.additionalText, pageCenterX, additionalY, {
             align: "center",
             width: doc.page.width - 200,
           })
@@ -457,44 +615,33 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         day: "numeric",
       })
 
+      currentY += 20
+      const dateY = yFromTop(currentY)
       doc
         .fontSize(14)
         .fillColor("#7F8C8D")
         .font(usePoppins ? "Poppins" : "Helvetica")
-        .text(`Issued on ${issuedDate}`, pageCenterX, currentY, {
+        .text(`Issued on ${issuedDate}`, pageCenterX, dateY, {
           align: "center",
         })
 
-      // Certificate Number (small, bottom)
-      doc
-        .fontSize(10)
-        .fillColor("#95A5A6")
-        .font(usePoppins ? "Poppins" : "Helvetica")
-        .text(
-          `Certificate Number: ${data.certificateNumber}`,
-          pageCenterX,
-          doc.page.height - 80,
-          {
-            align: "center",
-          }
-        )
-
-      // Signature section
-      const signatureY = doc.page.height - 120
-      const signatureXLeft = pageCenterX - 100
-      const signatureXRight = pageCenterX + 100
+      // Signature section - centered under the issued date
+      currentY += 40
+      const signatureYFromTop = currentY
+      const signatureY = yFromTop(signatureYFromTop)
       
-      // Left signature (signature image or line)
+      // Signature line (centered)
       if (signatureBuffer) {
         try {
           // Embed signature image
+          // PDFKit: Y coordinate for images is the bottom of the image
           const signatureWidth = 80
           const signatureHeight = 30
-          doc.image(signatureBuffer, signatureXLeft - signatureWidth / 2, signatureY - 5, {
+          const sigImageY = pageHeight - (signatureYFromTop + signatureHeight)
+          doc.image(signatureBuffer, pageCenterX - signatureWidth / 2, sigImageY, {
             width: signatureWidth,
             height: signatureHeight,
             fit: [signatureWidth, signatureHeight],
-            align: "center",
           })
         } catch (error) {
           console.warn("Failed to embed signature image, using line instead:", error)
@@ -503,7 +650,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             .fontSize(12)
             .fillColor("#34495E")
             .font(usePoppins ? "Poppins" : "Helvetica")
-            .text("_________________________", signatureXLeft, signatureY, {
+            .text("_________________________", pageCenterX, signatureY, {
               align: "center",
             })
         }
@@ -513,50 +660,82 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           .fontSize(12)
           .fillColor("#34495E")
           .font(usePoppins ? "Poppins" : "Helvetica")
-          .text("_________________________", signatureXLeft, signatureY, {
+          .text("_________________________", pageCenterX, signatureY, {
             align: "center",
           })
       }
-      
-      // Right signature line (for date)
-      doc
-        .fontSize(12)
-        .fillColor("#34495E")
-        .font(usePoppins ? "Poppins" : "Helvetica")
-        .text("_________________________", signatureXRight, signatureY, {
-          align: "center",
-        })
 
-      // Signature name and title (if provided) or default text
-      let signatureText = ""
+      // Signature name and title (centered below signature line)
+      currentY += 12
+      
+      // Render signature name and title separately for better spacing control
+      const signatureTextY = yFromTop(currentY)
+      
       if (data.signatureName && data.signatureTitle) {
-        signatureText = `${data.signatureName}\n${data.signatureTitle}`
+        // Render name
+        doc
+          .fontSize(10)
+          .fillColor("#7F8C8D")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text(data.signatureName, pageCenterX, signatureTextY, {
+            align: "center",
+            width: 200,
+          })
+        
+        // Render title with tighter spacing (only 8pt gap instead of default line height)
+        const titleY = yFromTop(currentY - 12)
+        doc
+          .fontSize(10)
+          .fillColor("#7F8C8D")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text(data.signatureTitle, pageCenterX, titleY, {
+            align: "center",
+            width: 200,
+          })
       } else if (data.signatureName) {
-        signatureText = data.signatureName
+        doc
+          .fontSize(10)
+          .fillColor("#7F8C8D")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text(data.signatureName, pageCenterX, signatureTextY, {
+            align: "center",
+            width: 200,
+          })
       } else if (data.signatureTitle) {
-        signatureText = data.signatureTitle
+        doc
+          .fontSize(10)
+          .fillColor("#7F8C8D")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text(data.signatureTitle, pageCenterX, signatureTextY, {
+            align: "center",
+            width: 200,
+          })
       } else {
-        signatureText = "Authorized Signature"
+        doc
+          .fontSize(10)
+          .fillColor("#7F8C8D")
+          .font(usePoppins ? "Poppins" : "Helvetica")
+          .text("Authorized Signature", pageCenterX, signatureTextY, {
+            align: "center",
+            width: 200,
+          })
       }
 
+      // Certificate Number (small, bottom)
+      currentY += 50
+      const certNumberY = yFromTop(currentY)
       doc
         .fontSize(10)
-        .fillColor("#7F8C8D")
+        .fillColor("#95A5A6")
         .font(usePoppins ? "Poppins" : "Helvetica")
-        .text(signatureText, signatureXLeft, signatureY + 25, {
-          align: "center",
-          width: 150,
-        })
-        .text("Date", signatureXRight, signatureY + 25, {
-          align: "center",
-        })
-
-      // Footer decorative element
-      doc
-        .circle(pageCenterX, doc.page.height - 40, 20)
-        .lineWidth(1)
-        .strokeColor("#BDC3C7")
-        .stroke()
+        .text(
+          `Certificate Number: ${data.certificateNumber}`,
+          pageCenterX,
+          certNumberY,
+          {
+            align: "center",
+          }
+        )
 
       doc.end()
     } catch (error: any) {
