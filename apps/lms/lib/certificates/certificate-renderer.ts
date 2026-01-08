@@ -264,8 +264,8 @@ export function renderCertificate(
   options: RenderOptions = {}
 ): void {
   // Layout constants from spec
-  const TOP_MARGIN = 25 // Reduced from 60pt to 25pt
-  const BOTTOM_MARGIN = 25 // Reduced from 60pt to 25pt
+  const TOP_MARGIN = 0 // Removed top margin
+  const BOTTOM_MARGIN = 25
 
   const LOGO_W = 120
   const LOGO_H = 40
