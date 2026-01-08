@@ -219,7 +219,12 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .stroke()
       }
 
+      // Calculate center positions for landscape layout
+      const pageCenterX = doc.page.width / 2
+      const pageCenterY = doc.page.height / 2
+      
       // Header - Logo (centered, no organization name if logo is present)
+      const logoY = 60
       let headerY = 80
       
       // Add logo (if available) - centered at top
@@ -228,13 +233,12 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           // Place logo at top center
           const logoWidth = 120
           const logoHeight = 40
-          doc.image(logoBuffer, (doc.page.width - logoWidth) / 2, 40, {
+          doc.image(logoBuffer, pageCenterX - logoWidth / 2, logoY, {
             width: logoWidth,
             height: logoHeight,
             fit: [logoWidth, logoHeight],
-            align: "center",
           })
-          headerY = 90 // Adjust header position if logo is present
+          headerY = logoY + logoHeight + 20 // Adjust header position if logo is present
         } catch (error) {
           console.warn("Failed to embed logo in PDF:", error)
         }
@@ -244,9 +248,10 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           .fontSize(24)
           .fillColor("#2C3E50")
           .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-          .text(data.organizationName, doc.page.width / 2, headerY, {
+          .text(data.organizationName, pageCenterX, headerY, {
             align: "center",
           })
+        headerY += 40
       }
 
       // Title - Certificate of Completion/Participation
@@ -267,32 +272,34 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         }
       }
 
+      const titleY = headerY + 30
       doc
         .fontSize(36)
         .fillColor("#2C3E50")
-        .font("Helvetica-Bold")
+        .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
         .text(
           getCertificateTitle(),
-          doc.page.width / 2,
-          (logoBuffer || data.organizationName) ? 130 : 100,
+          pageCenterX,
+          titleY,
           {
             align: "center",
           }
         )
 
       // Decorative line (only if no template)
+      const decorativeLineY = titleY + 50
       if (!templateBuffer) {
       doc
         .lineWidth(2)
         .strokeColor("#3498DB")
-        .moveTo(doc.page.width / 2 - 150, 180)
-        .lineTo(doc.page.width / 2 + 150, 180)
+        .moveTo(pageCenterX - 150, decorativeLineY)
+        .lineTo(pageCenterX + 150, decorativeLineY)
         .stroke()
       }
 
       // Certificate Description - use custom description if provided, otherwise use default
       let descriptionText: string
-      let currentY = 220
+      let currentY = decorativeLineY + 40
 
       if (data.certificateDescription) {
         // Replace [student_name] placeholder with actual learner name
@@ -307,7 +314,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             .fontSize(16)
             .fillColor("#34495E")
             .font(usePoppins ? "Poppins" : "Helvetica")
-            .text(parts[0].trim(), doc.page.width / 2, currentY, {
+            .text(parts[0].trim(), pageCenterX, currentY, {
               align: "center",
             })
           
@@ -318,7 +325,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             .fontSize(32)
             .fillColor("#2C3E50")
             .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-            .text(data.learnerName, doc.page.width / 2, currentY, {
+            .text(data.learnerName, pageCenterX, currentY, {
               align: "center",
             })
           
@@ -329,7 +336,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             .fontSize(16)
             .fillColor("#34495E")
             .font(usePoppins ? "Poppins" : "Helvetica")
-            .text(parts[1].trim(), doc.page.width / 2, currentY, {
+            .text(parts[1].trim(), pageCenterX, currentY, {
               align: "center",
               width: doc.page.width - 200,
             })
@@ -342,7 +349,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             .fontSize(16)
             .fillColor("#34495E")
             .font(usePoppins ? "Poppins" : "Helvetica")
-            .text(descriptionText, doc.page.width / 2, currentY, {
+            .text(descriptionText, pageCenterX, currentY, {
               align: "center",
               width: doc.page.width - 200,
             })
@@ -355,7 +362,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .fontSize(16)
         .fillColor("#34495E")
         .font(usePoppins ? "Poppins" : "Helvetica")
-          .text("This is to certify that", doc.page.width / 2, currentY, {
+          .text("This is to certify that", pageCenterX, currentY, {
           align: "center",
         })
 
@@ -365,8 +372,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(32)
         .fillColor("#2C3E50")
-        .font("Helvetica-Bold")
-          .text(data.learnerName, doc.page.width / 2, currentY, {
+        .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+          .text(data.learnerName, pageCenterX, currentY, {
           align: "center",
         })
 
@@ -392,7 +399,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .font(usePoppins ? "Poppins" : "Helvetica")
         .text(
             `has successfully ${getActionText()}`,
-          doc.page.width / 2,
+          pageCenterX,
             currentY,
           {
             align: "center",
@@ -406,8 +413,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       doc
         .fontSize(24)
         .fillColor("#2C3E50")
-        .font("Helvetica-Bold")
-        .text(data.courseTitle, doc.page.width / 2, currentY, {
+        .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+        .text(data.courseTitle, pageCenterX, currentY, {
           align: "center",
           width: doc.page.width - 200,
         })
@@ -420,7 +427,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           .fontSize(14)
           .fillColor("#34495E")
           .font(usePoppins ? "Poppins" : "Helvetica")
-          .text(data.additionalText, doc.page.width / 2, currentY, {
+          .text(data.additionalText, pageCenterX, currentY, {
             align: "center",
             width: doc.page.width - 200,
           })
@@ -438,7 +445,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .fontSize(14)
         .fillColor("#7F8C8D")
         .font(usePoppins ? "Poppins" : "Helvetica")
-        .text(`Issued on ${issuedDate}`, doc.page.width / 2, currentY, {
+        .text(`Issued on ${issuedDate}`, pageCenterX, currentY, {
           align: "center",
         })
 
@@ -449,7 +456,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .font(usePoppins ? "Poppins" : "Helvetica")
         .text(
           `Certificate Number: ${data.certificateNumber}`,
-          doc.page.width / 2,
+          pageCenterX,
           doc.page.height - 80,
           {
             align: "center",
@@ -458,8 +465,8 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Signature section
       const signatureY = doc.page.height - 120
-      const signatureXLeft = doc.page.width / 2 - 100
-      const signatureXRight = doc.page.width / 2 + 100
+      const signatureXLeft = pageCenterX - 100
+      const signatureXRight = pageCenterX + 100
       
       // Left signature (signature image or line)
       if (signatureBuffer) {
@@ -530,7 +537,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Footer decorative element
       doc
-        .circle(doc.page.width / 2, doc.page.height - 40, 20)
+        .circle(pageCenterX, doc.page.height - 40, 20)
         .lineWidth(1)
         .strokeColor("#BDC3C7")
         .stroke()
