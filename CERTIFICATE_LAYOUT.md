@@ -153,13 +153,15 @@ Runs:
 - **Base font**: 16pt Regular, #000000 (Black)
 - **Placeholder font**: 16pt Bold, #000000 (Black)
 - **Max width**: pageWidth - 200pt
+- **Character limit**: 150 characters (enforced in course builder)
 - **Line height**: maxFontSize * 1.2
 - **Baseline alignment**: Nudge factor 0.65
-- **Position**: Centered, after decorative line + 20pt
+- **Position**: Centered, after decorative line + 25pt
 
 ### 5. **Additional Text** (Optional)
 - **Font**: 16pt Regular
 - **Color**: #000000 (Black)
+- **Character limit**: 150 characters (enforced in course builder)
 - **Position**: Centered, after description + 20pt
 
 ### 6. **Date**

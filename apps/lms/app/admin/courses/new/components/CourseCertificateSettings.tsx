@@ -25,12 +25,20 @@ interface CourseCertificateSettingsProps {
   courseId?: string | number
 }
 
+// Character limits
+const DESCRIPTION_CHAR_LIMIT = 150
+const ADDITIONAL_TEXT_CHAR_LIMIT = 150
+
 export default function CourseCertificateSettings({ settings, onUpdate, courseId }: CourseCertificateSettingsProps) {
   // Track if "optional" is selected to show custom title field
   // Only consider "optional" selected if certificateTitle is a non-empty string
   // If certificateTitle is undefined or empty string, use the certificateType
   const isOptionalSelected = settings.certificateTitle !== undefined && settings.certificateTitle.trim() !== ""
   const currentValue = isOptionalSelected ? "optional" : (settings.certificateType || "completion")
+  
+  // Character counts (excluding placeholders from count)
+  const descriptionLength = settings.certificateDescription?.length || 0
+  const additionalTextLength = settings.additionalText?.length || 0
 
   return (
     <div className="space-y-6">
@@ -174,27 +182,41 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
           </div>
 
           <div className="space-y-2">
-            <Label>Certificate Description</Label>
+            <div className="flex items-center justify-between">
+              <Label>Certificate Description</Label>
+              <span className={`text-sm ${descriptionLength > DESCRIPTION_CHAR_LIMIT ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                {descriptionLength}/{DESCRIPTION_CHAR_LIMIT} characters
+              </span>
+            </div>
             <Textarea
               placeholder={
                 settings.certificateType === "completion"
-                  ? "e.g., This certifies that [Student Name] has successfully completed the [Course Name], demonstrating commitment to personal growth and self-awareness."
+                  ? "e.g., This certifies that [Student Name] has completed the [Course Name]."
                   : settings.certificateType === "participation"
-                  ? "e.g., This certifies that [Student Name] has successfully participated in the [Course Name], demonstrating commitment to personal growth and self-awareness."
+                  ? "e.g., This certifies that [Student Name] has participated in the [Course Name]."
                   : settings.certificateType === "achievement"
-                  ? "e.g., This certifies that [Student Name] has successfully achieved excellence in the [Course Name], demonstrating commitment to personal growth and self-awareness."
-                  : "e.g., This certifies that [Student Name] has successfully completed the [Course Name], demonstrating commitment to personal growth and self-awareness."
+                  ? "e.g., This certifies that [Student Name] has achieved excellence in the [Course Name]."
+                  : "e.g., This certifies that [Student Name] has completed the [Course Name]."
               }
               value={settings.certificateDescription}
-              onChange={(e) => onUpdate({ ...settings, certificateDescription: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value.length <= DESCRIPTION_CHAR_LIMIT) {
+                  onUpdate({ ...settings, certificateDescription: value })
+                }
+              }}
+              maxLength={DESCRIPTION_CHAR_LIMIT}
+              className={descriptionLength > DESCRIPTION_CHAR_LIMIT ? 'border-red-500' : ''}
             />
+            {descriptionLength > DESCRIPTION_CHAR_LIMIT && (
+              <p className="text-sm text-red-500">
+                Description exceeds {DESCRIPTION_CHAR_LIMIT} character limit. Please shorten your text.
+              </p>
+            )}
             <p className="text-sm text-muted-foreground">
-              Use placeholders for dynamic content. Both placeholders will be rendered in <strong>24pt Bold</strong>.<br />
-              <strong>Supported placeholders:</strong><br />
-              • <code>[Student Name]</code> or <code>[student_name]</code> - Student's name from their profile<br />
-              • <code>[Course Name]</code> or <code>[course_name]</code> - Course title<br />
-              <strong>Supported formats:</strong> <code>[student_name]</code>, <code>[Student Name]</code>, <code>[course_name]</code>, <code>[Course Name]</code>, etc.<br />
-              <strong>Example:</strong> "This certifies that [Student Name] has successfully completed the [Course Name], demonstrating commitment to personal growth and self-awareness."
+              <strong>Max {DESCRIPTION_CHAR_LIMIT} characters.</strong> Placeholders count toward the limit.<br />
+              <strong>Supported placeholders:</strong> <code>[Student Name]</code>, <code>[Course Name]</code><br />
+              Placeholders will be rendered in <strong>16pt Bold</strong>.
             </p>
           </div>
 
@@ -252,13 +274,32 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
           </Card>
 
           <div className="space-y-2">
-            <Label>Additional Text</Label>
+            <div className="flex items-center justify-between">
+              <Label>Additional Text (Optional)</Label>
+              <span className={`text-sm ${additionalTextLength > ADDITIONAL_TEXT_CHAR_LIMIT ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                {additionalTextLength}/{ADDITIONAL_TEXT_CHAR_LIMIT} characters
+              </span>
+            </div>
             <Textarea
               placeholder="Any additional text to appear on the certificate..."
               value={settings.additionalText}
-              onChange={(e) => onUpdate({ ...settings, additionalText: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value
+                if (value.length <= ADDITIONAL_TEXT_CHAR_LIMIT) {
+                  onUpdate({ ...settings, additionalText: value })
+                }
+              }}
+              maxLength={ADDITIONAL_TEXT_CHAR_LIMIT}
+              className={additionalTextLength > ADDITIONAL_TEXT_CHAR_LIMIT ? 'border-red-500' : ''}
             />
-            <p className="text-sm text-muted-foreground">This will appear at the bottom of the certificate</p>
+            {additionalTextLength > ADDITIONAL_TEXT_CHAR_LIMIT && (
+              <p className="text-sm text-red-500">
+                Additional text exceeds {ADDITIONAL_TEXT_CHAR_LIMIT} character limit. Please shorten your text.
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              <strong>Max {ADDITIONAL_TEXT_CHAR_LIMIT} characters.</strong> This will appear below the description on the certificate.
+            </p>
           </div>
         </div>
       )}
