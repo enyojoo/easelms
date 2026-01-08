@@ -32,7 +32,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │                                                          │
 │                    +30pt spacing                        │
 │                                                          │
-│         CERTIFICATE TITLE (36pt, Bold)                  │
+│         CERTIFICATE TITLE (30pt, Bold)                  │
 │    (Custom title OR "Certificate of Completion" etc.)    │
 │              Centered horizontally                       │
 │                                                          │
@@ -54,7 +54,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │    Line height: maxFontSize * 1.2                       │
 │    Max width: pageWidth - 200pt                         │
 │                                                          │
-│                    +30pt spacing                        │
+│                    +20pt spacing                        │
 │                                                          │
 │         ADDITIONAL TEXT (14pt, Optional)                │
 │    (From course builder settings)                        │
@@ -137,7 +137,7 @@ Runs:
 - **Note**: SVG not supported by PDFKit - must use PNG/JPG
 
 ### 2. **Certificate Title**
-- **Font**: 36pt Bold
+- **Font**: 30pt Bold
 - **Color**: #2C3E50
 - **Position**: Centered, after logo + 30pt
 - **Custom**: Can be set in course builder, or defaults based on type

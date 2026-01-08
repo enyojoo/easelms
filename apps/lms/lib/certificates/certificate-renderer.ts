@@ -269,7 +269,7 @@ export function renderCertificate(
   const LOGO_W = 120
   const LOGO_H = 40
 
-  const TITLE_SIZE = 36
+  const TITLE_SIZE = 30 // Reduced from 36pt to 30pt
 
   const LINE_W = 300
   const LINE_COLOR = "#3498DB" // Blue
@@ -370,7 +370,7 @@ export function renderCertificate(
     lineHeightFactor: 1.2,
     baselineNudgeFactor: 0.65,
   })
-  y += desc.height + 30 // Reduced from 50pt to 30pt
+  y += desc.height + 20 // Reduced from 30pt to 20pt
   console.log("[Certificate Renderer] Description rendered, lines:", desc.linesCount, ", y now:", y)
 
   // ADDITIONAL TEXT (optional)
