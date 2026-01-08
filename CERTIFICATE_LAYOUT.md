@@ -13,8 +13,8 @@
 The certificate uses a **flow layout** that stacks blocks from top to bottom using measured heights. No hardcoded absolute Y values beyond the top margin. Each block is centered horizontally using real font metrics.
 
 ### Layout Constants
-- **TOP_MARGIN**: 60pt
-- **BOTTOM_MARGIN**: 60pt
+- **TOP_MARGIN**: 25pt
+- **BOTTOM_MARGIN**: 25pt
 - **MAX_TEXT_WIDTH**: pageWidth - 200pt (592pt for LETTER landscape)
 
 ---
@@ -23,7 +23,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    TOP MARGIN (60pt)                    │
+│                    TOP MARGIN (25pt)                    │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
 │              [LOGO] - fit within 120x40pt               │
@@ -42,7 +42,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │         Decorative black line (300pt wide, #000000)     │
 │         (Only if no custom template)                     │
 │                                                          │
-│                    +20pt spacing                        │
+│                    +25pt spacing                        │
 │                                                          │
 │         CERTIFICATE DESCRIPTION                         │
 │    (From course builder settings - custom text)          │
@@ -56,7 +56,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │                                                          │
 │                    +20pt spacing                        │
 │                                                          │
-│         ADDITIONAL TEXT (14pt, Optional)                │
+│         ADDITIONAL TEXT (16pt, Optional)                │
 │    (From course builder settings)                        │
 │              Centered horizontally                       │
 │                                                          │
@@ -79,9 +79,9 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │                                                          │
 │                    +12pt spacing                        │
 │                                                          │
-│         SIGNATURE NAME (14pt, Bold, Gray #7F8C8D)       │
+│         SIGNATURE NAME (16pt, Bold, Black)              │
 │              Centered horizontally                       │
-│                    +8pt spacing                         │
+│                    +5pt spacing                         │
 │         SIGNATURE TITLE (12pt, Regular, Gray #7F8C8D)   │
 │              Centered horizontally                       │
 │                                                          │
@@ -91,7 +91,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │    "Certificate Number: [number]"                       │
 │              Centered horizontally                       │
 │                                                          │
-│                    BOTTOM MARGIN (60pt)                 │
+│                    BOTTOM MARGIN (25pt)                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -158,7 +158,7 @@ Runs:
 - **Position**: Centered, after decorative line + 20pt
 
 ### 5. **Additional Text** (Optional)
-- **Font**: 14pt Regular
+- **Font**: 16pt Regular
 - **Color**: #000000 (Black)
 - **Position**: Centered, after description + 20pt
 
@@ -181,9 +181,9 @@ Runs:
 - **Spacing**: +6pt between image and line (if image present)
 
 ### 8. **Signature Name & Title**
-- **Signature Name**: 14pt Bold, Black (#000000)
+- **Signature Name**: 16pt Bold, Black (#000000)
 - **Signature Title**: 12pt Regular, Gray (#7F8C8D)
-- **Spacing**: 8pt between name and title
+- **Spacing**: 5pt between name and title
 - **Fallback**: "Authorized Signature" (12pt, gray) if neither provided
 
 ### 9. **Certificate Number**

@@ -264,20 +264,20 @@ export function renderCertificate(
   options: RenderOptions = {}
 ): void {
   // Layout constants from spec
-  const TOP_MARGIN = 60
-  const BOTTOM_MARGIN = 60
+  const TOP_MARGIN = 25 // Reduced from 60pt to 25pt
+  const BOTTOM_MARGIN = 25 // Reduced from 60pt to 25pt
 
   const LOGO_W = 120
   const LOGO_H = 40
 
-  const TITLE_SIZE = 30 // Reduced from 36pt to 30pt
+  const TITLE_SIZE = 30
 
   const LINE_W = 300
   const LINE_COLOR = "#000000" // Black
 
   const MAX_TEXT_WIDTH = doc.page.width - 200
 
-  const ADDITIONAL_SIZE = 14
+  const ADDITIONAL_SIZE = 16 // Increased from 14pt to 16pt
   const DATE_SIZE = 14
   const SMALL_GRAY_SIZE = 10
   const GRAY = "#7F8C8D"
@@ -350,11 +350,11 @@ export function renderCertificate(
   y += 5 // Reduced from 60pt to 5pt to fit content on page
   console.log("[Certificate Renderer] Title rendered, y now:", y)
 
-  // DECORATIVE LINE (blue) - only if no template
+  // DECORATIVE LINE (black) - only if no template
   if (!assets?.template) {
     drawCenteredLine(doc, y, LINE_W, { strokeColor: LINE_COLOR, lineWidth: 2 })
   }
-  y += 20 // Reduced from 40pt to 20pt
+  y += 25 // Changed to 25pt
 
   // DESCRIPTION (rich runs: 16pt + 24pt bold placeholders)
   const descriptionTemplate = data.descriptionTemplate ||
@@ -421,7 +421,7 @@ export function renderCertificate(
   y += 12
   console.log("[Certificate Renderer] Signature line rendered, y now:", y)
 
-  // SIGNATURE NAME (14pt bold) - BLACK & TITLE (12pt regular) - GRAY
+  // SIGNATURE NAME (16pt bold) - BLACK & TITLE (12pt regular) - GRAY
   if (data.signatureName) {
     y += drawCenteredWrappedText(
       doc,
@@ -429,10 +429,10 @@ export function renderCertificate(
       y,
       MAX_TEXT_WIDTH,
       fonts.bold, // Bold for name
-      14, // 14pt font size
+      16, // 16pt font size (increased from 14pt)
       { color: "#000000" } // BLACK for name
     )
-    y += 8 // Small gap between name and title
+    y += 5 // Reduced from 8pt to 5pt
   }
   
   if (data.signatureTitle) {
