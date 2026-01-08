@@ -36,7 +36,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │    (Custom title OR "Certificate of Completion" etc.)    │
 │              Centered horizontally                       │
 │                                                          │
-│                    +60pt spacing                        │
+│                    +5pt spacing                         │
 │                                                          │
 │         ────────────────────────────────                 │
 │         Decorative blue line (300pt wide, #3498DB)      │
@@ -47,14 +47,14 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │         CERTIFICATE DESCRIPTION                         │
 │    (From course builder settings - custom text)          │
 │    Base text: 16pt Regular, Color: #34495E              │
-│    Placeholders: 24pt Bold, Color: #2C3E50              │
+│    Placeholders: 16pt Bold, Color: #2C3E50              │
 │    Supports [Student Name] and [Course Name]            │
 │    Placeholders rendered INLINE with text               │
 │    Baseline-aligned using nudge factor (0.65)           │
 │    Line height: maxFontSize * 1.2                       │
 │    Max width: pageWidth - 200pt                         │
 │                                                          │
-│                    +50pt spacing                        │
+│                    +30pt spacing                        │
 │                                                          │
 │         ADDITIONAL TEXT (14pt, Optional)                │
 │    (From course builder settings)                        │
@@ -66,7 +66,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │    "Issued on [Month Day, Year]"                        │
 │              Centered horizontally                       │
 │                                                          │
-│                    +40pt spacing                        │
+│                    +25pt spacing                        │
 │                                                          │
 │         [SIGNATURE IMAGE] (Optional)                    │
 │         Fit within 180x50pt, centered                   │
@@ -85,7 +85,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │         SIGNATURE TITLE (10pt, Gray #7F8C8D)            │
 │              Centered horizontally                       │
 │                                                          │
-│                    +50pt spacing                        │
+│                    +30pt spacing                        │
 │                                                          │
 │         CERTIFICATE NUMBER (10pt, Gray #95A5A6)         │
 │    "Certificate Number: [number]"                       │
@@ -133,8 +133,8 @@ Runs:
 - **Fit box**: 120x40pt
 - **Position**: Centered horizontally at top margin
 - **Source**: Brand settings `logoBlack` (S3 URL)
-- **Fallback**: Organization name (24pt Bold) if logo unavailable
-- **Note**: SVG not supported by PDFKit
+- **Fallback**: None - logo area is skipped if no image available
+- **Note**: SVG not supported by PDFKit - must use PNG/JPG
 
 ### 2. **Certificate Title**
 - **Font**: 36pt Bold
@@ -151,7 +151,7 @@ Runs:
 
 ### 4. **Description Paragraph**
 - **Base font**: 16pt Regular, #34495E
-- **Placeholder font**: 24pt Bold, #2C3E50
+- **Placeholder font**: 16pt Bold, #2C3E50
 - **Max width**: pageWidth - 200pt
 - **Line height**: maxFontSize * 1.2
 - **Baseline alignment**: Nudge factor 0.65
@@ -241,7 +241,7 @@ Certificate Number: CERT-12345
 ```
 
 **Note**: In the example above:
-- "John Doe" and "Introduction to Web Development" are rendered at **24pt Bold** (inline)
+- "John Doe" and "Introduction to Web Development" are rendered at **16pt Bold** (inline)
 - Regular text is rendered at **16pt Regular**
 - Signature line is **ALWAYS present** (centered)
 - Signature name and title have **12pt spacing** between them

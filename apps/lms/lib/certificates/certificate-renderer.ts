@@ -242,9 +242,11 @@ function buildDescriptionRuns(
     if (!p) continue
 
     if (p === "{{STUDENT}}") {
-      runs.push({ text: studentName, fontName: fonts.bold, fontSize: 24, color: "#2C3E50" })
+      // Placeholder: 16pt Bold (same size as regular text, but bold)
+      runs.push({ text: studentName, fontName: fonts.bold, fontSize: 16, color: "#2C3E50" })
     } else if (p === "{{COURSE}}") {
-      runs.push({ text: courseName, fontName: fonts.bold, fontSize: 24, color: "#2C3E50" })
+      // Placeholder: 16pt Bold (same size as regular text, but bold)
+      runs.push({ text: courseName, fontName: fonts.bold, fontSize: 16, color: "#2C3E50" })
     } else {
       runs.push({ text: p, fontName: fonts.regular, fontSize: 16, color: "#34495E" })
     }
@@ -316,7 +318,7 @@ export function renderCertificate(
 
   let y = TOP_MARGIN
 
-  // LOGO
+  // LOGO - MUST use image, not organization name
   if (assets?.logo) {
     try {
       y += drawCenteredImageFit(doc, assets.logo, y, LOGO_W, LOGO_H, { offsetX: logoOffsetX })
@@ -324,20 +326,13 @@ export function renderCertificate(
       console.log("[Certificate Renderer] Logo rendered, y now:", y)
     } catch (error) {
       console.error("[Certificate Renderer] Failed to render logo:", error)
-      // Show organization name as fallback
-      if (data.organizationName && !assets.template) {
-        y += drawCenteredWrappedText(doc, data.organizationName, y, MAX_TEXT_WIDTH, fonts.bold, 24, { color: "#2C3E50" })
-        y += 30
-      } else {
-        y += LOGO_H + 30
-      }
+      // Skip logo area if image fails - do NOT show organization name
+      y += LOGO_H + 30
     }
-  } else if (data.organizationName && !assets.template) {
-    // No logo, show organization name
-    y += drawCenteredWrappedText(doc, data.organizationName, y, MAX_TEXT_WIDTH, fonts.bold, 24, { color: "#2C3E50" })
-    y += 30
   } else {
-    // Keep spacing consistent if missing logo
+    // No logo provided - skip logo area entirely
+    // Do NOT show organization name as fallback
+    console.log("[Certificate Renderer] No logo provided, skipping logo area")
     y += LOGO_H + 30
   }
 
@@ -351,7 +346,7 @@ export function renderCertificate(
     TITLE_SIZE,
     { color: "#2C3E50" }
   )
-  y += 60
+  y += 5 // Reduced from 60pt to 5pt to fit content on page
   console.log("[Certificate Renderer] Title rendered, y now:", y)
 
   // DECORATIVE LINE (blue) - only if no template
@@ -375,7 +370,7 @@ export function renderCertificate(
     lineHeightFactor: 1.2,
     baselineNudgeFactor: 0.65,
   })
-  y += desc.height + 50
+  y += desc.height + 30 // Reduced from 50pt to 30pt
   console.log("[Certificate Renderer] Description rendered, lines:", desc.linesCount, ", y now:", y)
 
   // ADDITIONAL TEXT (optional)
@@ -402,7 +397,7 @@ export function renderCertificate(
     DATE_SIZE,
     { color: GRAY }
   )
-  y += 40
+  y += 25 // Reduced from 40pt to 25pt
   console.log("[Certificate Renderer] Date rendered, y now:", y)
 
   // SIGNATURE AREA:
@@ -461,7 +456,7 @@ export function renderCertificate(
       { color: GRAY }
     )
   }
-  y += 50
+  y += 30 // Reduced from 50pt to 30pt
 
   // CERTIFICATE NUMBER (10pt gray)
   drawCenteredWrappedText(
