@@ -175,13 +175,14 @@ function NewCourseContent() {
   }, [])
 
   // Update document title based on edit mode
+  // Use editCourseId directly instead of searchParams to ensure consistency
   useEffect(() => {
-    const isEditing = !!searchParams?.get("edit")
+    const isEditing = !!editCourseId
     const title = isEditing 
       ? `Edit Course${platformName ? ` - ${platformName}` : ""}`
       : `New Course${platformName ? ` - ${platformName}` : ""}`
     document.title = title
-  }, [searchParams, platformName])
+  }, [editCourseId, platformName])
 
   // Fetch instructors once when instructor settings are enabled
   useEffect(() => {
