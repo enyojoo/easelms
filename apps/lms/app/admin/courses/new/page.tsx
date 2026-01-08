@@ -29,6 +29,7 @@ function formatTimeAgo(date: Date): string {
 function NewCourseContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [platformName, setPlatformName] = useState<string>("")
 
   const [courseData, setCourseData] = useState<{
     basicInfo: {
@@ -156,6 +157,31 @@ function NewCourseContent() {
       setCurrentCourseId(null)
     }
   }, [editCourseId])
+
+  // Fetch platform name for SEO title
+  useEffect(() => {
+    const fetchPlatformName = async () => {
+      try {
+        const response = await fetch("/api/brand-settings")
+        if (response.ok) {
+          const data = await response.json()
+          setPlatformName(data.platformName || "")
+        }
+      } catch (error) {
+        console.error("Failed to fetch platform name:", error)
+      }
+    }
+    fetchPlatformName()
+  }, [])
+
+  // Update document title based on edit mode
+  useEffect(() => {
+    const isEditing = !!searchParams?.get("edit")
+    const title = isEditing 
+      ? `Edit Course${platformName ? ` - ${platformName}` : ""}`
+      : `New Course${platformName ? ` - ${platformName}` : ""}`
+    document.title = title
+  }, [searchParams, platformName])
 
   // Fetch instructors once when instructor settings are enabled
   useEffect(() => {
