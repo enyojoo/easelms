@@ -13,7 +13,7 @@
 The certificate uses a **flow layout** that stacks blocks from top to bottom using measured heights. No hardcoded absolute Y values beyond the top margin. Each block is centered horizontally using real font metrics.
 
 ### Layout Constants
-- **TOP_MARGIN**: 0pt (removed)
+- **TOP_MARGIN**: 60pt
 - **BOTTOM_MARGIN**: 25pt
 - **MAX_TEXT_WIDTH**: pageWidth - 200pt (592pt for LETTER landscape)
 
@@ -23,7 +23,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    TOP MARGIN (0pt)                     │
+│                    TOP MARGIN (60pt)                    │
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
 │              [LOGO] - fit within 120x40pt               │

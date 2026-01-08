@@ -264,20 +264,20 @@ export function renderCertificate(
   options: RenderOptions = {}
 ): void {
   // Layout constants from spec
-  const TOP_MARGIN = 0 // Removed top margin
+  const TOP_MARGIN = 60
   const BOTTOM_MARGIN = 25
 
   const LOGO_W = 120
   const LOGO_H = 40
 
-  const TITLE_SIZE = 30
+  const TITLE_SIZE = 30 // Reduced from 36pt to 30pt
 
   const LINE_W = 300
   const LINE_COLOR = "#000000" // Black
 
   const MAX_TEXT_WIDTH = doc.page.width - 200
 
-  const ADDITIONAL_SIZE = 16 // Increased from 14pt to 16pt
+  const ADDITIONAL_SIZE = 16
   const DATE_SIZE = 14
   const SMALL_GRAY_SIZE = 10
   const GRAY = "#7F8C8D"
@@ -354,7 +354,7 @@ export function renderCertificate(
   if (!assets?.template) {
     drawCenteredLine(doc, y, LINE_W, { strokeColor: LINE_COLOR, lineWidth: 2 })
   }
-  y += 25 // Changed to 25pt
+  y += 25 // Spacing after line
 
   // DESCRIPTION (rich runs: 16pt + 24pt bold placeholders)
   const descriptionTemplate = data.descriptionTemplate ||
@@ -429,10 +429,10 @@ export function renderCertificate(
       y,
       MAX_TEXT_WIDTH,
       fonts.bold, // Bold for name
-      16, // 16pt font size (increased from 14pt)
+      16, // 16pt font size
       { color: "#000000" } // BLACK for name
     )
-    y += 5 // Reduced from 8pt to 5pt
+    y += 5 // Gap between name and title
   }
   
   if (data.signatureTitle) {
