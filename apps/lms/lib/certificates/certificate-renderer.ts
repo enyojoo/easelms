@@ -353,7 +353,7 @@ export function renderCertificate(
   if (!assets?.template) {
     drawCenteredLine(doc, y, LINE_W, { strokeColor: LINE_COLOR, lineWidth: 2 })
   }
-  y += 40
+  y += 20 // Reduced from 40pt to 20pt
 
   // DESCRIPTION (rich runs: 16pt + 24pt bold placeholders)
   const descriptionTemplate = data.descriptionTemplate ||
@@ -397,7 +397,7 @@ export function renderCertificate(
     DATE_SIZE,
     { color: GRAY }
   )
-  y += 25 // Reduced from 40pt to 25pt
+  y += 20 // Reduced from 25pt to 20pt (before signature)
   console.log("[Certificate Renderer] Date rendered, y now:", y)
 
   // SIGNATURE AREA:
@@ -420,18 +420,18 @@ export function renderCertificate(
   y += 12
   console.log("[Certificate Renderer] Signature line rendered, y now:", y)
 
-  // SIGNATURE NAME & TITLE (10pt gray), tight spacing
+  // SIGNATURE NAME (14pt bold) & TITLE (12pt regular)
   if (data.signatureName) {
     y += drawCenteredWrappedText(
       doc,
       data.signatureName,
       y,
       MAX_TEXT_WIDTH,
-      fonts.regular,
-      SMALL_GRAY_SIZE,
+      fonts.bold, // Bold for name
+      14, // 14pt font size
       { color: GRAY }
     )
-    y += 12
+    y += 8 // Small gap between name and title
   }
   
   if (data.signatureTitle) {
@@ -440,8 +440,8 @@ export function renderCertificate(
       data.signatureTitle,
       y,
       MAX_TEXT_WIDTH,
-      fonts.regular,
-      SMALL_GRAY_SIZE,
+      fonts.regular, // Regular for title
+      12, // 12pt font size
       { color: GRAY }
     )
   } else if (!data.signatureName) {
@@ -452,11 +452,11 @@ export function renderCertificate(
       y,
       MAX_TEXT_WIDTH,
       fonts.regular,
-      SMALL_GRAY_SIZE,
+      12,
       { color: GRAY }
     )
   }
-  y += 30 // Reduced from 50pt to 30pt
+  y += 20 // Reduced from 30pt to 20pt
 
   // CERTIFICATE NUMBER (10pt gray)
   drawCenteredWrappedText(

@@ -42,7 +42,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │         Decorative blue line (300pt wide, #3498DB)      │
 │         (Only if no custom template)                     │
 │                                                          │
-│                    +40pt spacing                        │
+│                    +20pt spacing                        │
 │                                                          │
 │         CERTIFICATE DESCRIPTION                         │
 │    (From course builder settings - custom text)          │
@@ -66,7 +66,7 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │    "Issued on [Month Day, Year]"                        │
 │              Centered horizontally                       │
 │                                                          │
-│                    +25pt spacing                        │
+│                    +20pt spacing                        │
 │                                                          │
 │         [SIGNATURE IMAGE] (Optional)                    │
 │         Fit within 180x50pt, centered                   │
@@ -79,13 +79,13 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │                                                          │
 │                    +12pt spacing                        │
 │                                                          │
-│         SIGNATURE NAME (10pt, Gray #7F8C8D)             │
+│         SIGNATURE NAME (14pt, Bold, Gray #7F8C8D)       │
 │              Centered horizontally                       │
-│                    +12pt spacing                        │
-│         SIGNATURE TITLE (10pt, Gray #7F8C8D)            │
+│                    +8pt spacing                         │
+│         SIGNATURE TITLE (12pt, Regular, Gray #7F8C8D)   │
 │              Centered horizontally                       │
 │                                                          │
-│                    +30pt spacing                        │
+│                    +20pt spacing                        │
 │                                                          │
 │         CERTIFICATE NUMBER (10pt, Gray #95A5A6)         │
 │    "Certificate Number: [number]"                       │
@@ -181,10 +181,10 @@ Runs:
 - **Spacing**: +6pt between image and line (if image present)
 
 ### 8. **Signature Name & Title**
-- **Font**: 10pt Regular
-- **Color**: #7F8C8D (gray)
-- **Spacing**: 12pt between name and title
-- **Fallback**: "Authorized Signature" if neither provided
+- **Signature Name**: 14pt Bold, #7F8C8D (gray)
+- **Signature Title**: 12pt Regular, #7F8C8D (gray)
+- **Spacing**: 8pt between name and title
+- **Fallback**: "Authorized Signature" (12pt) if neither provided
 
 ### 9. **Certificate Number**
 - **Font**: 10pt Regular
