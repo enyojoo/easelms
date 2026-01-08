@@ -85,9 +85,9 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │         SIGNATURE TITLE (12pt, Regular, Gray #7F8C8D)   │
 │              Centered horizontally                       │
 │                                                          │
-│                    +20pt spacing                        │
+│                    +10pt spacing                        │
 │                                                          │
-│         CERTIFICATE NUMBER (10pt, Gray #95A5A6)         │
+│         CERTIFICATE NUMBER (8pt, Gray #95A5A6)          │
 │    "Certificate Number: [number]"                       │
 │              Centered horizontally                       │
 │                                                          │
@@ -187,10 +187,10 @@ Runs:
 - **Fallback**: "Authorized Signature" (12pt, gray) if neither provided
 
 ### 9. **Certificate Number**
-- **Font**: 10pt Regular
+- **Font**: 8pt Regular
 - **Color**: #95A5A6 (light gray)
 - **Format**: "Certificate Number: [number]"
-- **Position**: Centered, after signature section + 50pt
+- **Position**: Centered, after signature section + 10pt
 
 ---
 

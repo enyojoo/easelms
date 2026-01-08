@@ -457,16 +457,16 @@ export function renderCertificate(
       { color: GRAY }
     )
   }
-  y += 20 // Reduced from 30pt to 20pt
+  y += 10 // Reduced from 20pt to 10pt
 
-  // CERTIFICATE NUMBER (10pt gray)
+  // CERTIFICATE NUMBER (8pt gray)
   drawCenteredWrappedText(
     doc,
     `Certificate Number: ${data.certificateNumber}`,
     y,
     MAX_TEXT_WIDTH,
     fonts.regular,
-    SMALL_GRAY_SIZE,
+    8, // 8pt font size
     { color: "#95A5A6" }
   )
   console.log("[Certificate Renderer] Certificate number rendered, y now:", y)
