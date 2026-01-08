@@ -242,13 +242,14 @@ function buildDescriptionRuns(
     if (!p) continue
 
     if (p === "{{STUDENT}}") {
-      // Placeholder: 16pt Bold (same size as regular text, but bold)
-      runs.push({ text: studentName, fontName: fonts.bold, fontSize: 16, color: "#2C3E50" })
+      // Placeholder: 16pt Bold (same size as regular text, but bold) - BLACK
+      runs.push({ text: studentName, fontName: fonts.bold, fontSize: 16, color: "#000000" })
     } else if (p === "{{COURSE}}") {
-      // Placeholder: 16pt Bold (same size as regular text, but bold)
-      runs.push({ text: courseName, fontName: fonts.bold, fontSize: 16, color: "#2C3E50" })
+      // Placeholder: 16pt Bold (same size as regular text, but bold) - BLACK
+      runs.push({ text: courseName, fontName: fonts.bold, fontSize: 16, color: "#000000" })
     } else {
-      runs.push({ text: p, fontName: fonts.regular, fontSize: 16, color: "#34495E" })
+      // Regular text - BLACK
+      runs.push({ text: p, fontName: fonts.regular, fontSize: 16, color: "#000000" })
     }
   }
   return runs
@@ -272,7 +273,7 @@ export function renderCertificate(
   const TITLE_SIZE = 30 // Reduced from 36pt to 30pt
 
   const LINE_W = 300
-  const LINE_COLOR = "#3498DB" // Blue
+  const LINE_COLOR = "#000000" // Black
 
   const MAX_TEXT_WIDTH = doc.page.width - 200
 
@@ -336,7 +337,7 @@ export function renderCertificate(
     y += LOGO_H + 30
   }
 
-  // TITLE
+  // TITLE - BLACK
   y += drawCenteredWrappedText(
     doc,
     data.title || "Certificate of Completion",
@@ -344,7 +345,7 @@ export function renderCertificate(
     MAX_TEXT_WIDTH,
     fonts.bold,
     TITLE_SIZE,
-    { color: "#2C3E50" }
+    { color: "#000000" }
   )
   y += 5 // Reduced from 60pt to 5pt to fit content on page
   console.log("[Certificate Renderer] Title rendered, y now:", y)
@@ -373,7 +374,7 @@ export function renderCertificate(
   y += desc.height + 20 // Reduced from 30pt to 20pt
   console.log("[Certificate Renderer] Description rendered, lines:", desc.linesCount, ", y now:", y)
 
-  // ADDITIONAL TEXT (optional)
+  // ADDITIONAL TEXT (optional) - BLACK
   if (data.additionalText && String(data.additionalText).trim()) {
     y += drawCenteredWrappedText(
       doc,
@@ -382,7 +383,7 @@ export function renderCertificate(
       MAX_TEXT_WIDTH,
       fonts.regular,
       ADDITIONAL_SIZE,
-      { color: "#34495E" }
+      { color: "#000000" }
     )
     y += 20
   }
@@ -415,12 +416,12 @@ export function renderCertificate(
     }
   }
 
-  // SIGNATURE LINE (ALWAYS present)
-  drawCenteredLine(doc, y, SIGNATURE_LINE_W, { strokeColor: "#34495E", lineWidth: 1 })
+  // SIGNATURE LINE (ALWAYS present) - BLACK
+  drawCenteredLine(doc, y, SIGNATURE_LINE_W, { strokeColor: "#000000", lineWidth: 1 })
   y += 12
   console.log("[Certificate Renderer] Signature line rendered, y now:", y)
 
-  // SIGNATURE NAME (14pt bold) & TITLE (12pt regular)
+  // SIGNATURE NAME (14pt bold) - BLACK & TITLE (12pt regular) - GRAY
   if (data.signatureName) {
     y += drawCenteredWrappedText(
       doc,
@@ -429,7 +430,7 @@ export function renderCertificate(
       MAX_TEXT_WIDTH,
       fonts.bold, // Bold for name
       14, // 14pt font size
-      { color: GRAY }
+      { color: "#000000" } // BLACK for name
     )
     y += 8 // Small gap between name and title
   }
@@ -442,7 +443,7 @@ export function renderCertificate(
       MAX_TEXT_WIDTH,
       fonts.regular, // Regular for title
       12, // 12pt font size
-      { color: GRAY }
+      { color: GRAY } // GRAY for title
     )
   } else if (!data.signatureName) {
     // Fallback if neither name nor title

@@ -32,22 +32,22 @@ The certificate uses a **flow layout** that stacks blocks from top to bottom usi
 │                                                          │
 │                    +30pt spacing                        │
 │                                                          │
-│         CERTIFICATE TITLE (30pt, Bold)                  │
+│         CERTIFICATE TITLE (30pt, Bold, Black)           │
 │    (Custom title OR "Certificate of Completion" etc.)    │
 │              Centered horizontally                       │
 │                                                          │
 │                    +5pt spacing                         │
 │                                                          │
 │         ────────────────────────────────                 │
-│         Decorative blue line (300pt wide, #3498DB)      │
+│         Decorative black line (300pt wide, #000000)     │
 │         (Only if no custom template)                     │
 │                                                          │
 │                    +20pt spacing                        │
 │                                                          │
 │         CERTIFICATE DESCRIPTION                         │
 │    (From course builder settings - custom text)          │
-│    Base text: 16pt Regular, Color: #34495E              │
-│    Placeholders: 16pt Bold, Color: #2C3E50              │
+│    Base text: 16pt Regular, Color: #000000 (Black)      │
+│    Placeholders: 16pt Bold, Color: #000000 (Black)      │
 │    Supports [Student Name] and [Course Name]            │
 │    Placeholders rendered INLINE with text               │
 │    Baseline-aligned using nudge factor (0.65)           │
@@ -138,29 +138,29 @@ Runs:
 
 ### 2. **Certificate Title**
 - **Font**: 30pt Bold
-- **Color**: #2C3E50
+- **Color**: #000000 (Black)
 - **Position**: Centered, after logo + 30pt
 - **Custom**: Can be set in course builder, or defaults based on type
 
 ### 3. **Decorative Line**
 - **Width**: 300pt
-- **Color**: #3498DB (blue)
+- **Color**: #000000 (Black)
 - **Thickness**: 2pt
-- **Position**: Centered, after title + 60pt
+- **Position**: Centered, after title + 5pt
 - **Note**: Hidden if custom template is used
 
 ### 4. **Description Paragraph**
-- **Base font**: 16pt Regular, #34495E
-- **Placeholder font**: 16pt Bold, #2C3E50
+- **Base font**: 16pt Regular, #000000 (Black)
+- **Placeholder font**: 16pt Bold, #000000 (Black)
 - **Max width**: pageWidth - 200pt
 - **Line height**: maxFontSize * 1.2
 - **Baseline alignment**: Nudge factor 0.65
-- **Position**: Centered, after decorative line + 40pt
+- **Position**: Centered, after decorative line + 20pt
 
 ### 5. **Additional Text** (Optional)
 - **Font**: 14pt Regular
-- **Color**: #34495E
-- **Position**: Centered, after description + 50pt
+- **Color**: #000000 (Black)
+- **Position**: Centered, after description + 20pt
 
 ### 6. **Date**
 - **Font**: 14pt Regular
