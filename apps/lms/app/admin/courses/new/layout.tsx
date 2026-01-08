@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import { generatePageMetadata } from "@/lib/metadata"
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("New Course")
+  return generatePageMetadata("Course")
 }
 
 export default function NewCourseLayout({
