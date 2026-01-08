@@ -62,12 +62,26 @@ async function fetchImageBuffer(url: string): Promise<Buffer> {
   }
   
   // Handle regular URLs
+  console.log("[PDF Generation] Fetching image from URL:", url)
   const response = await fetch(url)
   if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.statusText}`)
+    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`)
   }
+  
+  // Check content type
+  const contentType = response.headers.get("content-type") || ""
+  console.log("[PDF Generation] Image content type:", contentType)
+  
+  // PDFKit doesn't support SVG - we'll handle this in the calling code
+  if (contentType.includes("svg") || url.toLowerCase().endsWith(".svg")) {
+    console.warn("[PDF Generation] SVG image detected - PDFKit doesn't support SVG natively")
+    // Return buffer anyway, caller will handle it
+  }
+  
   const arrayBuffer = await response.arrayBuffer()
-  return Buffer.from(arrayBuffer)
+  const buffer = Buffer.from(arrayBuffer)
+  console.log("[PDF Generation] Image fetched successfully, size:", buffer.length, "bytes")
+  return buffer
 }
 
 // Helper function to get the path to Poppins font files
@@ -116,16 +130,25 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Initialize PDFDocument
       // PDFKit will initialize default fonts, which our patch should redirect to local fonts
+      // Use no margins - we'll handle spacing manually
       const doc = new PDFDocument({
         size: "LETTER",
         layout: "landscape",
         margins: {
-          top: 50,
-          bottom: 50,
-          left: 50,
-          right: 50,
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
         },
+        autoFirstPage: true,
       })
+      
+      // Prevent automatic page creation - we want everything on one page
+      const originalAddPage = doc.addPage.bind(doc)
+      doc.addPage = function() {
+        console.warn("[PDF Generation] WARNING: Attempted to add new page - preventing to keep single page certificate")
+        return this
+      }
 
       // Register Poppins fonts (Google Fonts) to match the website design
       const poppinsRegular = getPoppinsFontPath("Poppins-Regular.ttf")
@@ -162,14 +185,27 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       try {
         if (data.logoUrl && data.logoUrl.trim() !== "") {
           console.log("[PDF Generation] Fetching logo from URL:", data.logoUrl)
+          try {
           logoBuffer = await fetchImageBuffer(data.logoUrl)
-          console.log("[PDF Generation] Logo fetched successfully, size:", logoBuffer.length)
+            console.log("[PDF Generation] Logo fetched successfully, size:", logoBuffer.length, "bytes")
+            if (!logoBuffer || logoBuffer.length === 0) {
+              console.error("[PDF Generation] Logo buffer is empty after fetch")
+              logoBuffer = null
+            }
+          } catch (fetchError) {
+            console.error("[PDF Generation] Error fetching logo:", fetchError)
+            console.error("[PDF Generation] Logo URL:", data.logoUrl)
+            console.error("[PDF Generation] Error details:", fetchError instanceof Error ? fetchError.message : String(fetchError))
+            logoBuffer = null
+          }
         } else {
           console.log("[PDF Generation] No logo URL provided or URL is empty")
+          console.log("[PDF Generation] logoUrl value:", data.logoUrl)
         }
       } catch (error) {
-        console.warn("[PDF Generation] Failed to fetch logo image:", error)
-        console.warn("[PDF Generation] Logo URL was:", data.logoUrl)
+        console.error("[PDF Generation] Failed to fetch logo image:", error)
+        console.error("[PDF Generation] Logo URL was:", data.logoUrl)
+        logoBuffer = null
       }
 
       try {
@@ -188,22 +224,32 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         console.warn("Failed to fetch certificate template image:", error)
       }
 
+      // Ensure we're on the first page before rendering background
+      // PDFKit creates the first page automatically, so we're already on page 1
+      console.log("[PDF Generation] Rendering background on page:", doc.page)
+
       // Background - use template if provided, otherwise use hardcoded design
+      // Render background FIRST before any content
       if (templateBuffer) {
         // Use template as full background
         try {
+          console.log("[PDF Generation] Rendering template background")
           doc.image(templateBuffer, 0, 0, {
             width: doc.page.width,
             height: doc.page.height,
             fit: [doc.page.width, doc.page.height],
+            align: 'center',
+            valign: 'center',
           })
+          console.log("[PDF Generation] Template background rendered successfully")
         } catch (error) {
-          console.warn("Failed to embed template image, using fallback:", error)
+          console.error("Failed to embed template image, using fallback:", error)
           // Fallback to hardcoded background
           doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
         }
       } else {
         // Hardcoded design (fallback)
+        console.log("[PDF Generation] Rendering hardcoded background")
       doc.rect(0, 0, doc.page.width, doc.page.height).fill("#FEF9E7")
       }
 
@@ -223,6 +269,11 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         .rect(50, 50, doc.page.width - 100, doc.page.height - 100)
         .stroke()
       }
+
+      console.log("[PDF Generation] Background and borders rendered, page dimensions:", {
+        width: doc.page.width,
+        height: doc.page.height,
+      })
 
       // Calculate center positions for landscape layout
       // PDFKit uses bottom-left origin, so Y coordinates are from bottom
@@ -246,8 +297,10 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       let currentY = topMargin
       
       // Add logo (if available) - centered at top
-      if (logoBuffer) {
+      if (logoBuffer && logoBuffer.length > 0) {
         try {
+          console.log("[PDF Generation] Attempting to embed logo, buffer size:", logoBuffer.length)
+          
           // Place logo at top center
           // PDFKit: Y coordinate for images is the bottom of the image
           const logoWidth = 120
@@ -265,37 +318,56 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             height: logoHeight,
             logoUrl: data.logoUrl,
             pageHeight,
+            currentPage: doc.page,
           })
           
-          doc.image(logoBuffer, logoX, logoYFromBottom, {
-            width: logoWidth,
-            height: logoHeight,
-            fit: [logoWidth, logoHeight],
-          })
+          // Check if logo URL is SVG - PDFKit doesn't support SVG directly
+          const isSVG = data.logoUrl?.toLowerCase().endsWith('.svg') || 
+                       (logoBuffer.toString('utf8', 0, Math.min(100, logoBuffer.length)).includes('<svg'))
           
-          currentY += logoHeight + 30 // Space after logo
-          console.log("[PDF Generation] Logo embedded successfully at Y:", logoYFromBottom)
+          if (isSVG) {
+            console.warn("[PDF Generation] Logo is SVG format - PDFKit doesn't support SVG. Converting or skipping.")
+            // For SVG, we could convert to PNG or skip. For now, skip and show org name
+            logoBuffer = null
+          } else {
+            // Render the image
+            doc.image(logoBuffer, logoX, logoYFromBottom, {
+              width: logoWidth,
+              height: logoHeight,
+              fit: [logoWidth, logoHeight],
+            })
+            
+            currentY += logoHeight + 30 // Space after logo
+            console.log("[PDF Generation] Logo embedded successfully at Y:", logoYFromBottom)
+          }
         } catch (error) {
           console.error("[PDF Generation] Failed to embed logo in PDF:", error)
           console.error("[PDF Generation] Error details:", error instanceof Error ? error.message : String(error))
+          console.error("[PDF Generation] Error stack:", error instanceof Error ? error.stack : undefined)
           console.error("[PDF Generation] Logo buffer size:", logoBuffer?.length)
-          // Continue without logo
+          console.error("[PDF Generation] Logo URL:", data.logoUrl)
+          // Continue without logo - will show org name as fallback
+          logoBuffer = null
         }
-      } else {
-        console.log("[PDF Generation] No logo buffer available")
+      }
+      
+      // Show organization name if no logo was rendered
+      if (!logoBuffer && data.organizationName && !templateBuffer) {
+        console.log("[PDF Generation] Showing organization name as fallback for logo")
+        const orgNameY = yFromTop(currentY)
+        doc
+          .fontSize(24)
+          .fillColor("#2C3E50")
+          .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
+          .text(data.organizationName, pageCenterX, orgNameY, {
+            align: "center",
+          })
+        currentY += 50
+      } else if (!logoBuffer) {
+        console.log("[PDF Generation] No logo buffer available and no org name fallback")
         console.log("[PDF Generation] Logo URL was:", data.logoUrl)
-        if (data.organizationName && !templateBuffer) {
-          // Only show organization name if no logo AND no template (template may have its own branding)
-          const orgNameY = yFromTop(currentY)
-          doc
-            .fontSize(24)
-            .fillColor("#2C3E50")
-            .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
-            .text(data.organizationName, pageCenterX, orgNameY, {
-              align: "center",
-            })
-          currentY += 50
-        }
+        console.log("[PDF Generation] Has org name:", !!data.organizationName)
+        console.log("[PDF Generation] Has template:", !!templateBuffer)
       }
 
       // Title - Certificate of Completion/Participation
@@ -337,12 +409,12 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       currentY += 60
       const decorativeLineY = yFromTop(currentY)
       if (!templateBuffer) {
-        doc
-          .lineWidth(2)
-          .strokeColor("#3498DB")
+      doc
+        .lineWidth(2)
+        .strokeColor("#3498DB")
           .moveTo(pageCenterX - 150, decorativeLineY)
           .lineTo(pageCenterX + 150, decorativeLineY)
-          .stroke()
+        .stroke()
       }
 
       // Certificate Description - use custom description if provided, otherwise use default
@@ -495,7 +567,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
               doc.fontSize(placeholderFontSize)
               doc.font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
               doc.fillColor("#2C3E50")
-            } else {
+        } else {
               // Render regular text (16pt)
               doc.fontSize(regularFontSize)
               doc.font(usePoppins ? "Poppins" : "Helvetica")
@@ -520,32 +592,32 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         currentY += totalHeight + 20
       } else {
         // Default description format
-        // This is to certify that
+      // This is to certify that
         const certifyY = yFromTop(currentY)
-        doc
-          .fontSize(16)
-          .fillColor("#34495E")
-          .font(usePoppins ? "Poppins" : "Helvetica")
+      doc
+        .fontSize(16)
+        .fillColor("#34495E")
+        .font(usePoppins ? "Poppins" : "Helvetica")
           .text("This is to certify that", pageCenterX, certifyY, {
-            align: "center",
-          })
+          align: "center",
+        })
 
         currentY += 30
 
-        // Learner Name (prominent)
+      // Learner Name (prominent)
         const nameY = yFromTop(currentY)
         console.log("[PDF Generation] Rendering learner name (default format):", {
           name: data.learnerName,
           y: nameY,
           yFromTop: currentY,
         })
-        doc
-          .fontSize(32)
-          .fillColor("#2C3E50")
+      doc
+        .fontSize(32)
+        .fillColor("#2C3E50")
           .font(usePoppins ? "Poppins-Bold" : "Helvetica-Bold")
           .text(data.learnerName, pageCenterX, nameY, {
-            align: "center",
-          })
+          align: "center",
+        })
         console.log("[PDF Generation] Learner name rendered successfully (default format)")
 
         currentY += 40
@@ -565,18 +637,18 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         }
 
         const actionY = yFromTop(currentY)
-        doc
-          .fontSize(16)
-          .fillColor("#34495E")
-          .font(usePoppins ? "Poppins" : "Helvetica")
-          .text(
+      doc
+        .fontSize(16)
+        .fillColor("#34495E")
+        .font(usePoppins ? "Poppins" : "Helvetica")
+        .text(
             `has successfully ${getActionText()}`,
             pageCenterX,
             actionY,
-            {
-              align: "center",
-            }
-          )
+          {
+            align: "center",
+          }
+        )
 
         currentY += 40
       }
@@ -664,7 +736,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
             align: "center",
           })
       }
-
+      
       // Signature name and title (centered below signature line)
       currentY += 12
       
@@ -733,9 +805,18 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           pageCenterX,
           certNumberY,
           {
-            align: "center",
+          align: "center",
           }
         )
+
+      // Final check - ensure we're still on the first page
+      const finalPageNumber = doc.bufferedPageRange().start
+      if (finalPageNumber !== 0) {
+        console.error("[PDF Generation] ERROR: Certificate spans multiple pages! Page count:", doc.bufferedPageRange().count)
+        console.error("[PDF Generation] This should not happen - certificate should be single page")
+      } else {
+        console.log("[PDF Generation] Certificate rendered successfully on single page")
+      }
 
       doc.end()
     } catch (error: any) {
