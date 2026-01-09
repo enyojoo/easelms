@@ -39,6 +39,8 @@ export function generateBaseEmailTemplate(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+  <meta name="x-apple-disable-message-reformatting">
   <title>${title}</title>
   <style>
     @media (prefers-color-scheme: dark) {
@@ -87,6 +89,12 @@ export function generateBaseEmailTemplate(
       .powered-by-logo-dark {
         display: block !important;
       }
+      .brand-logo-light {
+        display: none !important;
+      }
+      .brand-logo-dark {
+        display: block !important;
+      }
       .email-footer-small {
         color: #808080 !important;
       }
@@ -124,7 +132,20 @@ export function generateBaseEmailTemplate(
           <!-- Header -->
           <tr>
             <td class="email-header" style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff;">
-              <img src="${logoUrl}" alt="${platformName}" style="max-width: 200px; height: auto;" />
+              <!-- Light mode logo (black) -->
+              <img 
+                src="${logoUrl}" 
+                alt="${platformName}" 
+                class="brand-logo-light"
+                style="max-width: 200px; height: auto; display: block; margin: 0 auto;"
+              />
+              <!-- Dark mode logo (white) - hidden by default -->
+              <img 
+                src="${brandSettings?.logoWhite || logoUrl}" 
+                alt="${platformName}" 
+                class="brand-logo-dark"
+                style="max-width: 200px; height: auto; display: none; margin: 0 auto;"
+              />
             </td>
           </tr>
           
@@ -144,6 +165,15 @@ export function generateBaseEmailTemplate(
           
           <!-- Footer -->
           ${generateFooter(platformName, supportEmail, appUrl)}
+          
+          <!-- Notice -->
+          <tr>
+            <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
+              <p class="email-footer-small" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.6;">
+                You're receiving this email because you have an account with ${platformName}.
+              </p>
+            </td>
+          </tr>
           
           <!-- Powered by EaseLMS -->
           <tr>

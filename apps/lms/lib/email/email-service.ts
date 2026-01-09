@@ -81,6 +81,39 @@ class EmailService {
         subject,
         html: htmlContent,
         text: textContent,
+        // Anti-spam headers for transactional emails
+        headers: {
+          "X-Entity-Ref-ID": `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          "Precedence": "bulk",
+          "X-Auto-Response-Suppress": "All", // Suppress auto-replies
+        },
+        // SendGrid specific settings for better deliverability
+        mailSettings: {
+          clickTracking: {
+            enable: true,
+            enableText: true,
+          },
+          openTracking: {
+            enable: true,
+          },
+          subscriptionTracking: {
+            enable: false, // Transactional emails don't need unsubscribe
+          },
+          spamCheck: {
+            enable: true,
+            threshold: 5, // Block emails with spam score > 5
+            postToUrl: undefined,
+          },
+          // Improve deliverability
+          sandboxMode: {
+            enable: false,
+          },
+        },
+        // Custom args for tracking
+        customArgs: {
+          template: emailData.template,
+          timestamp: Date.now().toString(),
+        },
       }
 
       logInfo("Sending email", {

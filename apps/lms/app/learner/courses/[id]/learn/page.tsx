@@ -76,10 +76,10 @@ export default function CourseLearningPage() {
 
   const course = courseData?.course
 
-  // Calculate progress using custom hook
+  // Calculate progress using custom hook (only if course and progressData are available)
   const { completedLessons, progress, allCompleted } = useCourseProgress({
-    course,
-    progressData,
+    course: course && course.lessons ? course : undefined,
+    progressData: progressData !== undefined ? progressData : undefined,
   })
 
   // Update all lessons completed state
@@ -213,7 +213,19 @@ export default function CourseLearningPage() {
   // Only runs on initial load - does NOT run when completedLessons changes during quiz completion
   const initialLessonSetRef = useRef(false)
   useEffect(() => {
-    if (!course || !progressData?.progress) return
+    if (!course || !course.lessons || course.lessons.length === 0) return
+    
+    // If progress data is not yet loaded, default to first lesson
+    if (progressData === undefined) {
+      if (!initialLessonSetRef.current && currentLessonIndex === 0) {
+        initialLessonSetRef.current = true
+        setCurrentLessonIndex(0)
+        if (course.lessons[0]) {
+          setActiveTab(getInitialTab(course.lessons[0]))
+        }
+      }
+      return
+    }
 
     // If lessonIndex is provided in query params, use it (only process once)
     if (lessonIndexParam !== null && !lessonIndexProcessedRef.current) {
@@ -247,7 +259,17 @@ export default function CourseLearningPage() {
     }
 
     // Otherwise, find the first incomplete lesson (only on initial load)
-    if (completedLessons.length > 0 && course.lessons) {
+    // If no completed lessons yet, start from first lesson
+    if (course.lessons && course.lessons.length > 0) {
+      if (completedLessons.length === 0) {
+        // No progress yet, start from first lesson
+        initialLessonSetRef.current = true
+        setCurrentLessonIndex(0)
+        setActiveTab(getInitialTab(course.lessons[0]))
+        return
+      }
+      
+      // Find first incomplete lesson
       for (let i = 0; i < course.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
           initialLessonSetRef.current = true
@@ -257,13 +279,11 @@ export default function CourseLearningPage() {
         }
       }
       // All lessons completed, go to last lesson
-      if (course.lessons.length > 0) {
-        initialLessonSetRef.current = true
-        setCurrentLessonIndex(course.lessons.length - 1)
-        setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
-      }
+      initialLessonSetRef.current = true
+      setCurrentLessonIndex(course.lessons.length - 1)
+      setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
     }
-  }, [course, progressData, lessonIndexParam, isCourseCompleted]) // Removed completedLessons from dependencies to prevent auto-navigation
+  }, [course, progressData, lessonIndexParam, isCourseCompleted, completedLessons])
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
@@ -846,27 +866,48 @@ export default function CourseLearningPage() {
   }
 
   // If no course data exists at all, return null (will show on refetch)
-  if (!course) {
+  if (!course || !course.lessons || course.lessons.length === 0) {
     return null
   }
 
-  const currentLesson = course.lessons[currentLessonIndex]
+  // Ensure currentLessonIndex is valid - clamp to valid range
+  const validLessonIndex = course.lessons && course.lessons.length > 0 
+    ? Math.max(0, Math.min(currentLessonIndex, course.lessons.length - 1))
+    : 0
+  
+  // Update currentLessonIndex if it's invalid (but only if we have lessons)
+  useEffect(() => {
+    if (course.lessons && course.lessons.length > 0) {
+      if (validLessonIndex !== currentLessonIndex) {
+        setCurrentLessonIndex(validLessonIndex)
+        if (course.lessons[validLessonIndex]) {
+          setActiveTab(getInitialTab(course.lessons[validLessonIndex]))
+        }
+      }
+    }
+  }, [validLessonIndex, currentLessonIndex, course])
+  
+  // Get current lesson using valid index
+  const currentLesson = course.lessons && course.lessons.length > 0 
+    ? course.lessons[validLessonIndex]
+    : null
   
   if (!currentLesson) {
-    logError("No current lesson found", new Error("Current lesson is undefined"), {
-      component: "CourseLearningPage",
-      currentLessonIndex,
-      lessonsCount: course?.lessons?.length || 0,
-      lessons: course.lessons
-    })
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <p className="text-destructive">No lesson content available for this course</p>
-          <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
-        </div>
-      </div>
-    )
+    // If we have lessons but currentLesson is null, something is wrong
+    if (course.lessons && course.lessons.length > 0) {
+      logError("No current lesson found", new Error("Current lesson is undefined"), {
+        component: "CourseLearningPage",
+        currentLessonIndex: validLessonIndex,
+        lessonsCount: course.lessons.length,
+        lessons: course.lessons
+      })
+      // Reset to first lesson
+      if (currentLessonIndex !== 0) {
+        setCurrentLessonIndex(0)
+      }
+      return null
+    }
+    return null
   }
 
   return (
