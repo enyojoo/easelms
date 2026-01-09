@@ -22,6 +22,7 @@ import { useQuizData } from "./hooks/useQuizData"
 import { useCourseProgress } from "./hooks/useCourseProgress"
 import { logError, logInfo, logWarning, formatErrorMessage, handleApiError } from "./utils/errorHandler"
 import ErrorState from "@/components/ErrorState"
+import CourseLearningSkeleton from "@/components/CourseLearningSkeleton"
 
 interface Course {
   id: number
@@ -213,18 +214,22 @@ export default function CourseLearningPage() {
   // Only runs on initial load - does NOT run when completedLessons changes during quiz completion
   const initialLessonSetRef = useRef(false)
   useEffect(() => {
-    if (!course || !progressData?.progress) return
+    // Ensure course exists and has lessons array
+    if (!course || !Array.isArray(course.lessons) || course.lessons.length === 0) return
+    if (!progressData?.progress) return
 
     // If lessonIndex is provided in query params, use it (only process once)
     if (lessonIndexParam !== null && !lessonIndexProcessedRef.current) {
       const index = parseInt(lessonIndexParam, 10)
-      if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
+      if (!isNaN(index) && index >= 0 && index < course.lessons.length) {
         lessonIndexProcessedRef.current = true
         initialLessonSetRef.current = true
         setCurrentLessonIndex(index)
         // Reset active tab based on lesson type
         const lesson = course.lessons[index]
-        setActiveTab(getInitialTab(lesson))
+        if (lesson) {
+          setActiveTab(getInitialTab(lesson))
+        }
         
         // Remove lessonIndex from URL to prevent reprocessing
         const url = new URL(window.location.href)
@@ -239,20 +244,26 @@ export default function CourseLearningPage() {
     if (initialLessonSetRef.current) return
 
     // If course is already completed, always start from first lesson (lesson 0)
-    if (isCourseCompleted && course.lessons && course.lessons.length > 0) {
+    if (isCourseCompleted && course.lessons.length > 0) {
       initialLessonSetRef.current = true
       setCurrentLessonIndex(0)
-      setActiveTab(getInitialTab(course.lessons[0]))
+      const firstLesson = course.lessons[0]
+      if (firstLesson) {
+        setActiveTab(getInitialTab(firstLesson))
+      }
       return
     }
 
     // Otherwise, find the first incomplete lesson (only on initial load)
-    if (completedLessons.length > 0 && course.lessons) {
+    if (completedLessons.length >= 0 && course.lessons.length > 0) {
       for (let i = 0; i < course.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
           initialLessonSetRef.current = true
           setCurrentLessonIndex(i)
-          setActiveTab(getInitialTab(course.lessons[i]))
+          const lesson = course.lessons[i]
+          if (lesson) {
+            setActiveTab(getInitialTab(lesson))
+          }
           return
         }
       }
@@ -260,10 +271,13 @@ export default function CourseLearningPage() {
       if (course.lessons.length > 0) {
         initialLessonSetRef.current = true
         setCurrentLessonIndex(course.lessons.length - 1)
-        setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
+        const lastLesson = course.lessons[course.lessons.length - 1]
+        if (lastLesson) {
+          setActiveTab(getInitialTab(lastLesson))
+        }
       }
     }
-  }, [course, progressData, lessonIndexParam, isCourseCompleted]) // Removed completedLessons from dependencies to prevent auto-navigation
+  }, [course, progressData, lessonIndexParam, isCourseCompleted, completedLessons]) // Added completedLessons back for proper initialization
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
@@ -845,33 +859,64 @@ export default function CourseLearningPage() {
     return null // Wait for auth to complete
   }
 
-  // If no course data exists at all, return null (will show on refetch)
+  // If no course data exists at all, show skeleton while loading
   if (!course) {
+    // Show skeleton if we're still loading, otherwise return null (will show on refetch)
+    if (coursePending) {
+      return <CourseLearningSkeleton />
+    }
     return null
   }
   
-  const currentLesson = course.lessons[currentLessonIndex]
+  // Show skeleton if course exists but lessons are not yet loaded
+  // This handles the case when user enrolls and immediately navigates to /learn
+  // Check if lessons array is missing or empty
+  const hasLessons = Array.isArray(course.lessons) && course.lessons.length > 0
+  
+  if (!hasLessons) {
+    // If we're still loading the course data, show skeleton
+    // Also show skeleton if course exists but lessons might be loading (after enrollment)
+    if (coursePending || !course.lessons) {
+      return <CourseLearningSkeleton />
+    }
+    // If course has no lessons after loading completes, show error
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background p-4">
+        <ErrorState
+          title="No Lessons Available"
+          message="This course doesn't have any lessons yet. Please contact support if you believe this is an error."
+          onRetry={() => {
+            queryClient.refetchQueries({ queryKey: ["course", id] })
+          }}
+        />
+      </div>
+    )
+  }
+
+  // Ensure currentLessonIndex is within bounds
+  const validLessonIndex = Math.max(0, Math.min(currentLessonIndex, course.lessons.length - 1))
+  if (validLessonIndex !== currentLessonIndex) {
+    setCurrentLessonIndex(validLessonIndex)
+    return null
+  }
+
+  const currentLesson = course.lessons[validLessonIndex]
   
   if (!currentLesson) {
-    // If we have lessons but currentLesson is null, something is wrong
-    if (course.lessons && course.lessons.length > 0) {
-      logError("No current lesson found", new Error("Current lesson is undefined"), {
-        component: "CourseLearningPage",
-        currentLessonIndex,
-        lessonsCount: course.lessons.length,
-        lessons: course.lessons
-      })
-      // Reset to first lesson
-      if (currentLessonIndex !== 0) {
-        setCurrentLessonIndex(0)
-      }
-      return null
+    logError("No current lesson found", new Error("Current lesson is undefined"), {
+      component: "CourseLearningPage",
+      currentLessonIndex: validLessonIndex,
+      lessonsCount: course.lessons.length,
+    })
+    // Reset to first lesson
+    if (validLessonIndex !== 0 && course.lessons.length > 0) {
+      setCurrentLessonIndex(0)
     }
     return null
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y animate-in fade-in duration-300">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur">
         <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">

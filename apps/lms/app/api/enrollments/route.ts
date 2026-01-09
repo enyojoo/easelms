@@ -264,19 +264,42 @@ export async function POST(request: Request) {
 
   // Send enrollment email notification (non-blocking)
   if (data?.id) {
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+    // Use absolute URL for email notification - get from request or env
+    const url = new URL(request.url)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+      `${url.protocol}//${url.host}`
+    
+    fetch(`${baseUrl}/api/send-email-notification`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "enrollment",
         enrollmentId: data.id.toString(),
       }),
-    }).catch((error) => {
+    })
+    .then((response) => {
+      if (!response.ok) {
+        return response.json().then((err) => {
+          throw new Error(err.error || `HTTP ${response.status}`)
+        })
+      }
+      return response.json()
+    })
+    .then((result) => {
+      logInfo("Enrollment email notification sent", {
+        component: "enrollments/route",
+        action: "POST",
+        enrollmentId: data.id,
+        result,
+      })
+    })
+    .catch((error) => {
       logWarning("Failed to trigger enrollment email", {
         component: "enrollments/route",
         action: "POST",
         enrollmentId: data.id,
         error: error?.message,
+        stack: error?.stack,
       })
     })
   }
