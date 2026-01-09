@@ -17,7 +17,7 @@
 ---
 
 <div align="center">
-<img src="https://cldup.com/pdxWxC-chv.svg" alt="EaseLMS Product Screenshot" width="100%" />
+<img src="https://cldup.com/g7W7DHpIxf.png" alt="EaseLMS Product Screenshot" width="100%" />
 </div>
 
 ## 🎯 Overview
