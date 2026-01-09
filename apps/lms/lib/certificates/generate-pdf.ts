@@ -184,7 +184,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
 
       // Fetch logo
       if (data.logoUrl && data.logoUrl.trim() !== "") {
-        try {
+      try {
           console.log("[PDF Generation] ===== LOGO FETCH START =====")
           console.log("[PDF Generation] Logo URL:", data.logoUrl)
           
@@ -201,7 +201,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
           }
           
           console.log("[PDF Generation] ===== LOGO FETCH END =====")
-        } catch (error) {
+      } catch (error) {
           console.error("[PDF Generation] Logo fetch failed:", error)
           logoBuffer = null
         }
@@ -316,7 +316,7 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
         enhancedError.stack = error.stack
         reject(enhancedError)
       } else {
-        reject(error)
+      reject(error)
       }
     }
   })

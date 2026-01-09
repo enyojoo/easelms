@@ -183,7 +183,7 @@ export default function CourseCertificateSettings({ settings, onUpdate, courseId
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Certificate Description</Label>
+            <Label>Certificate Description</Label>
               <span className={`text-sm ${descriptionLength > DESCRIPTION_CHAR_LIMIT ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
                 {descriptionLength}/{DESCRIPTION_CHAR_LIMIT} characters
               </span>
