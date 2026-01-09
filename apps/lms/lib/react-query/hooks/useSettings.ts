@@ -12,6 +12,8 @@ export interface PlatformSettings {
   logo_black?: string
   logo_white?: string
   favicon?: string
+  contact_email?: string
+  app_url?: string
   seo_title?: string
   seo_description?: string
   seo_keywords?: string

@@ -87,6 +87,26 @@ export async function POST(request: Request) {
     )
   }
 
+  // Send welcome email notification (non-blocking)
+  const nameParts = (name || "").split(" ")
+  const firstName = nameParts[0] || "User"
+  fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      type: "welcome",
+      userEmail: email,
+      firstName,
+    }),
+  }).catch((error) => {
+    logWarning("Failed to trigger welcome email", {
+      component: "auth/signup/route",
+      action: "POST",
+      email,
+      error: error?.message,
+    })
+  })
+
   return NextResponse.json({
     user: authData.user,
     session: authData.session,

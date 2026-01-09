@@ -315,6 +315,25 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
 
+    // Send certificate email notification (non-blocking)
+    if (certificate?.id) {
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "certificate",
+          certificateId: certificate.id.toString(),
+        }),
+      }).catch((error) => {
+        logWarning("Failed to trigger certificate email", {
+          component: "certificates/route",
+          action: "POST",
+          certificateId: certificate.id,
+          error: error?.message,
+        })
+      })
+    }
+
     return NextResponse.json({ 
       certificate: {
         id: certificate.id,

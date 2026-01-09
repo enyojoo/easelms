@@ -25,6 +25,8 @@ export default function BrandSettings() {
     logoBlack: "https://cldup.com/VQGhFU5kd6.svg",
     logoWhite: "https://cldup.com/bwlFqC4f8I.svg",
     favicon: "https://cldup.com/6yEKvPtX22.svg",
+    contactEmail: "",
+    appUrl: "",
     seoTitle: "",
     seoDescription: "",
     seoKeywords: "",
@@ -44,6 +46,8 @@ export default function BrandSettings() {
         logoBlack: platformSettings.logo_black || "https://cldup.com/VQGhFU5kd6.svg",
         logoWhite: platformSettings.logo_white || "https://cldup.com/bwlFqC4f8I.svg",
         favicon: platformSettings.favicon || "https://cldup.com/6yEKvPtX22.svg",
+        contactEmail: platformSettings.contact_email || "",
+        appUrl: platformSettings.app_url || "",
         seoTitle: platformSettings.seo_title || "",
         seoDescription: platformSettings.seo_description || "",
         seoKeywords: platformSettings.seo_keywords || "",
@@ -86,6 +90,8 @@ export default function BrandSettings() {
         logo_black: brandSettings.logoBlack,
         logo_white: brandSettings.logoWhite,
         favicon: brandSettings.favicon,
+        contact_email: brandSettings.contactEmail || null,
+        app_url: brandSettings.appUrl || null,
         seo_title: brandSettings.seoTitle || null,
         seo_description: brandSettings.seoDescription || null,
         seo_keywords: brandSettings.seoKeywords || null,
@@ -296,6 +302,44 @@ export default function BrandSettings() {
             </div>
             <p className="text-sm text-muted-foreground">
               The small icon displayed in browser tabs. Recommended: 512x512px PNG/SVG.
+            </p>
+          </div>
+
+          {/* Contact Email */}
+          <div className="space-y-2">
+            <Label htmlFor="contact-email" className="text-base font-semibold">
+              Contact Email
+            </Label>
+            <Input
+              id="contact-email"
+              type="email"
+              value={brandSettings.contactEmail}
+              onChange={(e) => setBrandSettings((prev) => ({ ...prev, contactEmail: e.target.value }))}
+              placeholder="support@yourdomain.com"
+              className="max-w-md"
+              disabled={!isEditing}
+            />
+            <p className="text-sm text-muted-foreground">
+              Contact email address used in email templates and support communications.
+            </p>
+          </div>
+
+          {/* App URL */}
+          <div className="space-y-2">
+            <Label htmlFor="app-url" className="text-base font-semibold">
+              App URL
+            </Label>
+            <Input
+              id="app-url"
+              type="url"
+              value={brandSettings.appUrl}
+              onChange={(e) => setBrandSettings((prev) => ({ ...prev, appUrl: e.target.value }))}
+              placeholder="https://yourdomain.com"
+              className="max-w-md"
+              disabled={!isEditing}
+            />
+            <p className="text-sm text-muted-foreground">
+              The base URL of your application. Used in email templates for links and references.
             </p>
           </div>
         </CardContent>

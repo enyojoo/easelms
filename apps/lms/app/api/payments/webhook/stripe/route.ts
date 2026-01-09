@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     const { userId, courseId, amountUSD } = paymentIntent.metadata
 
     // Create payment record
-    await supabase.from("payments").insert({
+    const { data: paymentData } = await supabase.from("payments").insert({
       user_id: userId,
       course_id: parseInt(courseId),
       amount_usd: parseFloat(amountUSD),
@@ -46,7 +46,22 @@ export async function POST(request: Request) {
       transaction_id: paymentIntent.id,
       payment_method: paymentIntent.payment_method_types[0],
       completed_at: new Date().toISOString(),
-    })
+    }).select().single()
+
+    // Send payment confirmation email notification (non-blocking)
+    if (paymentData?.id) {
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "payment",
+          paymentId: paymentData.id.toString(),
+          status: "completed",
+        }),
+      }).catch((error) => {
+        console.error("Failed to trigger payment email:", error)
+      })
+    }
 
     // Create enrollment
     const { data: enrollmentData } = await supabase.from("enrollments").upsert({
@@ -67,6 +82,20 @@ export async function POST(request: Request) {
         .from("courses")
         .update({ enrolled_students: currentCount || 0 })
         .eq("id", parseInt(courseId))
+
+      // Send enrollment email notification (non-blocking)
+      if (enrollmentData.id) {
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "enrollment",
+            enrollmentId: enrollmentData.id.toString(),
+          }),
+        }).catch((error) => {
+          console.error("Failed to trigger enrollment email:", error)
+        })
+      }
     }
   }
 
@@ -84,7 +113,7 @@ export async function POST(request: Request) {
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
         // Create payment record
-        await supabase.from("payments").insert({
+        const { data: paymentData } = await supabase.from("payments").insert({
           user_id: userId,
           course_id: parseInt(courseId),
           amount_usd: parseFloat(amountUSD || "0"),
@@ -96,7 +125,22 @@ export async function POST(request: Request) {
           transaction_id: paymentIntent.id,
           payment_method: paymentIntent.payment_method_types[0] || "card",
           completed_at: new Date().toISOString(),
-        })
+        }).select().single()
+
+        // Send payment confirmation email notification (non-blocking)
+        if (paymentData?.id) {
+          fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "payment",
+              paymentId: paymentData.id.toString(),
+              status: "completed",
+            }),
+          }).catch((error) => {
+            console.error("Failed to trigger payment email:", error)
+          })
+        }
 
         // Create enrollment
         const { data: enrollmentData } = await supabase.from("enrollments").upsert({
@@ -117,6 +161,20 @@ export async function POST(request: Request) {
             .from("courses")
             .update({ enrolled_students: currentCount || 0 })
             .eq("id", parseInt(courseId))
+
+          // Send enrollment email notification (non-blocking)
+          if (enrollmentData.id) {
+            fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "enrollment",
+                enrollmentId: enrollmentData.id.toString(),
+              }),
+            }).catch((error) => {
+              console.error("Failed to trigger enrollment email:", error)
+            })
+          }
         }
       }
     }

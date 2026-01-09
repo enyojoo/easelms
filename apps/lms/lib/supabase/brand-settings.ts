@@ -6,6 +6,8 @@ export interface BrandSettings {
   logoBlack: string
   logoWhite: string
   favicon: string
+  contactEmail?: string
+  appUrl?: string
   seoTitle?: string
   seoDescription?: string
   seoKeywords?: string
@@ -40,6 +42,8 @@ export async function getBrandSettings(): Promise<BrandSettings> {
       platformSettings.logo_black ||
       platformSettings.logo_white ||
       platformSettings.favicon ||
+      platformSettings.contact_email ||
+      platformSettings.app_url ||
       platformSettings.seo_title ||
       platformSettings.seo_description ||
       platformSettings.seo_keywords ||
@@ -55,6 +59,8 @@ export async function getBrandSettings(): Promise<BrandSettings> {
         logoBlack: platformSettings.logo_black || DEFAULT_BRAND_SETTINGS.logoBlack,
         logoWhite: platformSettings.logo_white || DEFAULT_BRAND_SETTINGS.logoWhite,
         favicon: platformSettings.favicon || DEFAULT_BRAND_SETTINGS.favicon,
+        contactEmail: platformSettings.contact_email || undefined,
+        appUrl: platformSettings.app_url || undefined,
         seoTitle: platformSettings.seo_title || undefined,
         seoDescription: platformSettings.seo_description || undefined,
         seoKeywords: platformSettings.seo_keywords || undefined,

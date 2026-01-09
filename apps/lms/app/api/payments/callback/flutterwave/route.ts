@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       }
 
       // Create payment record
-      const { error: paymentError } = await supabase.from("payments").insert({
+      const { data: paymentData, error: paymentError } = await supabase.from("payments").insert({
         user_id: userId,
         course_id: parseInt(courseId),
         amount_usd: expectedAmountUSD,
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
         transaction_id: transactionId,
         payment_method: verification.data.payment_type,
         completed_at: new Date().toISOString(),
-      })
+      }).select().single()
 
       if (paymentError) {
         logError("Error creating payment record", paymentError, {
@@ -110,6 +110,45 @@ export async function GET(request: Request) {
           .from("courses")
           .update({ enrolled_students: currentCount || 0 })
           .eq("id", parseInt(courseId))
+
+        // Send enrollment email notification (non-blocking)
+        if (enrollmentData.id) {
+          fetch(`${baseUrl}/api/send-email-notification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "enrollment",
+              enrollmentId: enrollmentData.id.toString(),
+            }),
+          }).catch((error) => {
+            logWarning("Failed to trigger enrollment email", {
+              component: "payments/callback/flutterwave/route",
+              action: "GET",
+              enrollmentId: enrollmentData.id,
+              error: error?.message,
+            })
+          })
+        }
+      }
+
+      // Send payment confirmation email notification (non-blocking)
+      if (paymentData?.id) {
+        fetch(`${baseUrl}/api/send-email-notification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "payment",
+            paymentId: paymentData.id.toString(),
+            status: "completed",
+          }),
+        }).catch((error) => {
+          logWarning("Failed to trigger payment email", {
+            component: "payments/callback/flutterwave/route",
+            action: "GET",
+            paymentId: paymentData.id,
+            error: error?.message,
+          })
+        })
       }
 
       // Fetch course title to create proper slug for redirect

@@ -68,7 +68,13 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
   - Favicon customization
   - SEO metadata (title, description, keywords, image)
 - ⚙️ Flexible course settings and enrollment modes
-- 📧 Email notifications
+- 📧 Email notifications (SendGrid integration)
+  - Welcome emails for new users
+  - Course enrollment confirmations
+  - Course completion notifications
+  - Certificate ready notifications
+  - Payment confirmations and failure alerts
+  - Admin notifications for enrollments, payments, and completions
 - 🔐 Role-based access control
 
 ### Payment Integration
@@ -107,6 +113,7 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - **State Management:** [TanStack Query](https://tanstack.com/query)
 - **Forms:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
 - **Payments:** [Stripe](https://stripe.com/) & [Flutterwave](https://flutterwave.com/)
+- **Email Service:** [SendGrid](https://sendgrid.com/)
 - **PDF Generation:** [PDFKit](https://pdfkit.org/)
 - **Video Player:** [Media Chrome](https://www.media-chrome.org/)
 - **Monorepo:** [Turborepo](https://turbo.build/)
@@ -121,6 +128,7 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - npm 10.0 or higher
 - A Supabase account (free tier works)
 - AWS account (for S3 storage, optional for development)
+- SendGrid account (for email notifications, optional)
 
 ### Installation
 
@@ -156,6 +164,12 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
    FLUTTERWAVE_SECRET_KEY=your_flutterwave_secret_key
    NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY=your_flutterwave_public_key
+
+   # Email Notifications (SendGrid)
+   SENDGRID_API_KEY=your_sendgrid_api_key
+   SENDGRID_FROM_EMAIL=noreply@yourdomain.com
+   SENDGRID_FROM_NAME=EaseLMS
+   SENDGRID_REPLY_TO=support@yourdomain.com
 
    # App URL
    NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -212,9 +226,35 @@ Once logged in as an admin, navigate to **Settings → Brand** to customize your
 - Set your platform name and description
 - Upload custom logos for light and dark modes
 - Set a custom favicon
+- Configure contact email and app URL (used in email templates)
 - Configure SEO metadata (title, description, keywords, and image)
 
-These settings will automatically update across your entire platform, including the logo in the sidebar, favicon in browser tabs, and SEO tags for better search engine visibility.
+These settings will automatically update across your entire platform, including the logo in the sidebar, favicon in browser tabs, email templates, and SEO tags for better search engine visibility.
+
+### Email Notifications
+
+EaseLMS includes a comprehensive email notification system powered by SendGrid. The following emails are automatically sent:
+
+**User Emails:**
+- **Welcome Email** - Sent when a new user signs up
+- **Enrollment Confirmation** - Sent when a user enrolls in a course
+- **Course Completion** - Sent when a user completes a course
+- **Certificate Ready** - Sent when a certificate is generated
+- **Payment Confirmation** - Sent when a payment is successful
+- **Payment Failed** - Sent when a payment fails
+
+**Admin Emails:**
+- **New Enrollment Notification** - Sent to admins when a new enrollment occurs
+- **New Payment Notification** - Sent to admins when a payment is received
+- **Course Completion Notification** - Sent to admins when a course is completed
+
+All emails use your platform's branding (name, logo, contact email, and app URL) configured in Settings → Brand. Emails support both light and dark mode based on the recipient's email client preferences.
+
+**Setup:**
+1. Create a SendGrid account at [sendgrid.com](https://sendgrid.com)
+2. Generate an API key in SendGrid dashboard
+3. Add `SENDGRID_API_KEY` to your `.env.local` file
+4. Optionally configure `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`, and `SENDGRID_REPLY_TO`
 
 ---
 
