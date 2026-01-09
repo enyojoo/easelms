@@ -20,6 +20,10 @@
 
 EaseLMS is a modern, open-source Learning Management System built with Next.js, TypeScript, and Supabase. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.
 
+<div align="center">
+<img src="https://cldup.com/T3C8y1hTlt.svg" alt="EaseLMS Product Screenshot" width="100%" />
+</div>
+
 ### Why EaseLMS?
 
 - 🚀 **Modern Stack** - Built with Next.js 16, React 19, and TypeScript
@@ -87,6 +91,10 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - 📦 Monorepo structure with Turborepo
 - 🎨 shadcn/ui component library
 - 🧪 Well-structured, maintainable codebase
+
+<div align="center">
+<img src="https://cldup.com/Q7m1m5bLmf.svg" alt="EaseLMS Developer Experience" width="100%" />
+</div>
 
 ---
 
