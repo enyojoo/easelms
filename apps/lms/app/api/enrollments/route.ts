@@ -265,9 +265,33 @@ export async function POST(request: Request) {
   // Send enrollment email notification (non-blocking)
   if (data?.id) {
     // Use absolute URL for email notification - get from request or env
-    const url = new URL(request.url)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-      `${url.protocol}//${url.host}`
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    
+    // If NEXT_PUBLIC_APP_URL is not set, try to construct from request
+    if (!baseUrl) {
+      try {
+        const url = new URL(request.url)
+        baseUrl = `${url.protocol}//${url.host}`
+      } catch (urlError) {
+        // Fallback to localhost if URL parsing fails
+        baseUrl = "http://localhost:3000"
+        logWarning("Failed to parse request URL for email notification", {
+          component: "enrollments/route",
+          action: "POST",
+          error: urlError,
+        })
+      }
+    }
+    
+    // Ensure baseUrl doesn't end with a slash
+    baseUrl = baseUrl.replace(/\/$/, "")
+    
+    logInfo("Triggering enrollment email notification", {
+      component: "enrollments/route",
+      action: "POST",
+      enrollmentId: data.id,
+      baseUrl,
+    })
     
     fetch(`${baseUrl}/api/send-email-notification`, {
       method: "POST",
@@ -281,12 +305,14 @@ export async function POST(request: Request) {
       if (!response.ok) {
         return response.json().then((err) => {
           throw new Error(err.error || `HTTP ${response.status}`)
+        }).catch(() => {
+          throw new Error(`HTTP ${response.status}`)
         })
       }
       return response.json()
     })
     .then((result) => {
-      logInfo("Enrollment email notification sent", {
+      logInfo("Enrollment email notification sent successfully", {
         component: "enrollments/route",
         action: "POST",
         enrollmentId: data.id,
@@ -298,9 +324,16 @@ export async function POST(request: Request) {
         component: "enrollments/route",
         action: "POST",
         enrollmentId: data.id,
+        baseUrl,
         error: error?.message,
         stack: error?.stack,
       })
+    })
+  } else {
+    logWarning("Cannot send enrollment email - no enrollment ID", {
+      component: "enrollments/route",
+      action: "POST",
+      data: data ? { id: data.id, hasId: !!data.id } : null,
     })
   }
 

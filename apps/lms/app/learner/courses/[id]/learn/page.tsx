@@ -77,9 +77,16 @@ export default function CourseLearningPage() {
 
   const course = courseData?.course
 
+  // Ensure course.lessons is always an array (defensive check)
+  // This prevents the "Cannot read properties of undefined" error
+  const safeCourse = course ? {
+    ...course,
+    lessons: Array.isArray(course.lessons) ? course.lessons : []
+  } : undefined
+
   // Calculate progress using custom hook
   const { completedLessons, progress, allCompleted } = useCourseProgress({
-    course,
+    course: safeCourse,
     progressData,
   })
 
@@ -98,7 +105,7 @@ export default function CourseLearningPage() {
 
   // Mark enrollment as completed when all lessons are completed (only if not already completed)
   useEffect(() => {
-    if (allLessonsCompleted && course && id && user && !enrollmentMarkedRef.current && !isCourseCompleted) {
+    if (allLessonsCompleted && safeCourse && id && user && !enrollmentMarkedRef.current && !isCourseCompleted) {
       // Mark enrollment as completed
       const markEnrollmentCompleted = async () => {
         try {
@@ -139,12 +146,12 @@ export default function CourseLearningPage() {
       }
       markEnrollmentCompleted()
     }
-  }, [allLessonsCompleted, course, id, user, queryClient, isCourseCompleted])
+  }, [allLessonsCompleted, safeCourse, id, user, queryClient, isCourseCompleted])
 
   // Revert enrollment status to active if progress changes and not all lessons are completed
   // This handles cases where a quiz is retaken and failed, making a lesson incomplete
   useEffect(() => {
-    if (!course || !id || !user) return
+    if (!safeCourse || !id || !user) return
     
     // If not all lessons are completed but enrollment is marked as completed
     if (!allLessonsCompleted && isCourseCompleted) {
@@ -154,7 +161,7 @@ export default function CourseLearningPage() {
             courseId: parseInt(id), 
             allLessonsCompleted,
             completedLessonsCount: completedLessons.length,
-            totalLessons: course.lessons?.length || 0
+            totalLessons: safeCourse.lessons?.length || 0
           })
           enrollmentMarkedRef.current = false // Reset flag so it can be marked completed again when all lessons are done
           
@@ -189,7 +196,7 @@ export default function CourseLearningPage() {
       }
       revertEnrollmentStatus()
     }
-  }, [allLessonsCompleted, isCourseCompleted, course, id, user, queryClient, completedLessons.length])
+  }, [allLessonsCompleted, isCourseCompleted, safeCourse, id, user, queryClient, completedLessons.length])
 
   // Track if we've processed the lessonIndex parameter to prevent duplicate processing
   const lessonIndexProcessedRef = useRef(false)
@@ -215,18 +222,18 @@ export default function CourseLearningPage() {
   const initialLessonSetRef = useRef(false)
   useEffect(() => {
     // Ensure course exists and has lessons array
-    if (!course || !Array.isArray(course.lessons) || course.lessons.length === 0) return
+    if (!safeCourse || !Array.isArray(safeCourse.lessons) || safeCourse.lessons.length === 0) return
     if (!progressData?.progress) return
 
     // If lessonIndex is provided in query params, use it (only process once)
     if (lessonIndexParam !== null && !lessonIndexProcessedRef.current) {
       const index = parseInt(lessonIndexParam, 10)
-      if (!isNaN(index) && index >= 0 && index < course.lessons.length) {
+      if (!isNaN(index) && index >= 0 && index < safeCourse.lessons.length) {
         lessonIndexProcessedRef.current = true
         initialLessonSetRef.current = true
         setCurrentLessonIndex(index)
         // Reset active tab based on lesson type
-        const lesson = course.lessons[index]
+        const lesson = safeCourse.lessons[index]
         if (lesson) {
           setActiveTab(getInitialTab(lesson))
         }
@@ -244,10 +251,10 @@ export default function CourseLearningPage() {
     if (initialLessonSetRef.current) return
 
     // If course is already completed, always start from first lesson (lesson 0)
-    if (isCourseCompleted && course.lessons.length > 0) {
+    if (isCourseCompleted && safeCourse.lessons.length > 0) {
       initialLessonSetRef.current = true
       setCurrentLessonIndex(0)
-      const firstLesson = course.lessons[0]
+      const firstLesson = safeCourse.lessons[0]
       if (firstLesson) {
         setActiveTab(getInitialTab(firstLesson))
       }
@@ -255,12 +262,12 @@ export default function CourseLearningPage() {
     }
 
     // Otherwise, find the first incomplete lesson (only on initial load)
-    if (completedLessons.length >= 0 && course.lessons.length > 0) {
-      for (let i = 0; i < course.lessons.length; i++) {
+    if (completedLessons.length >= 0 && safeCourse.lessons.length > 0) {
+      for (let i = 0; i < safeCourse.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
           initialLessonSetRef.current = true
           setCurrentLessonIndex(i)
-          const lesson = course.lessons[i]
+          const lesson = safeCourse.lessons[i]
           if (lesson) {
             setActiveTab(getInitialTab(lesson))
           }
@@ -268,16 +275,16 @@ export default function CourseLearningPage() {
         }
       }
       // All lessons completed, go to last lesson
-      if (course.lessons.length > 0) {
+      if (safeCourse.lessons.length > 0) {
         initialLessonSetRef.current = true
-        setCurrentLessonIndex(course.lessons.length - 1)
-        const lastLesson = course.lessons[course.lessons.length - 1]
+        setCurrentLessonIndex(safeCourse.lessons.length - 1)
+        const lastLesson = safeCourse.lessons[safeCourse.lessons.length - 1]
         if (lastLesson) {
           setActiveTab(getInitialTab(lastLesson))
         }
       }
     }
-  }, [course, progressData, lessonIndexParam, isCourseCompleted, completedLessons]) // Added completedLessons back for proper initialization
+  }, [safeCourse, progressData, lessonIndexParam, isCourseCompleted, completedLessons]) // Added completedLessons back for proper initialization
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
@@ -310,7 +317,7 @@ export default function CourseLearningPage() {
   // Check enrollment and redirect if not enrolled
   // Handle payment=success by invalidating cache and waiting for enrollment
   useEffect(() => {
-    if (!id || !course) return
+    if (!id || !safeCourse) return
 
     const courseId = parseInt(id)
 
@@ -327,7 +334,7 @@ export default function CourseLearningPage() {
         
         if (enrollment) {
           // Enrollment found, remove query param
-          router.replace(`/learner/courses/${createCourseSlug(course.title, courseId)}/learn`)
+          router.replace(`/learner/courses/${createCourseSlug(safeCourse.title, courseId)}/learn`)
         }
       }, 1000) // Wait 1 second for enrollment to be available
 
@@ -345,10 +352,10 @@ export default function CourseLearningPage() {
     if (!enrollment) {
       // Only redirect if payment was not successful (to avoid redirect loop)
       if (!paymentSuccess) {
-        router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
+        router.push(`/learner/courses/${createCourseSlug(safeCourse.title, courseId)}`)
       }
     }
-  }, [id, enrollmentsData, course, router, paymentSuccess, queryClient])
+  }, [id, enrollmentsData, safeCourse, router, paymentSuccess, queryClient])
 
   // Save progress to API (debounced)
   const saveProgress = async (
@@ -358,7 +365,7 @@ export default function CourseLearningPage() {
     scorePercentage?: number,
     quizAttempts?: number
   ) => {
-    if (!course || !id) return
+    if (!safeCourse || !id) return
 
     // Clear existing timeout
     if (progressSaveTimeoutRef.current) {
@@ -392,8 +399,8 @@ export default function CourseLearningPage() {
 
   // Check if required lessons are completed before allowing access
   const canAccessLesson = (lessonIndex: number): boolean => {
-    if (!course) return false
-    const lesson = course.lessons[lessonIndex]
+    if (!safeCourse) return false
+    const lesson = safeCourse.lessons[lessonIndex]
     if (!lesson) return false
     
     // Check lesson settings for required flag
@@ -405,7 +412,7 @@ export default function CourseLearningPage() {
 
     // Check if all previous required lessons are completed
     for (let i = 0; i < lessonIndex; i++) {
-      const prevLesson = course.lessons[i]
+      const prevLesson = safeCourse.lessons[i]
       if (prevLesson) {
         const prevSettings = prevLesson.settings
         const prevIsRequired = prevSettings && typeof prevSettings === "object" ? (prevSettings as any).isRequired : false
@@ -421,9 +428,9 @@ export default function CourseLearningPage() {
 
   // Handle video completion (for video-only and mixed lessons)
   const handleVideoComplete = async () => {
-    if (!course) return
+    if (!safeCourse) return
 
-    const lesson = course.lessons[currentLessonIndex]
+    const lesson = safeCourse.lessons[currentLessonIndex]
     if (!lesson) return
 
     const lessonType = (lesson as any).type || ((lesson as any).url ? "video" : "text")
@@ -461,9 +468,9 @@ export default function CourseLearningPage() {
 
   // Handle text completion (for text-only and mixed lessons)
   const handleTextComplete = async () => {
-    if (!course) return
+    if (!safeCourse) return
 
-    const lesson = course.lessons[currentLessonIndex]
+    const lesson = safeCourse.lessons[currentLessonIndex]
     if (!lesson) return
 
     const lessonType = (lesson as any).type || ((lesson as any).url ? "video" : "text")
@@ -503,9 +510,9 @@ export default function CourseLearningPage() {
   // Common completion logic - mark lesson as completed (no auto-navigation)
   // User navigates manually - this function only saves progress
   const proceedWithLessonCompletion = async () => {
-    if (!course) return
+    if (!safeCourse) return
 
-    const lesson = course.lessons[currentLessonIndex]
+    const lesson = safeCourse.lessons[currentLessonIndex]
     if (!lesson) return
 
     // Check if lesson has a quiz
@@ -566,9 +573,9 @@ export default function CourseLearningPage() {
 
   // Legacy handler for backward compatibility (used for non-mixed lessons)
   const handleLessonComplete = async () => {
-    if (!course) return
+    if (!safeCourse) return
 
-    const lesson = course.lessons[currentLessonIndex]
+    const lesson = safeCourse.lessons[currentLessonIndex]
     if (!lesson) return
 
     const lessonType = (lesson as any).type || ((lesson as any).url ? "video" : "text")
@@ -634,9 +641,9 @@ export default function CourseLearningPage() {
 
 
   const handleQuizComplete = async (answers?: number[], questions?: any[], attemptCount?: number) => {
-    if (!course || !id) return
+    if (!safeCourse || !id) return
 
-    const lesson = course.lessons[currentLessonIndex]
+    const lesson = safeCourse.lessons[currentLessonIndex]
     if (!lesson) return
 
     // Calculate quiz score to check if passed
@@ -661,7 +668,7 @@ export default function CourseLearningPage() {
       }
       
       scorePercentage = totalPoints > 0 ? (pointsEarned / totalPoints) * 100 : 0
-      const minimumScore = course?.settings?.minimumQuizScore || 50
+      const minimumScore = safeCourse?.settings?.minimumQuizScore || 50
       quizPassed = scorePercentage >= minimumScore
 
       logInfo("Quiz score calculated", {
@@ -719,21 +726,21 @@ export default function CourseLearningPage() {
 
   const handleContinueFromQuiz = () => {
     // Continue button on quiz results - navigate to next lesson or resources
-    if (!course) return
+    if (!safeCourse) return
 
-    const hasResources = course.lessons[currentLessonIndex]?.resources && course.lessons[currentLessonIndex].resources.length > 0
+    const hasResources = safeCourse.lessons[currentLessonIndex]?.resources && safeCourse.lessons[currentLessonIndex].resources.length > 0
     
     if (hasResources) {
       // If current lesson has resources, go to resources tab
       setActiveTab("resources")
-    } else if (currentLessonIndex < course.lessons.length - 1) {
+    } else if (currentLessonIndex < safeCourse.lessons.length - 1) {
       // Go to next lesson
       const nextIndex = currentLessonIndex + 1
       if (!canAccessLesson(nextIndex)) {
         toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
         return
       }
-      const nextLesson = course.lessons[nextIndex]
+      const nextLesson = safeCourse.lessons[nextIndex]
       setCurrentLessonIndex(nextIndex)
       setActiveTab(getInitialTab(nextLesson))
       setTimeLimitExceeded(false)
@@ -742,9 +749,9 @@ export default function CourseLearningPage() {
   }
 
   const handleNextLesson = () => {
-    if (!course) return
+    if (!safeCourse) return
     
-    const currentLesson = course.lessons[currentLessonIndex]
+    const currentLesson = safeCourse.lessons[currentLessonIndex]
     if (!currentLesson) return
     
     const lessonType = (currentLesson as any).type || ((currentLesson as any).url ? "video" : "text")
@@ -770,18 +777,18 @@ export default function CourseLearningPage() {
         setActiveTab("resources")
       } else {
         // No quiz or resources, go to next lesson
-        if (currentLessonIndex < course.lessons.length - 1) {
+        if (currentLessonIndex < safeCourse.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
             toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
             return
           }
-          const nextLesson = course.lessons[nextIndex]
+          const nextLesson = safeCourse.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
           setActiveTab(getInitialTab(nextLesson))
           setTimeLimitExceeded(false)
         } else {
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+          router.push(`/learner/courses/${createCourseSlug(safeCourse?.title || "", parseInt(id))}/learn/summary`)
         }
       }
     } else if (activeTab === "quiz") {
@@ -791,35 +798,35 @@ export default function CourseLearningPage() {
         setActiveTab("resources")
       } else {
         // No resources, go to next lesson
-        if (currentLessonIndex < course.lessons.length - 1) {
+        if (currentLessonIndex < safeCourse.lessons.length - 1) {
           const nextIndex = currentLessonIndex + 1
           if (!canAccessLesson(nextIndex)) {
             toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
             return
           }
-          const nextLesson = course.lessons[nextIndex]
+          const nextLesson = safeCourse.lessons[nextIndex]
           setCurrentLessonIndex(nextIndex)
           setActiveTab(getInitialTab(nextLesson))
           setTimeLimitExceeded(false)
         } else {
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+          router.push(`/learner/courses/${createCourseSlug(safeCourse?.title || "", parseInt(id))}/learn/summary`)
         }
       }
     } else if (activeTab === "resources") {
-      if (currentLessonIndex < course.lessons.length - 1) {
+      if (currentLessonIndex < safeCourse.lessons.length - 1) {
         const nextIndex = currentLessonIndex + 1
         // Check if can access next lesson
         if (!canAccessLesson(nextIndex)) {
           toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
           return
         }
-        const nextLesson = course.lessons[nextIndex]
+        const nextLesson = safeCourse.lessons[nextIndex]
         setCurrentLessonIndex(nextIndex)
         setActiveTab(getInitialTab(nextLesson))
         setTimeLimitExceeded(false)
       } else {
         // All lessons completed, redirect to summary page
-        router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+        router.push(`/learner/courses/${createCourseSlug(safeCourse?.title || "", parseInt(id))}/learn/summary`)
       }
     }
   }
@@ -832,7 +839,7 @@ export default function CourseLearningPage() {
         toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
         return
       }
-      const prevLesson = course.lessons[prevIndex]
+      const prevLesson = safeCourse.lessons[prevIndex]
       setCurrentLessonIndex(prevIndex)
       setActiveTab(getInitialTab(prevLesson))
       setTimeLimitExceeded(false)
@@ -855,12 +862,12 @@ export default function CourseLearningPage() {
   }
 
   // Render with cached data immediately - don't wait for pending state
-  if (!course && authLoading) {
+  if (!safeCourse && authLoading) {
     return null // Wait for auth to complete
   }
 
   // If no course data exists at all, show skeleton while loading
-  if (!course) {
+  if (!safeCourse) {
     // Show skeleton if we're still loading, otherwise return null (will show on refetch)
     if (coursePending) {
       return <CourseLearningSkeleton />
@@ -871,12 +878,12 @@ export default function CourseLearningPage() {
   // Show skeleton if course exists but lessons are not yet loaded
   // This handles the case when user enrolls and immediately navigates to /learn
   // Check if lessons array is missing or empty
-  const hasLessons = Array.isArray(course.lessons) && course.lessons.length > 0
+  const hasLessons = Array.isArray(safeCourse.lessons) && safeCourse.lessons.length > 0
   
   if (!hasLessons) {
     // If we're still loading the course data, show skeleton
     // Also show skeleton if course exists but lessons might be loading (after enrollment)
-    if (coursePending || !course.lessons) {
+    if (coursePending || !safeCourse.lessons) {
       return <CourseLearningSkeleton />
     }
     // If course has no lessons after loading completes, show error
@@ -894,22 +901,22 @@ export default function CourseLearningPage() {
   }
 
   // Ensure currentLessonIndex is within bounds
-  const validLessonIndex = Math.max(0, Math.min(currentLessonIndex, course.lessons.length - 1))
+  const validLessonIndex = Math.max(0, Math.min(currentLessonIndex, safeCourse.lessons.length - 1))
   if (validLessonIndex !== currentLessonIndex) {
     setCurrentLessonIndex(validLessonIndex)
     return null
   }
 
-  const currentLesson = course.lessons[validLessonIndex]
+  const currentLesson = safeCourse.lessons[validLessonIndex]
   
   if (!currentLesson) {
     logError("No current lesson found", new Error("Current lesson is undefined"), {
       component: "CourseLearningPage",
       currentLessonIndex: validLessonIndex,
-      lessonsCount: course.lessons.length,
+      lessonsCount: safeCourse.lessons.length,
     })
     // Reset to first lesson
-    if (validLessonIndex !== 0 && course.lessons.length > 0) {
+    if (validLessonIndex !== 0 && safeCourse.lessons.length > 0) {
       setCurrentLessonIndex(0)
     }
     return null
@@ -924,7 +931,7 @@ export default function CourseLearningPage() {
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="flex-shrink-0 h-8 sm:h-9 md:h-10">
               <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
-            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate flex-1">Course: {course.title}</h1>
+            <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold truncate flex-1">Course: {safeCourse.title}</h1>
             {/* List icon for mobile/tablet - opens course progress and content sheet */}
             <Button 
               variant="ghost" 
@@ -1098,7 +1105,7 @@ export default function CourseLearningPage() {
                       onComplete={handleQuizComplete}
                           onContinue={handleContinueFromQuiz}
                           onRetry={() => clearQuizData(currentLesson.id)}
-                      minimumQuizScore={course?.settings?.minimumQuizScore || course?.settings?.certificate?.minimumQuizScore || 50}
+                      minimumQuizScore={safeCourse?.settings?.minimumQuizScore || safeCourse?.settings?.certificate?.minimumQuizScore || 50}
                       courseId={id}
                       lessonId={currentLesson.id}
                           showResultsOnly={completedQuizzes[currentLesson.id]}
@@ -1141,8 +1148,8 @@ export default function CourseLearningPage() {
                   variant={allLessonsCompleted && !isCourseCompleted ? "default" : isCourseCompleted && currentLessonIndex === course.lessons.length - 1 ? "default" : "outline"}
                   onClick={async () => {
                     // If course is already completed and we're on the last lesson, go to summary
-                    if (isCourseCompleted && currentLessonIndex === course.lessons.length - 1) {
-                      router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+                    if (isCourseCompleted && currentLessonIndex === safeCourse.lessons.length - 1) {
+                      router.push(`/learner/courses/${createCourseSlug(safeCourse?.title || "", parseInt(id))}/learn/summary`)
                       return
                     }
 
@@ -1165,7 +1172,7 @@ export default function CourseLearningPage() {
                           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
                           await queryClient.refetchQueries({ queryKey: ["progress", id] })
                           // Navigate to summary page
-                          router.push(`/learner/courses/${createCourseSlug(course?.title || "", parseInt(id))}/learn/summary`)
+                          router.push(`/learner/courses/${createCourseSlug(safeCourse?.title || "", parseInt(id))}/learn/summary`)
                         } else {
                           const error = await handleApiError(response)
                           logError("Failed to update enrollment", error, {
@@ -1190,15 +1197,15 @@ export default function CourseLearningPage() {
                   disabled={
                     !allLessonsCompleted && !isCourseCompleted &&
                     activeTab === "resources" &&
-                    currentLessonIndex === course.lessons.length - 1
+                    currentLessonIndex === safeCourse.lessons.length - 1
                   }
                   className={`text-foreground flex-1 sm:flex-initial h-10 sm:h-12 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 lg:px-8 ${
-                    (allLessonsCompleted && !isCourseCompleted) || (isCourseCompleted && currentLessonIndex === course.lessons.length - 1)
+                    (allLessonsCompleted && !isCourseCompleted) || (isCourseCompleted && currentLessonIndex === safeCourse.lessons.length - 1)
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
                   }`}
                 >
-                  {isCourseCompleted && currentLessonIndex === course.lessons.length - 1 ? (
+                  {isCourseCompleted && currentLessonIndex === safeCourse.lessons.length - 1 ? (
                     <>
                       View Summary <Eye className="ml-2 h-4 w-4" />
                     </>
@@ -1229,7 +1236,7 @@ export default function CourseLearningPage() {
                 </div>
                 <Progress value={progress} className="h-1.5 sm:h-2 md:h-2.5" />
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  {completedLessons.length} of {course.lessons.length} lessons completed
+                  {completedLessons.length} of {safeCourse.lessons.length} lessons completed
                 </p>
               </div>
             </div>
@@ -1237,7 +1244,7 @@ export default function CourseLearningPage() {
               <h3 className="text-xs sm:text-sm md:text-base font-semibold mb-2.5 sm:mb-3 md:mb-4 flex-shrink-0">Course Content</h3>
               <ScrollArea className="flex-1 min-h-0 w-full">
                 <div className="space-y-1.5 sm:space-y-2 md:space-y-2.5 pr-2 sm:pr-3">
-                {course.lessons.map((lesson: any, index: number) => {
+                {safeCourse.lessons.map((lesson: any, index: number) => {
                   const isCompleted = completedLessons.includes(index)
                   const isCurrent = index === currentLessonIndex
                   const canAccess = canAccessLesson(index)
@@ -1251,7 +1258,7 @@ export default function CourseLearningPage() {
                           toast.error("You must complete all current lesson requirements like passing the quiz before moving to the next lesson")
                           return
                         }
-                        const lesson = course.lessons[index]
+                        const lesson = safeCourse.lessons[index]
                         setCurrentLessonIndex(index)
                         setActiveTab(getInitialTab(lesson))
                         setTimeLimitExceeded(false)
@@ -1316,7 +1323,7 @@ export default function CourseLearningPage() {
               <h3 className="text-sm font-semibold mb-3 px-4 pt-4">Course Content</h3>
               <ScrollArea className="h-[calc(100vh-200px)] px-4">
                 <div className="space-y-2 pb-4">
-                  {course.lessons.map((lesson: any, index: number) => {
+                  {safeCourse.lessons.map((lesson: any, index: number) => {
                     const isCompleted = completedLessons.includes(index)
                     const isCurrent = index === currentLessonIndex
                     const canAccess = canAccessLesson(index)
