@@ -16,13 +16,13 @@
 
 ---
 
-## 🎯 Overview
-
-EaseLMS is a modern, open-source Learning Management System built with Next.js, TypeScript, and Supabase. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.
-
 <div align="center">
 <img src="https://cldup.com/T3C8y1hTlt.svg" alt="EaseLMS Product Screenshot" width="100%" />
 </div>
+
+## 🎯 Overview
+
+EaseLMS is a modern, open-source Learning Management System built with Next.js, TypeScript, and Supabase. It provides a complete solution for creating, managing, and delivering online courses with features like video lessons, interactive quizzes, progress tracking, certificates, and payment integration.
 
 ### Why EaseLMS?
 
