@@ -17,7 +17,7 @@
 ---
 
 <div align="center">
-<img src="https://cldup.com/T3C8y1hTlt.svg" alt="EaseLMS Product Screenshot" width="100%" />
+<img src="https://cldup.com/pdxWxC-chv.svg" alt="EaseLMS Product Screenshot" width="100%" />
 </div>
 
 ## 🎯 Overview
@@ -91,10 +91,6 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
 - 📦 Monorepo structure with Turborepo
 - 🎨 shadcn/ui component library
 - 🧪 Well-structured, maintainable codebase
-
-<div align="center">
-<img src="https://cldup.com/Q7m1m5bLmf.svg" alt="EaseLMS Developer Experience" width="100%" />
-</div>
 
 ---
 
