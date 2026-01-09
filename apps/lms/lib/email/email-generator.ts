@@ -149,20 +149,17 @@ export function generateBaseEmailTemplate(
           <tr>
             <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
               <div class="powered-by-container">
-                <p class="email-footer-small" style="margin: 0 0 8px; font-size: 11px; color: #999999; line-height: 1.6;">
-                  Powered by
-                </p>
                 <a href="https://www.easelms.org" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
-                  <!-- Light mode logo -->
+                  <!-- Light mode logo (white) -->
                   <img 
-                    src="https://cldup.com/rIhf7ALxYw.svg" 
+                    src="https://cldup.com/gGEH37AYfE.png" 
                     alt="EaseLMS" 
                     class="powered-by-logo-light"
                     style="height: 12px; width: auto; display: block; margin: 0 auto;"
                   />
-                  <!-- Dark mode logo (hidden by default) -->
+                  <!-- Dark mode logo (black) -->
                   <img 
-                    src="https://cldup.com/-U7IFSEK-m.svg" 
+                    src="https://cldup.com/DttVmSBdr9.png" 
                     alt="EaseLMS" 
                     class="powered-by-logo-dark"
                     style="height: 12px; width: auto; display: none; margin: 0 auto;"
