@@ -1,6 +1,7 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
+import { emailNotificationService } from "@/lib/email/email-notification-service"
 
 export async function GET() {
   try {
@@ -264,15 +265,17 @@ export async function POST(request: Request) {
 
   // Send enrollment email notification (non-blocking)
   if (data?.id) {
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "enrollment",
-        enrollmentId: data.id.toString(),
-      }),
-    }).catch((error) => {
-      logWarning("Failed to trigger enrollment email", {
+    emailNotificationService.sendEnrollmentEmail(data.id.toString()).catch((error) => {
+      logWarning("Failed to send enrollment email", {
+        component: "enrollments/route",
+        action: "POST",
+        enrollmentId: data.id,
+        error: error?.message,
+      })
+    })
+    // Send admin notification (non-blocking)
+    emailNotificationService.sendAdminNewEnrollmentNotification(data.id.toString()).catch((error) => {
+      logWarning("Failed to send admin enrollment notification", {
         component: "enrollments/route",
         action: "POST",
         enrollmentId: data.id,
@@ -359,15 +362,8 @@ export async function PATCH(request: Request) {
   // Send completion email notification if status changed to completed (non-blocking)
   if (status === "completed" && data?.id && existingEnrollment?.status !== "completed") {
     // Send completion email to student
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "completion",
-        enrollmentId: data.id.toString(),
-      }),
-    }).catch((error) => {
-      logWarning("Failed to trigger completion email", {
+    emailNotificationService.sendCompletionEmail(data.id.toString()).catch((error) => {
+      logWarning("Failed to send completion email", {
         component: "enrollments/route",
         action: "PATCH",
         enrollmentId: data.id,
@@ -376,15 +372,8 @@ export async function PATCH(request: Request) {
     })
 
     // Send admin notification for course completion
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "admin-completion",
-        enrollmentId: data.id.toString(),
-      }),
-    }).catch((error) => {
-      logWarning("Failed to trigger admin completion notification", {
+    emailNotificationService.sendAdminCourseCompletionNotification(data.id.toString()).catch((error) => {
+      logWarning("Failed to send admin completion notification", {
         component: "enrollments/route",
         action: "PATCH",
         enrollmentId: data.id,

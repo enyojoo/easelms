@@ -95,6 +95,12 @@ export default function CourseCard({
 
   const handleEnroll = async (e: React.MouseEvent) => {
     e.preventDefault()
+    
+    if (!course?.id) {
+      console.error("Course ID is missing")
+      return
+    }
+    
     setIsEnrolling(true)
     try {
       if (enrollmentMode === "free") {
@@ -102,15 +108,14 @@ export default function CourseCard({
         try {
           await enrollCourseMutation.mutateAsync(course.id)
           // Invalidate enrollments cache to ensure fresh data
-          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+          await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Dispatch event to notify parent components
           window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
-          // Small delay to ensure cache is updated before redirect
-          setTimeout(() => {
-            router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
-          }, 100)
-        } catch (error) {
+          // Redirect to learn page after enrollment
+          router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
+        } catch (error: any) {
           console.error("Error enrolling in course:", error)
+          // Error is already handled by the mutation's onError
         }
       } else {
         // For paid/subscription, handle payment directly
@@ -164,7 +169,7 @@ export default function CourseCard({
         <>
           {previewButton}
           <Button asChild className="flex-1">
-            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn?lessonIndex=${firstIncompleteLessonIndex}`} prefetch={true}>
+            <Link href={`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`} prefetch={true}>
               <Play className="w-4 h-4 mr-2" />
               Continue
             </Link>

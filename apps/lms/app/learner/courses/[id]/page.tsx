@@ -238,15 +238,22 @@ export default function CoursePage() {
   const { price, buttonText, access } = getAccessDetails()
 
   const handleEnrollOrStart = async () => {
+    if (!id || isNaN(Number.parseInt(id))) {
+      toast.error("Invalid course ID")
+      return
+    }
+
+    const courseId = Number.parseInt(id)
+    
     if (isCompleted) {
       // Course is completed, go to summary page
-      router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn/summary`)
+      router.push(`/learner/courses/${createCourseSlug(course?.title || "", courseId)}/learn/summary`)
       return
     }
 
     if (isEnrolled) {
       // Already enrolled, go to learn page
-      router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+      router.push(`/learner/courses/${createCourseSlug(course?.title || "", courseId)}/learn`)
       return
     }
 
@@ -257,12 +264,12 @@ export default function CoursePage() {
       if (enrollmentMode === "free") {
         // Enroll directly for free courses using React Query mutation
         try {
-          await enrollCourseMutation.mutateAsync(Number.parseInt(id))
+          await enrollCourseMutation.mutateAsync(courseId)
           toast.success(`Successfully enrolled in ${course?.title || "course"}`)
           // Refetch enrollments to ensure cache is updated before redirect
           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Redirect to learn page after enrollment and cache update
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          router.push(`/learner/courses/${createCourseSlug(course?.title || "", courseId)}/learn`)
         } catch (error: any) {
           console.error("Error enrolling in course:", error)
           // Check if error is due to prerequisites
@@ -288,7 +295,7 @@ export default function CoursePage() {
         const prereqCheckResponse = await fetch("/api/enrollments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseId: Number.parseInt(id) }),
+          body: JSON.stringify({ courseId: courseId }),
         })
 
         if (!prereqCheckResponse.ok) {
@@ -312,7 +319,7 @@ export default function CoursePage() {
         }
 
         const success = await handleCoursePayment(
-          Number.parseInt(id),
+          courseId,
           enrollmentMode,
           coursePrice,
           recurringPrice,
@@ -324,7 +331,7 @@ export default function CoursePage() {
           // Refetch enrollments after payment (payment webhook should create enrollment)
           await queryClient.refetchQueries({ queryKey: ["enrollments"] })
           // Redirect to learn page after successful payment
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          router.push(`/learner/courses/${createCourseSlug(course?.title || "", courseId)}/learn`)
         } else {
           toast.error("Payment failed. Please try again.")
           setIsEnrolling(false)

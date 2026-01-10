@@ -50,7 +50,6 @@ export default function CourseLearningPage() {
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const { user, loading: authLoading, userType } = useClientAuthState()
   const paymentSuccess = searchParams.get("payment") === "success"
-  const lessonIndexParam = searchParams.get("lessonIndex")
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
@@ -190,9 +189,6 @@ export default function CourseLearningPage() {
     }
   }, [allLessonsCompleted, isCourseCompleted, course, id, user, queryClient, completedLessons.length])
 
-  // Track if we've processed the lessonIndex parameter to prevent duplicate processing
-  const lessonIndexProcessedRef = useRef(false)
-
   // Helper function to get initial tab based on lesson type
   const getInitialTab = (lesson: any): string => {
     if (!lesson) return "video"
@@ -225,25 +221,6 @@ export default function CourseLearningPage() {
         }
       }
       return
-    }
-
-    // If lessonIndex is provided in query params, use it (only process once)
-    if (lessonIndexParam !== null && !lessonIndexProcessedRef.current) {
-      const index = parseInt(lessonIndexParam, 10)
-      if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
-        lessonIndexProcessedRef.current = true
-        initialLessonSetRef.current = true
-        setCurrentLessonIndex(index)
-        // Reset active tab based on lesson type
-        const lesson = course.lessons[index]
-        setActiveTab(getInitialTab(lesson))
-        
-        // Remove lessonIndex from URL to prevent reprocessing
-        const url = new URL(window.location.href)
-        url.searchParams.delete('lessonIndex')
-        window.history.replaceState({}, '', url.toString())
-        return
-      }
     }
 
     // Only run auto-detection logic once on initial load
@@ -283,7 +260,7 @@ export default function CourseLearningPage() {
       setCurrentLessonIndex(course.lessons.length - 1)
       setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
     }
-  }, [course, progressData, lessonIndexParam, isCourseCompleted, completedLessons])
+  }, [course, progressData, isCourseCompleted, completedLessons])
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
