@@ -28,14 +28,15 @@ export async function GET(
     // Use service role client to bypass RLS and avoid infinite recursion
     const serviceSupabase = createServiceRoleClient()
     
-    // Convert ID to number if it's a string (database stores IDs as integers)
-    const certificateIdNum = typeof id === 'string' ? parseInt(id, 10) : id
-    
-    if (isNaN(certificateIdNum)) {
-      console.error("[Certificates API] Invalid certificate ID format:", id)
+    // Certificate ID is a UUID, not an integer - use it as-is
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(id)) {
+      console.error("[Certificates API] Invalid certificate ID format (not a UUID):", id)
       return NextResponse.json({ error: "Invalid certificate ID format" }, { status: 400 })
     }
     
+    // Fetch certificate with relations - use explicit foreign key syntax for profiles
     const { data: certificate, error } = await serviceSupabase
     .from("certificates")
     .select(`
@@ -43,7 +44,7 @@ export async function GET(
       courses (
         id,
         title,
-          certificate_enabled,
+        certificate_enabled,
         certificate_template,
         certificate_title,
         certificate_description,
@@ -53,12 +54,12 @@ export async function GET(
         additional_text,
         certificate_type
       ),
-      profiles (
+      profiles:user_id (
         id,
         name
       )
     `)
-      .eq("id", certificateIdNum)
+      .eq("id", id)
     .maybeSingle()
 
   if (error) {
@@ -67,13 +68,13 @@ export async function GET(
         component: "certificates/[id]/download/route",
         action: "GET",
         certificateId: certificateId,
-        certificateIdNum,
+        id,
       })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
   
   if (!certificate) {
-    console.error("[Certificates API] Certificate not found for id:", certificateIdNum)
+    console.error("[Certificates API] Certificate not found for id:", id)
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
   }
 
@@ -296,7 +297,7 @@ export async function GET(
       const { error: updateError } = await serviceSupabase
         .from("certificates")
         .update({ certificate_url: url })
-        .eq("id", certificateId)
+        .eq("id", id)
 
       if (updateError) {
         console.error("[Certificates API] Error updating certificate_url in database:", updateError)
