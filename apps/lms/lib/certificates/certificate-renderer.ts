@@ -354,7 +354,7 @@ export function renderCertificate(
   if (!assets?.template) {
     drawCenteredLine(doc, y, LINE_W, { strokeColor: LINE_COLOR, lineWidth: 2 })
   }
-  y += 30 // Spacing after line (increased from 25pt to 30pt)
+  y += 35 // Spacing after line (increased to 35pt)
 
   // DESCRIPTION (rich runs: 16pt + 24pt bold placeholders)
   const descriptionTemplate = data.descriptionTemplate ||
@@ -398,7 +398,7 @@ export function renderCertificate(
     DATE_SIZE,
     { color: GRAY }
   )
-  y += 30 // Increased from 20pt to 30pt (before signature)
+  y += 35 // Increased to 35pt (before signature)
   console.log("[Certificate Renderer] Date rendered, y now:", y)
 
   // SIGNATURE AREA:
