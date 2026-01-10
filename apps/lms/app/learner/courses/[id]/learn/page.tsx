@@ -77,10 +77,14 @@ export default function CourseLearningPage() {
   const course = courseData?.course
 
   // Calculate progress using custom hook
-  const { completedLessons, progress, allCompleted } = useCourseProgress({
+  // Ensure safe defaults even if progressData is undefined
+  const progressResult = useCourseProgress({
     course,
     progressData,
   })
+  const completedLessons = progressResult?.completedLessons || []
+  const progress = progressResult?.progress || 0
+  const allCompleted = progressResult?.allCompleted || false
 
   // Update all lessons completed state
   useEffect(() => {
@@ -280,11 +284,17 @@ export default function CourseLearningPage() {
   }, [currentLessonIndex])
 
   // Process quiz data using custom hook
-  const { completedQuizzes, quizScores, quizAnswers, quizAttemptCounts, shuffleData } = useQuizData({
+  // Ensure we always have safe defaults even if data is undefined
+  const quizDataResult = useQuizData({
     quizResultsData,
     progressData,
     course,
   })
+  const completedQuizzes = quizDataResult?.completedQuizzes || {}
+  const quizScores = quizDataResult?.quizScores || {}
+  const quizAnswers = quizDataResult?.quizAnswers || {}
+  const quizAttemptCounts = quizDataResult?.quizAttemptCounts || {}
+  const shuffleData = quizDataResult?.shuffleData || {}
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -300,10 +310,12 @@ export default function CourseLearningPage() {
 
     const courseId = parseInt(id)
 
-    // If payment was successful, refetch enrollments cache and wait for it to update
+    // If payment was successful, invalidate enrollments cache and wait for it to update
     if (paymentSuccess) {
-      // Refetch enrollments immediately
-      queryClient.refetchQueries({ queryKey: ["enrollments"] })
+      // Invalidate enrollments immediately (non-blocking)
+      queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+      // Also invalidate progress to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["progress", id] })
       
       // Wait a bit for the cache to update, then check enrollment
       const checkEnrollment = setTimeout(() => {
@@ -324,6 +336,7 @@ export default function CourseLearningPage() {
     // Don't redirect if enrollment data is still loading (enrollment might be in progress)
     if (enrollmentsPending) return
 
+    // Don't redirect if we don't have enrollment data yet (might be loading)
     if (!enrollmentsData?.enrollments) return
 
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
@@ -334,7 +347,7 @@ export default function CourseLearningPage() {
         router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
       }
     }
-  }, [id, enrollmentsData, course, router, paymentSuccess, queryClient])
+  }, [id, enrollmentsData, enrollmentsPending, course, router, paymentSuccess, queryClient])
 
   // Save progress to API (debounced)
   const saveProgress = async (
@@ -850,7 +863,20 @@ export default function CourseLearningPage() {
     return null
   }
 
-  const currentLesson = course.lessons[currentLessonIndex]
+  // Ensure course.lessons exists and is an array before accessing
+  if (!course.lessons || !Array.isArray(course.lessons) || course.lessons.length === 0) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">Loading course content...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Ensure currentLessonIndex is valid
+  const validLessonIndex = Math.max(0, Math.min(currentLessonIndex, course.lessons.length - 1))
+  const currentLesson = course.lessons[validLessonIndex]
   
   if (!currentLesson) {
     logError("No current lesson found", new Error("Current lesson is undefined"), {
@@ -1003,7 +1029,7 @@ export default function CourseLearningPage() {
 
               {/* Show quiz tab if: quiz is enabled OR (quiz has questions AND user has results) */}
               {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && 
-               (currentLesson.quiz?.enabled !== false || completedQuizzes[currentLesson.id]) && (
+               (currentLesson.quiz?.enabled !== false || (completedQuizzes && currentLesson.id && completedQuizzes[currentLesson.id])) && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <div className="w-full h-full overflow-y-auto">
                     <div className="p-3 sm:p-4 md:p-6">
@@ -1055,11 +1081,11 @@ export default function CourseLearningPage() {
                       minimumQuizScore={course?.settings?.minimumQuizScore || course?.settings?.certificate?.minimumQuizScore || 50}
                       courseId={id}
                       lessonId={currentLesson.id}
-                          showResultsOnly={completedQuizzes[currentLesson.id]}
-                          prefilledAnswers={quizAnswers[currentLesson.id] || []}
-                          initialScore={quizScores[currentLesson.id]}
-                          initialAttemptCount={quizAttemptCounts[currentLesson.id]}
-                          shuffleData={shuffleData[currentLesson.id]}
+                          showResultsOnly={completedQuizzes && currentLesson.id ? (completedQuizzes[currentLesson.id] || false) : false}
+                          prefilledAnswers={(quizAnswers && currentLesson.id && quizAnswers[currentLesson.id]) ? quizAnswers[currentLesson.id] : []}
+                          initialScore={(quizScores && currentLesson.id && quizScores[currentLesson.id] !== undefined) ? quizScores[currentLesson.id] : undefined}
+                          initialAttemptCount={(quizAttemptCounts && currentLesson.id && quizAttemptCounts[currentLesson.id] !== undefined) ? quizAttemptCounts[currentLesson.id] : undefined}
+                          shuffleData={(shuffleData && currentLesson.id && shuffleData[currentLesson.id]) ? shuffleData[currentLesson.id] : undefined}
                     />
                     </div>
                   </div>

@@ -259,11 +259,11 @@ export default function CoursePage() {
         try {
           await enrollCourseMutation.mutateAsync(Number.parseInt(id))
           toast.success(`Successfully enrolled in ${course?.title || "course"}`)
-          // Invalidate enrollments cache to ensure fresh data
+          // Invalidate enrollments cache to ensure fresh data (non-blocking)
           queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-          // Dispatch event to notify parent components
-          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: Number.parseInt(id) } }))
-          // Small delay to ensure cache is updated before redirect
+          // Invalidate progress cache so it starts fresh for new enrollment
+          queryClient.invalidateQueries({ queryKey: ["progress", id] })
+          // Small delay to ensure cache is updated before redirect (same as CourseCard)
           setTimeout(() => {
             router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
           }, 100)
@@ -325,11 +325,11 @@ export default function CoursePage() {
         )
         if (success) {
           toast.success(`Successfully enrolled in ${course?.title || "course"}`)
-          // Invalidate enrollments cache to ensure fresh data (payment webhook should create enrollment)
+          // Invalidate enrollments cache (non-blocking, payment webhook should create enrollment)
           queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-          // Dispatch event to notify parent components
-          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: Number.parseInt(id) } }))
-          // Small delay to ensure cache is updated before redirect
+          // Invalidate progress cache so it starts fresh for new enrollment
+          queryClient.invalidateQueries({ queryKey: ["progress", id] })
+          // Small delay to ensure cache is updated before redirect (same as CourseCard)
           setTimeout(() => {
             router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
           }, 100)
