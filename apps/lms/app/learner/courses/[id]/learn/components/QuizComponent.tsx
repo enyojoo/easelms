@@ -61,10 +61,46 @@ export default function QuizComponent({
   previewMode = false,
   disabled = false,
 }: QuizProps) {
-  // Use questions in original order (no shuffling)
+  // Use questions - if shuffled, reorder based on shuffleData.questionOrder for consistency
   const questions = useMemo(() => {
-    return quiz.questions || []
-  }, [quiz.questions])
+    const rawQuestions = quiz.questions || []
+    if (!rawQuestions.length) return []
+    
+    // If shuffle data exists, ensure questions are in the order specified by questionOrder
+    const hasShuffle = shuffleData?.questionOrder && Array.isArray(shuffleData.questionOrder) && shuffleData.questionOrder.length > 0
+    if (hasShuffle && shuffleData.questionOrder) {
+      // Reorder questions to match shuffleData.questionOrder
+      const orderedQuestions: QuizQuestion[] = []
+      const questionMap = new Map(rawQuestions.map((q: QuizQuestion) => {
+        const qId = q.id ? (typeof q.id === 'string' ? parseInt(q.id) : q.id) : null
+        return [qId, q]
+      }))
+      
+      shuffleData.questionOrder.forEach((originalQuestionId: number) => {
+        const question = questionMap.get(originalQuestionId) || 
+                        rawQuestions.find((q: QuizQuestion) => {
+                          const qId = q.id ? (typeof q.id === 'string' ? parseInt(q.id) : q.id) : null
+                          return qId === originalQuestionId || String(q.id) === String(originalQuestionId)
+                        })
+        if (question) {
+          orderedQuestions.push(question)
+        }
+      })
+      
+      // If we didn't find all questions by ID, add any remaining questions
+      if (orderedQuestions.length < rawQuestions.length) {
+        rawQuestions.forEach((q: QuizQuestion) => {
+          if (!orderedQuestions.includes(q)) {
+            orderedQuestions.push(q)
+          }
+        })
+      }
+      
+      return orderedQuestions.length > 0 ? orderedQuestions : rawQuestions
+    }
+    
+    return rawQuestions
+  }, [quiz.questions, shuffleData])
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([])
@@ -213,19 +249,54 @@ export default function QuizComponent({
       setSubmissionError(null)
 
       // Prepare answers array with question IDs
-      // Use question.id if available, otherwise use index as fallback
-      const answers = questions.map((question, index) => {
-        // question.id might be a string or number, ensure we send it as-is
-        // The API will match by ID, so we need to send the actual question ID
-        const questionId = question.id 
-          ? (typeof question.id === 'string' ? question.id : String(question.id))
-          : String(index)
-        
-        return {
-          questionId: questionId,
-          userAnswer: selectedAnswers[index] ?? null,
-        }
-      })
+      // IMPORTANT: If questions are shuffled, selectedAnswers is indexed by shuffled position,
+      // so we need to map answers to the correct question IDs based on shuffle order
+      const hasShuffle = shuffleData?.questionOrder && Array.isArray(shuffleData.questionOrder) && shuffleData.questionOrder.length > 0
+      
+      let answers: Array<{ questionId: string; userAnswer: number | null }> = []
+      
+      if (hasShuffle && shuffleData.questionOrder) {
+        // Questions are shuffled - map selectedAnswers (in shuffled order) to question IDs
+        shuffleData.questionOrder.forEach((originalQuestionId: number, shuffledIndex: number) => {
+          // Find the question by ID
+          const question = questions.find((q) => {
+            const qId = q.id ? (typeof q.id === 'string' ? parseInt(q.id) : q.id) : null
+            return qId === originalQuestionId || String(q.id) === String(originalQuestionId)
+          })
+          
+          if (question) {
+            const questionId = question.id 
+              ? (typeof question.id === 'string' ? question.id : String(question.id))
+              : String(originalQuestionId)
+            
+            // selectedAnswers[shuffledIndex] is the answer for the question at shuffled position shuffledIndex
+            answers.push({
+              questionId: questionId,
+              userAnswer: selectedAnswers[shuffledIndex] ?? null,
+            })
+          } else {
+            logWarning("Question not found for shuffled index", {
+              component: "QuizComponent",
+              action: "submitQuizResults",
+              shuffledIndex,
+              originalQuestionId,
+              availableQuestionIds: questions.map(q => q.id),
+            })
+          }
+        })
+      } else {
+        // Not shuffled - map answers in original order
+        answers = questions.map((question, index) => {
+          const questionId = question.id 
+            ? (typeof question.id === 'string' ? question.id : String(question.id))
+            : String(index)
+          
+          return {
+            questionId: questionId,
+            userAnswer: selectedAnswers[index] ?? null,
+          }
+        })
+      }
       
       logInfo("Submitting quiz answers", { lessonId, questionsCount: questions.length })
 

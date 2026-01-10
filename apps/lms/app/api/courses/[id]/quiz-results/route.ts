@@ -439,31 +439,47 @@ export async function POST(
       let question = null
       let originalQuestion: any = null
       
-      // If shuffled, questions are in shuffled order, so use index directly
-      if (effectiveHasShuffle && effectiveQuestionOrder && i < effectiveQuestionOrder.length && i < shuffledQuestionsForComparison.length) {
-        // Question at index i in shuffled order (with shuffled correctOption)
-        question = shuffledQuestionsForComparison[i]
-        // Find original question for mapping back
-        const shuffledQuestionId = effectiveQuestionOrder[i]
-        originalQuestion = quizQuestions.find((q: any) => {
-          const qId = q.dbId || parseInt(String(q.id)) || 0
-          return qId === shuffledQuestionId
-        }) || question
-      } else {
-        // Not shuffled, match normally
-        question = quizQuestions.find((q: any) => {
-          return q.id === answer.questionId || 
-                 String(q.id) === String(answer.questionId) ||
-                 q.id?.toString() === answer.questionId?.toString()
-        })
-        
+      // Always try to match by questionId first (more reliable than index)
+      // This works for both shuffled and non-shuffled quizzes
+      question = quizQuestions.find((q: any) => {
+        const qId = q.dbId || parseInt(String(q.id)) || 0
+        const answerQuestionId = parseInt(String(answer.questionId)) || 0
+        return qId === answerQuestionId || 
+               String(q.id) === String(answer.questionId) ||
+               q.id?.toString() === answer.questionId?.toString()
+      })
+      
+      if (question) {
+        // Found by ID - this is the original question
         originalQuestion = question
         
-        // Fallback to index
-        if (!question && i < quizQuestions.length) {
-          logInfo(`Question ID ${answer.questionId} not found, using index ${i} as fallback`, { questionId: answer.questionId, index: i })
-          question = quizQuestions[i]
-          originalQuestion = question
+        // If shuffled, we need to verify this question is in the shuffled order
+        // and get its position for correct answer comparison
+        if (effectiveHasShuffle && effectiveQuestionOrder) {
+          const questionDbId = question.dbId || parseInt(String(question.id)) || 0
+          const shuffledIndex = effectiveQuestionOrder.findIndex((id: number) => id === questionDbId)
+          if (shuffledIndex >= 0 && shuffledIndex < shuffledQuestionsForComparison.length) {
+            // Use the question from shuffled order for correct answer comparison
+            question = shuffledQuestionsForComparison[shuffledIndex]
+          }
+        }
+      } else {
+        // Not found by ID - fallback to index-based matching (for backward compatibility)
+        if (effectiveHasShuffle && effectiveQuestionOrder && i < effectiveQuestionOrder.length && i < shuffledQuestionsForComparison.length) {
+          // Question at index i in shuffled order
+          question = shuffledQuestionsForComparison[i]
+          const shuffledQuestionId = effectiveQuestionOrder[i]
+          originalQuestion = quizQuestions.find((q: any) => {
+            const qId = q.dbId || parseInt(String(q.id)) || 0
+            return qId === shuffledQuestionId
+          }) || question
+        } else {
+          // Not shuffled, use index fallback
+          if (i < quizQuestions.length) {
+            logInfo(`Question ID ${answer.questionId} not found, using index ${i} as fallback`, { questionId: answer.questionId, index: i })
+            question = quizQuestions[i]
+            originalQuestion = question
+          }
         }
       }
       
