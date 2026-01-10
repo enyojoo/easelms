@@ -259,10 +259,14 @@ export default function CoursePage() {
         try {
           await enrollCourseMutation.mutateAsync(Number.parseInt(id))
           toast.success(`Successfully enrolled in ${course?.title || "course"}`)
-          // Refetch enrollments to ensure cache is updated before redirect
-          await queryClient.refetchQueries({ queryKey: ["enrollments"] })
-          // Redirect to learn page after enrollment and cache update
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          // Invalidate enrollments cache to ensure fresh data
+          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+          // Dispatch event to notify parent components
+          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: Number.parseInt(id) } }))
+          // Small delay to ensure cache is updated before redirect
+          setTimeout(() => {
+            router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          }, 100)
         } catch (error: any) {
           console.error("Error enrolling in course:", error)
           // Check if error is due to prerequisites
@@ -321,10 +325,14 @@ export default function CoursePage() {
         )
         if (success) {
           toast.success(`Successfully enrolled in ${course?.title || "course"}`)
-          // Refetch enrollments after payment (payment webhook should create enrollment)
-          await queryClient.refetchQueries({ queryKey: ["enrollments"] })
-          // Redirect to learn page after successful payment
-          router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          // Invalidate enrollments cache to ensure fresh data (payment webhook should create enrollment)
+          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
+          // Dispatch event to notify parent components
+          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: Number.parseInt(id) } }))
+          // Small delay to ensure cache is updated before redirect
+          setTimeout(() => {
+            router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
+          }, 100)
         } else {
           toast.error("Payment failed. Please try again.")
           setIsEnrolling(false)
