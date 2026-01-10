@@ -130,7 +130,7 @@ class EmailService {
     lastName: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const dashboardUrl = `${appUrl}/learner/dashboard`
+    const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     return this.sendEmail({
       to: data.userEmail,
@@ -158,8 +158,8 @@ class EmailService {
     enrolledAt: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const courseUrl = `${appUrl}/learner/courses/${data.courseId}`
-    const dashboardUrl = `${appUrl}/learner/dashboard`
+    const courseUrl = new URL(`/learner/courses/${data.courseId}`, appUrl).toString()
+    const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     return this.sendEmail({
       to: data.userEmail,
@@ -194,8 +194,8 @@ class EmailService {
     certificateUrl?: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const courseUrl = `${appUrl}/learner/courses/${data.courseId}`
-    const dashboardUrl = `${appUrl}/learner/dashboard`
+    const courseUrl = new URL(`/learner/courses/${data.courseId}`, appUrl).toString()
+    const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     return this.sendEmail({
       to: data.userEmail,
@@ -229,7 +229,7 @@ class EmailService {
     certificateUrl: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const dashboardUrl = `${appUrl}/learner/dashboard`
+    const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     return this.sendEmail({
       to: data.userEmail,
@@ -265,8 +265,8 @@ class EmailService {
     failureReason?: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const courseUrl = `${appUrl}/learner/courses/${data.courseId}`
-    const dashboardUrl = `${appUrl}/learner/dashboard`
+    const courseUrl = new URL(`/learner/courses/${data.courseId}`, appUrl).toString()
+    const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     const template = data.status === "completed" ? "paymentConfirmation" : "paymentFailed"
 
@@ -308,7 +308,7 @@ class EmailService {
     paymentDate?: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const adminDashboardUrl = `${appUrl}/admin`
+    const adminDashboardUrl = new URL("/admin", appUrl).toString()
 
     let template: string
     if (data.type === "enrollment") {
@@ -341,6 +341,8 @@ class EmailService {
    * Send test email for development
    */
   async sendTestEmail(to: string): Promise<SendGridResponse> {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
+    const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
     return this.sendEmail({
       to,
       template: "welcome",
@@ -348,7 +350,7 @@ class EmailService {
         firstName: "Test",
         lastName: "User",
         email: to,
-        dashboardUrl: process.env.NEXT_PUBLIC_APP_URL || "https://easelms.org",
+        dashboardUrl,
       },
     })
   }

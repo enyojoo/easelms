@@ -334,7 +334,7 @@ class EmailNotificationService {
 
       // Send notification to all admins
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-      const adminDashboardUrl = `${appUrl}/admin`
+      const adminDashboardUrl = new URL("/admin", appUrl).toString()
 
       for (const admin of admins) {
         await emailService.sendAdminNotificationEmail({
@@ -429,7 +429,7 @@ class EmailNotificationService {
       const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : ""
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-      const certificateUrl = certificate.s3_url || `${appUrl}/api/certificates/${certificateId}/download`
+      const certificateUrl = certificate.s3_url || new URL(`/api/certificates/${certificateId}/download`, appUrl).toString()
 
       await emailService.sendCertificateEmail({
         userEmail: profile.email,
@@ -723,7 +723,7 @@ class EmailNotificationService {
 
       // Send notification to all admins
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-      const adminDashboardUrl = `${appUrl}/admin`
+      const adminDashboardUrl = new URL("/admin", appUrl).toString()
 
       for (const admin of admins) {
         await emailService.sendAdminNotificationEmail({
@@ -830,7 +830,7 @@ class EmailNotificationService {
 
       // Send notification to all admins
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-      const adminDashboardUrl = `${appUrl}/admin`
+      const adminDashboardUrl = new URL("/admin", appUrl).toString()
 
       for (const admin of admins) {
         await emailService.sendAdminNotificationEmail({
