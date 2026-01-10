@@ -377,6 +377,18 @@ class EmailNotificationService {
 
       const supabase = createServiceRoleClient()
 
+      // Convert certificateId to number if it's a string (database stores IDs as integers)
+      const certificateIdNum = typeof certificateId === 'string' ? parseInt(certificateId, 10) : certificateId
+      
+      if (isNaN(certificateIdNum)) {
+        logError("Invalid certificate ID format", new Error("Invalid certificate ID"), {
+          component: "email-notification-service",
+          action: "sendCertificateEmail",
+          certificateId,
+        })
+        return
+      }
+
       // Fetch certificate with related data
       const { data: certificate, error: certificateError } = await supabase
         .from("certificates")
@@ -399,14 +411,25 @@ class EmailNotificationService {
           )
         `
         )
-        .eq("id", certificateId)
-        .single()
+        .eq("id", certificateIdNum)
+        .maybeSingle()
 
-      if (certificateError || !certificate) {
+      if (certificateError) {
         logError("Failed to fetch certificate data", certificateError, {
           component: "email-notification-service",
           action: "sendCertificateEmail",
           certificateId,
+          certificateIdNum,
+        })
+        return
+      }
+      
+      if (!certificate) {
+        logWarning("Certificate not found for email", {
+          component: "email-notification-service",
+          action: "sendCertificateEmail",
+          certificateId,
+          certificateIdNum,
         })
         return
       }

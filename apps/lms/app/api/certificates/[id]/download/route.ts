@@ -28,6 +28,14 @@ export async function GET(
     // Use service role client to bypass RLS and avoid infinite recursion
     const serviceSupabase = createServiceRoleClient()
     
+    // Convert ID to number if it's a string (database stores IDs as integers)
+    const certificateIdNum = typeof id === 'string' ? parseInt(id, 10) : id
+    
+    if (isNaN(certificateIdNum)) {
+      console.error("[Certificates API] Invalid certificate ID format:", id)
+      return NextResponse.json({ error: "Invalid certificate ID format" }, { status: 400 })
+    }
+    
     const { data: certificate, error } = await serviceSupabase
     .from("certificates")
     .select(`
@@ -50,18 +58,25 @@ export async function GET(
         name
       )
     `)
-      .eq("id", id)
-    .single()
+      .eq("id", certificateIdNum)
+    .maybeSingle()
 
   if (error) {
       console.error("[Certificates API] Error fetching certificate:", error)
+      logError("Error fetching certificate", error, {
+        component: "certificates/[id]/download/route",
+        action: "GET",
+        certificateId: certificateId,
+        certificateIdNum,
+      })
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-
+  
   if (!certificate) {
-      console.error("[Certificates API] Certificate not found for id:", id)
+    console.error("[Certificates API] Certificate not found for id:", certificateIdNum)
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 })
   }
+
 
     console.log("[Certificates API] Certificate found:", {
       id: certificate.id,
