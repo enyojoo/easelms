@@ -115,7 +115,6 @@ export interface SendGridResponse {
 export interface EmailBrandSettings {
   platformName: string
   logoUrl?: string
-  logoWhite?: string
   supportEmail?: string
   appUrl: string
 }

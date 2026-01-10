@@ -50,6 +50,7 @@ export default function CourseLearningPage() {
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const { user, loading: authLoading, userType } = useClientAuthState()
   const paymentSuccess = searchParams.get("payment") === "success"
+  const lessonIndexParam = searchParams.get("lessonIndex")
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
   const [allLessonsCompleted, setAllLessonsCompleted] = useState(false)
@@ -75,10 +76,10 @@ export default function CourseLearningPage() {
 
   const course = courseData?.course
 
-  // Calculate progress using custom hook (only if course and progressData are available)
+  // Calculate progress using custom hook
   const { completedLessons, progress, allCompleted } = useCourseProgress({
-    course: course && course.lessons ? course : undefined,
-    progressData: progressData !== undefined ? progressData : undefined,
+    course,
+    progressData,
   })
 
   // Update all lessons completed state
@@ -189,6 +190,9 @@ export default function CourseLearningPage() {
     }
   }, [allLessonsCompleted, isCourseCompleted, course, id, user, queryClient, completedLessons.length])
 
+  // Track if we've processed the lessonIndex parameter to prevent duplicate processing
+  const lessonIndexProcessedRef = useRef(false)
+
   // Helper function to get initial tab based on lesson type
   const getInitialTab = (lesson: any): string => {
     if (!lesson) return "video"
@@ -209,18 +213,25 @@ export default function CourseLearningPage() {
   // Only runs on initial load - does NOT run when completedLessons changes during quiz completion
   const initialLessonSetRef = useRef(false)
   useEffect(() => {
-    if (!course || !course.lessons || course.lessons.length === 0) return
-    
-    // If progress data is not yet loaded, default to first lesson
-    if (progressData === undefined) {
-      if (!initialLessonSetRef.current && currentLessonIndex === 0) {
+    if (!course || !progressData?.progress) return
+
+    // If lessonIndex is provided in query params, use it (only process once)
+    if (lessonIndexParam !== null && !lessonIndexProcessedRef.current) {
+      const index = parseInt(lessonIndexParam, 10)
+      if (!isNaN(index) && index >= 0 && index < (course.lessons?.length || 0)) {
+        lessonIndexProcessedRef.current = true
         initialLessonSetRef.current = true
-        setCurrentLessonIndex(0)
-        if (course.lessons[0]) {
-          setActiveTab(getInitialTab(course.lessons[0]))
-        }
+        setCurrentLessonIndex(index)
+        // Reset active tab based on lesson type
+        const lesson = course.lessons[index]
+        setActiveTab(getInitialTab(lesson))
+        
+        // Remove lessonIndex from URL to prevent reprocessing
+        const url = new URL(window.location.href)
+        url.searchParams.delete('lessonIndex')
+        window.history.replaceState({}, '', url.toString())
+        return
       }
-      return
     }
 
     // Only run auto-detection logic once on initial load
@@ -236,17 +247,7 @@ export default function CourseLearningPage() {
     }
 
     // Otherwise, find the first incomplete lesson (only on initial load)
-    // If no completed lessons yet, start from first lesson
-    if (course.lessons && course.lessons.length > 0) {
-      if (completedLessons.length === 0) {
-        // No progress yet, start from first lesson
-        initialLessonSetRef.current = true
-        setCurrentLessonIndex(0)
-        setActiveTab(getInitialTab(course.lessons[0]))
-        return
-      }
-      
-      // Find first incomplete lesson
+    if (completedLessons.length > 0 && course.lessons) {
       for (let i = 0; i < course.lessons.length; i++) {
         if (!completedLessons.includes(i)) {
           initialLessonSetRef.current = true
@@ -256,11 +257,13 @@ export default function CourseLearningPage() {
         }
       }
       // All lessons completed, go to last lesson
-      initialLessonSetRef.current = true
-      setCurrentLessonIndex(course.lessons.length - 1)
-      setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
+      if (course.lessons.length > 0) {
+        initialLessonSetRef.current = true
+        setCurrentLessonIndex(course.lessons.length - 1)
+        setActiveTab(getInitialTab(course.lessons[course.lessons.length - 1]))
+      }
     }
-  }, [course, progressData, isCourseCompleted, completedLessons])
+  }, [course, progressData, lessonIndexParam, isCourseCompleted]) // Removed completedLessons from dependencies to prevent auto-navigation
 
   // Cleanup: Pause all videos when lesson index changes (but preserve video state during viewport changes)
   useEffect(() => {
@@ -843,48 +846,27 @@ export default function CourseLearningPage() {
   }
 
   // If no course data exists at all, return null (will show on refetch)
-  if (!course || !course.lessons || course.lessons.length === 0) {
+  if (!course) {
     return null
   }
 
-  // Ensure currentLessonIndex is valid - clamp to valid range
-  const validLessonIndex = course.lessons && course.lessons.length > 0 
-    ? Math.max(0, Math.min(currentLessonIndex, course.lessons.length - 1))
-    : 0
-  
-  // Update currentLessonIndex if it's invalid (but only if we have lessons)
-  useEffect(() => {
-    if (course.lessons && course.lessons.length > 0) {
-      if (validLessonIndex !== currentLessonIndex) {
-        setCurrentLessonIndex(validLessonIndex)
-        if (course.lessons[validLessonIndex]) {
-          setActiveTab(getInitialTab(course.lessons[validLessonIndex]))
-        }
-      }
-    }
-  }, [validLessonIndex, currentLessonIndex, course])
-  
-  // Get current lesson using valid index
-  const currentLesson = course.lessons && course.lessons.length > 0 
-    ? course.lessons[validLessonIndex]
-    : null
+  const currentLesson = course.lessons[currentLessonIndex]
   
   if (!currentLesson) {
-    // If we have lessons but currentLesson is null, something is wrong
-    if (course.lessons && course.lessons.length > 0) {
-      logError("No current lesson found", new Error("Current lesson is undefined"), {
-        component: "CourseLearningPage",
-        currentLessonIndex: validLessonIndex,
-        lessonsCount: course.lessons.length,
-        lessons: course.lessons
-      })
-      // Reset to first lesson
-      if (currentLessonIndex !== 0) {
-        setCurrentLessonIndex(0)
-      }
-      return null
-    }
-    return null
+    logError("No current lesson found", new Error("Current lesson is undefined"), {
+      component: "CourseLearningPage",
+      currentLessonIndex,
+      lessonsCount: course?.lessons?.length || 0,
+      lessons: course.lessons
+    })
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">No lesson content available for this course</p>
+          <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -31,7 +31,6 @@ async function getBrandSettingsForEmail(): Promise<EmailBrandSettings> {
     return {
       platformName: brandSettings.platformName,
       logoUrl: brandSettings.logoBlack,
-      logoWhite: brandSettings.logoWhite,
       supportEmail: brandSettings.contactEmail || "support@easelms.org",
       appUrl: brandSettings.appUrl || appUrl,
     }
