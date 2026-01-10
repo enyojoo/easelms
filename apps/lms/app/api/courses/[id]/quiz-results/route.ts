@@ -228,6 +228,30 @@ export async function POST(
     let attemptId = quizAttempt?.id || null
     let attemptNumber = quizAttempt?.attempt_number || 1
     
+    // First, if there's an existing attempt that's not completed, mark it as completed
+    // This ensures we update the existing attempt before creating a new one
+    if (attemptId && quizAttempt && !quizAttempt.completed_at) {
+      const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
+        .from("quiz_attempts")
+        .update({ completed_at: new Date().toISOString() })
+        .eq("id", attemptId)
+        .select()
+        .single()
+      
+      if (updateAttemptError) {
+        logWarning("Could not mark quiz attempt as completed before retry", {
+          component: "courses/[id]/quiz-results/route",
+          action: "POST",
+          error: updateAttemptError,
+          attemptId,
+        })
+      } else {
+        logInfo("Quiz attempt marked as completed before retry", { attemptId, lessonId })
+        // Update quizAttempt to reflect completion
+        quizAttempt.completed_at = updatedAttempt?.completed_at || new Date().toISOString()
+      }
+    }
+    
     // Determine if this is a retry (previous attempt was completed)
     const isRetry = quizAttempt && quizAttempt.completed_at
     
@@ -330,8 +354,9 @@ export async function POST(
       }
     }
     
-    // If attempt exists but is not completed, mark it as completed now
-    if (attemptId && quizAttempt && !quizAttempt.completed_at) {
+    // If attempt exists but is not completed (and we didn't already mark it as completed above), mark it as completed now
+    // This handles the case where we didn't create a new attempt (not a retry)
+    if (attemptId && quizAttempt && !quizAttempt.completed_at && !isRetry) {
       const { data: updatedAttempt, error: updateAttemptError } = await serviceSupabase
         .from("quiz_attempts")
         .update({ completed_at: new Date().toISOString() })

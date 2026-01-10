@@ -61,6 +61,7 @@ export default function CourseLearningPage() {
   const [videoCompleted, setVideoCompleted] = useState<{ [key: number]: boolean }>({}) // Track video completion separately for mixed lessons
   const progressSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const textViewedRefs = useRef<{ [key: number]: { viewed: boolean; scrollTop: number; scrollHeight: number } }>({})
+  const showingQuizResultsRef = useRef<{ [lessonId: number]: boolean }>({}) // Track if quiz results are showing for a lesson
 
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
@@ -281,7 +282,16 @@ export default function CourseLearningPage() {
         video.currentTime = 0
       }
     })
-  }, [currentLessonIndex])
+    
+    // Clear quiz results flag when lesson changes (user navigated away from quiz results)
+    const currentLesson = course?.lessons?.[currentLessonIndex]
+    if (currentLesson?.id) {
+      // Only clear if we're not on the quiz tab (user navigated away)
+      if (activeTab !== "quiz") {
+        showingQuizResultsRef.current[currentLesson.id] = false
+      }
+    }
+  }, [currentLessonIndex, activeTab, course])
 
   // Process quiz data using custom hook
   // Ensure we always have safe defaults even if data is undefined
@@ -588,6 +598,10 @@ export default function CourseLearningPage() {
   }
 
   const clearQuizData = async (lessonId: number) => {
+    // Clear the quiz results flag when user retries
+    if (lessonId) {
+      showingQuizResultsRef.current[lessonId] = false
+    }
     try {
       logInfo("Clearing quiz data for lesson", { lessonId })
       
@@ -637,6 +651,9 @@ export default function CourseLearningPage() {
 
     const lesson = course.lessons[currentLessonIndex]
     if (!lesson) return
+
+    // Mark that quiz results are showing for this lesson - prevent auto-navigation
+    showingQuizResultsRef.current[lesson.id] = true
 
     // Calculate quiz score to check if passed
     let quizPassed = false
@@ -692,10 +709,10 @@ export default function CourseLearningPage() {
       // Save immediately (no debounce) for quiz completion
       await saveProgressMutation.mutateAsync(progressPayload)
       
-      // Use refetchQueries instead of invalidateQueries to avoid race conditions
-      // This ensures data is fetched after mutation completes
-      await queryClient.refetchQueries({ queryKey: ["progress", id] })
-      await queryClient.refetchQueries({ queryKey: ["quiz-results", id] })
+      // Use invalidateQueries instead of refetchQueries to avoid blocking
+      // This ensures data is refreshed without blocking the UI
+      queryClient.invalidateQueries({ queryKey: ["progress", id] })
+      queryClient.invalidateQueries({ queryKey: ["quiz-results", id] })
     } catch (error) {
       logError("Error saving quiz progress", error, {
         component: "CourseLearningPage",
@@ -745,6 +762,12 @@ export default function CourseLearningPage() {
     
     const currentLesson = course.lessons[currentLessonIndex]
     if (!currentLesson) return
+    
+    // Prevent navigation if quiz results are showing for current lesson
+    if (currentLesson.id && showingQuizResultsRef.current[currentLesson.id]) {
+      logInfo("Preventing navigation - quiz results are showing", { lessonId: currentLesson.id })
+      return
+    }
     
     const lessonType = (currentLesson as any).type || ((currentLesson as any).url ? "video" : "text")
     const hasVideo = !!(currentLesson as any).url

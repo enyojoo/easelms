@@ -435,6 +435,7 @@ export default function QuizComponent({
   // Show submitting state when quiz is being submitted
   // Keep showing submitting screen if we just submitted (even if submitting becomes false briefly)
   // This prevents the quiz info screen from showing during the transition
+  // Also prevent showing quiz info if we're showing results (to prevent flicker)
   if ((submitting || justSubmittedRef.current) && !showResults && !showResultsOnly) {
     return (
       <div className="space-y-6 max-w-3xl mx-auto">
@@ -449,6 +450,11 @@ export default function QuizComponent({
         </Card>
       </div>
     )
+  }
+  
+  // Prevent quiz info from showing if results are showing or we just submitted
+  if (showResults || showResultsOnly || justSubmittedRef.current) {
+    // This will be handled by the results screen below
   }
 
   // Show results if showResultsOnly is true (quiz was already completed) OR if showResults state is true (just completed)
@@ -632,13 +638,18 @@ export default function QuizComponent({
                 const answersToReview = showResultsOnly ? prefilledAnswers : originalAnswers
                 
                 return questionsToReview.map(({ question, originalIndex, shuffledIndex }, reviewIndex) => {
-                  // Get user answer for this question (answers are in shuffled order)
-                  const userAnswer = answersToReview[shuffledIndex] !== undefined ? answersToReview[shuffledIndex] : answersToReview[reviewIndex]
+                  // Get user answer for this question
+                  // If shuffled, answers are mapped to shuffled positions, so use shuffledIndex
+                  // If not shuffled, answers are in original order, so use reviewIndex (which equals originalIndex)
+                  const answerIndex = hasShuffle ? shuffledIndex : reviewIndex
+                  const userAnswer = answersToReview[answerIndex] !== undefined ? answersToReview[answerIndex] : null
                   
                   // Get correct answer index - answers are NOT shuffled, only questions are shuffled
-                  // So we use the original correctAnswer index directly
+                  // So we use the question's correctAnswer index directly (this is correct regardless of shuffle)
                   const correctAnswerIndex = question.correctAnswer
                   
+                  // Compare user answer with correct answer
+                  // Both are answer indices (0, 1, 2, etc.) since answers are NOT shuffled
                   const isCorrect = userAnswer !== undefined && userAnswer !== null && userAnswer === correctAnswerIndex
                   
                   return (
@@ -766,6 +777,7 @@ export default function QuizComponent({
   // - showResultsOnly is true (quiz was already completed), unless we're retrying
   // - We just submitted (to prevent flicker after submission)
   // - showResults is true (results are being shown)
+  // - We're in the middle of a retry (isRetryingRef.current is true)
   if ((!showResultsOnly || isRetryingRef.current) && 
       !justSubmittedRef.current && 
       !quizStarted && 
