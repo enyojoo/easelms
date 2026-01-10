@@ -130,13 +130,17 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       
       console.log(`[PDF Generation] Found ${afmFiles.length} font files in ${fontDir}`)
 
-      // Initialize PDFDocument - A4 landscape, no margins (we handle spacing manually)
-      // A4 landscape: 297mm × 210mm (11.69" × 8.27") or 842pt × 595pt
+      // Initialize PDFDocument - Custom size for high quality (300 DPI equivalent)
+      // Target: 2560 x 1810 pixels at 300 DPI = 8.533" × 6.033" = 216.7mm × 153.1mm
+      // In PDF points (72 points per inch): 614.4pt × 434.4pt
+      // Using custom size array [width, height] in points
+      const customWidth = 614.4  // 2560px / 300 DPI * 72 points/inch
+      const customHeight = 434.4 // 1810px / 300 DPI * 72 points/inch
       const doc = new PDFDocument({
-        size: "A4",
-        layout: "landscape",
+        size: [customWidth, customHeight], // Custom size in points
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
         autoFirstPage: true,
+        compress: false, // Disable compression for maximum quality
       })
       
       // Prevent automatic page creation - we want everything on one page
