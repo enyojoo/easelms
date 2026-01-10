@@ -31,6 +31,7 @@ async function getBrandSettingsForEmail(): Promise<EmailBrandSettings> {
     return {
       platformName: brandSettings.platformName,
       logoUrl: brandSettings.logoBlack,
+      logoWhite: brandSettings.logoWhite,
       supportEmail: brandSettings.contactEmail || "support@easelms.org",
       appUrl: brandSettings.appUrl || appUrl,
     }
@@ -40,6 +41,7 @@ async function getBrandSettingsForEmail(): Promise<EmailBrandSettings> {
     return {
       platformName: "EaseLMS",
       logoUrl: "https://cldup.com/VQGhFU5kd6.svg",
+      logoWhite: "https://cldup.com/bwlFqC4f8I.svg",
       supportEmail: "support@easelms.org",
       appUrl,
     }

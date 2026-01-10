@@ -16,7 +16,8 @@ export function generateBaseEmailTemplate(
   brandSettings?: EmailBrandSettings
 ): string {
   const platformName = brandSettings?.platformName || "EaseLMS"
-  const logoUrl = brandSettings?.logoUrl || "https://cldup.com/VQGhFU5kd6.svg"
+  const logoBlack = brandSettings?.logoUrl || "https://cldup.com/VQGhFU5kd6.svg"
+  const logoWhite = brandSettings?.logoWhite || "https://cldup.com/bwlFqC4f8I.svg"
   const supportEmail = brandSettings?.supportEmail || "support@easelms.org"
   const appUrl = brandSettings?.appUrl || "https://www.easelms.org"
 
@@ -81,6 +82,12 @@ export function generateBaseEmailTemplate(
       .email-cta-button a {
         color: hsl(240, 5.9%, 10%) !important;
       }
+      .brand-logo-light {
+        display: none !important;
+      }
+      .brand-logo-dark {
+        display: block !important;
+      }
       .powered-by-logo-light {
         display: none !important;
       }
@@ -106,13 +113,6 @@ export function generateBaseEmailTemplate(
       .course-description {
         color: #b0b0b0 !important;
       }
-      /* Dark mode logo switch */
-      .powered-by-logo-light {
-        display: none !important;
-      }
-      .powered-by-logo-dark {
-        display: block !important;
-      }
     }
   </style>
 </head>
@@ -124,7 +124,20 @@ export function generateBaseEmailTemplate(
           <!-- Header -->
           <tr>
             <td class="email-header" style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff;">
-              <img src="${logoUrl}" alt="${platformName}" style="max-width: 200px; height: auto;" />
+              <!-- Light mode logo (black) -->
+              <img 
+                src="${logoBlack}" 
+                alt="${platformName}" 
+                class="brand-logo-light"
+                style="max-width: 200px; height: auto; display: block; margin: 0 auto;"
+              />
+              <!-- Dark mode logo (white) -->
+              <img 
+                src="${logoWhite}" 
+                alt="${platformName}" 
+                class="brand-logo-dark"
+                style="max-width: 200px; height: auto; display: none; margin: 0 auto;"
+              />
             </td>
           </tr>
           
@@ -145,21 +158,30 @@ export function generateBaseEmailTemplate(
           <!-- Footer -->
           ${generateFooter(platformName, supportEmail, appUrl)}
           
+          <!-- Notice -->
+          <tr>
+            <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
+              <p class="email-footer-small" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.6;">
+                You're receiving this email because you have an account with ${platformName}.
+              </p>
+            </td>
+          </tr>
+          
           <!-- Powered by EaseLMS -->
           <tr>
             <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
               <div class="powered-by-container">
                 <a href="https://www.easelms.org" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
-                  <!-- Light mode logo (white) -->
+                  <!-- Light mode logo (black) -->
                   <img 
-                    src="https://cldup.com/gGEH37AYfE.png" 
+                    src="https://cldup.com/DttVmSBdr9.png" 
                     alt="EaseLMS" 
                     class="powered-by-logo-light"
                     style="height: 12px; width: auto; display: block; margin: 0 auto;"
                   />
-                  <!-- Dark mode logo (black) -->
+                  <!-- Dark mode logo (white) -->
                   <img 
-                    src="https://cldup.com/DttVmSBdr9.png" 
+                    src="https://cldup.com/gGEH37AYfE.png" 
                     alt="EaseLMS" 
                     class="powered-by-logo-dark"
                     style="height: 12px; width: auto; display: none; margin: 0 auto;"
