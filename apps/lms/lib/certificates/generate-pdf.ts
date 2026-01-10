@@ -130,9 +130,10 @@ export async function generateCertificatePDF(data: CertificateData): Promise<Buf
       
       console.log(`[PDF Generation] Found ${afmFiles.length} font files in ${fontDir}`)
 
-      // Initialize PDFDocument - LETTER landscape, no margins (we handle spacing manually)
+      // Initialize PDFDocument - A4 landscape, no margins (we handle spacing manually)
+      // A4 landscape: 297mm × 210mm (11.69" × 8.27") or 842pt × 595pt
       const doc = new PDFDocument({
-        size: "LETTER",
+        size: "A4",
         layout: "landscape",
         margins: { top: 0, bottom: 0, left: 0, right: 0 },
         autoFirstPage: true,
