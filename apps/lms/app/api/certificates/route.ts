@@ -317,21 +317,32 @@ export async function POST(request: Request) {
 
     // Send certificate email notification (non-blocking)
     if (certificate?.id) {
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "certificate",
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+        const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+        fetch(notificationUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "certificate",
           certificateId: certificate.id.toString(),
-        }),
-      }).catch((error) => {
-        logWarning("Failed to trigger certificate email", {
-          component: "certificates/route",
+          }),
+        }).catch((error) => {
+          logWarning("Failed to trigger certificate email", {
+            component: "certificates/route",
           action: "POST",
           certificateId: certificate.id,
           error: error?.message,
         })
       })
+      } catch (urlError) {
+        logWarning("Failed to construct notification URL", {
+          component: "certificates/route",
+          action: "POST",
+          certificateId: certificate.id,
+          error: urlError instanceof Error ? urlError.message : String(urlError),
+        })
+      }
     }
 
     return NextResponse.json({ 

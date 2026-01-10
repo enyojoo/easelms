@@ -50,17 +50,23 @@ export async function POST(request: Request) {
 
     // Send payment confirmation email notification (non-blocking)
     if (paymentData?.id) {
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "payment",
-          paymentId: paymentData.id.toString(),
-          status: "completed",
-        }),
-      }).catch((error) => {
-        console.error("Failed to trigger payment email:", error)
-      })
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+        const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+        fetch(notificationUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "payment",
+            paymentId: paymentData.id.toString(),
+            status: "completed",
+          }),
+        }).catch((error) => {
+          console.error("Failed to trigger payment email:", error)
+        })
+      } catch (urlError) {
+        console.error("Failed to construct notification URL:", urlError)
+      }
     }
 
     // Create enrollment
@@ -85,16 +91,22 @@ export async function POST(request: Request) {
 
       // Send enrollment email notification (non-blocking)
       if (enrollmentData.id) {
-        fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "enrollment",
-            enrollmentId: enrollmentData.id.toString(),
-          }),
-        }).catch((error) => {
-          console.error("Failed to trigger enrollment email:", error)
-        })
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+          const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+          fetch(notificationUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "enrollment",
+              enrollmentId: enrollmentData.id.toString(),
+            }),
+          }).catch((error) => {
+            console.error("Failed to trigger enrollment email:", error)
+          })
+        } catch (urlError) {
+          console.error("Failed to construct notification URL:", urlError)
+        }
       }
     }
   }
@@ -129,17 +141,23 @@ export async function POST(request: Request) {
 
         // Send payment confirmation email notification (non-blocking)
         if (paymentData?.id) {
-          fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "payment",
-              paymentId: paymentData.id.toString(),
-              status: "completed",
-            }),
-          }).catch((error) => {
-            console.error("Failed to trigger payment email:", error)
-          })
+          try {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+            const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+            fetch(notificationUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "payment",
+                paymentId: paymentData.id.toString(),
+                status: "completed",
+              }),
+            }).catch((error) => {
+              console.error("Failed to trigger payment email:", error)
+            })
+          } catch (urlError) {
+            console.error("Failed to construct notification URL:", urlError)
+          }
         }
 
         // Create enrollment
@@ -164,16 +182,22 @@ export async function POST(request: Request) {
 
           // Send enrollment email notification (non-blocking)
           if (enrollmentData.id) {
-            fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "enrollment",
-                enrollmentId: enrollmentData.id.toString(),
-              }),
-            }).catch((error) => {
-              console.error("Failed to trigger enrollment email:", error)
-            })
+            try {
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+              const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+              fetch(notificationUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "enrollment",
+                  enrollmentId: enrollmentData.id.toString(),
+                }),
+              }).catch((error) => {
+                console.error("Failed to trigger enrollment email:", error)
+              })
+            } catch (urlError) {
+              console.error("Failed to construct notification URL:", urlError)
+            }
           }
         }
       }

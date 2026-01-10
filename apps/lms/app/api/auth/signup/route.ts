@@ -90,22 +90,33 @@ export async function POST(request: Request) {
   // Send welcome email notification (non-blocking)
   const nameParts = (name || "").split(" ")
   const firstName = nameParts[0] || "User"
-  fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      type: "welcome",
-      userEmail: email,
-      firstName,
-    }),
-  }).catch((error) => {
-    logWarning("Failed to trigger welcome email", {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+    const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+    fetch(notificationUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "welcome",
+        userEmail: email,
+        firstName,
+      }),
+    }).catch((error) => {
+      logWarning("Failed to trigger welcome email", {
+        component: "auth/signup/route",
+        action: "POST",
+        email,
+        error: error?.message,
+      })
+    })
+  } catch (urlError) {
+    logWarning("Failed to construct notification URL", {
       component: "auth/signup/route",
       action: "POST",
       email,
-      error: error?.message,
+      error: urlError instanceof Error ? urlError.message : String(urlError),
     })
-  })
+  }
 
   return NextResponse.json({
     user: authData.user,

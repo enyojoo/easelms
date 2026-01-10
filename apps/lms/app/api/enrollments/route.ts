@@ -264,21 +264,32 @@ export async function POST(request: Request) {
 
   // Send enrollment email notification (non-blocking)
   if (data?.id) {
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "enrollment",
-        enrollmentId: data.id.toString(),
-      }),
-    }).catch((error) => {
-      logWarning("Failed to trigger enrollment email", {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+      fetch(notificationUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "enrollment",
+          enrollmentId: data.id.toString(),
+        }),
+      }).catch((error) => {
+        logWarning("Failed to trigger enrollment email", {
+          component: "enrollments/route",
+          action: "POST",
+          enrollmentId: data.id,
+          error: error?.message,
+        })
+      })
+    } catch (urlError) {
+      logWarning("Failed to construct notification URL", {
         component: "enrollments/route",
         action: "POST",
         enrollmentId: data.id,
-        error: error?.message,
+        error: urlError instanceof Error ? urlError.message : String(urlError),
       })
-    })
+    }
   }
 
   return NextResponse.json({ enrollment: data })
@@ -358,39 +369,51 @@ export async function PATCH(request: Request) {
 
   // Send completion email notification if status changed to completed (non-blocking)
   if (status === "completed" && data?.id && existingEnrollment?.status !== "completed") {
-    // Send completion email to student
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "completion",
-        enrollmentId: data.id.toString(),
-      }),
-    }).catch((error) => {
-      logWarning("Failed to trigger completion email", {
-        component: "enrollments/route",
-        action: "PATCH",
-        enrollmentId: data.id,
-        error: error?.message,
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+      const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+      
+      // Send completion email to student
+      fetch(notificationUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "completion",
+          enrollmentId: data.id.toString(),
+        }),
+      }).catch((error) => {
+        logWarning("Failed to trigger completion email", {
+          component: "enrollments/route",
+          action: "PATCH",
+          enrollmentId: data.id,
+          error: error?.message,
+        })
       })
-    })
 
-    // Send admin notification for course completion
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/send-email-notification`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        type: "admin-completion",
-        enrollmentId: data.id.toString(),
-      }),
-    }).catch((error) => {
-      logWarning("Failed to trigger admin completion notification", {
+      // Send admin notification for course completion
+      fetch(notificationUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "admin-completion",
+          enrollmentId: data.id.toString(),
+        }),
+      }).catch((error) => {
+        logWarning("Failed to trigger admin completion notification", {
+          component: "enrollments/route",
+          action: "PATCH",
+          enrollmentId: data.id,
+          error: error?.message,
+        })
+      })
+    } catch (urlError) {
+      logWarning("Failed to construct notification URL", {
         component: "enrollments/route",
         action: "PATCH",
         enrollmentId: data.id,
-        error: error?.message,
+        error: urlError instanceof Error ? urlError.message : String(urlError),
       })
-    })
+    }
   }
 
   if (error) {

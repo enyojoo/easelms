@@ -338,14 +338,8 @@ export function generateFooter(
   return `
           <tr>
             <td class="email-footer" style="padding: 32px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
-              <p class="email-footer-text" style="margin: 0 0 12px; font-size: 14px; color: #666666; line-height: 1.6;">
+              <p class="email-footer-text" style="margin: 0; font-size: 14px; color: #666666; line-height: 1.6;">
                 Need help? Contact us at <a href="mailto:${supportEmail}" class="email-footer-link" style="color: hsl(240, 5.9%, 10%); text-decoration: none;">${supportEmail}</a>
-              </p>
-              <p class="email-footer-text" style="margin: 0 0 12px; font-size: 14px; color: #666666; line-height: 1.6;">
-                <a href="${appUrl}" class="email-footer-link" style="color: hsl(240, 5.9%, 10%); text-decoration: none;">Visit ${platformName}</a>
-              </p>
-              <p class="email-footer-small" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.6;">
-                © ${new Date().getFullYear()} ${platformName}. All rights reserved.
               </p>
             </td>
           </tr>

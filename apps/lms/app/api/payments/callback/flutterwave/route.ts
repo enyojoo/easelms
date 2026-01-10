@@ -113,42 +113,62 @@ export async function GET(request: Request) {
 
         // Send enrollment email notification (non-blocking)
         if (enrollmentData.id) {
-          fetch(`${baseUrl}/api/send-email-notification`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "enrollment",
-              enrollmentId: enrollmentData.id.toString(),
-            }),
-          }).catch((error) => {
-            logWarning("Failed to trigger enrollment email", {
+          try {
+            const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+            fetch(notificationUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                type: "enrollment",
+                enrollmentId: enrollmentData.id.toString(),
+              }),
+            }).catch((error) => {
+              logWarning("Failed to trigger enrollment email", {
+                component: "payments/callback/flutterwave/route",
+                action: "GET",
+                enrollmentId: enrollmentData.id,
+                error: error?.message,
+              })
+            })
+          } catch (urlError) {
+            logWarning("Failed to construct notification URL", {
               component: "payments/callback/flutterwave/route",
               action: "GET",
               enrollmentId: enrollmentData.id,
-              error: error?.message,
+              error: urlError instanceof Error ? urlError.message : String(urlError),
             })
-          })
+          }
         }
       }
 
       // Send payment confirmation email notification (non-blocking)
       if (paymentData?.id) {
-        fetch(`${baseUrl}/api/send-email-notification`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "payment",
-            paymentId: paymentData.id.toString(),
-            status: "completed",
-          }),
-        }).catch((error) => {
-          logWarning("Failed to trigger payment email", {
+        try {
+          const notificationUrl = new URL("/api/send-email-notification", baseUrl).toString()
+          fetch(notificationUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "payment",
+              paymentId: paymentData.id.toString(),
+              status: "completed",
+            }),
+          }).catch((error) => {
+            logWarning("Failed to trigger payment email", {
+              component: "payments/callback/flutterwave/route",
+              action: "GET",
+              paymentId: paymentData.id,
+              error: error?.message,
+            })
+          })
+        } catch (urlError) {
+          logWarning("Failed to construct notification URL", {
             component: "payments/callback/flutterwave/route",
             action: "GET",
             paymentId: paymentData.id,
-            error: error?.message,
+            error: urlError instanceof Error ? urlError.message : String(urlError),
           })
-        })
+        }
       }
 
       // Fetch course title to create proper slug for redirect
