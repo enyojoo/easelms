@@ -54,9 +54,11 @@ export default function CourseCard({
   const userCurrency = profileData?.profile?.currency || "USD"
   const platformDefaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
   const displayCurrency = userCurrency // User preference overrides platform default
+  const settingsLoaded = !!settingsData?.platformSettings
 
   // Convert course price from platform currency to display currency
   const [convertedPrice, setConvertedPrice] = useState<string>("Free")
+  const [priceLoading, setPriceLoading] = useState(false)
 
   useEffect(() => {
     const authState = getClientAuthState()
@@ -65,17 +67,42 @@ export default function CourseCard({
 
   // Convert course price when data changes
   useEffect(() => {
+    // Don't convert until settings are loaded
+    if (!settingsLoaded) {
+      setConvertedPrice("Free")
+      setPriceLoading(false)
+      return
+    }
+
     const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
     const price = course.settings?.enrollment?.price || course.price || 0
 
     if (enrollmentMode === "free" || price === 0) {
       setConvertedPrice("Free")
-    } else {
-      convertAndFormatCurrency(price, platformDefaultCurrency, displayCurrency)
-        .then(setConvertedPrice)
-        .catch(() => setConvertedPrice(formatCurrency(price, displayCurrency))) // fallback
+      setPriceLoading(false)
+      return
     }
-  }, [course.settings?.enrollment, course.price, platformDefaultCurrency, displayCurrency])
+
+    // If currencies are the same, just format
+    if (platformDefaultCurrency === displayCurrency) {
+      setConvertedPrice(formatCurrency(price, displayCurrency))
+      setPriceLoading(false)
+      return
+    }
+
+    setPriceLoading(true)
+    convertAndFormatCurrency(price, platformDefaultCurrency, displayCurrency)
+      .then((formattedPrice) => {
+        setConvertedPrice(formattedPrice)
+        setPriceLoading(false)
+      })
+      .catch((error) => {
+        console.warn('Currency conversion failed, using fallback:', error)
+        // Fallback: show price in display currency (assuming it's already in that currency)
+        setConvertedPrice(formatCurrency(price, displayCurrency))
+        setPriceLoading(false)
+      })
+  }, [course.settings?.enrollment, course.price, platformDefaultCurrency, displayCurrency, settingsLoaded])
   
   // Check enrollment status using utility function
   const isEnrolled = isEnrolledInCourse(course.id, user) || enrolledCourseIds.includes(course.id)
@@ -318,7 +345,7 @@ export default function CourseCard({
           <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />
             <span>
-              {convertedPrice}
+              {priceLoading ? "..." : convertedPrice}
             </span>
           </div>
         </div>
