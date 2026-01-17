@@ -34,11 +34,11 @@ export async function GET(request: Request) {
       
       // Get metadata from verification response
       const metadata = verification.data.meta || {}
-      const { userId, courseId, amountUSD } = metadata
+      const { userId, courseId, amount, platformCurrency } = metadata
 
-      // Verify amounts match (per Flutterwave Standard guide)
-      // We store expected amount in metadata, compare with verified amount
-      const expectedAmountUSD = parseFloat(amountUSD || "0")
+      // Calculate USD equivalent for storage
+      const { convertCurrency } = await import("@/lib/payments/currency")
+      const expectedAmountUSD = await convertCurrency(parseFloat(amount || "0"), platformCurrency || "USD", "USD")
       const verifiedAmount = verification.data.amount
       const verifiedCurrency = verification.data.currency
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
         amount_usd: expectedAmountUSD,
         amount: verifiedAmount,
         currency: verifiedCurrency,
-        exchange_rate: verifiedAmount / expectedAmountUSD,
+        exchange_rate: verifiedAmount / parseFloat(amount || "1"),
         gateway: "flutterwave",
         status: "completed",
         transaction_id: transactionId,

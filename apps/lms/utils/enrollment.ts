@@ -163,7 +163,7 @@ export function handleCoursePayment(
         },
         body: JSON.stringify({
           courseId,
-          amountUSD: price,
+          amount: price, // price in platform currency
           courseTitle: courseTitle || `Course ${courseId}`,
         }),
       })

@@ -4,6 +4,16 @@ import { initializePayment } from "@/lib/payments/flutterwave"
 import { convertCurrency } from "@/lib/payments/currency"
 import { NextResponse } from "next/server"
 
+// Get platform settings
+async function getPlatformSettings() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("platform_settings")
+    .select("default_currency")
+    .single()
+  return data?.default_currency || "USD"
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -12,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId, amountUSD, courseTitle } = await request.json()
+  const { courseId, amount, courseTitle } = await request.json() // amount is in platform currency
 
   // Get course title if not provided
   let courseTitleToUse = courseTitle
@@ -25,7 +35,8 @@ export async function POST(request: Request) {
     courseTitleToUse = course?.title || "Course Enrollment"
   }
 
-  // Get user's currency
+  // Get platform settings and user currency
+  const platformCurrency = await getPlatformSettings()
   const { data: profile } = await supabase
     .from("profiles")
     .select("currency")
@@ -33,8 +44,10 @@ export async function POST(request: Request) {
     .single()
 
   const userCurrency = profile?.currency || "USD"
-  const exchangeRate = await convertCurrency(1, "USD", userCurrency)
-  const convertedAmount = amountUSD * exchangeRate
+
+  // Convert from platform currency to user's currency
+  const exchangeRate = await convertCurrency(1, platformCurrency, userCurrency)
+  const convertedAmount = amount * exchangeRate
 
   // Determine payment gateway
   const gateway = userCurrency === "NGN" ? "flutterwave" : "stripe"
@@ -71,6 +84,8 @@ export async function POST(request: Request) {
         gateway: "stripe",
         amount: convertedAmount,
         currency: userCurrency,
+        platformAmount: amount,
+        platformCurrency: platformCurrency,
         exchangeRate,
       })
     } else {
@@ -92,7 +107,8 @@ export async function POST(request: Request) {
         metadata: {
           userId: user.id,
           courseId: courseId.toString(),
-          amountUSD: amountUSD.toString(),
+          amount: amount.toString(),
+          platformCurrency: platformCurrency,
         },
       })
 
@@ -102,6 +118,8 @@ export async function POST(request: Request) {
         txRef,
         amount: convertedAmount,
         currency: userCurrency,
+        platformAmount: amount,
+        platformCurrency: platformCurrency,
         exchangeRate,
       })
     }
