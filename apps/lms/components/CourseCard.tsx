@@ -13,7 +13,8 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
-import { useEnrollCourse, useProgress, useSettings, useProfile } from "@/lib/react-query/hooks"
+import { useEnrollCourse, useProgress, useProfile } from "@/lib/react-query/hooks"
+import { usePlatformSettings } from "@/lib/react-query/hooks/usePlatformSettings"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { formatCurrency, convertAndFormatCurrency } from "@/lib/utils/currency"
@@ -47,14 +48,14 @@ export default function CourseCard({
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   const { data: progressData } = useProgress(course.id)
-  const { data: settingsData } = useSettings()
+  const { data: platformSettings } = usePlatformSettings()
   const { data: profileData } = useProfile()
 
   // Get user's currency preference, fallback to platform default
   const userCurrency = profileData?.profile?.currency || "USD"
-  const platformDefaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+  const platformDefaultCurrency = platformSettings?.default_currency || "USD"
   const displayCurrency = userCurrency // User preference overrides platform default
-  const settingsLoaded = !!settingsData?.platformSettings
+  const settingsLoaded = !!platformSettings
 
   // Convert course price from platform currency to display currency
   const [convertedPrice, setConvertedPrice] = useState<string>("Free")

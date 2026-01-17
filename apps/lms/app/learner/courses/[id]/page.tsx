@@ -15,7 +15,8 @@ import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings, useProfile } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useProfile } from "@/lib/react-query/hooks"
+import { usePlatformSettings } from "@/lib/react-query/hooks/usePlatformSettings"
 import { useQueryClient } from "@tanstack/react-query"
 import { formatCurrency, convertAndFormatCurrency } from "@/lib/utils/currency"
 import { toast } from "sonner"
@@ -96,7 +97,7 @@ export default function CoursePage() {
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
-  const { data: settingsData } = useSettings()
+  const { data: platformSettings } = usePlatformSettings()
   const { data: profileData } = useProfile()
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
@@ -189,9 +190,9 @@ export default function CoursePage() {
 
   // Get user's currency preference, fallback to platform default
   const userCurrency = profileData?.profile?.currency || "USD"
-  const platformDefaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+  const platformDefaultCurrency = platformSettings?.default_currency || "USD"
   const displayCurrency = userCurrency // User preference overrides platform default
-  const settingsLoaded = !!settingsData?.platformSettings
+  const settingsLoaded = !!platformSettings
 
   // Get actual enrollment mode from course settings
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
