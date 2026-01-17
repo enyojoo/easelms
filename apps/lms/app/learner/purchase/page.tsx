@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingBag, XCircle, Calendar, DollarSign } from "lucide-react"
+import { ShoppingBag, Calendar, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { createCourseSlug } from "@/lib/slug"
-import { cancelSubscription } from "@/utils/enrollment"
 import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
 import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchases"
 import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
@@ -121,45 +120,23 @@ export default function PurchaseHistoryPage() {
               {purchases.map((purchase) => {
                 // Find course from enrolled courses
                 const course = enrolledCourses.find((c: any) => c.id === purchase.courseId)
-                const isSubscription = purchase.type === "recurring"
-                const isActive = purchase.status === "active"
-                
+
                 return (
-                  <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
+                  <Card key={purchase.id}>
                     <CardContent className="p-4 md:p-6">
                       <div className="flex flex-col gap-4 md:gap-5">
                         <div className="flex-1 min-w-0">
                           <div className="mb-3">
                             <h3 className="font-semibold text-base md:text-lg mb-2 break-words">{purchase.courseTitle}</h3>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge
-                                variant={isSubscription ? "secondary" : "outline"}
-                                className={
-                                  isSubscription
-                                    ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs"
-                                    : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs"
-                                }
-                              >
-                                {isSubscription ? "Subscription" : "One-time Purchase"}
-                              </Badge>
-                              <Badge
-                                variant={isActive ? "default" : "secondary"}
-                                className={
-                                  isActive
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200 text-xs"
-                                }
-                              >
-                                {isActive ? "Active" : "Cancelled"}
-                              </Badge>
-                            </div>
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                              One-time Purchase
+                            </Badge>
                           </div>
                           <div className="space-y-2 text-xs md:text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
                               <span className="break-words">
                                 {purchase.currency} {purchase.amount}
-                                {isSubscription && purchase.recurringPrice && " /month"}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -172,18 +149,6 @@ export default function PurchaseHistoryPage() {
                                 })}
                               </span>
                             </div>
-                            {purchase.cancelledAt && (
-                              <div className="flex items-center gap-2">
-                                <XCircle className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                                <span>
-                                  Cancelled: {new Date(purchase.cancelledAt).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "long",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2 border-t">
@@ -193,29 +158,6 @@ export default function PurchaseHistoryPage() {
                                 View Course
                               </Button>
                             </Link>
-                          )}
-                          {isSubscription && isActive && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={async () => {
-                                if (window.confirm("Are you sure you want to cancel this subscription? You will be redirected to support to complete the cancellation.")) {
-                                  try {
-                                    cancelSubscription(purchase.id)
-                                    // Refetch purchases cache to get updated data
-                                    await queryClient.refetchQueries({ queryKey: ["purchases"] })
-                                    toast.success("Subscription cancellation initiated. Please contact support to complete the process.")
-                                    router.push("/learner/support")
-                                  } catch (error: any) {
-                                    toast.error(error?.message || "Failed to cancel subscription. Please try again.")
-                                  }
-                                }
-                              }}
-                              className="w-full sm:w-auto min-h-[44px]"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Cancel Subscription
-                            </Button>
                           )}
                         </div>
                       </div>
