@@ -22,6 +22,7 @@ import { useClientAuthState } from "@/utils/client-auth"
 import Link from "next/link"
 import { toast } from "sonner"
 import { createCourseSlug } from "@/lib/slug"
+import { formatCurrency } from "@/lib/utils/currency"
 import AdminLearnerDetailSkeleton from "@/components/AdminLearnerDetailSkeleton"
 import { useLearner, useRealtimeAdminStats } from "@/lib/react-query/hooks"
 
@@ -444,11 +445,10 @@ function LearnerDetailsPage() {
                 <div className="space-y-4">
                   {purchases.map((purchase) => {
                     const course = getCourse(purchase.courseId)
-                    const isSubscription = purchase.type === "recurring"
                     const isActive = purchase.status === "completed" || purchase.status === "active"
-                    
+
                     return (
-                      <Card key={purchase.id} className={!isActive ? "opacity-75" : ""}>
+                      <Card key={purchase.id}>
                         <CardContent className="p-6">
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                             <div className="flex-1">
@@ -456,15 +456,8 @@ function LearnerDetailsPage() {
                                 <div>
                                   <h3 className="font-semibold text-lg mb-1">{purchase.courseTitle}</h3>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <Badge
-                                      variant={isSubscription ? "secondary" : "outline"}
-                                      className={
-                                        isSubscription
-                                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                                      }
-                                    >
-                                      {isSubscription ? "Subscription" : "One-time Purchase"}
+                                    <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                      One-time Purchase
                                     </Badge>
                                     <Badge
                                       variant={isActive ? "default" : "secondary"}
@@ -474,7 +467,7 @@ function LearnerDetailsPage() {
                                           : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
                                       }
                                     >
-                                      {isActive ? "Active" : purchase.status}
+                                      {isActive ? "Completed" : purchase.status}
                                     </Badge>
                                   </div>
                                 </div>
@@ -483,8 +476,7 @@ function LearnerDetailsPage() {
                                 <div className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4" />
                                   <span>
-                                    {purchase.currency || "USD"} {purchase.amount}
-                                    {isSubscription && purchase.recurringPrice && " /month"}
+                                    {formatCurrency(purchase.amount, purchase.currency || "USD")}
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">

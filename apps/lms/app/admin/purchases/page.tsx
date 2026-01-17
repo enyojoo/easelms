@@ -11,6 +11,7 @@ import { ShoppingBag, Calendar, DollarSign, Search, Loader2, User, ExternalLink 
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { toast } from "sonner"
+import { formatCurrency } from "@/lib/utils/currency"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import AdminPurchasesSkeleton from "@/components/AdminPurchasesSkeleton"
 import { usePurchases, useRealtimeAdminStats } from "@/lib/react-query/hooks"
@@ -154,7 +155,6 @@ export default function AdminPurchasesPage() {
                       </TableRow>
                     ) : (
                       filteredPurchases.map((purchase) => {
-                        const isSubscription = purchase.type === "recurring"
                         const isActive = purchase.status === "completed"
 
                         return (
@@ -184,8 +184,7 @@ export default function AdminPurchasesPage() {
                               <div className="flex items-center gap-1">
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-medium">
-                                  {purchase.currency || "USD"} {purchase.amount}
-                                  {isSubscription && purchase.recurringPrice && " /month"}
+                                  {formatCurrency(purchase.amount, purchase.currency || "USD")}
                                 </span>
                               </div>
                             </TableCell>
@@ -202,15 +201,8 @@ export default function AdminPurchasesPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant={isSubscription ? "secondary" : "outline"}
-                                className={
-                                  isSubscription
-                                    ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                                    : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                                }
-                              >
-                                {isSubscription ? "Subscription" : "One-time"}
+                              <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                One-time Purchase
                               </Badge>
                             </TableCell>
                             <TableCell>
