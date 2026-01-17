@@ -15,7 +15,7 @@ import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings, useProfile } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { formatCurrency } from "@/lib/utils/currency"
 import { toast } from "sonner"
@@ -97,6 +97,7 @@ export default function CoursePage() {
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
   const { data: settingsData } = useSettings()
+  const { data: profileData } = useProfile()
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   
@@ -186,8 +187,10 @@ export default function CoursePage() {
     title: "Course Instructor"
       }]
 
-  // Get platform default currency
-  const defaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+  // Get user's currency preference, fallback to platform default
+  const userCurrency = profileData?.profile?.currency || "USD"
+  const platformDefaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+  const displayCurrency = userCurrency // User preference overrides platform default
 
   // Get actual enrollment mode from course settings
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
@@ -196,7 +199,7 @@ export default function CoursePage() {
   const getAccessDetails = () => {
     if (isCompleted) {
       return {
-        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, defaultCurrency),
+        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, displayCurrency),
         buttonText: "View Summary",
         access: "Full access for 3 months",
       }
@@ -204,7 +207,7 @@ export default function CoursePage() {
 
     if (isEnrolled) {
       return {
-        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, defaultCurrency),
+        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, displayCurrency),
         buttonText: "Continue",
         access: "Full access for 3 months",
       }
@@ -219,7 +222,7 @@ export default function CoursePage() {
         }
       case "buy":
         return {
-          price: formatCurrency(coursePrice, defaultCurrency),
+          price: formatCurrency(coursePrice, displayCurrency),
           buttonText: "Buy",
           access: "Full access for 3 months",
         }

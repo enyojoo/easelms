@@ -13,7 +13,7 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
-import { useEnrollCourse, useProgress, useSettings } from "@/lib/react-query/hooks"
+import { useEnrollCourse, useProgress, useSettings, useProfile } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { formatCurrency } from "@/lib/utils/currency"
@@ -48,9 +48,12 @@ export default function CourseCard({
   const queryClient = useQueryClient()
   const { data: progressData } = useProgress(course.id)
   const { data: settingsData } = useSettings()
+  const { data: profileData } = useProfile()
 
-  // Get platform default currency
-  const defaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+  // Get user's currency preference, fallback to platform default
+  const userCurrency = profileData?.profile?.currency || "USD"
+  const platformDefaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+  const displayCurrency = userCurrency // User preference overrides platform default
 
   useEffect(() => {
     const authState = getClientAuthState()
@@ -303,11 +306,11 @@ export default function CourseCard({
                 const price = course.settings?.enrollment?.price || course.price
 
                 if (enrollmentMode === "buy" && price) {
-                  return formatCurrency(price, defaultCurrency)
+                  return formatCurrency(price, displayCurrency)
                 } else if (enrollmentMode === "free") {
                   return "Free"
                 } else if (price) {
-                  return formatCurrency(price, defaultCurrency)
+                  return formatCurrency(price, displayCurrency)
                 } else {
                   return "Free"
                 }
