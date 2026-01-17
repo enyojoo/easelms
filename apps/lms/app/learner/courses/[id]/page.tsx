@@ -17,7 +17,7 @@ import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
 import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings, useProfile } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
-import { formatCurrency } from "@/lib/utils/currency"
+import { formatCurrency, convertAndFormatCurrency } from "@/lib/utils/currency"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -196,10 +196,23 @@ export default function CoursePage() {
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
   const coursePrice = course?.settings?.enrollment?.price || 0
 
+  // Convert course price from platform currency to display currency
+  const [convertedPrice, setConvertedPrice] = useState<string>("Free")
+
+  useEffect(() => {
+    if (enrollmentMode === "free") {
+      setConvertedPrice("Free")
+    } else if (coursePrice > 0) {
+      convertAndFormatCurrency(coursePrice, platformDefaultCurrency, displayCurrency)
+        .then(setConvertedPrice)
+        .catch(() => setConvertedPrice(formatCurrency(coursePrice, displayCurrency))) // fallback
+    }
+  }, [coursePrice, platformDefaultCurrency, displayCurrency, enrollmentMode])
+
   const getAccessDetails = () => {
     if (isCompleted) {
       return {
-        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, displayCurrency),
+        price: enrollmentMode === "free" ? "Free" : convertedPrice,
         buttonText: "View Summary",
         access: "Full access for 3 months",
       }
@@ -207,7 +220,7 @@ export default function CoursePage() {
 
     if (isEnrolled) {
       return {
-        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, displayCurrency),
+        price: enrollmentMode === "free" ? "Free" : convertedPrice,
         buttonText: "Continue",
         access: "Full access for 3 months",
       }
@@ -222,7 +235,7 @@ export default function CoursePage() {
         }
       case "buy":
         return {
-          price: formatCurrency(coursePrice, displayCurrency),
+          price: convertedPrice,
           buttonText: "Buy",
           access: "Full access for 3 months",
         }

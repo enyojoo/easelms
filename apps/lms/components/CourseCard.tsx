@@ -16,7 +16,7 @@ import { getClientAuthState } from "@/utils/client-auth"
 import { useEnrollCourse, useProgress, useSettings, useProfile } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { formatCurrency } from "@/lib/utils/currency"
+import { formatCurrency, convertAndFormatCurrency } from "@/lib/utils/currency"
 
 interface CourseCardProps {
   course: Module
@@ -55,10 +55,27 @@ export default function CourseCard({
   const platformDefaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
   const displayCurrency = userCurrency // User preference overrides platform default
 
+  // Convert course price from platform currency to display currency
+  const [convertedPrice, setConvertedPrice] = useState<string>("Free")
+
   useEffect(() => {
     const authState = getClientAuthState()
     setUser(authState.user)
   }, [])
+
+  // Convert course price when data changes
+  useEffect(() => {
+    const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
+    const price = course.settings?.enrollment?.price || course.price || 0
+
+    if (enrollmentMode === "free" || price === 0) {
+      setConvertedPrice("Free")
+    } else {
+      convertAndFormatCurrency(price, platformDefaultCurrency, displayCurrency)
+        .then(setConvertedPrice)
+        .catch(() => setConvertedPrice(formatCurrency(price, displayCurrency))) // fallback
+    }
+  }, [course.settings?.enrollment, course.price, platformDefaultCurrency, displayCurrency])
   
   // Check enrollment status using utility function
   const isEnrolled = isEnrolledInCourse(course.id, user) || enrolledCourseIds.includes(course.id)
@@ -301,20 +318,7 @@ export default function CourseCard({
           <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />
             <span>
-              {(() => {
-                const enrollmentMode = course.settings?.enrollment?.enrollmentMode
-                const price = course.settings?.enrollment?.price || course.price
-
-                if (enrollmentMode === "buy" && price) {
-                  return formatCurrency(price, displayCurrency)
-                } else if (enrollmentMode === "free") {
-                  return "Free"
-                } else if (price) {
-                  return formatCurrency(price, displayCurrency)
-                } else {
-                  return "Free"
-                }
-              })()}
+              {convertedPrice}
             </span>
           </div>
         </div>
