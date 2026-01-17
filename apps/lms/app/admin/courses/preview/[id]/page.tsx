@@ -13,6 +13,8 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import InstructorCard from "@/components/InstructorCard"
 import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
 import { useClientAuthState } from "@/utils/client-auth"
+import { useSettings } from "@/lib/react-query/hooks"
+import { formatCurrency } from "@/lib/utils/currency"
 import { toast } from "sonner"
 import ReadMore from "@/components/ReadMore"
 
@@ -38,9 +40,8 @@ interface Course {
   }>
   settings?: {
     enrollment?: {
-      enrollmentMode?: "open" | "free" | "buy" | "recurring" | "closed"
+      enrollmentMode?: "open" | "free" | "buy" | "closed"
       price?: number
-      recurringPrice?: number
     }
     certificate?: {
       certificateEnabled?: boolean
@@ -89,11 +90,15 @@ export default function InstructorCoursePreviewPage() {
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
+  const { data: settingsData } = useSettings()
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+
+  // Get platform default currency
+  const defaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
 
   useEffect(() => {
     setMounted(true)
@@ -176,7 +181,6 @@ export default function InstructorCoursePreviewPage() {
   // Get enrollment mode and pricing
   const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
   const coursePrice = course.settings?.enrollment?.price || course.price || 0
-  const recurringPrice = course.settings?.enrollment?.recurringPrice
 
   // Get total duration from course data (calculated by API)
   const lessons = course.lessons || []
@@ -200,15 +204,9 @@ export default function InstructorCoursePreviewPage() {
         }
       case "buy":
         return {
-          price: `$${coursePrice}`,
+          price: formatCurrency(coursePrice, defaultCurrency),
           buttonText: "Buy",
           access: "Full lifetime access",
-        }
-      case "recurring":
-        return {
-          price: `$${recurringPrice || coursePrice}`,
-          buttonText: "Subscribe",
-          access: "Access while subscribed",
         }
       default:
         return {
@@ -289,7 +287,6 @@ export default function InstructorCoursePreviewPage() {
             <div className="mt-4 mb-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
-                {enrollmentMode === "recurring" && <span className="text-xs md:text-sm text-muted-foreground">/month</span>}
               </div>
             </div>
             <Button 
@@ -530,7 +527,6 @@ export default function InstructorCoursePreviewPage() {
               <div className="mt-4 mb-4 flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
-                  {enrollmentMode === "recurring" && <span className="text-xs md:text-sm text-muted-foreground">/month</span>}
                 </div>
               </div>
               <Button 

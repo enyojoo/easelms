@@ -25,7 +25,8 @@ import AdminCoursesSkeleton from "@/components/AdminCoursesSkeleton"
 import { useClientAuthState } from "@/utils/client-auth"
 import type { User } from "@/data/users"
 import { toast } from "sonner"
-import { useCourses, useRealtimeCourses, useInvalidateCourses } from "@/lib/react-query/hooks"
+import { formatCurrency } from "@/lib/utils/currency"
+import { useCourses, useRealtimeCourses, useInvalidateCourses, useSettings } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -39,9 +40,8 @@ interface Course {
   settings?: {
     isPublished?: boolean
     enrollment?: {
-      enrollmentMode?: "open" | "free" | "buy" | "recurring" | "closed"
+      enrollmentMode?: "open" | "free" | "buy" | "closed"
       price?: number
-      recurringPrice?: number
     }
   }
   _localStorageCourseId?: any // For tracking localStorage draft matching
@@ -61,12 +61,16 @@ export default function ManageCoursesPage() {
 
   // Use React Query hooks for data fetching with caching
   const { data: coursesData, isPending: coursesPending, error: coursesError } = useCourses({ all: true })
-  
+  const { data: settingsData } = useSettings()
+
   // Set up real-time subscription for courses
   useRealtimeCourses()
-  
+
   // Get cache invalidation function
   const invalidateCourses = useInvalidateCourses()
+
+  // Get platform default currency
+  const defaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
 
   // Track mount state to prevent flash of content
   useEffect(() => {
@@ -132,13 +136,10 @@ export default function ManageCoursesPage() {
             // Get price from settings.enrollment or basicInfo.price
             const enrollmentMode = draftData.settings?.enrollment?.enrollmentMode
             const enrollmentPrice = draftData.settings?.enrollment?.price
-            const recurringPrice = draftData.settings?.enrollment?.recurringPrice
             const basicPrice = parseFloat(draftData.basicInfo.price) || 0
-            
+
             let finalPrice = 0
-            if (enrollmentMode === "recurring" && recurringPrice) {
-              finalPrice = recurringPrice
-            } else if (enrollmentMode === "buy" && enrollmentPrice) {
+            if (enrollmentMode === "buy" && enrollmentPrice) {
               finalPrice = enrollmentPrice
             } else if (enrollmentMode === "buy" && basicPrice) {
               finalPrice = basicPrice
@@ -464,16 +465,13 @@ export default function ManageCoursesPage() {
               {(() => {
                 const enrollmentMode = course.settings?.enrollment?.enrollmentMode
                 const price = course.settings?.enrollment?.price || course.price
-                const recurringPrice = course.settings?.enrollment?.recurringPrice
-                
-                if (enrollmentMode === "recurring" && recurringPrice) {
-                  return `$${recurringPrice}`
-                } else if (enrollmentMode === "buy" && price) {
-                  return `$${price}`
+
+                if (enrollmentMode === "buy" && price) {
+                  return formatCurrency(price, defaultCurrency)
                 } else if (enrollmentMode === "free") {
                   return "Free"
                 } else if (price) {
-                  return `$${price}`
+                  return formatCurrency(price, defaultCurrency)
                 } else {
                   return "Free"
                 }

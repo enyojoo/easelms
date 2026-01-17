@@ -680,7 +680,6 @@ export async function GET(
         enrollment: {
           enrollmentMode: course.enrollment_mode || "free",
           price: course.price || undefined,
-          recurringPrice: course.recurring_price || undefined,
         },
         certificate: {
           certificateEnabled: course.certificate_enabled || false,
@@ -699,7 +698,6 @@ export async function GET(
         },
         minimumQuizScore: course.minimum_quiz_score || null,
         requiresSequentialProgress: course.requires_sequential_progress || false,
-        currency: course.currency || "USD",
       },
     }
     

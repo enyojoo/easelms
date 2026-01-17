@@ -165,6 +165,9 @@ EaseLMS is a modern, open-source Learning Management System built with Next.js, 
    FLUTTERWAVE_SECRET_KEY=your_flutterwave_secret_key
    NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY=your_flutterwave_public_key
 
+   # Exchange Rates (optional - uses exchangerate-api.com)
+   EXCHANGERATE_API_KEY=your_exchangerate_api_key
+
    # Email Notifications (SendGrid)
    SENDGRID_API_KEY=your_sendgrid_api_key
    SENDGRID_FROM_EMAIL=noreply@yourdomain.com

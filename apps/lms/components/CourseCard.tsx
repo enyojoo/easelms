@@ -13,9 +13,10 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
-import { useEnrollCourse, useProgress } from "@/lib/react-query/hooks"
+import { useEnrollCourse, useProgress, useSettings } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
+import { formatCurrency } from "@/lib/utils/currency"
 
 interface CourseCardProps {
   course: Module
@@ -46,7 +47,11 @@ export default function CourseCard({
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   const { data: progressData } = useProgress(course.id)
-  
+  const { data: settingsData } = useSettings()
+
+  // Get platform default currency
+  const defaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+
   useEffect(() => {
     const authState = getClientAuthState()
     setUser(authState.user)
@@ -113,14 +118,12 @@ export default function CourseCard({
           console.error("Error enrolling in course:", error)
         }
       } else {
-        // For paid/subscription, handle payment directly
+        // For paid courses, handle payment directly
         const coursePrice = course.settings?.enrollment?.price || course.price || 0
-        const recurringPrice = course.settings?.enrollment?.recurringPrice
         const success = await handleCoursePayment(
           course.id,
-          enrollmentMode,
+          enrollmentMode as "buy",
           coursePrice,
-          recurringPrice,
           course.title,
           user
         )
@@ -180,8 +183,6 @@ export default function CourseCard({
               return "Enrolling..."
             case "buy":
               return "Processing..."
-            case "recurring":
-              return "Processing..."
             default:
               return "Processing..."
           }
@@ -192,8 +193,6 @@ export default function CourseCard({
             return "Enroll"
           case "buy":
             return "Buy"
-          case "recurring":
-            return "Subscribe"
           default:
             return "Enroll"
         }
@@ -260,12 +259,6 @@ export default function CourseCard({
             Paid
           </Badge>
         )
-      case "recurring":
-        return (
-          <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-            Subscription
-          </Badge>
-        )
       default:
         return null
     }
@@ -308,16 +301,13 @@ export default function CourseCard({
               {(() => {
                 const enrollmentMode = course.settings?.enrollment?.enrollmentMode
                 const price = course.settings?.enrollment?.price || course.price
-                const recurringPrice = course.settings?.enrollment?.recurringPrice
-                
-                if (enrollmentMode === "recurring" && recurringPrice) {
-                  return `$${recurringPrice}`
-                } else if (enrollmentMode === "buy" && price) {
-                  return `$${price}`
+
+                if (enrollmentMode === "buy" && price) {
+                  return formatCurrency(price, defaultCurrency)
                 } else if (enrollmentMode === "free") {
                   return "Free"
                 } else if (price) {
-                  return `$${price}`
+                  return formatCurrency(price, defaultCurrency)
                 } else {
                   return "Free"
                 }

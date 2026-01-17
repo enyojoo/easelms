@@ -46,9 +46,8 @@ function NewCourseContent() {
       requiresSequentialProgress: boolean
       minimumQuizScore: number
       enrollment: {
-        enrollmentMode: "free" | "buy" | "recurring"
+        enrollmentMode: "free" | "buy"
         price?: number
-        recurringPrice?: number
       }
       certificate: {
         certificateEnabled: boolean
@@ -68,7 +67,6 @@ function NewCourseContent() {
         instructorEnabled: boolean
         instructorIds: string[]
       }
-      currency: string
     }
   }>({
     basicInfo: {
@@ -88,7 +86,6 @@ function NewCourseContent() {
       enrollment: {
         enrollmentMode: "free",
         price: undefined,
-        recurringPrice: undefined,
       },
       certificate: {
         certificateEnabled: false,
@@ -108,7 +105,6 @@ function NewCourseContent() {
         instructorEnabled: false,
         instructorIds: [],
       },
-      currency: "USD",
     },
   })
 
@@ -326,7 +322,6 @@ function NewCourseContent() {
                   enrollment: {
                     enrollmentMode: course.enrollment_mode || "free",
                     price: course.price !== undefined ? course.price : undefined,
-                    recurringPrice: course.recurring_price !== undefined ? course.recurring_price : undefined,
                   },
                   certificate: {
                     certificateEnabled: course.certificate_enabled || false,
@@ -345,7 +340,6 @@ function NewCourseContent() {
                   },
                   prerequisites: course.prerequisites || { enabled: false, courseIds: [] },
                   instructor: course.settings?.instructor || { instructorEnabled: false, instructorIds: [] },
-                  currency: course.currency || "USD",
                 },
               })
               // Ensure currentCourseId is set so auto-save uses the correct localStorage key

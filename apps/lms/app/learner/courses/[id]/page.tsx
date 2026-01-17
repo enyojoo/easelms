@@ -15,8 +15,9 @@ import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments } from "@/lib/react-query/hooks"
+import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
+import { formatCurrency } from "@/lib/utils/currency"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -40,9 +41,8 @@ interface Course {
   totalDurationMinutes?: number
   settings?: {
     enrollment?: {
-      enrollmentMode?: "open" | "free" | "buy" | "recurring" | "closed"
+      enrollmentMode?: "open" | "free" | "buy" | "closed"
       price?: number
-      recurringPrice?: number
     }
     certificate?: any
   }
@@ -96,6 +96,7 @@ export default function CoursePage() {
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
+  const { data: settingsData } = useSettings()
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   
@@ -185,28 +186,30 @@ export default function CoursePage() {
     title: "Course Instructor"
       }]
 
+  // Get platform default currency
+  const defaultCurrency = settingsData?.platformSettings?.default_currency || "USD"
+
   // Get actual enrollment mode from course settings
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
   const coursePrice = course?.settings?.enrollment?.price || 0
-  const recurringPrice = course?.settings?.enrollment?.recurringPrice
 
   const getAccessDetails = () => {
     if (isCompleted) {
       return {
-        price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
+        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, defaultCurrency),
         buttonText: "View Summary",
-        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full access for 3 months",
+        access: "Full access for 3 months",
       }
     }
 
     if (isEnrolled) {
       return {
-        price: enrollmentMode === "free" ? "Free" : `$${enrollmentMode === "recurring" ? (recurringPrice || coursePrice) : coursePrice}`,
+        price: enrollmentMode === "free" ? "Free" : formatCurrency(coursePrice, defaultCurrency),
         buttonText: "Continue",
-        access: enrollmentMode === "recurring" ? "Access while subscribed" : "Full access for 3 months",
+        access: "Full access for 3 months",
       }
     }
-    
+
     switch (enrollmentMode) {
       case "free":
         return {
@@ -216,15 +219,9 @@ export default function CoursePage() {
         }
       case "buy":
         return {
-          price: `$${coursePrice}`,
+          price: formatCurrency(coursePrice, defaultCurrency),
           buttonText: "Buy",
           access: "Full access for 3 months",
-        }
-      case "recurring":
-        return {
-          price: `$${recurringPrice || coursePrice}`,
-          buttonText: "Subscribe",
-          access: "Access while subscribed",
         }
       default:
         return {
@@ -317,9 +314,8 @@ export default function CoursePage() {
 
         const success = await handleCoursePayment(
           Number.parseInt(id),
-          enrollmentMode,
+          enrollmentMode as "buy",
           coursePrice,
-          recurringPrice,
           course?.title || "",
           user
         )
@@ -418,7 +414,6 @@ export default function CoursePage() {
             <div className="mt-4 mb-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
-                {enrollmentMode === "recurring" && !isEnrolled && <span className="text-xs md:text-sm text-muted-foreground">/month</span>}
               </div>
               <div className="flex-shrink-0">{getCourseBadge()}</div>
             </div>

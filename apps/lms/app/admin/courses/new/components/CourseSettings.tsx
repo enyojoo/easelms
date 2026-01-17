@@ -14,9 +14,8 @@ interface CourseSettingsProps {
     requiresSequentialProgress: boolean
     minimumQuizScore: number
     enrollment: {
-      enrollmentMode: "free" | "buy" | "recurring"
+      enrollmentMode: "free" | "buy"
       price?: number
-      recurringPrice?: number
     }
     certificate: {
       certificateEnabled: boolean

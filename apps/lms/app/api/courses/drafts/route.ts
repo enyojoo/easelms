@@ -74,7 +74,6 @@ export async function POST(request: Request) {
       requires_sequential_progress: settings.requiresSequentialProgress !== undefined ? settings.requiresSequentialProgress : false,
       minimum_quiz_score: settings.minimumQuizScore !== undefined ? settings.minimumQuizScore : null,
       enrollment_mode: enrollment.enrollmentMode || "free",
-      recurring_price: enrollment.recurringPrice !== undefined ? enrollment.recurringPrice : null,
       certificate_enabled: certificate.certificateEnabled || false,
       certificate_template: certificate.certificateTemplate || null,
       certificate_title: certificate.certificateTitle || null,
@@ -1349,7 +1348,6 @@ export async function GET(request: Request) {
       enrollment: {
         enrollmentMode: data.enrollment_mode || "free",
         price: data.price || undefined,
-        recurringPrice: data.recurring_price || undefined,
       },
       certificate: {
         certificateEnabled: data.certificate_enabled || false,

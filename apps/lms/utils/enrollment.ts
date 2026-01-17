@@ -94,10 +94,9 @@ export interface Purchase {
   userId?: string // Optional for backward compatibility
   courseId: number
   courseTitle: string
-  type: "buy" | "recurring"
+  type: "buy"
   amount: number
   currency: string
-  recurringPrice?: number
   status: "active" | "cancelled" | "completed"
   purchasedAt: string
   cancelledAt?: string
@@ -142,27 +141,6 @@ export function addPurchase(purchase: Omit<Purchase, "id" | "purchasedAt">, user
   }
 }
 
-/**
- * Cancel a subscription
- */
-export function cancelSubscription(purchaseId: string): void {
-  try {
-    const purchases = getPurchaseHistory()
-    const updatedPurchases = purchases.map((purchase) => {
-      if (purchase.id === purchaseId && purchase.type === "recurring" && purchase.status === "active") {
-        return {
-          ...purchase,
-          status: "cancelled" as const,
-          cancelledAt: new Date().toISOString(),
-        }
-      }
-      return purchase
-    })
-    localStorage.setItem("purchase-history", JSON.stringify(updatedPurchases))
-  } catch (error) {
-    console.error("Error cancelling subscription:", error)
-  }
-}
 
 /**
  * Handle payment/subscription for paid courses
@@ -170,9 +148,8 @@ export function cancelSubscription(purchaseId: string): void {
  */
 export function handleCoursePayment(
   courseId: number,
-  enrollmentMode: "buy" | "recurring",
+  enrollmentMode: "buy",
   price: number,
-  recurringPrice?: number,
   courseTitle?: string,
   user?: any
 ): Promise<boolean> {
@@ -186,7 +163,7 @@ export function handleCoursePayment(
         },
         body: JSON.stringify({
           courseId,
-          amountUSD: enrollmentMode === "recurring" ? (recurringPrice || price) : price,
+          amountUSD: price,
           courseTitle: courseTitle || `Course ${courseId}`,
         }),
       })

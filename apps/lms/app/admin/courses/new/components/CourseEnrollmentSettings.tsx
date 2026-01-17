@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input"
 
 interface CourseEnrollmentSettingsProps {
   settings: {
-    enrollmentMode: "free" | "buy" | "recurring"
+    enrollmentMode: "free" | "buy"
     price?: number
-    recurringPrice?: number
   }
   onUpdate: (settings: any) => void
 }
@@ -20,7 +19,7 @@ export default function CourseEnrollmentSettings({ settings, onUpdate }: CourseE
         <Label>Enrollment Mode</Label>
         <RadioGroup
           value={settings.enrollmentMode}
-          onValueChange={(value: "free" | "buy" | "recurring") =>
+          onValueChange={(value: "free" | "buy") =>
             onUpdate({ ...settings, enrollmentMode: value })
           }
         >
@@ -53,24 +52,6 @@ export default function CourseEnrollmentSettings({ settings, onUpdate }: CourseE
             </div>
           </div>
 
-          <div className="flex items-start space-x-2">
-            <RadioGroupItem value="recurring" id="recurring" />
-            <div className="grid gap-1.5 leading-none">
-              <Label htmlFor="recurring">Subscription</Label>
-              <p className="text-sm text-muted-foreground">
-                Students need to subscribe to the course (recurring monthly fee) in order to gain access.
-              </p>
-              {settings.enrollmentMode === "recurring" && (
-                <Input
-                  type="number"
-                  placeholder="Monthly Price"
-                  value={settings.recurringPrice || ""}
-                  onChange={(e) => onUpdate({ ...settings, recurringPrice: Number.parseFloat(e.target.value) || 0 })}
-                  className="mt-2 w-32"
-                />
-              )}
-            </div>
-          </div>
         </RadioGroup>
       </div>
     </div>
