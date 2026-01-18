@@ -20,10 +20,10 @@ export async function GET(request: Request) {
     const { createCourseSlug } = await import("@/lib/slug")
     const courseSlug = createCourseSlug(courseTitle, parseInt(courseId))
 
-    // Redirect to the course learn page
-    // The webhook will handle the actual enrollment
+    // Redirect to the payment results page
+    // The payment page will handle enrollment and payment records
     return NextResponse.redirect(
-      `${baseUrl}/learner/courses/${courseSlug}/learn?payment=success`
+      `${baseUrl}/payment?status=success&gateway=stripe&courseId=${courseId}`
     )
   }
 
@@ -42,12 +42,12 @@ export async function GET(request: Request) {
     const courseSlug = createCourseSlug(courseTitle, parseInt(courseId))
     
     return NextResponse.redirect(
-      `${baseUrl}/learner/courses/${courseSlug}?payment=canceled`
+      `${baseUrl}/payment?status=error&gateway=stripe&courseId=${courseId}&reason=cancelled`
     )
   }
 
   return NextResponse.redirect(
-    `${baseUrl}/learner/courses?payment=canceled`
+    `${baseUrl}/payment?status=error&gateway=stripe&reason=cancelled`
   )
 }
 

@@ -88,25 +88,18 @@ export async function GET(request: Request) {
       const { createCourseSlug } = await import("@/lib/slug")
       const courseSlug = createCourseSlug(courseTitle, courseIdNum)
 
-      console.log('Flutterwave payment successful, redirecting to learn page')
+      console.log('Flutterwave payment successful, redirecting to payment page')
       return NextResponse.redirect(
-        `${baseUrl}/learner/courses/${courseSlug}/learn?payment=success&gateway=flutterwave`
+        `${baseUrl}/payment?status=success&gateway=flutterwave&courseId=${courseId}`
       )
     } else {
       console.log('Flutterwave payment not successful:', status)
-      // Redirect based on referrer (where payment was initiated from)
-      let redirectUrl = `${baseUrl}/learner/courses?error=payment_failed` // fallback
+      // Redirect to payment error page
+      const errorUrl = redirectCourseId
+        ? `${baseUrl}/payment?status=error&gateway=flutterwave&courseId=${redirectCourseId}&reason=failed`
+        : `${baseUrl}/payment?status=error&gateway=flutterwave&reason=failed`
 
-      if (referrer === "courses-list") {
-        redirectUrl = `${baseUrl}/learner/courses?payment=canceled`
-      } else if (referrer === "course-detail" && redirectCourseId) {
-        redirectUrl = `${baseUrl}/learner/courses/${redirectCourseId}?payment=canceled`
-      } else if (redirectCourseId) {
-        // Default to course detail if courseId available but referrer unknown
-        redirectUrl = `${baseUrl}/learner/courses/${redirectCourseId}?payment=canceled`
-      }
-
-      return NextResponse.redirect(redirectUrl)
+      return NextResponse.redirect(errorUrl)
     }
       const supabase = await createClient()
       const serviceSupabase = createServiceRoleClient()

@@ -50,7 +50,6 @@ export default function CourseLearningPage() {
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const courseId = parseInt(id) // Parse course ID for use throughout component
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const paymentSuccess = searchParams.get("payment") === "success"
   const lessonIndexParam = searchParams.get("lessonIndex")
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [activeTab, setActiveTab] = useState("video")
@@ -315,130 +314,10 @@ export default function CourseLearningPage() {
     }
   }, [authLoading, user, router])
 
-  // Check enrollment and redirect if not enrolled
-  // Handle payment=success by enrolling the user (similar to free courses)
+  // Check enrollment status
   useEffect(() => {
-    // Don't run payment logic until all necessary data is loaded
-    if (!id || !course || !user || coursePending || enrollmentsPending) {
-      return
-    }
-
-    // If payment was successful, immediately replace history to prevent back button to payment gateway
-    if (paymentSuccess) {
-      console.log("Payment success detected, cleaning up URL")
-      // Replace current history entry to remove payment gateway from back button
-      const url = new URL(window.location.href)
-      url.searchParams.delete("payment")
-      url.searchParams.delete("gateway") // Also remove gateway param
-      window.history.replaceState({}, "", url.toString())
-    }
-
-    // If payment was successful, enroll the user and create payment record (like webhooks do)
-    if (paymentSuccess) {
-      console.log("Processing payment success - all data loaded, starting enrollment")
-      console.log("Payment success detected, processing enrollment and payment record creation")
-
-      // For testing purposes, simulate webhook behavior: enroll user and create payment record
-      // In production, this should be handled by payment gateway webhooks only
-      const enrollAndCreatePayment = async () => {
-        try {
-          console.log("Starting enrollment and payment record creation")
-          // Get gateway from URL parameters
-          const gateway = searchParams.get("gateway") || "unknown"
-
-          // Enroll the user (like webhooks do)
-          // Note: Enrollment API automatically sends enrollment emails
-          console.log("Calling enrollment mutation for courseId:", courseId)
-          try {
-            const enrollmentResult = await enrollCourseMutation.mutateAsync(courseId)
-            console.log("Enrollment result:", enrollmentResult)
-          } catch (enrollmentError: any) {
-            console.error("Enrollment failed:", enrollmentError)
-
-            // If user is already enrolled (409), that's actually okay
-            if (enrollmentError.response?.status === 409) {
-              console.log("User already enrolled, continuing with payment record creation")
-            } else {
-              // For other errors, still proceed with payment record creation
-              // but log the enrollment failure
-              console.warn("Enrollment failed but continuing with payment processing")
-            }
-          }
-
-          // Create payment record (simulating webhook behavior for testing)
-          // Note: In production, this should only be done by payment gateway webhooks
-          const paymentResponse = await fetch("/api/payments/record-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              courseId: courseId,
-              userId: user?.id,
-              amount: course?.price || 0,
-              gateway: gateway // Use the actual gateway from URL params
-            })
-          })
-
-          if (!paymentResponse.ok) {
-            const errorText = await paymentResponse.text()
-            console.error("Failed to create payment record:", paymentResponse.status, errorText)
-          } else {
-            // Get payment data for email sending
-            const paymentData = await paymentResponse.json()
-            console.log("Payment record created successfully:", paymentData)
-            console.log("Payment ID for email:", paymentData?.payment?.id || paymentData?.id)
-
-            // Send payment confirmation email (non-blocking)
-            if (paymentData?.id) {
-              console.log("Sending payment confirmation email for payment:", paymentData.id)
-              console.log("Payment data structure:", paymentData)
-              try {
-                const emailResponse = await fetch("/api/send-email-notification", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    type: "payment",
-                    paymentId: paymentData.id,
-                    status: "completed",
-                  }),
-                })
-                console.log("Email response status:", emailResponse.status)
-                if (!emailResponse.ok) {
-                  const emailErrorText = await emailResponse.text()
-                  console.warn("Payment confirmation email failed:", emailResponse.status, emailErrorText)
-                } else {
-                  console.log("Payment confirmation email sent successfully")
-                }
-              } catch (emailError) {
-                console.warn("Payment confirmation email error:", emailError)
-              }
-            } else {
-              console.warn("No payment ID found for email sending:", paymentData)
-            }
-          }
-
-          // Success - invalidate caches
-          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-          queryClient.invalidateQueries({ queryKey: ["progress", id] })
-          queryClient.invalidateQueries({ queryKey: ["purchases"] }) // Invalidate purchases cache
-
-          toast.success("Payment successful! You are now enrolled in this course.")
-        } catch (error) {
-          console.error("Failed to enroll after payment success:", error)
-          // If enrollment fails, redirect back to course page
-          router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
-        }
-      }
-
-      enrollAndCreatePayment()
-      return // Don't run the enrollment check below when processing payment success
-    }
-
-    // Normal enrollment check (only if we have enrollment data and not processing payment)
-    // Don't redirect if enrollment data is still loading (enrollment might be in progress)
-    if (enrollmentsPending) return
-
-    // Don't redirect if we don't have enrollment data yet (might be loading)
-    if (!enrollmentsData?.enrollments) return
+    // Don't check enrollment until data is loaded
+    if (enrollmentsPending || !enrollmentsData?.enrollments) return
 
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
 
@@ -446,7 +325,7 @@ export default function CourseLearningPage() {
       // User is not enrolled and not processing payment success - redirect to course page
       router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
     }
-  }, [id, enrollmentsData, enrollmentsPending, course, router, paymentSuccess, queryClient])
+  }, [id, enrollmentsData, enrollmentsPending, course, router])
 
   // Save progress to API (debounced)
   const saveProgress = async (
