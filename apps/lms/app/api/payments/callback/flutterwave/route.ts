@@ -40,6 +40,18 @@ export async function GET(request: Request) {
   try {
     console.log('Flutterwave callback received:', { status, transactionId, txRef, searchParams: Object.fromEntries(searchParams) })
 
+    // Extract courseId early for redirects (needed for both success and cancel cases)
+    let redirectCourseId = searchParams.get("courseId")
+
+    // Fallback: extract from tx_ref format: tx_${timestamp}_${userId}_${courseId}
+    if (!redirectCourseId && txRef) {
+      const txRefParts = txRef.split('_')
+      if (txRefParts.length >= 4) {
+        redirectCourseId = txRefParts[3] // courseId is the 4th part
+        console.log('Extracted courseId from tx_ref for redirect:', redirectCourseId)
+      }
+    }
+
     // Check if we're using Flutterwave test/sandbox credentials
     const isFlutterwaveTestMode = process.env.FLUTTERWAVE_SECRET_KEY?.includes('TEST') ||
                                  process.env.FLUTTERWAVE_SECRET_KEY?.startsWith('FLWSECK_TEST')
@@ -84,11 +96,17 @@ export async function GET(request: Request) {
       }
     } else {
       console.log('Flutterwave payment not successful:', status)
-      return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      // Redirect back to course view page with cancel parameter
+      const redirectUrl = redirectCourseId
+        ? `${baseUrl}/learner/courses/${redirectCourseId}?payment=canceled`
+        : `${baseUrl}/learner/courses?error=payment_failed`
+      return NextResponse.redirect(redirectUrl)
     }
 
     if (!shouldCreateEnrollment) {
       console.log('Not creating enrollment due to verification failure')
+      // For verification failures, redirect to courses list (more serious error)
+      // For cancelled payments, we redirect back to course view above
       return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
     }
 
