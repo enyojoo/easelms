@@ -67,8 +67,11 @@ export default function PaymentPage() {
 
     // Handle payment success
     if (paymentStatus === "success" && gateway) {
+      processingStartedRef.current = true
+      console.log("Starting payment success processing for gateway:", gateway, "courseId:", courseId)
       processPaymentSuccess()
     } else {
+      console.log("Invalid parameters - status:", paymentStatus, "gateway:", gateway, "courseId:", courseId)
       router.push("/learner/courses")
     }
   }, []) // Empty dependency array - run only once on mount // Removed 'status' from deps to prevent re-runs
@@ -93,25 +96,35 @@ export default function PaymentPage() {
       const courseData = await courseResponse.json()
       setCourse(courseData.course)
 
-      // Enroll the user (handle case where user is already enrolled)
-      console.log("Enrolling user in course:", courseId)
-      let enrollmentResult
-      try {
-        enrollmentResult = await enrollCourseMutation.mutateAsync({
-          courseId: parseInt(courseId),
-          bypassPrerequisites: true // Bypass prerequisites for paid courses
-        })
-        console.log("Enrollment created:", enrollmentResult)
-      } catch (enrollmentError: any) {
-        console.log("Enrollment error:", enrollmentError)
-        // Check if user is already enrolled (any error containing "already enrolled")
-        if (enrollmentError.message?.includes("already enrolled") ||
-            enrollmentError.errorData?.error?.includes("already enrolled")) {
-          console.log("User already enrolled in course, continuing...")
-          enrollmentResult = { enrollment: enrollmentError.errorData?.enrollment }
-        } else {
-          throw enrollmentError
+      // Handle enrollment (skip for Stripe - handled by webhook)
+      if (gateway !== "stripe") {
+        // Enroll the user for non-Stripe gateways (handle case where user is already enrolled)
+        console.log("Enrolling user in course:", courseId)
+        let enrollmentResult
+        try {
+          enrollmentResult = await enrollCourseMutation.mutateAsync({
+            courseId: parseInt(courseId),
+            bypassPrerequisites: true // Bypass prerequisites for paid courses
+          })
+          console.log("Enrollment created:", enrollmentResult)
+        } catch (enrollmentError: any) {
+          console.log("Enrollment error:", enrollmentError)
+          // Check if user is already enrolled (any error containing "already enrolled")
+          if (enrollmentError.message?.includes("already enrolled") ||
+              enrollmentError.errorData?.error?.includes("already enrolled")) {
+            console.log("User already enrolled in course, continuing...")
+            enrollmentResult = { enrollment: enrollmentError.errorData?.enrollment }
+          } else {
+            throw enrollmentError
+          }
         }
+      } else {
+        console.log("Skipping enrollment for Stripe - handled by webhook")
+      }
+
+      // For Stripe, everything is handled by webhook - just complete successfully
+      if (gateway === "stripe") {
+        console.log("Stripe payment processing completed - webhook handled everything")
       }
 
       // Create payment record (skip for Stripe - handled by webhook)
