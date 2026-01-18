@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { createCheckoutSession } from "@/lib/payments/stripe"
 import { initializePayment } from "@/lib/payments/flutterwave"
 import { convertCurrency } from "@/lib/payments/currency"
@@ -21,8 +21,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid course ID" }, { status: 400 })
   }
 
+  // Use service role client to bypass RLS policies that cause infinite recursion
+  const serviceSupabase = createServiceRoleClient()
+
   // Fetch course with price and title
-  const { data: course, error: courseError } = await supabase
+  const { data: course, error: courseError } = await serviceSupabase
     .from("courses")
     .select("title, price")
     .eq("id", Number(courseId))
@@ -43,16 +46,15 @@ export async function POST(request: Request) {
   const courseTitleToUse = courseTitle || course.title || "Course Enrollment"
   const coursePrice = course.price || 0
 
-  // Get platform currency setting
-  const { data: platformSettings } = await supabase
+  // Get platform currency setting (use service client to avoid RLS issues)
+  const { data: platformSettings } = await serviceSupabase
     .from("platform_settings")
     .select("default_currency")
     .single()
 
   const platformCurrency = platformSettings?.default_currency || "USD"
 
-  // Get user's currency preference - use service role to bypass RLS infinite recursion
-  const serviceSupabase = createServiceRoleClient()
+  // Get user's currency preference (use service client to avoid RLS issues)
   const { data: profile } = await serviceSupabase
     .from("profiles")
     .select("currency")
@@ -69,8 +71,8 @@ export async function POST(request: Request) {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
-  // Get user profile for name (optional, email is required) - use service role to bypass RLS
-  const { data: userProfile } = await serviceSupabase
+  // Get user profile for name (optional, email is required)
+  const { data: userProfile } = await supabase
     .from("profiles")
     .select("name")
     .eq("id", user.id)
