@@ -79,10 +79,12 @@ export default function PaymentPage() {
         enrollmentResult = await enrollCourseMutation.mutateAsync(parseInt(courseId))
         console.log("Enrollment created:", enrollmentResult)
       } catch (enrollmentError: any) {
-        // Check if user is already enrolled (409 Conflict)
-        if (enrollmentError.response?.status === 409 && enrollmentError.errorData?.error?.includes("already enrolled")) {
+        console.log("Enrollment error:", enrollmentError)
+        // Check if user is already enrolled (any error containing "already enrolled")
+        if (enrollmentError.message?.includes("already enrolled") ||
+            enrollmentError.errorData?.error?.includes("already enrolled")) {
           console.log("User already enrolled in course, continuing...")
-          enrollmentResult = { enrollment: enrollmentError.errorData.enrollment }
+          enrollmentResult = { enrollment: enrollmentError.errorData?.enrollment }
         } else {
           throw enrollmentError
         }
