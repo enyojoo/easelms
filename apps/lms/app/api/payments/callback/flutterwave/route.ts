@@ -86,12 +86,19 @@ export async function GET(request: Request) {
       }
 
       // Create enrollment
+      console.log("Creating Flutterwave enrollment for user:", userId, "course:", courseId)
       const { data: enrollmentData, error: enrollmentError } = await supabase.from("enrollments").upsert({
         user_id: userId,
         course_id: parseInt(courseId),
         status: "active",
         progress: 0,
       }).select().single()
+
+      if (enrollmentError) {
+        console.error("Flutterwave callback enrollment creation failed:", enrollmentError)
+      } else {
+        console.log("Flutterwave callback enrollment created:", enrollmentData)
+      }
 
       if (enrollmentError) {
         logError("Error creating enrollment", enrollmentError, {

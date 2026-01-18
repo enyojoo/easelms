@@ -320,29 +320,52 @@ export default function CourseLearningPage() {
 
     const courseId = parseInt(id)
 
-    // If payment was successful, invalidate enrollments cache and wait for it to update
+    // If payment was successful, invalidate and refetch enrollments cache
     if (paymentSuccess) {
-      // Invalidate enrollments immediately (non-blocking)
+      console.log("Payment successful, checking for enrollment...")
+
+      // Invalidate and refetch enrollments immediately
       queryClient.invalidateQueries({ queryKey: ["enrollments"] })
       // Also invalidate progress to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ["progress", id] })
-      
-      // Wait a bit for the cache to update, then check enrollment
-      const checkEnrollment = setTimeout(() => {
-        // Check if enrollment is now available
+
+      // Force refetch of enrollments data
+      queryClient.refetchQueries({ queryKey: ["enrollments"] })
+
+      // Check enrollment status immediately and after a delay
+      const checkEnrollmentImmediately = () => {
         const currentEnrollments = queryClient.getQueryData<{ enrollments: any[] }>(["enrollments"])
         const enrollment = currentEnrollments?.enrollments?.find((e: any) => e.course_id === courseId)
-        
+        console.log("Enrollment check result:", { enrollment, courseId, enrollments: currentEnrollments?.enrollments })
+
         if (enrollment) {
+          console.log("Enrollment found, cleaning up URL")
           // Enrollment found, remove query param and prevent back button to payment gateway
           const url = new URL(window.location.href)
           url.searchParams.delete("payment")
-          // Use replaceState to replace current history entry, preventing back button to payment gateway
           window.history.replaceState({}, "", url.toString())
+          return true
         }
-      }, 1000) // Wait 1 second for enrollment to be available
+        return false
+      }
 
-      return () => clearTimeout(checkEnrollment)
+      // Check immediately
+      if (!checkEnrollmentImmediately()) {
+        // If not found immediately, wait and check again
+        const checkEnrollment = setTimeout(() => {
+          if (!checkEnrollmentImmediately()) {
+            console.log("Enrollment still not found after delay")
+            // If still no enrollment after 3 seconds, there might be an issue
+            setTimeout(() => {
+              if (!checkEnrollmentImmediately()) {
+                console.error("Enrollment not found after payment success - webhook may have failed")
+              }
+            }, 2000)
+          }
+        }, 1000)
+
+        return () => clearTimeout(checkEnrollment)
+      }
     }
 
     // Normal enrollment check (only if we have enrollment data)
@@ -355,8 +378,13 @@ export default function CourseLearningPage() {
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
     
     if (!enrollment) {
-      // Only redirect if payment was not successful (to avoid redirect loop)
-      if (!paymentSuccess) {
+      // If payment was successful but no enrollment found, there was an error
+      if (paymentSuccess) {
+        // Enrollment creation failed despite successful payment
+        toast.error("Payment was successful but enrollment failed. Please contact support.")
+        router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
+      } else {
+        // Normal case - no enrollment, redirect to course page
         router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
       }
     }

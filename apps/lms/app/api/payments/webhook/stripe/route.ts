@@ -9,6 +9,8 @@ export async function POST(request: Request) {
   const headersList = await headers()
   const signature = headersList.get("stripe-signature")
 
+  console.log("Stripe webhook received:", { hasSignature: !!signature })
+
   if (!signature) {
     return NextResponse.json({ error: "No signature" }, { status: 400 })
   }
@@ -22,7 +24,9 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
+    console.log("Stripe webhook event:", event.type)
   } catch (err: any) {
+    console.error("Stripe webhook signature verification failed:", err.message)
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
   }
 
@@ -165,12 +169,19 @@ export async function POST(request: Request) {
         }
 
         // Create enrollment
-        const { data: enrollmentData } = await supabase.from("enrollments").upsert({
+        console.log("Creating enrollment for user:", userId, "course:", courseId)
+        const { data: enrollmentData, error: enrollmentError } = await supabase.from("enrollments").upsert({
           user_id: userId,
           course_id: parseInt(courseId),
           status: "active",
           progress: 0,
         }).select().single()
+
+        if (enrollmentError) {
+          console.error("Stripe webhook enrollment creation failed:", enrollmentError)
+        } else {
+          console.log("Stripe webhook enrollment created:", enrollmentData)
+        }
 
         // Update enrolled_students count in courses table if enrollment was created
         if (enrollmentData) {
