@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     // Redirect to the payment results page
     // The payment page will handle enrollment and payment records
     return NextResponse.redirect(
-      `${baseUrl}/payment?status=success&gateway=stripe&courseId=${courseId}`
+      `${baseUrl}/learner/payment?status=success&gateway=stripe&courseId=${courseId}`
     )
   }
 
@@ -42,12 +42,12 @@ export async function GET(request: Request) {
     const courseSlug = createCourseSlug(courseTitle, parseInt(courseId))
     
     return NextResponse.redirect(
-      `${baseUrl}/payment?status=error&gateway=stripe&courseId=${courseId}&reason=cancelled`
+      `${baseUrl}/learner/payment?status=error&gateway=stripe&courseId=${courseId}&reason=cancelled`
     )
   }
 
   return NextResponse.redirect(
-    `${baseUrl}/payment?status=error&gateway=stripe&reason=cancelled`
+    `${baseUrl}/learner/payment?status=error&gateway=stripe&reason=cancelled`
   )
 }
 

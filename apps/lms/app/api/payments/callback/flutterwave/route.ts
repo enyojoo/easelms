@@ -90,14 +90,14 @@ export async function GET(request: Request) {
 
       console.log('Flutterwave payment successful, redirecting to payment page')
       return NextResponse.redirect(
-        `${baseUrl}/payment?status=success&gateway=flutterwave&courseId=${courseId}`
+        `${baseUrl}/learner/payment?status=success&gateway=flutterwave&courseId=${courseId}`
       )
     } else {
       console.log('Flutterwave payment not successful:', status)
       // Redirect to payment error page
       const errorUrl = redirectCourseId
-        ? `${baseUrl}/payment?status=error&gateway=flutterwave&courseId=${redirectCourseId}&reason=failed`
-        : `${baseUrl}/payment?status=error&gateway=flutterwave&reason=failed`
+        ? `${baseUrl}/learner/payment?status=error&gateway=flutterwave&courseId=${redirectCourseId}&reason=failed`
+        : `${baseUrl}/learner/payment?status=error&gateway=flutterwave&reason=failed`
 
       return NextResponse.redirect(errorUrl)
     }
