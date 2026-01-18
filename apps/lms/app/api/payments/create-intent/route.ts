@@ -51,8 +51,9 @@ export async function POST(request: Request) {
 
   const platformCurrency = platformSettings?.default_currency || "USD"
 
-  // Get user's currency preference
-  const { data: profile } = await supabase
+  // Get user's currency preference - use service role to bypass RLS infinite recursion
+  const serviceSupabase = createServiceRoleClient()
+  const { data: profile } = await serviceSupabase
     .from("profiles")
     .select("currency")
     .eq("id", user.id)
@@ -68,8 +69,8 @@ export async function POST(request: Request) {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
-  // Get user profile for name (optional, email is required)
-  const { data: userProfile } = await supabase
+  // Get user profile for name (optional, email is required) - use service role to bypass RLS
+  const { data: userProfile } = await serviceSupabase
     .from("profiles")
     .select("name")
     .eq("id", user.id)
