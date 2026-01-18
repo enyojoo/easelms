@@ -81,6 +81,8 @@ export default function CoursePage() {
   const slugOrId = params.id as string
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
   const router = useRouter()
+
+  // ALL HOOKS MUST BE CALLED AT THE TOP, BEFORE ANY CONDITIONAL LOGIC
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
   const [isEnrolling, setIsEnrolling] = useState(false)
   const [isEnrolled, setIsEnrolled] = useState(false)
@@ -92,7 +94,7 @@ export default function CoursePage() {
 
   // Get user auth state
   const { user, loading: authLoading } = useClientAuthState()
-  
+
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
@@ -100,10 +102,12 @@ export default function CoursePage() {
   const { data: profileData } = useProfile()
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
-  
+
   // Set up real-time subscription for course enrollment count
   useRealtimeCourseEnrollments(id)
-  
+
+  // ALL LOGIC THAT DEPENDS ON HOOKS GOES HERE, BEFORE ANY EARLY RETURNS
+
   const course = courseData?.course
 
   // Check enrollment status from enrollments data
@@ -112,7 +116,7 @@ export default function CoursePage() {
 
     const courseId = parseInt(id)
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
-    
+
     if (enrollment) {
       setIsEnrolled(true)
       setIsCompleted(enrollment.status === "completed")
@@ -124,6 +128,9 @@ export default function CoursePage() {
 
   // Get enrollment count from course data (total enrollments for the course)
   const enrollmentCount = course?.enrolledStudents || 0
+
+
+  // NOW WE CAN DO EARLY RETURNS AFTER ALL HOOKS ARE CALLED
 
   // Show error only if no cached data exists
   if (courseError && !course) {
