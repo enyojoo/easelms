@@ -329,33 +329,8 @@ export default function CoursePage() {
           setIsEnrolling(false)
         }
       } else {
-        // Handle payment/subscription for paid courses
-        // Check prerequisites before payment
-        const prereqCheckResponse = await fetch("/api/enrollments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseId: Number.parseInt(id) }),
-        })
-
-        if (!prereqCheckResponse.ok) {
-          const errorData = await prereqCheckResponse.json().catch(() => ({}))
-          if (errorData.error === "Prerequisites not met" && errorData.missingPrerequisites) {
-            setPrerequisitesError({
-              show: true,
-              missingPrerequisites: errorData.missingPrerequisites,
-            })
-            setIsEnrolling(false)
-            return
-          }
-          // Show error toast for other enrollment errors
-          if (errorData.error === "User is already enrolled in this course") {
-            toast.error("You are already enrolled in this course")
-          } else {
-            toast.error(errorData.error || "Failed to enroll in course")
-          }
-          setIsEnrolling(false)
-          return
-        }
+        // Handle payment for paid courses
+        // Prerequisites will be checked in payment webhook after successful payment
 
         // handleCoursePayment will redirect to payment gateway
         // Success/failure will be handled by payment callbacks/webhooks

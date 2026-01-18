@@ -14,14 +14,29 @@ export async function POST(request: Request) {
 
   const { courseId, enrollmentMode, courseTitle } = await request.json()
 
+  console.log("Payment create-intent request:", { courseId, enrollmentMode, courseTitle, userId: user.id })
+
+  // Validate courseId
+  if (!courseId || isNaN(Number(courseId))) {
+    return NextResponse.json({ error: "Invalid course ID" }, { status: 400 })
+  }
+
   // Fetch course with price and title
   const { data: course, error: courseError } = await supabase
     .from("courses")
-    .select("title, price")
-    .eq("id", courseId)
+    .select("title, price, settings")
+    .eq("id", Number(courseId))
     .single()
 
-  if (courseError || !course) {
+  console.log("Course fetch result:", { course, courseError })
+
+  if (courseError) {
+    console.error("Course fetch error:", courseError)
+    return NextResponse.json({ error: `Database error: ${courseError.message}` }, { status: 500 })
+  }
+
+  if (!course) {
+    console.error("Course not found for ID:", courseId)
     return NextResponse.json({ error: "Course not found" }, { status: 404 })
   }
 
