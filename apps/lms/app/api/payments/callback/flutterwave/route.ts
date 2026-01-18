@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { verifyTransaction } from "@/lib/payments/flutterwave"
 import { NextResponse } from "next/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
@@ -31,6 +31,7 @@ export async function GET(request: Request) {
       verification.data.status === "successful"
     ) {
       const supabase = await createClient()
+      const serviceSupabase = createServiceRoleClient()
       
       // Get metadata from verification response
       const metadata = verification.data.meta || {}
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       }
 
       // Create payment record with multi-currency support
-      const { data: paymentData, error: paymentError } = await supabase.from("payments").insert({
+      const { data: paymentData, error: paymentError } = await serviceSupabase.from("payments").insert({
         user_id: userId,
         course_id: parseInt(courseId),
         amount_usd: expectedOriginalAmount, // Keep for backward compatibility
@@ -86,19 +87,12 @@ export async function GET(request: Request) {
       }
 
       // Create enrollment
-      console.log("Creating Flutterwave enrollment for user:", userId, "course:", courseId)
-      const { data: enrollmentData, error: enrollmentError } = await supabase.from("enrollments").upsert({
+      const { data: enrollmentData, error: enrollmentError } = await serviceSupabase.from("enrollments").upsert({
         user_id: userId,
         course_id: parseInt(courseId),
         status: "active",
         progress: 0,
       }).select().single()
-
-      if (enrollmentError) {
-        console.error("Flutterwave callback enrollment creation failed:", enrollmentError)
-      } else {
-        console.log("Flutterwave callback enrollment created:", enrollmentData)
-      }
 
       if (enrollmentError) {
         logError("Error creating enrollment", enrollmentError, {
@@ -113,12 +107,12 @@ export async function GET(request: Request) {
 
       // Update enrolled_students count in courses table
       if (enrollmentData) {
-        const { count: currentCount } = await supabase
+        const { count: currentCount } = await serviceSupabase
           .from("enrollments")
           .select("*", { count: "exact", head: true })
           .eq("course_id", parseInt(courseId))
 
-        await supabase
+        await serviceSupabase
           .from("courses")
           .update({ enrolled_students: currentCount || 0 })
           .eq("id", parseInt(courseId))
@@ -184,7 +178,7 @@ export async function GET(request: Request) {
       }
 
       // Fetch course title to create proper slug for redirect
-      const { data: course } = await supabase
+      const { data: course } = await serviceSupabase
         .from("courses")
         .select("title")
         .eq("id", parseInt(courseId))

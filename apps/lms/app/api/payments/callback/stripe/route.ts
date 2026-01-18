@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -9,8 +9,8 @@ export async function GET(request: Request) {
 
   if (success === "true" && courseId) {
     // Fetch course title to create proper slug for redirect
-    const supabase = await createClient()
-    const { data: course } = await supabase
+    const serviceSupabase = createServiceRoleClient()
+    const { data: course } = await serviceSupabase
       .from("courses")
       .select("title")
       .eq("id", parseInt(courseId))

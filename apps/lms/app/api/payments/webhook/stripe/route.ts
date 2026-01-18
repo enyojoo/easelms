@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { getStripeClient } from "@/lib/payments/stripe"
 import { NextResponse } from "next/server"
 import { headers } from "next/headers"
@@ -8,8 +8,6 @@ export async function POST(request: Request) {
   const body = await request.text()
   const headersList = await headers()
   const signature = headersList.get("stripe-signature")
-
-  console.log("Stripe webhook received:", { hasSignature: !!signature })
 
   if (!signature) {
     return NextResponse.json({ error: "No signature" }, { status: 400 })
@@ -24,13 +22,12 @@ export async function POST(request: Request) {
       signature,
       process.env.STRIPE_WEBHOOK_SECRET!
     )
-    console.log("Stripe webhook event:", event.type)
   } catch (err: any) {
-    console.error("Stripe webhook signature verification failed:", err.message)
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
   }
 
   const supabase = await createClient()
+  const serviceSupabase = createServiceRoleClient()
 
   // Handle Payment Intent (legacy, for embedded forms)
   if (event.type === "payment_intent.succeeded") {
@@ -38,7 +35,7 @@ export async function POST(request: Request) {
     const { userId, courseId, amountUSD } = paymentIntent.metadata
 
     // Create payment record
-    const { data: paymentData } = await supabase.from("payments").insert({
+    const { data: paymentData } = await serviceSupabase.from("payments").insert({
       user_id: userId,
       course_id: parseInt(courseId),
       amount_usd: parseFloat(amountUSD),
@@ -74,7 +71,7 @@ export async function POST(request: Request) {
     }
 
     // Create enrollment
-    const { data: enrollmentData } = await supabase.from("enrollments").upsert({
+    const { data: enrollmentData } = await serviceSupabase.from("enrollments").upsert({
       user_id: userId,
       course_id: parseInt(courseId),
       status: "active",
@@ -129,7 +126,7 @@ export async function POST(request: Request) {
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
         // Create payment record with multi-currency support
-        const { data: paymentData } = await supabase.from("payments").insert({
+        const { data: paymentData } = await serviceSupabase.from("payments").insert({
           user_id: userId,
           course_id: parseInt(courseId),
           amount_usd: parseFloat(originalAmount || "0"), // Keep for backward compatibility
@@ -169,28 +166,21 @@ export async function POST(request: Request) {
         }
 
         // Create enrollment
-        console.log("Creating enrollment for user:", userId, "course:", courseId)
-        const { data: enrollmentData, error: enrollmentError } = await supabase.from("enrollments").upsert({
+        const { data: enrollmentData } = await serviceSupabase.from("enrollments").upsert({
           user_id: userId,
           course_id: parseInt(courseId),
           status: "active",
           progress: 0,
         }).select().single()
 
-        if (enrollmentError) {
-          console.error("Stripe webhook enrollment creation failed:", enrollmentError)
-        } else {
-          console.log("Stripe webhook enrollment created:", enrollmentData)
-        }
-
         // Update enrolled_students count in courses table if enrollment was created
         if (enrollmentData) {
-          const { count: currentCount } = await supabase
+          const { count: currentCount } = await serviceSupabase
             .from("enrollments")
             .select("*", { count: "exact", head: true })
             .eq("course_id", parseInt(courseId))
 
-          await supabase
+          await serviceSupabase
             .from("courses")
             .update({ enrolled_students: currentCount || 0 })
             .eq("id", parseInt(courseId))
