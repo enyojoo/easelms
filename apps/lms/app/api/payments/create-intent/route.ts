@@ -70,7 +70,8 @@ export async function POST(request: Request) {
         {
           userId: user.id,
           courseId: courseId.toString(),
-          amountUSD: amountUSD.toString(),
+          originalAmount: coursePrice.toString(),
+          originalCurrency: platformCurrency,
         },
         `${baseUrl}/api/payments/callback/stripe?success=true&courseId=${courseId}`,
         `${baseUrl}/learner/courses/${courseId}?canceled=true`,

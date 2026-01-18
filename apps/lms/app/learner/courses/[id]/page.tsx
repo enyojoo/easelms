@@ -357,26 +357,18 @@ export default function CoursePage() {
           return
         }
 
-        const success = await handleCoursePayment(
+        // handleCoursePayment will redirect to payment gateway
+        // Success/failure will be handled by payment callbacks/webhooks
+        await handleCoursePayment(
           Number.parseInt(id),
           enrollmentMode as "buy",
           course?.title || "",
           user
         )
-        if (success) {
-          toast.success(`Successfully enrolled in ${course?.title || "course"}`)
-          // Invalidate enrollments cache (non-blocking, payment webhook should create enrollment)
-          queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-          // Invalidate progress cache so it starts fresh for new enrollment
-          queryClient.invalidateQueries({ queryKey: ["progress", id] })
-          // Small delay to ensure cache is updated before redirect (same as CourseCard)
-          setTimeout(() => {
-            router.push(`/learner/courses/${createCourseSlug(course?.title || "", Number.parseInt(id))}/learn`)
-          }, 100)
-        } else {
-          toast.error("Payment failed. Please try again.")
-          setIsEnrolling(false)
-        }
+        // If we reach here, handleCoursePayment failed before redirect
+        // (e.g., API error), so show error and don't enroll
+        toast.error("Failed to initiate payment. Please try again.")
+        setIsEnrolling(false)
       }
     } catch (error) {
       console.error("Error enrolling in course:", error)

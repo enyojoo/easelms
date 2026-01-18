@@ -118,19 +118,17 @@ export default function CourseCard({
       } else {
         // For paid courses, handle payment directly
         const coursePrice = course.settings?.enrollment?.price || course.price || 0
-        const success = await handleCoursePayment(
+        // handleCoursePayment will redirect to payment gateway
+        // Success/failure will be handled by payment callbacks
+        await handleCoursePayment(
           course.id,
           enrollmentMode as "buy",
           coursePrice,
           course.title,
           user
         )
-        if (success) {
-          // Dispatch event to notify parent components
-          window.dispatchEvent(new CustomEvent("courseEnrolled", { detail: { courseId: course.id } }))
-          // Redirect to learn page after successful payment
-          router.push(`/learner/courses/${createCourseSlug(course.title, course.id)}/learn`)
-        }
+        // If we reach here, handleCoursePayment failed before redirect
+        // Don't enroll or redirect - payment callbacks will handle success
       }
     } catch (error) {
       console.error("Error enrolling in course:", error)
