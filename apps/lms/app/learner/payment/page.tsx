@@ -72,10 +72,21 @@ export default function PaymentPage() {
       const courseData = await courseResponse.json()
       setCourse(courseData.course)
 
-      // Enroll the user
+      // Enroll the user (handle case where user is already enrolled)
       console.log("Enrolling user in course:", courseId)
-      const enrollmentResult = await enrollCourseMutation.mutateAsync(parseInt(courseId))
-      console.log("Enrollment result:", enrollmentResult)
+      let enrollmentResult
+      try {
+        enrollmentResult = await enrollCourseMutation.mutateAsync(parseInt(courseId))
+        console.log("Enrollment created:", enrollmentResult)
+      } catch (enrollmentError: any) {
+        // Check if user is already enrolled (409 Conflict)
+        if (enrollmentError.response?.status === 409 && enrollmentError.errorData?.error?.includes("already enrolled")) {
+          console.log("User already enrolled in course, continuing...")
+          enrollmentResult = { enrollment: enrollmentError.errorData.enrollment }
+        } else {
+          throw enrollmentError
+        }
+      }
 
       // Create payment record
       console.log("Creating payment record")
