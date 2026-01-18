@@ -13,6 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { useRouter } from "next/navigation"
 import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
+import CourseDetailSkeleton from "@/components/CourseDetailSkeleton"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
 import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings, useProfile, useCoursePrice } from "@/lib/react-query/hooks"
@@ -157,14 +158,32 @@ export default function CoursePage() {
     )
   }
 
-  // Render with cached data immediately - don't wait for pending state
-  if (!course && !authLoading) {
-    return null // Will show on refetch
+  // Show skeleton during initial load
+  if (coursePending || authLoading || (!course && !courseError)) {
+    return <CourseDetailSkeleton />
+  }
+
+  // Show error if course failed to load and there's no cached data
+  if (courseError && !course) {
+    const is404 = courseError instanceof Error && courseError.message.includes("404")
+    if (is404) {
+      notFound()
+    }
+    return (
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+        <div className="flex flex-col justify-center items-center h-64 space-y-4">
+          <p className="text-destructive">{courseError instanceof Error ? courseError.message : "Course not found"}</p>
+          <Button asChild>
+            <Link href="/learner/courses" prefetch={true}>Back to Courses</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   // Additional safety check - ensure course exists before accessing properties
   if (!course) {
-    return null
+    return <CourseDetailSkeleton />
   }
 
   // Calculate total resources from lessons
