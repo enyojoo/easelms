@@ -10,11 +10,12 @@ export function formatCurrency(amount: number, currency: string): string {
   }
 
   // Format currency using Intl.NumberFormat for proper localization
+  // Show 2 decimal places for most currencies, but allow flexibility
   const formatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
 
   return formatter.format(amount)

@@ -301,8 +301,8 @@ export default function CourseCard({
                   // Show platform currency price while loading conversion
                   const platformPrice = course.price || course.settings?.enrollment?.price || 0
                   if (platformPrice > 0) {
-                    // Show with generic currency symbol while loading
-                    return `$${platformPrice}`
+                    // Show properly formatted currency while loading (assume USD as fallback)
+                    return formatCurrency(platformPrice, "USD")
                   }
                   return "Free"
                 }
