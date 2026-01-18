@@ -28,11 +28,10 @@ export async function POST(request: Request) {
     // Get platform currency setting (this is the base currency for all courses)
     const { data: platformSettings } = await serviceSupabase
       .from("platform_settings")
-      .select("value")
-      .eq("key", "default_currency")
+      .select("default_currency")
       .single()
 
-    const platformCurrency = platformSettings?.value || "USD"
+    const platformCurrency = platformSettings?.default_currency || "USD"
 
     // Get user profile to understand their currency preference
     const { data: userProfile, error: profileError } = await serviceSupabase

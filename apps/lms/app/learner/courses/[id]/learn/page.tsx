@@ -384,7 +384,8 @@ export default function CourseLearningPage() {
           } else {
             // Get payment data for email sending
             const paymentData = await paymentResponse.json()
-            console.log("Payment record created:", paymentData)
+            console.log("Payment record created successfully:", paymentData)
+            console.log("Payment ID for email:", paymentData?.payment?.id || paymentData?.id)
 
             // Send payment confirmation email (non-blocking)
             if (paymentData?.id) {
