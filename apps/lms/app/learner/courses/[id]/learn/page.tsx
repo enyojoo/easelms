@@ -48,6 +48,7 @@ export default function CourseLearningPage() {
   const searchParams = useSearchParams()
   const slugOrId = params.id as string
   const id = extractIdFromSlug(slugOrId) // Extract actual ID from slug if present
+  const courseId = parseInt(id) // Parse course ID for use throughout component
   const { user, loading: authLoading, userType } = useClientAuthState()
   const paymentSuccess = searchParams.get("payment") === "success"
   const lessonIndexParam = searchParams.get("lessonIndex")
@@ -322,8 +323,6 @@ export default function CourseLearningPage() {
       return
     }
 
-    const courseId = parseInt(id)
-
     // If payment was successful, immediately replace history to prevent back button to payment gateway
     if (paymentSuccess) {
       console.log("Payment success detected, cleaning up URL")
@@ -388,15 +387,15 @@ export default function CourseLearningPage() {
             console.log("Payment record created:", paymentData)
 
             // Send payment confirmation email (non-blocking)
-            if (paymentData.payment?.id) {
-              console.log("Sending payment confirmation email for payment:", paymentData.payment.id)
+            if (paymentData?.id) {
+              console.log("Sending payment confirmation email for payment:", paymentData.id)
               try {
                 const emailResponse = await fetch("/api/send-email-notification", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     type: "payment",
-                    paymentId: paymentData.payment.id,
+                    paymentId: paymentData.id,
                     status: "completed",
                   }),
                 })
