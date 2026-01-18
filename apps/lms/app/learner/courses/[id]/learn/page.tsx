@@ -327,6 +327,9 @@ export default function CourseLearningPage() {
       // In production, this should be handled by payment gateway webhooks only
       const enrollAndCreatePayment = async () => {
         try {
+          // Get gateway from URL parameters
+          const gateway = searchParams.get("gateway") || "unknown"
+
           // Enroll the user (like webhooks do)
           await enrollCourseMutation.mutateAsync(courseId)
 
@@ -339,7 +342,7 @@ export default function CourseLearningPage() {
               courseId: courseId,
               userId: user?.id,
               amount: course?.price || 0,
-              gateway: "test" // Since we don't know which gateway was used
+              gateway: gateway // Use the actual gateway from URL params
             })
           })
 

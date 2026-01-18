@@ -53,48 +53,44 @@ export async function GET(request: Request) {
       }
     }
 
-    // Check if we're using Flutterwave test/sandbox credentials
-    const isFlutterwaveTestMode = process.env.FLUTTERWAVE_SECRET_KEY?.includes('TEST') ||
-                                 process.env.FLUTTERWAVE_SECRET_KEY?.startsWith('FLWSECK_TEST')
-
-    // For testing/development or test credentials, skip verification
-    // In production with live credentials, always verify transactions
-    const shouldSkipVerification = !process.env.NODE_ENV === 'production' || isFlutterwaveTestMode
-
-    let verification = { data: { meta: {} } } // Default mock data
-    let shouldCreateEnrollment = false
-
     if (status === 'successful') {
-      shouldCreateEnrollment = true
-
-      if (!shouldSkipVerification) {
-        // Verify transaction with Flutterwave (per Flutterwave Standard guide)
-        try {
-          verification = await verifyTransaction(transactionId)
-          console.log('Flutterwave verification result:', verification)
-
-          // Check verification response matches expected structure
-          if (!(verification.status === "success" && verification.data.status === "successful")) {
-            logWarning("Flutterwave transaction verification failed", {
-              component: "payments/callback/flutterwave/route",
-              action: "GET",
-              transactionId,
-              verification,
-            })
-            shouldCreateEnrollment = false
-          }
-        } catch (verifyError) {
-          logError("Flutterwave verification API error", verifyError, {
-            component: "payments/callback/flutterwave/route",
-            action: "GET",
-            transactionId,
-          })
-          shouldCreateEnrollment = false
-        }
-      } else {
-        // Skip verification for test mode or development
-        console.log(`Skipping Flutterwave verification (${isFlutterwaveTestMode ? 'test credentials' : 'development mode'})`)
+      // For successful payments, redirect to learn page (like Stripe callback)
+      // Let the learn page handle enrollment and payment record creation
+      if (!redirectCourseId) {
+        console.error('Missing courseId for successful payment redirect')
+        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
+
+      // Convert courseId to number
+      const courseIdNum = parseInt(redirectCourseId)
+      if (isNaN(courseIdNum)) {
+        console.error('Invalid courseId:', redirectCourseId)
+        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      }
+
+      // Get course title for slug creation (similar to Stripe callback)
+      const serviceSupabase = createServiceRoleClient()
+      const { data: course, error: courseError } = await serviceSupabase
+        .from("courses")
+        .select("title")
+        .eq("id", courseIdNum)
+        .single()
+
+      if (courseError || !course) {
+        console.error('Course fetch error:', courseError)
+        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      }
+
+      const courseTitle = course.title || "Course"
+
+      // Create course slug and redirect to learn page (like Stripe callback)
+      const { createCourseSlug } = await import("@/lib/slug")
+      const courseSlug = createCourseSlug(courseTitle, courseIdNum)
+
+      console.log('Flutterwave payment successful, redirecting to learn page')
+      return NextResponse.redirect(
+        `${baseUrl}/learner/courses/${courseSlug}/learn?payment=success&gateway=flutterwave`
+      )
     } else {
       console.log('Flutterwave payment not successful:', status)
       // Redirect based on referrer (where payment was initiated from)
@@ -111,15 +107,6 @@ export async function GET(request: Request) {
 
       return NextResponse.redirect(redirectUrl)
     }
-
-    if (!shouldCreateEnrollment) {
-      console.log('Not creating enrollment due to verification failure')
-      // For verification failures, redirect to courses list (more serious error)
-      // For cancelled payments, we redirect back to course view above
-      return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
-    }
-
-    // Continue with enrollment and payment processing...
       const supabase = await createClient()
       const serviceSupabase = createServiceRoleClient()
       
