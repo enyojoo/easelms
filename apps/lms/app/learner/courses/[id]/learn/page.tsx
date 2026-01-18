@@ -348,6 +348,29 @@ export default function CourseLearningPage() {
 
           if (!paymentResponse.ok) {
             console.warn("Failed to create payment record, but enrollment succeeded")
+          } else {
+            // Get payment data for email sending
+            const paymentData = await paymentResponse.json()
+
+            // Send payment confirmation email (non-blocking)
+            if (paymentData.payment?.id) {
+              try {
+                const emailResponse = await fetch("/api/send-email-notification", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    type: "payment",
+                    paymentId: paymentData.payment.id,
+                    status: "completed",
+                  }),
+                })
+                if (!emailResponse.ok) {
+                  console.warn("Payment confirmation email failed to send")
+                }
+              } catch (emailError) {
+                console.warn("Payment confirmation email error:", emailError)
+              }
+            }
           }
 
           // Success - invalidate caches and clean up URL
