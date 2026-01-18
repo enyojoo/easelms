@@ -300,7 +300,13 @@ export default function CourseCard({
                 const enrollmentMode = course.settings?.enrollment?.enrollmentMode
 
                 if (!coursePriceInfo) {
-                  return "..."
+                  // Show platform currency price while loading conversion
+                  const platformPrice = course.price || course.settings?.enrollment?.price || 0
+                  if (platformPrice > 0) {
+                    // Show with generic currency symbol while loading
+                    return `$${platformPrice}`
+                  }
+                  return "Free"
                 }
 
                 if (enrollmentMode === "buy" && coursePriceInfo.displayPrice > 0) {

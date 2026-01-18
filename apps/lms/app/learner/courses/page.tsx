@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import CourseCard from "@/components/CourseCard"
 import CourseCardSkeleton from "@/components/CourseCardSkeleton"
 import CoursesPageSkeleton from "@/components/CoursesPageSkeleton"
-import { useCourses, useEnrollments, useRealtimeEnrollments, useRealtimeCourses } from "@/lib/react-query/hooks"
+import { useCourses, useEnrollments, useRealtimeEnrollments, useRealtimeCourses, useSettings, useProfile } from "@/lib/react-query/hooks"
 
 interface Course {
   id: number
@@ -33,7 +33,9 @@ export default function CoursesPage() {
   // Use React Query hooks for data fetching
   const { data: coursesData, isPending: coursesPending, error: coursesError } = useCourses()
   const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
-  
+  const { data: settingsData } = useSettings() // Preload settings for currency conversion
+  const { data: profileData } = useProfile() // Preload profile for currency preferences
+
   // Set up real-time subscriptions for enrollments and courses
   useRealtimeEnrollments(user?.id)
   useRealtimeCourses() // Listen to course changes and enrollment count updates
