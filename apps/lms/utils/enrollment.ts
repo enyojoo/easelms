@@ -174,16 +174,16 @@ export function handleCoursePayment(
 
       const data = await response.json()
 
-      // Redirect to payment gateway
+      // Redirect to payment gateway (replace current history entry to prevent back button issues)
       if (data.gateway === "stripe" && data.checkoutUrl) {
         // Redirect to Stripe Checkout (hosted page)
-        window.location.href = data.checkoutUrl
+        window.location.replace(data.checkoutUrl)
         // Note: The promise won't resolve until after redirect, but that's okay
         // The callback URL will handle enrollment
         resolve(true)
       } else if (data.gateway === "flutterwave" && data.paymentLink) {
         // Redirect to Flutterwave payment page
-        window.location.href = data.paymentLink
+        window.location.replace(data.paymentLink)
         // Note: The promise won't resolve until after redirect, but that's okay
         // The callback URL will handle enrollment
         resolve(true)

@@ -334,8 +334,11 @@ export default function CourseLearningPage() {
         const enrollment = currentEnrollments?.enrollments?.find((e: any) => e.course_id === courseId)
         
         if (enrollment) {
-          // Enrollment found, remove query param
-          router.replace(`/learner/courses/${createCourseSlug(course.title, courseId)}/learn`)
+          // Enrollment found, remove query param and prevent back button to payment gateway
+          const url = new URL(window.location.href)
+          url.searchParams.delete("payment")
+          // Use replaceState to replace current history entry, preventing back button to payment gateway
+          window.history.replaceState({}, "", url.toString())
         }
       }, 1000) // Wait 1 second for enrollment to be available
 

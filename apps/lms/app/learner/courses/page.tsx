@@ -39,13 +39,13 @@ export default function CoursesPage() {
 
     if (paymentStatus === "canceled") {
       toast.error("Payment was canceled. You can try again when ready.")
-      // Clean up the URL
+      // Clean up the URL and prevent back button to payment gateway
       const url = new URL(window.location.href)
       url.searchParams.delete("payment")
       window.history.replaceState({}, "", url.toString())
     } else if (errorStatus === "payment_failed") {
       toast.error("Payment failed. Please try again or contact support.")
-      // Clean up the URL
+      // Clean up the URL and prevent back button to payment gateway
       const url = new URL(window.location.href)
       url.searchParams.delete("error")
       window.history.replaceState({}, "", url.toString())
