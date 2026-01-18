@@ -99,7 +99,7 @@ export async function GET(
     courseTitle: payment.courses?.title || "Unknown Course",
     courseImage: payment.courses?.image,
     amount: payment.payment_amount || payment.amount || payment.amount_usd || 0,
-    currency: payment.currency || "USD",
+    currency: payment.payment_currency || payment.currency || "USD",
     gateway: payment.gateway,
     status: payment.status,
     type: payment.recurring_price ? "recurring" : "one-time",

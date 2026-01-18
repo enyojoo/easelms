@@ -116,12 +116,10 @@ export async function POST(request: Request) {
       .insert({
         user_id: userId,
         course_id: parseInt(courseId),
-        amount_usd: amountUSD, // USD equivalent (simplified)
+        amount_usd: amountUSD, // USD equivalent
         original_amount: originalAmount,
         original_currency: originalCurrency,
-        amount: paymentAmount, // Legacy field - payment amount
         payment_amount: paymentAmount,
-        currency: paymentCurrency, // Legacy field - payment currency
         payment_currency: paymentCurrency,
         exchange_rate: exchangeRate,
         gateway: gateway || "unknown",
