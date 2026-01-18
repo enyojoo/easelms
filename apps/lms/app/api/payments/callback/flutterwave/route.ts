@@ -40,9 +40,13 @@ export async function GET(request: Request) {
   try {
     console.log('Flutterwave callback received:', { status, transactionId, txRef, searchParams: Object.fromEntries(searchParams) })
 
-    // For testing/development, skip verification and create enrollment directly
-    // In production, always verify transactions
-    const isProduction = process.env.NODE_ENV === 'production'
+    // Check if we're using Flutterwave test/sandbox credentials
+    const isFlutterwaveTestMode = process.env.FLUTTERWAVE_SECRET_KEY?.includes('TEST') ||
+                                 process.env.FLUTTERWAVE_SECRET_KEY?.startsWith('FLWSECK_TEST')
+
+    // For testing/development or test credentials, skip verification
+    // In production with live credentials, always verify transactions
+    const shouldSkipVerification = !process.env.NODE_ENV === 'production' || isFlutterwaveTestMode
 
     let verification = { data: { meta: {} } } // Default mock data
     let shouldCreateEnrollment = false
@@ -50,7 +54,7 @@ export async function GET(request: Request) {
     if (status === 'successful') {
       shouldCreateEnrollment = true
 
-      if (isProduction) {
+      if (!shouldSkipVerification) {
         // Verify transaction with Flutterwave (per Flutterwave Standard guide)
         try {
           verification = await verifyTransaction(transactionId)
@@ -75,8 +79,8 @@ export async function GET(request: Request) {
           shouldCreateEnrollment = false
         }
       } else {
-        // In development/testing, assume payment was successful
-        console.log('Development mode: Skipping Flutterwave verification, assuming success')
+        // Skip verification for test mode or development
+        console.log(`Skipping Flutterwave verification (${isFlutterwaveTestMode ? 'test credentials' : 'development mode'})`)
       }
     } else {
       console.log('Flutterwave payment not successful:', status)
