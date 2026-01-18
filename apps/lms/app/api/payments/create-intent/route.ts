@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId, enrollmentMode, courseTitle, referrer } = await request.json()
+  const { courseId, enrollmentMode, courseTitle, referrer = "course-detail" } = await request.json()
 
   console.log("Payment create-intent request:", { courseId, enrollmentMode, courseTitle, referrer, userId: user.id })
 
@@ -113,6 +113,7 @@ export async function POST(request: Request) {
     } else {
       // Flutterwave - Only email is required, name is optional
       const txRef = `tx_${Date.now()}_${user.id}_${courseId}`
+      console.log('Creating Flutterwave payment with referrer:', referrer)
       const payment = await initializePayment({
         amount: convertedAmount,
         currency: userCurrency,

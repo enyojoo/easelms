@@ -68,12 +68,29 @@ export async function initializePayment(data: {
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    console.error('Flutterwave API error:', errorData)
-    throw new Error(`Flutterwave API error: ${response.status} ${response.statusText}`)
+    let errorText = `HTTP ${response.status}: ${response.statusText}`
+    try {
+      const errorData = await response.text()
+      console.error('Flutterwave API error response:', errorData)
+      if (errorData) {
+        errorText += ` - ${errorData}`
+      }
+    } catch (textError) {
+      console.error('Could not read error response:', textError)
+    }
+    throw new Error(`Flutterwave API error: ${errorText}`)
   }
 
-  return await response.json()
+  try {
+    const data = await response.json()
+    console.log('Flutterwave API success response:', data)
+    return data
+  } catch (jsonError) {
+    console.error('Failed to parse Flutterwave response as JSON:', jsonError)
+    const textResponse = await response.text()
+    console.error('Raw response text:', textResponse)
+    throw new Error('Flutterwave API returned invalid JSON response')
+  }
 }
 
 export async function verifyTransaction(transactionId: string) {
