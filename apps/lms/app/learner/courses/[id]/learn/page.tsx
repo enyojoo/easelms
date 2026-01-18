@@ -390,6 +390,7 @@ export default function CourseLearningPage() {
             // Send payment confirmation email (non-blocking)
             if (paymentData?.id) {
               console.log("Sending payment confirmation email for payment:", paymentData.id)
+              console.log("Payment data structure:", paymentData)
               try {
                 const emailResponse = await fetch("/api/send-email-notification", {
                   method: "POST",

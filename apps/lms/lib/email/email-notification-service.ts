@@ -493,6 +493,7 @@ class EmailNotificationService {
       const supabase = createServiceRoleClient()
 
       // Fetch payment with related data
+      console.log("Email service: Fetching payment data for ID:", paymentId)
       const { data: payment, error: paymentError } = await supabase
         .from("payments")
         .select(
@@ -520,6 +521,8 @@ class EmailNotificationService {
         .eq("id", paymentId)
         .single()
 
+      console.log("Email service: Payment fetch result:", { payment: !!payment, error: paymentError })
+
       if (paymentError || !payment) {
         logError("Failed to fetch payment data", paymentError, {
           component: "email-notification-service",
@@ -528,6 +531,14 @@ class EmailNotificationService {
         })
         return
       }
+
+      console.log("Email service: Payment data:", {
+        id: payment.id,
+        amount: payment.payment_amount,
+        currency: payment.payment_currency,
+        user: payment.profiles?.email,
+        course: payment.courses?.title
+      })
 
       const profile = payment.profiles as any
       const course = payment.courses as any
