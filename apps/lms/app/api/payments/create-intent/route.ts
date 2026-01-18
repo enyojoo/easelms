@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   // Fetch course with price and title
   const { data: course, error: courseError } = await supabase
     .from("courses")
-    .select("title, price, settings")
+    .select("title, price")
     .eq("id", Number(courseId))
     .single()
 
