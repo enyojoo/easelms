@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   const { courseId, enrollmentMode, courseTitle, referrer = "course-detail" } = await request.json()
 
   console.log("Payment create-intent request:", { courseId, enrollmentMode, courseTitle, referrer, userId: user.id })
@@ -73,8 +74,6 @@ export async function POST(request: Request) {
 
   // Determine payment gateway
   const gateway = userCurrency === "NGN" ? "flutterwave" : "stripe"
-
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
 
   // Get user profile for name (optional, email is required)
   const { data: userProfile } = await supabase
