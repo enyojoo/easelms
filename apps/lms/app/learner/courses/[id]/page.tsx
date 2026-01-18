@@ -158,8 +158,15 @@ export default function CoursePage() {
     )
   }
 
-  // Show skeleton during initial load
-  if (coursePending || authLoading || (!course && !courseError)) {
+  // Show skeleton only during initial auth loading
+  if (authLoading) {
+    return <CourseDetailSkeleton />
+  }
+
+  // Always show cached course data immediately when available
+  // React Query's placeholderData will keep previous data during refetch
+  // Only show skeleton when there's no course data at all (first time loading)
+  if (!course) {
     return <CourseDetailSkeleton />
   }
 

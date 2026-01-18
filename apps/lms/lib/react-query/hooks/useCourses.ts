@@ -51,8 +51,11 @@ export function useCourse(id: string | number | null) {
       return response.json()
     },
     enabled: !!id,
-    staleTime: 10 * 60 * 1000, // 10 minutes - course details don't change often
+    staleTime: 15 * 60 * 1000, // 15 minutes - course details don't change often
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes even when inactive
     placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
+    refetchOnReconnect: false, // Don't refetch when reconnecting
   })
 }
 
