@@ -13,10 +13,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
-    // Get course details including currency to understand the original pricing
+    // Get course details to understand the original pricing
     const { data: course, error: courseError } = await serviceSupabase
       .from("courses")
-      .select("price, currency")
+      .select("price")
       .eq("id", parseInt(courseId))
       .single()
 
@@ -25,8 +25,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
     }
 
-    // Use the course's currency as the original currency
-    const courseCurrency = course.currency || "USD"
+    // Get platform currency setting (this is the base currency for all courses)
+    const { data: platformSettings } = await serviceSupabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "default_currency")
+      .single()
+
+    const platformCurrency = platformSettings?.value || "USD"
 
     // Get user profile to understand their currency preference
     const { data: userProfile, error: profileError } = await serviceSupabase
@@ -53,9 +59,9 @@ export async function POST(request: Request) {
 
     if (gateway === "flutterwave") {
       // For Flutterwave, user paid in their preferred currency
-      // The course price is in courseCurrency, payment was made in userCurrency
+      // The course price is in platformCurrency, payment was made in userCurrency
       originalAmount = coursePrice
-      originalCurrency = courseCurrency
+      originalCurrency = platformCurrency
       paymentAmount = coursePrice // For Flutterwave, payment amount equals course price
       paymentCurrency = userCurrency
 
@@ -72,7 +78,7 @@ export async function POST(request: Request) {
       // For Stripe, payment was made in converted amount (typically USD or EUR)
       // The 'amount' passed should be the actual payment amount
       originalAmount = coursePrice
-      originalCurrency = courseCurrency
+      originalCurrency = platformCurrency
       paymentAmount = amount // The actual amount paid
       paymentCurrency = userCurrency
 
@@ -88,7 +94,7 @@ export async function POST(request: Request) {
     } else {
       // Fallback for unknown gateways
       originalAmount = coursePrice
-      originalCurrency = courseCurrency
+      originalCurrency = platformCurrency
       paymentAmount = amount
       paymentCurrency = userCurrency
 
