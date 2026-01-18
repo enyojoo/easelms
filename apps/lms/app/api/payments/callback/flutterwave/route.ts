@@ -167,12 +167,10 @@ export async function GET(request: Request) {
       const { data: paymentData, error: paymentError } = await serviceSupabase.from("payments").insert({
         user_id: userId,
         course_id: parseInt(courseId),
-        amount_usd: expectedOriginalAmount, // Keep for backward compatibility
+        amount_usd: expectedOriginalAmount, // USD equivalent
         original_amount: expectedOriginalAmount,
         original_currency: expectedOriginalCurrency,
-        amount: verifiedAmount, // Payment amount (deprecated, use payment_amount)
         payment_amount: verifiedAmount,
-        currency: verifiedCurrency, // Payment currency (deprecated, use payment_currency)
         payment_currency: verifiedCurrency,
         exchange_rate: verifiedAmount / expectedOriginalAmount,
         gateway: "flutterwave",

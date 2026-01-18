@@ -35,19 +35,19 @@ export async function POST(request: Request) {
     const { userId, courseId, amountUSD } = paymentIntent.metadata
 
     // Create payment record
-    const { data: paymentData } = await serviceSupabase.from("payments").insert({
-      user_id: userId,
-      course_id: parseInt(courseId),
-      amount_usd: parseFloat(amountUSD),
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency.toUpperCase(),
-      exchange_rate: paymentIntent.amount / 100 / parseFloat(amountUSD),
-      gateway: "stripe",
-      status: "completed",
-      transaction_id: paymentIntent.id,
-      payment_method: paymentIntent.payment_method_types[0],
-      completed_at: new Date().toISOString(),
-    }).select().single()
+      const { data: paymentData } = await serviceSupabase.from("payments").insert({
+        user_id: userId,
+        course_id: parseInt(courseId),
+        amount_usd: parseFloat(amountUSD),
+        payment_amount: paymentIntent.amount / 100,
+        payment_currency: paymentIntent.currency.toUpperCase(),
+        exchange_rate: paymentIntent.amount / 100 / parseFloat(amountUSD),
+        gateway: "stripe",
+        status: "completed",
+        transaction_id: paymentIntent.id,
+        payment_method: paymentIntent.payment_method_types[0],
+        completed_at: new Date().toISOString(),
+      }).select().single()
 
     // Send payment confirmation email notification (non-blocking)
     if (paymentData?.id) {
@@ -129,12 +129,10 @@ export async function POST(request: Request) {
         const { data: paymentData } = await serviceSupabase.from("payments").insert({
           user_id: userId,
           course_id: parseInt(courseId),
-          amount_usd: parseFloat(originalAmount || "0"), // Keep for backward compatibility
+          amount_usd: parseFloat(originalAmount || "0"), // USD equivalent
           original_amount: parseFloat(originalAmount || "0"),
           original_currency: originalCurrency || "USD",
-          amount: paymentIntent.amount / 100, // Payment amount (deprecated, use payment_amount)
           payment_amount: paymentIntent.amount / 100,
-          currency: paymentIntent.currency.toUpperCase(), // Payment currency (deprecated, use payment_currency)
           payment_currency: paymentIntent.currency.toUpperCase(),
           exchange_rate: paymentIntent.amount / 100 / parseFloat(originalAmount || "1"),
           gateway: "stripe",
