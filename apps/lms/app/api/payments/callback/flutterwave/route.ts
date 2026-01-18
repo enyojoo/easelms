@@ -33,7 +33,8 @@ export async function GET(request: Request) {
   }
 
   // Only process successful payments (per Flutterwave Standard guide)
-  if (status !== "successful") {
+  // Flutterwave can send either 'successful' or 'completed' for successful payments
+  if (status !== "successful" && status !== "completed") {
     return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
   }
 
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
       }
     }
 
-    if (status === 'successful') {
+    if (status === 'successful' || status === 'completed') {
       // For successful payments, redirect to learn page (like Stripe callback)
       // Let the learn page handle enrollment and payment record creation
       if (!redirectCourseId) {
