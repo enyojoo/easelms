@@ -307,9 +307,6 @@ export function generatePaymentDetails(data: {
   return `
     <div class="info-box" style="background-color: ${data.failureReason ? "#fef2f2" : "#f0fdf4"}; border-left: 4px solid ${statusColor}; padding: 16px; margin: 24px 0; border-radius: 4px;">
       <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;">
-        <strong>Transaction ID:</strong> ${data.transactionId}
-      </p>
-      <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;">
         <strong>Amount:</strong> ${data.amount.toFixed(2)} ${data.currency}
       </p>
       <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;">

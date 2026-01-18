@@ -499,8 +499,8 @@ class EmailNotificationService {
           `
           id,
           transaction_id,
-          amount,
-          currency,
+          payment_amount,
+          payment_currency,
           payment_method,
           completed_at,
           status,
@@ -595,8 +595,8 @@ class EmailNotificationService {
           `
           id,
           transaction_id,
-          amount,
-          currency,
+          payment_amount,
+          payment_currency,
           payment_method,
           completed_at,
           status,
@@ -864,8 +864,8 @@ class EmailNotificationService {
           courseName: course.title,
           courseId: course.id,
           transactionId: payment.transaction_id || payment.id,
-          amount: parseFloat(payment.amount?.toString() || "0"),
-          currency: payment.currency || "USD",
+          amount: parseFloat(payment.payment_amount?.toString() || payment.amount?.toString() || "0"),
+          currency: payment.payment_currency || payment.currency || "USD",
           paymentDate: payment.completed_at || new Date().toISOString(),
         })
       }
