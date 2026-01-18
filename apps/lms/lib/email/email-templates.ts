@@ -297,7 +297,6 @@ Hi ${data.firstName},
 
 Your payment has been successfully processed. You now have access to ${data.courseName}.
 
-Transaction ID: ${data.transactionId}
 Amount: ${data.amount.toFixed(2)} ${data.currency}
 Payment Method: ${data.paymentMethod}
 Date: ${date}
@@ -357,7 +356,6 @@ Hi ${data.firstName},
 
 Unfortunately, your payment for ${data.courseName} could not be processed.
 
-Transaction ID: ${data.transactionId}
 Amount: ${data.amount.toFixed(2)} ${data.currency}
 Payment Method: ${data.paymentMethod}
 Date: ${date}
@@ -443,7 +441,6 @@ export const adminNewPaymentTemplate: EmailTemplate = {
         <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;"><strong>Student:</strong> ${data.userName} (${data.userEmail})</p>
         <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;"><strong>Course:</strong> ${data.courseName}</p>
         <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;"><strong>Amount:</strong> ${data.amount?.toFixed(2)} ${data.currency}</p>
-        <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;"><strong>Transaction ID:</strong> ${data.transactionId}</p>
         <p class="info-box-text" style="margin: 0; font-size: 14px; color: #333333;"><strong>Date:</strong> ${paymentDate}</p>
       </div>
     `
@@ -474,7 +471,6 @@ A new payment has been received.
 Student: ${data.userName} (${data.userEmail})
 Course: ${data.courseName}
 Amount: ${data.amount?.toFixed(2)} ${data.currency}
-Transaction ID: ${data.transactionId}
 Date: ${paymentDate}
 
 View in dashboard: ${data.adminDashboardUrl}
