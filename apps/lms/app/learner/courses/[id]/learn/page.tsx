@@ -317,12 +317,16 @@ export default function CourseLearningPage() {
   // Check enrollment and redirect if not enrolled
   // Handle payment=success by enrolling the user (similar to free courses)
   useEffect(() => {
-    if (!id || !course || !user) return
+    // Don't run payment logic until all necessary data is loaded
+    if (!id || !course || !user || coursePending || enrollmentsPending) {
+      return
+    }
 
     const courseId = parseInt(id)
 
     // If payment was successful, immediately replace history to prevent back button to payment gateway
     if (paymentSuccess) {
+      console.log("Payment success detected, cleaning up URL")
       // Replace current history entry to remove payment gateway from back button
       const url = new URL(window.location.href)
       url.searchParams.delete("payment")
@@ -332,6 +336,7 @@ export default function CourseLearningPage() {
 
     // If payment was successful, enroll the user and create payment record (like webhooks do)
     if (paymentSuccess) {
+      console.log("Processing payment success - all data loaded, starting enrollment")
       console.log("Payment success detected, processing enrollment and payment record creation")
 
       // For testing purposes, simulate webhook behavior: enroll user and create payment record
@@ -410,15 +415,10 @@ export default function CourseLearningPage() {
             }
           }
 
-          // Success - invalidate caches and clean up URL
+          // Success - invalidate caches
           queryClient.invalidateQueries({ queryKey: ["enrollments"] })
           queryClient.invalidateQueries({ queryKey: ["progress", id] })
           queryClient.invalidateQueries({ queryKey: ["purchases"] }) // Invalidate purchases cache
-
-          // Remove query param and prevent back button to payment gateway
-          const url = new URL(window.location.href)
-          url.searchParams.delete("payment")
-          window.history.replaceState({}, "", url.toString())
 
           toast.success("Payment successful! You are now enrolled in this course.")
         } catch (error) {
