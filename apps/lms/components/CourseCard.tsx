@@ -47,7 +47,8 @@ export default function CourseCard({
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   const { data: progressData } = useProgress(course.id)
-  const coursePriceInfo = useCoursePrice(course.price || course.settings?.enrollment?.price || 0)
+  const coursePrice = course.price || course.settings?.enrollment?.price || 0
+  const coursePriceInfo = useCoursePrice(coursePrice)
 
   useEffect(() => {
     const authState = getClientAuthState()

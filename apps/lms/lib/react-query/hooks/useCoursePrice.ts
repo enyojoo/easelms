@@ -25,6 +25,9 @@ export function useCoursePrice(coursePrice: number): CoursePriceInfo | undefined
   // Get user's display currency preference
   const userCurrency = profile?.profile?.currency || "USD"
 
+  // Only enable query when we have valid data and coursePrice > 0
+  const isEnabled = !!settings && !!profile && coursePrice > 0
+
   // Use useQuery to handle the async conversion
   const { data: conversionData } = useQuery({
     queryKey: ["course-price", coursePrice, platformCurrency, userCurrency],
@@ -41,8 +44,13 @@ export function useCoursePrice(coursePrice: number): CoursePriceInfo | undefined
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!settings && !!profile,
+    enabled: isEnabled,
   })
+
+  // Return a loading state when disabled
+  if (!isEnabled) {
+    return undefined
+  }
 
   return conversionData
 }

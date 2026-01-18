@@ -192,6 +192,7 @@ export default function CoursePage() {
   const coursePrice = course?.settings?.enrollment?.price || 0
 
   // Use the new course price hook for consistent currency conversion
+  // Pass 0 as default to maintain consistent hook calls
   const coursePriceInfo = useCoursePrice(coursePrice)
 
   const getAccessDetails = () => {
