@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       })
 
       return NextResponse.json({
-        paymentLink: payment.data.link,
+        paymentLink: payment.data?.link || payment.link,
         gateway: "flutterwave",
         txRef,
         amount: convertedAmount,
