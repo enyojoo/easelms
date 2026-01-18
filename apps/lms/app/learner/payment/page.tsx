@@ -30,31 +30,23 @@ export default function PaymentPage() {
   const reason = searchParams.get("reason")
 
   useEffect(() => {
-    console.log("Payment page params:", { paymentStatus, gateway, courseId, reason, authLoading, user: !!user })
-
     // Redirect if not authenticated
     if (!authLoading && !user) {
-      console.log("Redirecting to login - not authenticated")
       router.push("/auth/learner/login")
       return
     }
 
     // If user is still loading, wait
-    if (authLoading || !user) {
-      console.log("Waiting for auth to load")
-      return
-    }
+    if (authLoading || !user) return
 
     // If no courseId, redirect to courses
     if (!courseId) {
-      console.log("Redirecting to courses - no courseId")
       router.push("/learner/courses")
       return
     }
 
     // Handle payment error
     if (paymentStatus === "error") {
-      console.log("Setting error status")
       setStatus("error")
       setError(reason || "Payment failed")
       return
@@ -62,10 +54,8 @@ export default function PaymentPage() {
 
     // Handle payment success
     if (paymentStatus === "success" && gateway) {
-      console.log("Processing payment success")
       processPaymentSuccess()
     } else {
-      console.log("Invalid parameters, redirecting to courses:", { paymentStatus, gateway })
       router.push("/learner/courses")
     }
   }, [authLoading, user, paymentStatus, gateway, courseId, reason])

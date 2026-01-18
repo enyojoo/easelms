@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 import { logError } from "@/lib/utils/errorHandler"
 
 export async function GET(request: Request) {
@@ -53,38 +54,13 @@ export async function GET(request: Request) {
     }
 
     if (status === 'successful' || status === 'completed') {
-      // For successful payments, redirect to learn page (like Stripe callback)
-      // Let the learn page handle enrollment and payment record creation
+      console.log('Processing successful Flutterwave payment')
+
+      // For successful payments, redirect to payment page
       if (!redirectCourseId) {
         console.error('Missing courseId for successful payment redirect')
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
-
-      // Convert courseId to number
-      const courseIdNum = parseInt(redirectCourseId)
-      if (isNaN(courseIdNum)) {
-        console.error('Invalid courseId:', redirectCourseId)
-        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
-      }
-
-      // Get course title for slug creation (similar to Stripe callback)
-      const serviceSupabase = createServiceRoleClient()
-      const { data: course, error: courseError } = await serviceSupabase
-        .from("courses")
-        .select("title")
-        .eq("id", courseIdNum)
-        .single()
-
-      if (courseError || !course) {
-        console.error('Course fetch error:', courseError)
-        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
-      }
-
-      const courseTitle = course.title || "Course"
-
-      // Create course slug and redirect to learn page (like Stripe callback)
-      const { createCourseSlug } = await import("@/lib/slug")
-      const courseSlug = createCourseSlug(courseTitle, courseIdNum)
 
       console.log('Flutterwave payment successful, redirecting to payment page')
       return NextResponse.redirect(
