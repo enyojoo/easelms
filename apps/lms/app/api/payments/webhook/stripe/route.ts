@@ -31,20 +31,16 @@ export async function POST(request: Request) {
   // Handle Payment Intent (legacy, for embedded forms)
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object as Stripe.PaymentIntent
-    const { userId, courseId, amount, platformCurrency } = paymentIntent.metadata
-
-    // Calculate USD equivalent for storage
-    const { convertCurrency } = await import("@/lib/payments/currency")
-    const usdAmount = await convertCurrency(paymentIntent.amount / 100, paymentIntent.currency.toUpperCase(), "USD")
+    const { userId, courseId, amountUSD } = paymentIntent.metadata
 
     // Create payment record
     const { data: paymentData } = await supabase.from("payments").insert({
       user_id: userId,
       course_id: parseInt(courseId),
-      amount_usd: usdAmount,
+      amount_usd: parseFloat(amountUSD),
       amount: paymentIntent.amount / 100,
       currency: paymentIntent.currency.toUpperCase(),
-      exchange_rate: paymentIntent.amount / 100 / parseFloat(amount || "1"),
+      exchange_rate: paymentIntent.amount / 100 / parseFloat(amountUSD),
       gateway: "stripe",
       status: "completed",
       transaction_id: paymentIntent.id,
@@ -118,28 +114,28 @@ export async function POST(request: Request) {
   // Handle Checkout Session (for hosted Checkout pages)
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session
-    const { userId, courseId, amount, platformCurrency } = session.metadata || {}
+    const { userId, courseId, originalAmount, originalCurrency } = session.metadata || {}
 
     if (userId && courseId) {
       // Retrieve the payment intent to get amount details
       const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : null
-
+      
       if (paymentIntentId) {
         const stripe = getStripeClient()
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
 
-        // Calculate USD equivalent for storage
-        const { convertCurrency } = await import("@/lib/payments/currency")
-        const usdAmount = await convertCurrency(paymentIntent.amount / 100, paymentIntent.currency.toUpperCase(), "USD")
-
-        // Create payment record
+        // Create payment record with multi-currency support
         const { data: paymentData } = await supabase.from("payments").insert({
           user_id: userId,
           course_id: parseInt(courseId),
-          amount_usd: usdAmount,
-          amount: paymentIntent.amount / 100,
-          currency: paymentIntent.currency.toUpperCase(),
-          exchange_rate: paymentIntent.amount / 100 / parseFloat(amount || "1"),
+          amount_usd: parseFloat(originalAmount || "0"), // Keep for backward compatibility
+          original_amount: parseFloat(originalAmount || "0"),
+          original_currency: originalCurrency || "USD",
+          amount: paymentIntent.amount / 100, // Payment amount (deprecated, use payment_amount)
+          payment_amount: paymentIntent.amount / 100,
+          currency: paymentIntent.currency.toUpperCase(), // Payment currency (deprecated, use payment_currency)
+          payment_currency: paymentIntent.currency.toUpperCase(),
+          exchange_rate: paymentIntent.amount / 100 / parseFloat(originalAmount || "1"),
           gateway: "stripe",
           status: "completed",
           transaction_id: paymentIntent.id,

@@ -149,7 +149,6 @@ export function addPurchase(purchase: Omit<Purchase, "id" | "purchasedAt">, user
 export function handleCoursePayment(
   courseId: number,
   enrollmentMode: "buy",
-  price: number,
   courseTitle?: string,
   user?: any
 ): Promise<boolean> {
@@ -163,7 +162,7 @@ export function handleCoursePayment(
         },
         body: JSON.stringify({
           courseId,
-          amount: price, // price in platform currency
+          enrollmentMode,
           courseTitle: courseTitle || `Course ${courseId}`,
         }),
       })

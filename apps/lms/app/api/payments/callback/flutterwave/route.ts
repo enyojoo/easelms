@@ -34,11 +34,12 @@ export async function GET(request: Request) {
       
       // Get metadata from verification response
       const metadata = verification.data.meta || {}
-      const { userId, courseId, amount, platformCurrency } = metadata
+      const { userId, courseId, originalAmount, originalCurrency } = metadata
 
-      // Calculate USD equivalent for storage
-      const { convertCurrency } = await import("@/lib/payments/currency")
-      const expectedAmountUSD = await convertCurrency(parseFloat(amount || "0"), platformCurrency || "USD", "USD")
+      // Verify amounts match (per Flutterwave Standard guide)
+      // We store expected amount in metadata, compare with verified amount
+      const expectedOriginalAmount = parseFloat(originalAmount || "0")
+      const expectedOriginalCurrency = originalCurrency || "USD"
       const verifiedAmount = verification.data.amount
       const verifiedCurrency = verification.data.currency
 
@@ -54,14 +55,18 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }
 
-      // Create payment record
+      // Create payment record with multi-currency support
       const { data: paymentData, error: paymentError } = await supabase.from("payments").insert({
         user_id: userId,
         course_id: parseInt(courseId),
-        amount_usd: expectedAmountUSD,
-        amount: verifiedAmount,
-        currency: verifiedCurrency,
-        exchange_rate: verifiedAmount / parseFloat(amount || "1"),
+        amount_usd: expectedOriginalAmount, // Keep for backward compatibility
+        original_amount: expectedOriginalAmount,
+        original_currency: expectedOriginalCurrency,
+        amount: verifiedAmount, // Payment amount (deprecated, use payment_amount)
+        payment_amount: verifiedAmount,
+        currency: verifiedCurrency, // Payment currency (deprecated, use payment_currency)
+        payment_currency: verifiedCurrency,
+        exchange_rate: verifiedAmount / expectedOriginalAmount,
         gateway: "flutterwave",
         status: "completed",
         transaction_id: transactionId,

@@ -4,16 +4,6 @@ import { initializePayment } from "@/lib/payments/flutterwave"
 import { convertCurrency } from "@/lib/payments/currency"
 import { NextResponse } from "next/server"
 
-// Get platform settings
-async function getPlatformSettings() {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from("platform_settings")
-    .select("default_currency")
-    .single()
-  return data?.default_currency || "USD"
-}
-
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,21 +12,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId, amount, courseTitle } = await request.json() // amount is in platform currency
+  const { courseId, enrollmentMode, courseTitle } = await request.json()
 
-  // Get course title if not provided
-  let courseTitleToUse = courseTitle
-  if (!courseTitleToUse) {
-    const { data: course } = await supabase
-      .from("courses")
-      .select("title")
-      .eq("id", courseId)
-      .single()
-    courseTitleToUse = course?.title || "Course Enrollment"
+  // Fetch course with price and title
+  const { data: course, error: courseError } = await supabase
+    .from("courses")
+    .select("title, price")
+    .eq("id", courseId)
+    .single()
+
+  if (courseError || !course) {
+    return NextResponse.json({ error: "Course not found" }, { status: 404 })
   }
 
-  // Get platform settings and user currency
-  const platformCurrency = await getPlatformSettings()
+  const courseTitleToUse = courseTitle || course.title || "Course Enrollment"
+  const coursePrice = course.price || 0
+
+  // Get platform currency setting
+  const { data: platformSettings } = await supabase
+    .from("platform_settings")
+    .select("default_currency")
+    .single()
+
+  const platformCurrency = platformSettings?.default_currency || "USD"
+
+  // Get user's currency preference
   const { data: profile } = await supabase
     .from("profiles")
     .select("currency")
@@ -45,9 +45,8 @@ export async function POST(request: Request) {
 
   const userCurrency = profile?.currency || "USD"
 
-  // Convert from platform currency to user's currency
-  const exchangeRate = await convertCurrency(1, platformCurrency, userCurrency)
-  const convertedAmount = amount * exchangeRate
+  // Convert course price from platform currency to user currency
+  const convertedAmount = await convertCurrency(coursePrice, platformCurrency, userCurrency)
 
   // Determine payment gateway
   const gateway = userCurrency === "NGN" ? "flutterwave" : "stripe"
@@ -84,9 +83,8 @@ export async function POST(request: Request) {
         gateway: "stripe",
         amount: convertedAmount,
         currency: userCurrency,
-        platformAmount: amount,
-        platformCurrency: platformCurrency,
-        exchangeRate,
+        originalAmount: coursePrice,
+        originalCurrency: platformCurrency,
       })
     } else {
       // Flutterwave - Only email is required, name is optional
@@ -107,8 +105,8 @@ export async function POST(request: Request) {
         metadata: {
           userId: user.id,
           courseId: courseId.toString(),
-          amount: amount.toString(),
-          platformCurrency: platformCurrency,
+          originalAmount: coursePrice.toString(),
+          originalCurrency: platformCurrency,
         },
       })
 
@@ -118,9 +116,8 @@ export async function POST(request: Request) {
         txRef,
         amount: convertedAmount,
         currency: userCurrency,
-        platformAmount: amount,
-        platformCurrency: platformCurrency,
-        exchangeRate,
+        originalAmount: coursePrice,
+        originalCurrency: platformCurrency,
       })
     }
   } catch (error: any) {

@@ -15,10 +15,9 @@ import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useClientAuthState } from "@/utils/client-auth"
-import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useProfile } from "@/lib/react-query/hooks"
-import { usePlatformSettings } from "@/lib/react-query/hooks/usePlatformSettings"
+import { useCourse, useEnrollments, useEnrollCourse, useRealtimeCourseEnrollments, useSettings, useProfile, useCoursePrice } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
-import { formatCurrency, convertAndFormatCurrency } from "@/lib/utils/currency"
+import { formatCurrency } from "@/lib/utils/currency"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -97,7 +96,7 @@ export default function CoursePage() {
   // Use React Query hooks for data fetching
   const { data: courseData, isPending: coursePending, error: courseError } = useCourse(id)
   const { data: enrollmentsData } = useEnrollments()
-  const { data: platformSettings } = usePlatformSettings()
+  const { data: settingsData } = useSettings()
   const { data: profileData } = useProfile()
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
@@ -188,59 +187,25 @@ export default function CoursePage() {
     title: "Course Instructor"
       }]
 
-  // Get user's currency preference, fallback to platform default
-  const userCurrency = profileData?.profile?.currency || "USD"
-  const platformDefaultCurrency = platformSettings?.default_currency || "USD"
-  const displayCurrency = userCurrency // User preference overrides platform default
-  const settingsLoaded = !!platformSettings
-
   // Get actual enrollment mode from course settings
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
   const coursePrice = course?.settings?.enrollment?.price || 0
 
-  // Convert course price from platform currency to display currency
-  const [convertedPrice, setConvertedPrice] = useState<string>("Free")
-  const [priceLoading, setPriceLoading] = useState(false)
-
-  useEffect(() => {
-    // Don't convert until settings are loaded
-    if (!settingsLoaded) {
-      setConvertedPrice(enrollmentMode === "free" ? "Free" : "...")
-      setPriceLoading(false)
-      return
-    }
-
-    if (enrollmentMode === "free") {
-      setConvertedPrice("Free")
-      setPriceLoading(false)
-    } else if (coursePrice > 0) {
-      // If currencies are the same, just format
-      if (platformDefaultCurrency === displayCurrency) {
-        setConvertedPrice(formatCurrency(coursePrice, displayCurrency))
-        setPriceLoading(false)
-        return
-      }
-
-      setPriceLoading(true)
-      convertAndFormatCurrency(coursePrice, platformDefaultCurrency, displayCurrency)
-        .then((formattedPrice) => {
-          setConvertedPrice(formattedPrice)
-          setPriceLoading(false)
-        })
-        .catch(() => {
-          // Fallback: just format without conversion
-          setConvertedPrice(formatCurrency(coursePrice, displayCurrency))
-          setPriceLoading(false)
-        })
-    }
-  }, [coursePrice, platformDefaultCurrency, displayCurrency, enrollmentMode, settingsLoaded])
+  // Use the new course price hook for consistent currency conversion
+  const coursePriceInfo = useCoursePrice(coursePrice)
 
   const getAccessDetails = () => {
-    const displayPrice = priceLoading ? "..." : convertedPrice
+    if (!coursePriceInfo) {
+      return {
+        price: "...",
+        buttonText: "Loading...",
+        access: "Loading...",
+      }
+    }
 
     if (isCompleted) {
       return {
-        price: enrollmentMode === "free" ? "Free" : displayPrice,
+        price: enrollmentMode === "free" ? "Free" : coursePriceInfo.formattedDisplayPrice,
         buttonText: "View Summary",
         access: "Full access for 3 months",
       }
@@ -248,7 +213,7 @@ export default function CoursePage() {
 
     if (isEnrolled) {
       return {
-        price: enrollmentMode === "free" ? "Free" : displayPrice,
+        price: enrollmentMode === "free" ? "Free" : coursePriceInfo.formattedDisplayPrice,
         buttonText: "Continue",
         access: "Full access for 3 months",
       }
@@ -263,7 +228,7 @@ export default function CoursePage() {
         }
       case "buy":
         return {
-          price: displayPrice,
+          price: coursePriceInfo.formattedDisplayPrice,
           buttonText: "Buy",
           access: "Full access for 3 months",
         }
@@ -359,7 +324,6 @@ export default function CoursePage() {
         const success = await handleCoursePayment(
           Number.parseInt(id),
           enrollmentMode as "buy",
-          coursePrice,
           course?.title || "",
           user
         )

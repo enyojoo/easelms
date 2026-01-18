@@ -13,11 +13,10 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
-import { useEnrollCourse, useProgress, useProfile } from "@/lib/react-query/hooks"
-import { usePlatformSettings } from "@/lib/react-query/hooks/usePlatformSettings"
+import { useEnrollCourse, useProgress, useCoursePrice } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { formatCurrency, convertAndFormatCurrency } from "@/lib/utils/currency"
+import { formatCurrency } from "@/lib/utils/currency"
 
 interface CourseCardProps {
   course: Module
@@ -48,62 +47,12 @@ export default function CourseCard({
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   const { data: progressData } = useProgress(course.id)
-  const { data: platformSettings } = usePlatformSettings()
-  const { data: profileData } = useProfile()
-
-  // Get user's currency preference, fallback to platform default
-  const userCurrency = profileData?.profile?.currency || "USD"
-  const platformDefaultCurrency = platformSettings?.default_currency || "USD"
-  const displayCurrency = userCurrency // User preference overrides platform default
-  const settingsLoaded = !!platformSettings
-
-  // Convert course price from platform currency to display currency
-  const [convertedPrice, setConvertedPrice] = useState<string>("Free")
-  const [priceLoading, setPriceLoading] = useState(false)
+  const coursePriceInfo = useCoursePrice(course.price || course.settings?.enrollment?.price || 0)
 
   useEffect(() => {
     const authState = getClientAuthState()
     setUser(authState.user)
   }, [])
-
-  // Convert course price when data changes
-  useEffect(() => {
-    // Don't convert until settings are loaded
-    if (!settingsLoaded) {
-      setConvertedPrice("Free")
-      setPriceLoading(false)
-      return
-    }
-
-    const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
-    const price = course.settings?.enrollment?.price || course.price || 0
-
-    if (enrollmentMode === "free" || price === 0) {
-      setConvertedPrice("Free")
-      setPriceLoading(false)
-      return
-    }
-
-    // If currencies are the same, just format
-    if (platformDefaultCurrency === displayCurrency) {
-      setConvertedPrice(formatCurrency(price, displayCurrency))
-      setPriceLoading(false)
-      return
-    }
-
-    setPriceLoading(true)
-    convertAndFormatCurrency(price, platformDefaultCurrency, displayCurrency)
-      .then((formattedPrice) => {
-        setConvertedPrice(formattedPrice)
-        setPriceLoading(false)
-      })
-      .catch((error) => {
-        console.warn('Currency conversion failed, using fallback:', error)
-        // Fallback: show price in display currency (assuming it's already in that currency)
-        setConvertedPrice(formatCurrency(price, displayCurrency))
-        setPriceLoading(false)
-      })
-  }, [course.settings?.enrollment, course.price, platformDefaultCurrency, displayCurrency, settingsLoaded])
   
   // Check enrollment status using utility function
   const isEnrolled = isEnrolledInCourse(course.id, user) || enrolledCourseIds.includes(course.id)
@@ -346,7 +295,23 @@ export default function CourseCard({
           <div className="flex items-center">
             <Banknote className="w-4 h-4 mr-1" />
             <span>
-              {priceLoading ? "..." : convertedPrice}
+              {(() => {
+                const enrollmentMode = course.settings?.enrollment?.enrollmentMode
+
+                if (!coursePriceInfo) {
+                  return "..."
+                }
+
+                if (enrollmentMode === "buy" && coursePriceInfo.displayPrice > 0) {
+                  return coursePriceInfo.formattedDisplayPrice
+                } else if (enrollmentMode === "free") {
+                  return "Free"
+                } else if (coursePriceInfo.displayPrice > 0) {
+                  return coursePriceInfo.formattedDisplayPrice
+                } else {
+                  return "Free"
+                }
+              })()}
             </span>
           </div>
         </div>

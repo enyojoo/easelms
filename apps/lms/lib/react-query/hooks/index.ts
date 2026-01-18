@@ -10,6 +10,6 @@ export * from "./useUsers"
 export * from "./usePurchases"
 export * from "./useProfile"
 export * from "./useSettings"
-export * from "./usePlatformSettings"
 export * from "./useBrandSettings"
+export * from "./useCoursePrice"
 

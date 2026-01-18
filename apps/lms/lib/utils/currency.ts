@@ -21,31 +21,6 @@ export function formatCurrency(amount: number, currency: string): string {
 }
 
 /**
- * Convert and format currency from one currency to another
- * @param amount - Amount in source currency
- * @param fromCurrency - Source currency code
- * @param toCurrency - Target currency code
- * @returns Formatted string in target currency
- */
-export async function convertAndFormatCurrency(amount: number, fromCurrency: string, toCurrency: string): Promise<string> {
-  // Handle free courses
-  if (amount === 0 || amount === undefined || amount === null) {
-    return 'Free'
-  }
-
-  // If same currency, just format
-  if (fromCurrency === toCurrency) {
-    return formatCurrency(amount, toCurrency)
-  }
-
-  // Convert amount
-  const convertedAmount = await convertCurrency(amount, fromCurrency, toCurrency)
-
-  // Format in target currency
-  return formatCurrency(convertedAmount, toCurrency)
-}
-
-/**
  * Get currency symbol for a given currency code
  */
 export function getCurrencySymbol(currency: string): string {
