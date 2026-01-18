@@ -9,7 +9,7 @@ import { ShoppingBag, Calendar } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { createCourseSlug } from "@/lib/slug"
-import { formatCurrency, getCurrencySymbol } from "@/lib/utils/currency"
+import { formatCurrency } from "@/lib/utils/currency"
 import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
 import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchases"
 import { usePurchasePrice } from "@/lib/react-query/hooks/useCoursePrice"
@@ -137,7 +137,7 @@ export default function PurchaseHistoryPage() {
                           <div className="space-y-2 text-xs md:text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium flex-shrink-0">
-                                {getCurrencySymbol(purchase.currency)}
+                                Amount:
                               </span>
                               <span className="break-words">
                                 {formatCurrency(purchase.amount, purchase.currency)}
