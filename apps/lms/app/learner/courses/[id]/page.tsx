@@ -134,6 +134,26 @@ export default function CoursePage() {
     }
   }, [id, enrollmentsData])
 
+  // Handle payment status messages from redirects
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const paymentStatus = searchParams.get("payment")
+
+    if (paymentStatus === "canceled") {
+      toast.error("Payment was canceled. You can try again when ready.")
+      // Clean up the URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete("payment")
+      window.history.replaceState({}, "", url.toString())
+    } else if (paymentStatus === "failed") {
+      toast.error("Payment failed. Please try again or contact support.")
+      // Clean up the URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete("payment")
+      window.history.replaceState({}, "", url.toString())
+    }
+  }, [])
+
   // Get enrollment count from course data (total enrollments for the course)
   const enrollmentCount = course?.enrolledStudents || 0
 
@@ -333,17 +353,24 @@ export default function CoursePage() {
         // Prerequisites will be checked in payment webhook after successful payment
 
         // handleCoursePayment will redirect to payment gateway
-        // Success/failure will be handled by payment callbacks/webhooks
-        await handleCoursePayment(
-          Number.parseInt(id),
-          enrollmentMode as "buy",
-          course?.title || "",
-          user
-        )
-        // If we reach here, handleCoursePayment failed before redirect
-        // (e.g., API error), so show error and don't enroll
-        toast.error("Failed to initiate payment. Please try again.")
-        setIsEnrolling(false)
+        // Success means user is being redirected to payment - don't show error
+        // Only show error if the API call actually fails
+        try {
+          await handleCoursePayment(
+            Number.parseInt(id),
+            enrollmentMode as "buy",
+            course?.title || "",
+            user
+          )
+          // If we reach here without error, payment initiation succeeded
+          // User will be redirected to payment gateway
+          // Don't set isEnrolling to false - let the redirect happen
+        } catch (paymentError) {
+          // Only show error if payment initiation actually failed
+          console.error("Payment initiation failed:", paymentError)
+          toast.error("Failed to initiate payment. Please try again.")
+          setIsEnrolling(false)
+        }
       }
     } catch (error) {
       console.error("Error enrolling in course:", error)

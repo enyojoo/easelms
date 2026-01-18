@@ -13,6 +13,7 @@ import type { Module } from "@/data/courses"
 import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils/enrollment"
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
+import { toast } from "sonner"
 import { useEnrollCourse, useProgress, useCoursePrice } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -119,16 +120,25 @@ export default function CourseCard({
         // For paid courses, handle payment directly
         const coursePrice = course.settings?.enrollment?.price || course.price || 0
         // handleCoursePayment will redirect to payment gateway
-        // Success/failure will be handled by payment callbacks
-        await handleCoursePayment(
-          course.id,
-          enrollmentMode as "buy",
-          coursePrice,
-          course.title,
-          user
-        )
-        // If we reach here, handleCoursePayment failed before redirect
-        // Don't enroll or redirect - payment callbacks will handle success
+        // Success means user is being redirected to payment - don't show error
+        // Only show error if the API call actually fails
+        try {
+          await handleCoursePayment(
+            course.id,
+            enrollmentMode as "buy",
+            coursePrice,
+            course.title,
+            user
+          )
+          // If we reach here without error, payment initiation succeeded
+          // User will be redirected to payment gateway
+          // Don't set isEnrolling to false - let the redirect happen
+        } catch (paymentError) {
+          // Only show error if payment initiation actually failed
+          console.error("Payment initiation failed:", paymentError)
+          toast.error("Failed to initiate payment. Please try again.")
+          setIsEnrolling(false)
+        }
       }
     } catch (error) {
       console.error("Error enrolling in course:", error)

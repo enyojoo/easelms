@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -29,6 +30,27 @@ export default function CoursesPage() {
   const [dashboardUser, setDashboardUser] = useState<User | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [sortBy, setSortBy] = useState("relevance")
+
+  // Handle payment status messages from redirects
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const paymentStatus = searchParams.get("payment")
+    const errorStatus = searchParams.get("error")
+
+    if (paymentStatus === "canceled") {
+      toast.error("Payment was canceled. You can try again when ready.")
+      // Clean up the URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete("payment")
+      window.history.replaceState({}, "", url.toString())
+    } else if (errorStatus === "payment_failed") {
+      toast.error("Payment failed. Please try again or contact support.")
+      // Clean up the URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete("error")
+      window.history.replaceState({}, "", url.toString())
+    }
+  }, [])
 
   // Use React Query hooks for data fetching
   const { data: coursesData, isPending: coursesPending, error: coursesError } = useCourses()
