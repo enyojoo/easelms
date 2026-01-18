@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShoppingBag, Calendar, DollarSign } from "lucide-react"
+import { ShoppingBag, Calendar } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { createCourseSlug } from "@/lib/slug"
-import { formatCurrency } from "@/lib/utils/currency"
+import { formatCurrency, getCurrencySymbol } from "@/lib/utils/currency"
 import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
 import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchases"
 import { usePurchasePrice } from "@/lib/react-query/hooks/useCoursePrice"
@@ -136,7 +136,9 @@ export default function PurchaseHistoryPage() {
                           </div>
                           <div className="space-y-2 text-xs md:text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
-                              <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                              <span className="text-sm font-medium flex-shrink-0">
+                                {getCurrencySymbol(purchase.currency)}
+                              </span>
                               <span className="break-words">
                                 {formatCurrency(purchase.amount, purchase.currency)}
                               </span>
