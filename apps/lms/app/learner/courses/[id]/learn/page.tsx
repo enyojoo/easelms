@@ -366,9 +366,10 @@ export default function CourseLearningPage() {
       }
 
       enrollAndCreatePayment()
+      return // Don't run the enrollment check below when processing payment success
     }
 
-    // Normal enrollment check (only if we have enrollment data)
+    // Normal enrollment check (only if we have enrollment data and not processing payment)
     // Don't redirect if enrollment data is still loading (enrollment might be in progress)
     if (enrollmentsPending) return
 
@@ -376,12 +377,10 @@ export default function CourseLearningPage() {
     if (!enrollmentsData?.enrollments) return
 
     const enrollment = enrollmentsData.enrollments.find((e: any) => e.course_id === courseId)
-    
+
     if (!enrollment) {
-      // Only redirect if payment was not successful (to avoid redirect loop)
-      if (!paymentSuccess) {
-        router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
-      }
+      // User is not enrolled and not processing payment success - redirect to course page
+      router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)
     }
   }, [id, enrollmentsData, enrollmentsPending, course, router, paymentSuccess, queryClient])
 
