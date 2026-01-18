@@ -26,6 +26,7 @@ export default function PaymentPage() {
   // Prevent multiple payment processing
   const processingStartedRef = useRef(false)
   const processingCompletedRef = useRef(false)
+  const processingInProgressRef = useRef(false)
 
   // Get parameters from URL
   const paymentStatus = searchParams.get("status") // "success" or "error"
@@ -33,28 +34,20 @@ export default function PaymentPage() {
   const courseId = searchParams.get("courseId")
   const reason = searchParams.get("reason")
 
-  // Early return if already processed
-  if (processingCompletedRef.current) {
-    console.log("Component already processed payment, skipping render logic")
-  }
-
   useEffect(() => {
-    // Prevent multiple processing - check if already started or completed
-    if (processingStartedRef.current || status !== "processing") {
-      console.log("Payment processing already started or completed, skipping...")
+    // Prevent multiple processing
+    if (processingStartedRef.current) {
       return
     }
 
-    console.log("Payment page useEffect triggered:", { paymentStatus, gateway, courseId, status })
+    // Wait for auth to load
+    if (authLoading) return
 
     // Redirect if not authenticated
-    if (!authLoading && !user) {
+    if (!user) {
       router.push("/auth/learner/login")
       return
     }
-
-    // If user is still loading, wait
-    if (authLoading || !user) return
 
     // If no courseId, redirect to courses
     if (!courseId) {
@@ -62,30 +55,32 @@ export default function PaymentPage() {
       return
     }
 
+    // Mark as started to prevent any future runs
+    processingStartedRef.current = true
+
     // Handle payment error
     if (paymentStatus === "error") {
       setStatus("error")
       setError(reason || "Payment failed")
-      processingStartedRef.current = true // Mark as processed even for errors
       return
     }
 
     // Handle payment success
     if (paymentStatus === "success" && gateway) {
-      processingStartedRef.current = true
-      console.log("Starting payment success processing...")
       processPaymentSuccess()
     } else {
       router.push("/learner/courses")
     }
-  }, [authLoading, user, paymentStatus, gateway, courseId, reason]) // Removed 'status' from deps to prevent re-runs
+  }, []) // Empty dependency array - run only once on mount // Removed 'status' from deps to prevent re-runs
 
   const processPaymentSuccess = async () => {
-    // Double-check processing hasn't started elsewhere
-    if (processingCompletedRef.current) {
-      console.log("Payment processing already completed, skipping...")
+    // Prevent duplicate processing
+    if (processingCompletedRef.current || processingInProgressRef.current) {
+      console.log("Payment processing already completed or in progress, skipping...")
       return
     }
+
+    processingInProgressRef.current = true
 
     try {
       console.log("Processing payment success for course:", courseId, "gateway:", gateway)
@@ -159,12 +154,14 @@ export default function PaymentPage() {
       }
 
       processingCompletedRef.current = true
+      processingInProgressRef.current = false
       setStatus("success")
       toast.success("Payment successful! You are now enrolled in this course.")
 
     } catch (error: any) {
       console.error("Payment processing failed:", error)
       processingCompletedRef.current = true
+      processingInProgressRef.current = false
       setStatus("error")
       setError(error.message || "Failed to process payment")
     }
