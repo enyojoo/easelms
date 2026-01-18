@@ -7,6 +7,8 @@ export async function POST(request: Request) {
     const serviceSupabase = createServiceRoleClient()
     const { courseId, userId, amount, gateway } = await request.json()
 
+    console.log("Record payment API called:", { courseId, userId, amount, gateway })
+
     if (!courseId || !userId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
@@ -136,7 +138,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create payment record" }, { status: 500 })
     }
 
-    console.log("Payment record created:", {
+    console.log("Payment record created successfully:", {
+      id: paymentData.id,
       gateway,
       originalAmount,
       originalCurrency,

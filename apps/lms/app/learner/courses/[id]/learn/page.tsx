@@ -321,6 +321,15 @@ export default function CourseLearningPage() {
 
     const courseId = parseInt(id)
 
+    // If payment was successful, immediately replace history to prevent back button to payment gateway
+    if (paymentSuccess) {
+      // Replace current history entry to remove payment gateway from back button
+      const url = new URL(window.location.href)
+      url.searchParams.delete("payment")
+      url.searchParams.delete("gateway") // Also remove gateway param
+      window.history.replaceState({}, "", url.toString())
+    }
+
     // If payment was successful, enroll the user and create payment record (like webhooks do)
     if (paymentSuccess) {
       // For testing purposes, simulate webhook behavior: enroll user and create payment record
@@ -331,6 +340,7 @@ export default function CourseLearningPage() {
           const gateway = searchParams.get("gateway") || "unknown"
 
           // Enroll the user (like webhooks do)
+          // Note: Enrollment API automatically sends enrollment emails
           await enrollCourseMutation.mutateAsync(courseId)
 
           // Create payment record (simulating webhook behavior for testing)
@@ -347,7 +357,8 @@ export default function CourseLearningPage() {
           })
 
           if (!paymentResponse.ok) {
-            console.warn("Failed to create payment record, but enrollment succeeded")
+            const errorText = await paymentResponse.text()
+            console.error("Failed to create payment record:", paymentResponse.status, errorText)
           } else {
             // Get payment data for email sending
             const paymentData = await paymentResponse.json()
