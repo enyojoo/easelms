@@ -35,13 +35,13 @@ export function useEnrollments() {
 // Enroll in a course
 export function useEnrollCourse() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
-    mutationFn: async (courseId: number) => {
+    mutationFn: async ({ courseId, bypassPrerequisites = false }: { courseId: number; bypassPrerequisites?: boolean }) => {
       const response = await fetch("/api/enrollments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseId }),
+        body: JSON.stringify({ courseId, bypassPrerequisites }),
       })
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))

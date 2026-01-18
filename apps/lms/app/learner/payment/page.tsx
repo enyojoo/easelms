@@ -97,7 +97,10 @@ export default function PaymentPage() {
       console.log("Enrolling user in course:", courseId)
       let enrollmentResult
       try {
-        enrollmentResult = await enrollCourseMutation.mutateAsync(parseInt(courseId))
+        enrollmentResult = await enrollCourseMutation.mutateAsync({
+          courseId: parseInt(courseId),
+          bypassPrerequisites: true // Bypass prerequisites for paid courses
+        })
         console.log("Enrollment created:", enrollmentResult)
       } catch (enrollmentError: any) {
         console.log("Enrollment error:", enrollmentError)
@@ -111,44 +114,52 @@ export default function PaymentPage() {
         }
       }
 
-      // Create payment record
-      console.log("Creating payment record")
-      const paymentResponse = await fetch("/api/payments/record-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          courseId: courseId,
-          userId: user?.id,
-          amount: courseData.course?.price || 0,
-          gateway: gateway
-        })
-      })
-
-      if (!paymentResponse.ok) {
-        const errorText = await paymentResponse.text()
-        console.error("Failed to create payment record:", paymentResponse.status, errorText)
-        // Don't fail the whole process for payment record issues
+      // Create payment record (skip for Stripe - handled by webhook)
+      let paymentData = null
+      if (gateway === "stripe") {
+        console.log("Skipping payment record creation for Stripe - handled by webhook")
+        // For Stripe, payment record and email are handled by the webhook
+        // We only need to handle enrollment here
       } else {
-        const paymentData = await paymentResponse.json()
-        console.log("Payment record created:", paymentData)
+        // For Flutterwave and other gateways, create the payment record
+        console.log("Creating payment record for", gateway)
+        const paymentResponse = await fetch("/api/payments/record-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId: courseId,
+            userId: user?.id,
+            amount: courseData.course?.price || 0,
+            gateway: gateway
+          })
+        })
 
-        // Send payment confirmation email
-        if (paymentData.payment?.id) {
-          try {
-            const emailResponse = await fetch("/api/send-email-notification", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                type: "payment",
-                paymentId: paymentData.payment.id,
-                status: "completed",
-              }),
-            })
-            if (!emailResponse.ok) {
-              console.warn("Payment confirmation email failed to send")
+        if (!paymentResponse.ok) {
+          const errorText = await paymentResponse.text()
+          console.error("Failed to create payment record:", paymentResponse.status, errorText)
+          // Don't fail the whole process for payment record issues
+        } else {
+          paymentData = await paymentResponse.json()
+          console.log("Payment record created:", paymentData)
+
+          // Send payment confirmation email
+          if (paymentData.payment?.id) {
+            try {
+              const emailResponse = await fetch("/api/send-email-notification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type: "payment",
+                  paymentId: paymentData.payment.id,
+                  status: "completed",
+                }),
+              })
+              if (!emailResponse.ok) {
+                console.warn("Payment confirmation email failed to send")
+              }
+            } catch (emailError) {
+              console.warn("Payment confirmation email error:", emailError)
             }
-          } catch (emailError) {
-            console.warn("Payment confirmation email error:", emailError)
           }
         }
       }

@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId, userId } = await request.json()
+  const { courseId, userId, bypassPrerequisites = false } = await request.json()
 
   // Use service role client for admin checks and enrollment operations to bypass RLS
   const serviceSupabase = createServiceRoleClient()
@@ -173,19 +173,20 @@ export async function POST(request: Request) {
     }, { status: 409 }) // 409 Conflict
   }
 
-  // Check prerequisites before enrollment
-  const { data: prerequisitesData } = await serviceSupabase
-    .from("course_prerequisites")
-    .select(`
-      prerequisite_course_id,
-      courses!course_prerequisites_prerequisite_course_id_fkey (
-        id,
-        title
-      )
-    `)
-    .eq("course_id", courseId)
+  // Check prerequisites before enrollment (skip for paid courses)
+  if (!bypassPrerequisites) {
+    const { data: prerequisitesData } = await serviceSupabase
+      .from("course_prerequisites")
+      .select(`
+        prerequisite_course_id,
+        courses!course_prerequisites_prerequisite_course_id_fkey (
+          id,
+          title
+        )
+      `)
+      .eq("course_id", courseId)
 
-  if (prerequisitesData && prerequisitesData.length > 0) {
+    if (prerequisitesData && prerequisitesData.length > 0) {
     // Get prerequisite course IDs
     const prerequisiteIds = prerequisitesData.map((p: any) => p.prerequisite_course_id)
 
@@ -217,14 +218,15 @@ export async function POST(request: Request) {
         }
       })
 
-    if (missingPrerequisites.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Prerequisites not met",
-          missingPrerequisites,
-        },
-        { status: 400 }
-      )
+      if (missingPrerequisites.length > 0) {
+        return NextResponse.json(
+          {
+            error: "Prerequisites not met",
+            missingPrerequisites,
+          },
+          { status: 400 }
+        )
+      }
     }
   }
 

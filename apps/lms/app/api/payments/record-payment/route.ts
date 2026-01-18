@@ -61,14 +61,21 @@ export async function POST(request: Request) {
       // The course price is in platformCurrency, payment was made in userCurrency
       originalAmount = coursePrice
       originalCurrency = platformCurrency
-      paymentAmount = coursePrice // For Flutterwave, payment amount equals course price
+
+      // Convert course price from platform currency to user's preferred currency
+      try {
+        paymentAmount = await convertCurrency(coursePrice, platformCurrency, userCurrency)
+      } catch (conversionError) {
+        console.warn("Currency conversion failed, using course price as payment amount:", conversionError)
+        paymentAmount = coursePrice // Fallback if conversion fails
+      }
       paymentCurrency = userCurrency
 
       // Convert payment amount to USD for reporting
       try {
         amountUSD = await convertCurrency(paymentAmount, paymentCurrency, "USD")
       } catch (conversionError) {
-        console.warn("Currency conversion failed, using fallback:", conversionError)
+        console.warn("USD conversion failed, using payment amount:", conversionError)
         amountUSD = paymentAmount // Fallback if conversion fails
       }
 
