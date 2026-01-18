@@ -14,7 +14,7 @@ import { isEnrolledInCourse, enrollInCourse, handleCoursePayment } from "@/utils
 import { useState, useEffect } from "react"
 import { getClientAuthState } from "@/utils/client-auth"
 import { toast } from "sonner"
-import { useEnrollCourse, useProgress, useCoursePrice } from "@/lib/react-query/hooks"
+import { useEnrollCourse, useProgress, useCoursePrice, useSettings } from "@/lib/react-query/hooks"
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { formatCurrency } from "@/lib/utils/currency"
@@ -48,6 +48,7 @@ export default function CourseCard({
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
   const { data: progressData } = useProgress(course.id)
+  const { data: settingsData } = useSettings()
   const coursePrice = course.price || course.settings?.enrollment?.price || 0
   const coursePriceInfo = useCoursePrice(coursePrice)
 
@@ -310,9 +311,10 @@ export default function CourseCard({
                 if (!coursePriceInfo) {
                   // Show platform currency price while loading conversion
                   const platformPrice = course.price || course.settings?.enrollment?.price || 0
+                  const platformCurrency = settingsData?.platformSettings?.default_currency || "USD"
                   if (platformPrice > 0) {
-                    // Show properly formatted currency while loading (assume USD as fallback)
-                    return formatCurrency(platformPrice, "USD")
+                    // Show properly formatted currency while loading
+                    return formatCurrency(platformPrice, platformCurrency)
                   }
                   return "Free"
                 }

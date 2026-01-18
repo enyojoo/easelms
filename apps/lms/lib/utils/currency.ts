@@ -9,6 +9,15 @@ export function formatCurrency(amount: number, currency: string): string {
     return 'Free'
   }
 
+  // For currencies with custom symbols that Intl.NumberFormat doesn't handle well
+  const currencyCode = currency.toUpperCase()
+  if (currencyCode === 'NGN') {
+    return `₦${amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
+
   // Format currency using Intl.NumberFormat for proper localization
   // Show 2 decimal places for most currencies, but allow flexibility
   const formatter = new Intl.NumberFormat('en-US', {
