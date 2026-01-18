@@ -35,36 +35,22 @@ export default function PaymentPage() {
   const reason = searchParams.get("reason")
 
   useEffect(() => {
-    console.log("Payment page useEffect running:", {
-      processingStarted: processingStartedRef.current,
-      authLoading,
-      user: !!user,
-      paymentStatus,
-      gateway,
-      courseId
-    })
-
     // Prevent multiple processing
     if (processingStartedRef.current) {
-      console.log("Processing already started, skipping")
       return
     }
 
     // If no courseId, redirect to courses
     if (!courseId) {
-      console.log("No courseId, redirecting to courses")
       router.push("/learner/courses")
       return
     }
-
-    console.log("All checks passed, processing payment")
 
     // Mark as started to prevent any future runs
     processingStartedRef.current = true
 
     // Handle payment error
     if (paymentStatus === "error") {
-      console.log("Setting error status")
       setStatus("error")
       setError(reason || "Payment failed")
       return
@@ -72,27 +58,21 @@ export default function PaymentPage() {
 
     // Handle payment success
     if (paymentStatus === "success" && gateway) {
-      console.log("Starting payment success processing for gateway:", gateway, "courseId:", courseId)
       processPaymentSuccess()
     } else {
-      console.log("Invalid parameters - status:", paymentStatus, "gateway:", gateway, "courseId:", courseId, "redirecting to courses")
       router.push("/learner/courses")
     }
   }, []) // Empty dependency array - run only once on mount // Removed 'status' from deps to prevent re-runs
 
   const processPaymentSuccess = async () => {
-    console.log("processPaymentSuccess called for gateway:", gateway)
-
     // Prevent duplicate processing
     if (processingCompletedRef.current || processingInProgressRef.current) {
-      console.log("Payment processing already completed or in progress, skipping...")
       return
     }
 
     processingInProgressRef.current = true
 
     try {
-      console.log("Processing payment success for course:", courseId, "gateway:", gateway)
 
       // First, fetch course details
       const courseResponse = await fetch(`/api/courses/${courseId}`)
@@ -183,12 +163,10 @@ export default function PaymentPage() {
         }
       }
 
-      console.log("Payment processing completed successfully, setting status to success")
       processingCompletedRef.current = true
       processingInProgressRef.current = false
       setStatus("success")
       toast.success("Payment successful! You are now enrolled in this course.")
-      console.log("Status set to success, UI should update")
 
     } catch (error: any) {
       console.error("Payment processing failed:", error)
