@@ -360,7 +360,8 @@ export default function CoursePage() {
             Number.parseInt(id),
             enrollmentMode as "buy",
             course?.title || "",
-            user
+            user,
+            "course-detail"
           )
           // If we reach here without error, payment initiation succeeded
           // User will be redirected to payment gateway

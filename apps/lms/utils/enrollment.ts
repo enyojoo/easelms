@@ -150,7 +150,8 @@ export function handleCoursePayment(
   courseId: number,
   enrollmentMode: "buy",
   courseTitle?: string,
-  user?: any
+  user?: any,
+  referrer?: "courses-list" | "course-detail"
 ): Promise<boolean> {
   return new Promise(async (resolve, reject) => {
     try {
@@ -164,6 +165,7 @@ export function handleCoursePayment(
           courseId,
           enrollmentMode,
           courseTitle: courseTitle || `Course ${courseId}`,
+          referrer,
         }),
       })
 

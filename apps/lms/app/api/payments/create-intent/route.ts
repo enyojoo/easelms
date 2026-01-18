@@ -12,9 +12,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { courseId, enrollmentMode, courseTitle } = await request.json()
+  const { courseId, enrollmentMode, courseTitle, referrer } = await request.json()
 
-  console.log("Payment create-intent request:", { courseId, enrollmentMode, courseTitle, userId: user.id })
+  console.log("Payment create-intent request:", { courseId, enrollmentMode, courseTitle, referrer, userId: user.id })
+
+  // Determine redirect URLs based on referrer
+  const cancelUrl = referrer === "courses-list"
+    ? `${baseUrl}/learner/courses?payment=canceled`
+    : `${baseUrl}/learner/courses/${courseId}?payment=canceled`
 
   // Validate courseId
   if (!courseId || isNaN(Number(courseId))) {
@@ -91,8 +96,8 @@ export async function POST(request: Request) {
           originalAmount: coursePrice.toString(),
           originalCurrency: platformCurrency,
         },
-        `${baseUrl}/api/payments/callback/stripe?success=true&courseId=${courseId}`,
-        `${baseUrl}/learner/courses/${courseId}?canceled=true`,
+        `${baseUrl}/api/payments/callback/stripe?success=true&courseId=${courseId}&referrer=${referrer}`,
+        cancelUrl,
         user.email!, // Required: customer email
         courseTitleToUse
       )
@@ -113,7 +118,7 @@ export async function POST(request: Request) {
         currency: userCurrency,
         email: user.email!, // Required
         tx_ref: txRef,
-        callback_url: `${baseUrl}/api/payments/callback/flutterwave?courseId=${courseId}`,
+        callback_url: `${baseUrl}/api/payments/callback/flutterwave?courseId=${courseId}&referrer=${referrer}`,
         customer: {
           ...(customerName && { name: customerName }), // Optional
         },

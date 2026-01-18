@@ -40,8 +40,9 @@ export async function GET(request: Request) {
   try {
     console.log('Flutterwave callback received:', { status, transactionId, txRef, searchParams: Object.fromEntries(searchParams) })
 
-    // Extract courseId early for redirects (needed for both success and cancel cases)
+    // Extract courseId and referrer early for redirects (needed for both success and cancel cases)
     let redirectCourseId = searchParams.get("courseId")
+    const referrer = searchParams.get("referrer")
 
     // Fallback: extract from tx_ref format: tx_${timestamp}_${userId}_${courseId}
     if (!redirectCourseId && txRef) {
@@ -96,10 +97,18 @@ export async function GET(request: Request) {
       }
     } else {
       console.log('Flutterwave payment not successful:', status)
-      // Redirect back to course view page with cancel parameter
-      const redirectUrl = redirectCourseId
-        ? `${baseUrl}/learner/courses/${redirectCourseId}?payment=canceled`
-        : `${baseUrl}/learner/courses?error=payment_failed`
+      // Redirect based on referrer (where payment was initiated from)
+      let redirectUrl = `${baseUrl}/learner/courses?error=payment_failed` // fallback
+
+      if (referrer === "courses-list") {
+        redirectUrl = `${baseUrl}/learner/courses?payment=canceled`
+      } else if (referrer === "course-detail" && redirectCourseId) {
+        redirectUrl = `${baseUrl}/learner/courses/${redirectCourseId}?payment=canceled`
+      } else if (redirectCourseId) {
+        // Default to course detail if courseId available but referrer unknown
+        redirectUrl = `${baseUrl}/learner/courses/${redirectCourseId}?payment=canceled`
+      }
+
       return NextResponse.redirect(redirectUrl)
     }
 

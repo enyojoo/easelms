@@ -127,9 +127,9 @@ export default function CourseCard({
           await handleCoursePayment(
             course.id,
             enrollmentMode as "buy",
-            coursePrice,
             course.title,
-            user
+            user,
+            "courses-list"
           )
           // If we reach here without error, payment initiation succeeded
           // User will be redirected to payment gateway
