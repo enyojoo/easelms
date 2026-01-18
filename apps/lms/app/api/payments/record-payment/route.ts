@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/server"
+import { convertCurrency } from "@/lib/payments/currency"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
@@ -57,13 +58,21 @@ export async function POST(request: Request) {
     if (gateway === "flutterwave") {
       // For Flutterwave, user paid in their preferred currency
       // The 'amount' passed is the course price in platform currency
-      // But the actual payment was in user currency
+      // But the actual payment was in user currency, so we need to convert
       originalAmount = coursePrice
       originalCurrency = platformCurrency
-      paymentAmount = coursePrice // For now, assume no conversion happened
-      paymentCurrency = platformCurrency
-      amountUSD = coursePrice // Simplified - should convert to USD
-      exchangeRate = 1
+      paymentAmount = coursePrice // For now, assume payment amount equals course price
+      paymentCurrency = userCurrency
+
+      // Convert payment amount to USD for reporting
+      try {
+        amountUSD = await convertCurrency(paymentAmount, paymentCurrency, "USD")
+      } catch (conversionError) {
+        console.warn("Currency conversion failed, using fallback:", conversionError)
+        amountUSD = paymentAmount // Fallback if conversion fails
+      }
+
+      exchangeRate = amountUSD / originalAmount || 1
     } else if (gateway === "stripe") {
       // For Stripe, payment was made in converted amount (typically USD or EUR)
       // The 'amount' passed should be the actual payment amount
@@ -71,15 +80,31 @@ export async function POST(request: Request) {
       originalCurrency = platformCurrency
       paymentAmount = amount // The actual amount paid
       paymentCurrency = userCurrency
-      amountUSD = amount // Assume Stripe payments are in USD
-      exchangeRate = paymentAmount / originalAmount || 1
+
+      // Convert payment amount to USD for reporting
+      try {
+        amountUSD = await convertCurrency(paymentAmount, paymentCurrency, "USD")
+      } catch (conversionError) {
+        console.warn("Currency conversion failed, using payment amount as USD:", conversionError)
+        amountUSD = paymentAmount // Fallback: assume it's already in USD
+      }
+
+      exchangeRate = amountUSD / originalAmount || 1
     } else {
       // Fallback for unknown gateways
       originalAmount = coursePrice
       originalCurrency = platformCurrency
       paymentAmount = amount
       paymentCurrency = userCurrency
-      amountUSD = amount
+
+      // Convert to USD for reporting
+      try {
+        amountUSD = await convertCurrency(paymentAmount, paymentCurrency, "USD")
+      } catch (conversionError) {
+        console.warn("Currency conversion failed, using payment amount:", conversionError)
+        amountUSD = paymentAmount
+      }
+
       exchangeRate = 1
     }
 
@@ -117,7 +142,8 @@ export async function POST(request: Request) {
       originalCurrency,
       paymentAmount,
       paymentCurrency,
-      amountUSD
+      amountUSD,
+      exchangeRate
     })
 
     return NextResponse.json({ success: true, payment: paymentData })
