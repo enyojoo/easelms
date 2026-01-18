@@ -298,7 +298,7 @@ export async function GET(request: Request) {
       console.log('Flutterwave payment successful, redirecting to learn page:', `${baseUrl}/learner/courses/${courseSlug}/learn?payment=success`)
 
       // Success! Redirect to learn page with payment=success flag
-      return NextResponse.redirect(`${baseUrl}/learner/courses/${courseSlug}/learn?payment=success`)
+      return NextResponse.redirect(`${baseUrl}/learner/courses/${courseSlug}/learn?payment=success&gateway=flutterwave`)
   } catch (error) {
     logError("Flutterwave verification error", error, {
       component: "payments/callback/flutterwave/route",

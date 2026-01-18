@@ -332,16 +332,21 @@ export default function CourseLearningPage() {
 
     // If payment was successful, enroll the user and create payment record (like webhooks do)
     if (paymentSuccess) {
+      console.log("Payment success detected, processing enrollment and payment record creation")
+
       // For testing purposes, simulate webhook behavior: enroll user and create payment record
       // In production, this should be handled by payment gateway webhooks only
       const enrollAndCreatePayment = async () => {
         try {
+          console.log("Starting enrollment and payment record creation")
           // Get gateway from URL parameters
           const gateway = searchParams.get("gateway") || "unknown"
 
           // Enroll the user (like webhooks do)
           // Note: Enrollment API automatically sends enrollment emails
-          await enrollCourseMutation.mutateAsync(courseId)
+          console.log("Calling enrollment mutation for courseId:", courseId)
+          const enrollmentResult = await enrollCourseMutation.mutateAsync(courseId)
+          console.log("Enrollment result:", enrollmentResult)
 
           // Create payment record (simulating webhook behavior for testing)
           // Note: In production, this should only be done by payment gateway webhooks
