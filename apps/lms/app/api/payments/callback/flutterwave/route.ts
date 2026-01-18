@@ -8,8 +8,24 @@ export async function GET(request: Request) {
   const status = searchParams.get("status")
   const transactionId = searchParams.get("transaction_id")
   const txRef = searchParams.get("tx_ref")
+  const courseId = searchParams.get("courseId")
+
+  console.log('Flutterwave callback called with params:', {
+    status,
+    transactionId,
+    txRef,
+    courseId,
+    allParams: Object.fromEntries(searchParams)
+  })
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  console.log('Base URL:', baseUrl)
+
+  // If no status/transactionId, this might be a direct redirect without payment completion
+  if (!status || !transactionId) {
+    console.log('Flutterwave callback called without payment parameters, redirecting to courses')
+    return NextResponse.redirect(`${baseUrl}/learner/courses`)
+  }
 
   // Handle failed payments (per Flutterwave Standard guide)
   if (status === "failed" || !transactionId) {
@@ -22,44 +38,57 @@ export async function GET(request: Request) {
   }
 
   try {
-    console.log('Flutterwave callback received:', { status, transactionId, txRef })
+    console.log('Flutterwave callback received:', { status, transactionId, txRef, searchParams: Object.fromEntries(searchParams) })
 
     // For testing/development, skip verification and create enrollment directly
     // In production, always verify transactions
     const isProduction = process.env.NODE_ENV === 'production'
 
     let verification = { data: { meta: {} } } // Default mock data
+    let shouldCreateEnrollment = false
 
-    if (isProduction) {
-      // Verify transaction with Flutterwave (per Flutterwave Standard guide)
-      try {
-        verification = await verifyTransaction(transactionId)
-        console.log('Flutterwave verification result:', verification)
+    if (status === 'successful') {
+      shouldCreateEnrollment = true
 
-        // Check verification response matches expected structure
-        if (!(verification.status === "success" && verification.data.status === "successful")) {
-          logWarning("Flutterwave transaction verification failed", {
+      if (isProduction) {
+        // Verify transaction with Flutterwave (per Flutterwave Standard guide)
+        try {
+          verification = await verifyTransaction(transactionId)
+          console.log('Flutterwave verification result:', verification)
+
+          // Check verification response matches expected structure
+          if (!(verification.status === "success" && verification.data.status === "successful")) {
+            logWarning("Flutterwave transaction verification failed", {
+              component: "payments/callback/flutterwave/route",
+              action: "GET",
+              transactionId,
+              verification,
+            })
+            shouldCreateEnrollment = false
+          }
+        } catch (verifyError) {
+          logError("Flutterwave verification API error", verifyError, {
             component: "payments/callback/flutterwave/route",
             action: "GET",
             transactionId,
-            verification,
           })
-          return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+          shouldCreateEnrollment = false
         }
-      } catch (verifyError) {
-        logError("Flutterwave verification API error", verifyError, {
-          component: "payments/callback/flutterwave/route",
-          action: "GET",
-          transactionId,
-        })
-        return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+      } else {
+        // In development/testing, assume payment was successful
+        console.log('Development mode: Skipping Flutterwave verification, assuming success')
       }
     } else {
-      // In development/testing, assume payment was successful
-      console.log('Development mode: Skipping Flutterwave verification, assuming success')
+      console.log('Flutterwave payment not successful:', status)
+      return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
     }
 
-    // Continue with payment processing...
+    if (!shouldCreateEnrollment) {
+      console.log('Not creating enrollment due to verification failure')
+      return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
+    }
+
+    // Continue with enrollment and payment processing...
       const supabase = await createClient()
       const serviceSupabase = createServiceRoleClient()
       
@@ -82,6 +111,15 @@ export async function GET(request: Request) {
 
       console.log('Final metadata:', { userId, courseId, originalAmount, originalCurrency })
 
+      // If we still don't have courseId, try to get it from tx_ref format: tx_timestamp_userId_courseId
+      if (!courseId && txRef) {
+        const txRefParts = txRef.split('_')
+        if (txRefParts.length >= 4) {
+          courseId = txRefParts[3] // courseId is the 4th part
+          console.log('Extracted courseId from tx_ref:', courseId)
+        }
+      }
+
       if (!userId || !courseId) {
         logError("Missing userId or courseId in Flutterwave callback", new Error("Missing required data"), {
           component: "payments/callback/flutterwave/route",
@@ -89,6 +127,8 @@ export async function GET(request: Request) {
           transactionId,
           txRef,
           metadata,
+          extractedUserId: userId,
+          extractedCourseId: courseId,
         })
         return NextResponse.redirect(`${baseUrl}/learner/courses?error=payment_failed`)
       }

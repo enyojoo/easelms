@@ -107,13 +107,13 @@ export async function POST(request: Request) {
       })
     } else {
       // Flutterwave - Only email is required, name is optional
-      const txRef = `tx_${Date.now()}_${user.id}`
+      const txRef = `tx_${Date.now()}_${user.id}_${courseId}`
       const payment = await initializePayment({
         amount: convertedAmount,
         currency: userCurrency,
         email: user.email!, // Required
         tx_ref: txRef,
-        callback_url: `${baseUrl}/api/payments/callback/flutterwave`,
+        callback_url: `${baseUrl}/api/payments/callback/flutterwave?courseId=${courseId}`,
         customer: {
           ...(customerName && { name: customerName }), // Optional
         },
