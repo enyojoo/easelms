@@ -345,8 +345,21 @@ export default function CourseLearningPage() {
           // Enroll the user (like webhooks do)
           // Note: Enrollment API automatically sends enrollment emails
           console.log("Calling enrollment mutation for courseId:", courseId)
-          const enrollmentResult = await enrollCourseMutation.mutateAsync(courseId)
-          console.log("Enrollment result:", enrollmentResult)
+          try {
+            const enrollmentResult = await enrollCourseMutation.mutateAsync(courseId)
+            console.log("Enrollment result:", enrollmentResult)
+          } catch (enrollmentError: any) {
+            console.error("Enrollment failed:", enrollmentError)
+
+            // If user is already enrolled (409), that's actually okay
+            if (enrollmentError.response?.status === 409) {
+              console.log("User already enrolled, continuing with payment record creation")
+            } else {
+              // For other errors, still proceed with payment record creation
+              // but log the enrollment failure
+              console.warn("Enrollment failed but continuing with payment processing")
+            }
+          }
 
           // Create payment record (simulating webhook behavior for testing)
           // Note: In production, this should only be done by payment gateway webhooks
@@ -367,9 +380,11 @@ export default function CourseLearningPage() {
           } else {
             // Get payment data for email sending
             const paymentData = await paymentResponse.json()
+            console.log("Payment record created:", paymentData)
 
             // Send payment confirmation email (non-blocking)
             if (paymentData.payment?.id) {
+              console.log("Sending payment confirmation email for payment:", paymentData.payment.id)
               try {
                 const emailResponse = await fetch("/api/send-email-notification", {
                   method: "POST",
@@ -380,12 +395,18 @@ export default function CourseLearningPage() {
                     status: "completed",
                   }),
                 })
+                console.log("Email response status:", emailResponse.status)
                 if (!emailResponse.ok) {
-                  console.warn("Payment confirmation email failed to send")
+                  const emailErrorText = await emailResponse.text()
+                  console.warn("Payment confirmation email failed:", emailResponse.status, emailErrorText)
+                } else {
+                  console.log("Payment confirmation email sent successfully")
                 }
               } catch (emailError) {
                 console.warn("Payment confirmation email error:", emailError)
               }
+            } else {
+              console.warn("No payment ID found for email sending:", paymentData)
             }
           }
 
