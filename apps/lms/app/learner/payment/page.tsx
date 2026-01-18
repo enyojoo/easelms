@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,9 @@ export default function PaymentPage() {
 
   const enrollCourseMutation = useEnrollCourse()
 
+  // Prevent multiple payment processing
+  const processingStartedRef = useRef(false)
+
   // Get parameters from URL
   const paymentStatus = searchParams.get("status") // "success" or "error"
   const gateway = searchParams.get("gateway") // "stripe" or "flutterwave"
@@ -30,6 +33,12 @@ export default function PaymentPage() {
   const reason = searchParams.get("reason")
 
   useEffect(() => {
+    // Prevent multiple processing
+    if (processingStartedRef.current) {
+      console.log("Payment processing already started, skipping...")
+      return
+    }
+
     // Redirect if not authenticated
     if (!authLoading && !user) {
       router.push("/auth/learner/login")
@@ -54,6 +63,7 @@ export default function PaymentPage() {
 
     // Handle payment success
     if (paymentStatus === "success" && gateway) {
+      processingStartedRef.current = true
       processPaymentSuccess()
     } else {
       router.push("/learner/courses")
@@ -61,6 +71,12 @@ export default function PaymentPage() {
   }, [authLoading, user, paymentStatus, gateway, courseId, reason])
 
   const processPaymentSuccess = async () => {
+    // Double-check processing hasn't started elsewhere
+    if (processingStartedRef.current && status !== "processing") {
+      console.log("Payment processing already completed, skipping...")
+      return
+    }
+
     try {
       console.log("Processing payment success for course:", courseId, "gateway:", gateway)
 
