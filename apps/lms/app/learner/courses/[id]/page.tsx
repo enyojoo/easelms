@@ -106,9 +106,16 @@ export default function CoursePage() {
   // Set up real-time subscription for course enrollment count
   useRealtimeCourseEnrollments(id)
 
-  // ALL LOGIC THAT DEPENDS ON HOOKS GOES HERE, BEFORE ANY EARLY RETURNS
-
+  // Calculate course price for currency conversion hook
+  // This MUST be calculated before any early returns to ensure consistent hook calls
   const course = courseData?.course
+  const coursePrice = course?.settings?.enrollment?.price || 0
+
+  // Use the new course price hook for consistent currency conversion
+  // This hook MUST be called before any early returns to maintain Rules of Hooks
+  const coursePriceInfo = useCoursePrice(coursePrice)
+
+  // ALL LOGIC THAT DEPENDS ON HOOKS GOES HERE, BEFORE ANY EARLY RETURNS
 
   // Check enrollment status from enrollments data
   useEffect(() => {
@@ -196,11 +203,6 @@ export default function CoursePage() {
 
   // Get actual enrollment mode from course settings
   const enrollmentMode = course?.settings?.enrollment?.enrollmentMode || "free"
-  const coursePrice = course?.settings?.enrollment?.price || 0
-
-  // Use the new course price hook for consistent currency conversion
-  // Pass 0 as default to maintain consistent hook calls
-  const coursePriceInfo = useCoursePrice(coursePrice)
 
   const getAccessDetails = () => {
     if (!coursePriceInfo) {
