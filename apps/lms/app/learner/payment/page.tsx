@@ -50,19 +50,6 @@ export default function PaymentPage() {
       return
     }
 
-    // Wait for auth to load
-    if (authLoading) {
-      console.log("Waiting for auth to load")
-      return
-    }
-
-    // Redirect if not authenticated
-    if (!user) {
-      console.log("No user, redirecting to login")
-      router.push("/auth/learner/login")
-      return
-    }
-
     // If no courseId, redirect to courses
     if (!courseId) {
       console.log("No courseId, redirecting to courses")
