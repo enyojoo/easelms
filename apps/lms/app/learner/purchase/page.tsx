@@ -114,13 +114,7 @@ export default function PurchaseHistoryPage() {
       <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Purchase History</h1>
       
       <Card>
-        <CardHeader className="p-4 md:p-6">
-          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
-            <ShoppingBag className="h-5 w-5 flex-shrink-0" />
-            Purchases ({purchases.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 md:p-6 pt-0">
+        <CardContent className="p-4 md:p-6">
           {purchases.length > 0 ? (
             <div className="space-y-3 md:space-y-4">
               {purchases.map((purchase) => {
