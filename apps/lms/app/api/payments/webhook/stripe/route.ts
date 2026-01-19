@@ -38,7 +38,6 @@ export async function POST(request: Request) {
       const { data: paymentData } = await serviceSupabase.from("payments").insert({
         user_id: userId,
         course_id: parseInt(courseId),
-        amount_usd: parseFloat(amountUSD),
         payment_amount: paymentIntent.amount / 100,
         payment_currency: paymentIntent.currency.toUpperCase(),
         exchange_rate: paymentIntent.amount / 100 / parseFloat(amountUSD),
@@ -129,7 +128,6 @@ export async function POST(request: Request) {
         const { data: paymentData } = await serviceSupabase.from("payments").insert({
           user_id: userId,
           course_id: parseInt(courseId),
-          amount_usd: parseFloat(originalAmount || "0"), // USD equivalent
           original_amount: parseFloat(originalAmount || "0"),
           original_currency: originalCurrency || "USD",
           payment_amount: paymentIntent.amount / 100,

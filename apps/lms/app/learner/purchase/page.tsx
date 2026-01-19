@@ -14,6 +14,7 @@ import PurchaseHistorySkeleton from "@/components/PurchaseHistorySkeleton"
 import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchases"
 import { usePurchasePrice } from "@/lib/react-query/hooks/useCoursePrice"
 import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
+import { useRealtimePurchases } from "@/lib/react-query/hooks/useRealtime"
 import { useQueryClient, useQuery } from "@tanstack/react-query"
 import { toast } from "sonner"
 
@@ -25,6 +26,9 @@ export default function PurchaseHistoryPage() {
   // Fetch purchases, enrollments, and courses using React Query
   const { data: purchasesData, isPending: purchasesPending } = usePurchases()
   const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
+
+  // Set up real-time subscription for purchases
+  useRealtimePurchases(user?.id)
   
   // Get enrolled course IDs (sorted for stable query key)
   const enrolledIds = enrollmentsData?.enrollments

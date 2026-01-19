@@ -7,6 +7,7 @@ import sgMail from "@sendgrid/mail"
 import { emailTemplates } from "./email-templates"
 import type { EmailData, EmailServiceConfig, SendGridResponse } from "./email-types"
 import { logError, logInfo, logWarning } from "../utils/errorHandler"
+import { createCourseSlug } from "../slug"
 
 // Initialize SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
@@ -158,7 +159,7 @@ class EmailService {
     enrolledAt: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const courseUrl = new URL(`/learner/courses/${data.courseId}`, appUrl).toString()
+    const courseUrl = new URL(`/learner/courses/${createCourseSlug(data.courseName, data.courseId)}`, appUrl).toString()
     const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     return this.sendEmail({
@@ -194,7 +195,7 @@ class EmailService {
     certificateUrl?: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const courseUrl = new URL(`/learner/courses/${data.courseId}`, appUrl).toString()
+    const courseUrl = new URL(`/learner/courses/${createCourseSlug(data.courseName, data.courseId)}`, appUrl).toString()
     const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     return this.sendEmail({
@@ -265,7 +266,7 @@ class EmailService {
     failureReason?: string
   }): Promise<SendGridResponse> {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.easelms.org"
-    const courseUrl = new URL(`/learner/courses/${data.courseId}`, appUrl).toString()
+    const courseUrl = new URL(`/learner/courses/${createCourseSlug(data.courseName, data.courseId)}`, appUrl).toString()
     const dashboardUrl = new URL("/learner/dashboard", appUrl).toString()
 
     const template = data.status === "completed" ? "paymentConfirmation" : "paymentFailed"

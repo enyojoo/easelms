@@ -178,14 +178,17 @@ export default function CoursePage() {
     )
   }
 
-  // Show skeleton only during initial auth loading
-  if (authLoading) {
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  // Always show cached course data immediately when available
+  const hasCachedCourseData = !!course
+  const showSkeleton = authLoading && !hasCachedCourseData
+
+  if (showSkeleton) {
     return <CourseDetailSkeleton />
   }
 
-  // Always show cached course data immediately when available
-  // React Query's placeholderData will keep previous data during refetch
-  // Only show skeleton when there's no course data at all (first time loading)
+  // If no course data exists at all after auth is loaded, show skeleton
   if (!course) {
     return <CourseDetailSkeleton />
   }
@@ -640,8 +643,8 @@ export default function CoursePage() {
                     const enrollment = enrollmentsData?.enrollments?.find(
                       (e: any) => e.course_id === prereq.id
                     )
-                    const isCompleted = enrollment?.status === "completed" || enrollment?.completed_at !== null
-                    const isInProgress = enrollment && !isCompleted && enrollment.progress > 0
+                    const isCompleted = enrollment?.status === "completed"
+                    const isInProgress = enrollment && !isCompleted && (enrollment.progress ?? 0) > 0
                     const status = isCompleted ? "completed" : isInProgress ? "in_progress" : "not_started"
 
                     return (

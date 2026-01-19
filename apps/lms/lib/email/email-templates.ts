@@ -287,18 +287,15 @@ export const paymentConfirmationTemplate: EmailTemplate = {
       year: "numeric",
       month: "long",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     })
     return `
 Payment Confirmed
 
 Hi ${data.firstName},
 
-Your payment has been successfully processed. You now have access to ${data.courseName}.
+Your payment has been successfully processed.
 
 Amount: ${data.amount.toFixed(2)} ${data.currency}
-Payment Method: ${data.paymentMethod}
 Date: ${date}
 
 You can start learning immediately. Access the course from your dashboard.
@@ -346,18 +343,15 @@ export const paymentFailedTemplate: EmailTemplate = {
       year: "numeric",
       month: "long",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     })
     return `
 Payment Failed
 
 Hi ${data.firstName},
 
-Unfortunately, your payment for ${data.courseName} could not be processed.
+Unfortunately, your payment could not be processed.
 
 Amount: ${data.amount.toFixed(2)} ${data.currency}
-Payment Method: ${data.paymentMethod}
 Date: ${date}
 ${data.failureReason ? `Reason: ${data.failureReason}` : ""}
 

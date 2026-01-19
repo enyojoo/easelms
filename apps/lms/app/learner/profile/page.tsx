@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { US } from "country-flag-icons/react/3x2"
 import { useProfile, useUpdateProfile, useSettings } from "@/lib/react-query/hooks"
+import { useRealtimeProfile } from "@/lib/react-query/hooks/useRealtime"
 import { toast } from "sonner"
 
 const NigeriaFlag = () => (
@@ -55,6 +56,10 @@ export default function LearnerProfilePage() {
   const { data: profileData, isPending: profilePending } = useProfile()
   const { data: settingsData } = useSettings()
   const updateProfileMutation = useUpdateProfile()
+
+  // Set up real-time subscription for profile changes
+  // This ensures profile data stays in sync across tabs and devices
+  useRealtimeProfile(authUser?.id)
 
   const profile = profileData?.profile
 

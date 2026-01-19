@@ -297,8 +297,6 @@ export function generatePaymentDetails(data: {
     year: "numeric",
     month: "long",
     day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   })
 
   const statusColor = data.failureReason ? "#dc2626" : "#16a34a"
@@ -309,10 +307,6 @@ export function generatePaymentDetails(data: {
       <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;">
         <strong>Amount:</strong> ${data.amount.toFixed(2)} ${data.currency}
       </p>
-      <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;">
-        <strong>Payment Method:</strong> ${data.paymentMethod}
-      </p>
-      ${data.courseName ? `<p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;"><strong>Course:</strong> ${data.courseName}</p>` : ""}
       <p class="info-box-text" style="margin: 0 0 8px; font-size: 14px; color: #333333;">
         <strong>Status:</strong> <span style="color: ${statusColor}; font-weight: 600;">${statusText}</span>
       </p>

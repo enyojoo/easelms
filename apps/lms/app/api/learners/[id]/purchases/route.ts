@@ -98,7 +98,7 @@ export async function GET(
     courseId: payment.course_id,
     courseTitle: payment.courses?.title || "Unknown Course",
     courseImage: payment.courses?.image,
-    amount: payment.payment_amount || payment.amount || payment.amount_usd || 0,
+    amount: payment.payment_amount || payment.amount || 0,
     currency: payment.payment_currency || payment.currency || "USD",
     gateway: payment.gateway,
     status: payment.status,

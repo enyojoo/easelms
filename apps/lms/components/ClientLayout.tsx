@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { usePathname } from "next/navigation"
 import Header from "./Header"
 import LeftSidebar from "./LeftSidebar"
@@ -46,7 +46,7 @@ export default function ClientLayout({
           try {
             const supabase = createClient()
             const { data: { session } } = await supabase.auth.getSession()
-            
+
             if (session?.user) {
               // If we have a session, use the hook state if available, otherwise fetch profile
               if (!supabaseAuthState.loading && supabaseAuthState.user) {
@@ -104,7 +104,7 @@ export default function ClientLayout({
             }
           }
         }
-        
+
         checkSession()
       } else {
         setAuthState(getClientAuthState())
@@ -112,8 +112,50 @@ export default function ClientLayout({
     }
   }, [isSupabase, supabaseAuthState])
 
-  // Update auth state when pathname changes (in case user logs in/out or navigates)
+  // Prevent unnecessary auth re-checks when tab becomes visible
+  // This fixes flickering when switching between browser tabs
   useEffect(() => {
+    if (!mounted || typeof window === "undefined") return
+
+    let isInitialCheck = true
+
+    const handleVisibilityChange = () => {
+      // Skip auth re-check on first visibility change (tab becoming active)
+      // Only allow re-checks after the initial mount to prevent flickering
+      if (isInitialCheck) {
+        isInitialCheck = false
+        return
+      }
+
+      // For subsequent visibility changes, only re-check if we suspect auth state might have changed
+      // This prevents unnecessary API calls and re-renders that cause flickering
+      if (document.visibilityState === "visible") {
+        // Small delay to ensure the tab is fully active before any potential re-checks
+        setTimeout(() => {
+          // Only proceed if component is still mounted and visible
+          if (document.visibilityState === "visible") {
+            // We could add lightweight auth verification here if needed
+            // For now, we prevent the heavy auth re-checks that were causing flickering
+          }
+        }, 100)
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [mounted])
+
+  // Update auth state when pathname changes (in case user logs in/out or navigates)
+  // Only trigger on actual pathname changes, not on tab visibility changes
+  const prevPathnameRef = useRef(pathname)
+  useEffect(() => {
+    // Only run if pathname actually changed (not just tab becoming visible)
+    if (prevPathnameRef.current === pathname) return
+    prevPathnameRef.current = pathname
+
     if (mounted && typeof window !== "undefined") {
       if (isSupabase) {
         // Check session on pathname change to catch login/logout
@@ -121,7 +163,7 @@ export default function ClientLayout({
           try {
             const supabase = createClient()
             const { data: { session } } = await supabase.auth.getSession()
-            
+
             if (session?.user) {
               if (!supabaseAuthState.loading && supabaseAuthState.user) {
                 setAuthState({
@@ -175,7 +217,7 @@ export default function ClientLayout({
             }
           }
         }
-        
+
         checkSession()
       } else {
         setAuthState(getClientAuthState())
@@ -235,27 +277,33 @@ export default function ClientLayout({
   // Check if current path is an auth page
   const { isLoggedIn, userType, user } = authState
 
-  // Determine if we should show the layout
-  const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
-  const isAuthPage = [
-    "/auth/learner/login",
-    "/auth/learner/signup",
-    "/auth/admin/login",
-    "/forgot-password",
-    "/forgot-password/code",
-    "/forgot-password/new-password",
-  ].includes(pathname) || pathname.startsWith("/auth/")
-  
-  // Always show layout for protected routes (even if auth is loading)
-  // Page content will handle showing its own skeleton
-  const shouldShowLayout = isProtectedRoute && !isAuthPage
+  // Memoize derived values to prevent unnecessary re-renders
+  const derivedLayoutValues = useMemo(() => {
+    const isProtectedRoute = pathname.startsWith('/admin/') || pathname.startsWith('/learner/')
+    const isAuthPage = [
+      "/auth/learner/login",
+      "/auth/learner/signup",
+      "/auth/admin/login",
+      "/forgot-password",
+      "/forgot-password/code",
+      "/forgot-password/new-password",
+    ].includes(pathname) || pathname.startsWith("/auth/")
 
-  // Derive userType from pathname if auth state not ready yet
-  const derivedUserType: "user" | "admin" | "instructor" = userType 
-    ? (userType as "user" | "admin" | "instructor")
-    : pathname.startsWith('/admin/') 
-      ? "admin" 
-      : "user"
+    // Always show layout for protected routes (even if auth is loading)
+    // Page content will handle showing its own skeleton
+    const shouldShowLayout = isProtectedRoute && !isAuthPage
+
+    // Derive userType from pathname if auth state not ready yet
+    const derivedUserType: "user" | "admin" | "instructor" = userType
+      ? (userType as "user" | "admin" | "instructor")
+      : pathname.startsWith('/admin/')
+        ? "admin"
+        : "user"
+
+    return { isProtectedRoute, isAuthPage, shouldShowLayout, derivedUserType }
+  }, [pathname, userType])
+
+  const { shouldShowLayout, derivedUserType } = derivedLayoutValues
 
   return (
     <ErrorBoundary>

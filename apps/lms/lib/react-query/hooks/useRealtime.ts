@@ -261,6 +261,94 @@ export function useRealtimeCourseEnrollments(courseId?: string | number | null) 
 }
 
 /**
+ * Hook to set up real-time subscription for user purchases
+ * Automatically invalidates purchases cache when user's purchases change
+ */
+export function useRealtimePurchases(userId?: string) {
+  const queryClient = useQueryClient()
+  const channelRef = useRef<RealtimeChannel | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+
+    const supabase = createClient()
+
+    // Subscribe to purchases changes for this specific user
+    const channel = supabase
+      .channel(`purchases-changes-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "purchases",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log("Purchase change detected:", payload)
+          // Invalidate purchases cache to refetch
+          queryClient.invalidateQueries({ queryKey: ["purchases"] })
+        }
+      )
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
+    }
+  }, [userId, queryClient])
+}
+
+/**
+ * Hook to set up real-time subscription for user profile
+ * Automatically invalidates profile cache when user's profile changes
+ */
+export function useRealtimeProfile(userId?: string) {
+  const queryClient = useQueryClient()
+  const channelRef = useRef<RealtimeChannel | null>(null)
+
+  useEffect(() => {
+    if (!userId) return
+
+    const supabase = createClient()
+
+    // Subscribe to profile changes for this specific user
+    const channel = supabase
+      .channel(`profile-changes-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "profiles",
+          filter: `id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log("Profile change detected:", payload)
+          // Invalidate profile cache to refetch
+          queryClient.invalidateQueries({ queryKey: ["profile"] })
+          // Also dispatch custom event for components that need to react to profile updates
+          window.dispatchEvent(new CustomEvent("profileUpdated"))
+        }
+      )
+      .subscribe()
+
+    channelRef.current = channel
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
+    }
+  }, [userId, queryClient])
+}
+
+/**
  * Hook to set up real-time subscription for admin stats
  * Useful for admin dashboard to see stats updates in real-time
  */

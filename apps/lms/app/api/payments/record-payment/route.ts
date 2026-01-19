@@ -121,7 +121,6 @@ export async function POST(request: Request) {
       .insert({
         user_id: userId,
         course_id: parseInt(courseId),
-        amount_usd: amountUSD, // USD equivalent
         original_amount: originalAmount,
         original_currency: originalCurrency,
         payment_amount: paymentAmount,

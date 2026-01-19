@@ -100,7 +100,7 @@ export async function GET() {
     // Get total revenue from completed payments
     const { data: payments, error: paymentsError } = await adminClient
       .from("payments")
-      .select("amount_usd")
+      .select("payment_amount, exchange_rate")
       .eq("status", "completed")
 
     if (paymentsError) {
@@ -112,8 +112,12 @@ export async function GET() {
     }
 
     // Only calculate revenue for admins (instructors should not see revenue)
-    const totalRevenue = isAdmin 
-      ? (payments?.reduce((sum, payment) => sum + (payment.amount_usd || 0), 0) || 0)
+    // Calculate USD equivalent using payment_amount and exchange_rate
+    const totalRevenue = isAdmin
+      ? (payments?.reduce((sum, payment) => {
+          const usdEquivalent = payment.payment_amount / (payment.exchange_rate || 1)
+          return sum + usdEquivalent
+        }, 0) || 0)
       : 0
 
     // Get total completed courses count (enrollments with status = 'completed')
@@ -176,7 +180,8 @@ export async function GET() {
         .select(`
           id,
           created_at,
-          amount_usd,
+          payment_amount,
+          payment_currency,
               user_id,
               course_id
         `)
@@ -365,7 +370,7 @@ export async function GET() {
         type: "payment" as const,
         user: p.profiles?.name || "Unknown User",
         course: p.courses?.title || "Unknown Course",
-        amount: `$${p.amount_usd}`,
+        amount: `${p.payment_amount} ${p.payment_currency}`,
         time: new Date(p.created_at).toISOString(),
         timestamp: new Date(p.created_at).getTime()
       })) || []) : [])

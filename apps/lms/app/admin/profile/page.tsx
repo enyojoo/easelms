@@ -15,6 +15,7 @@ import type { User } from "@/data/users"
 import { Upload, Loader2 } from "lucide-react"
 import AdminProfileSkeleton from "@/components/AdminProfileSkeleton"
 import { useProfile, useUpdateProfile } from "@/lib/react-query/hooks"
+import { useRealtimeProfile } from "@/lib/react-query/hooks/useRealtime"
 import { toast } from "sonner"
 
 export default function ProfilePage() {
@@ -33,6 +34,10 @@ export default function ProfilePage() {
   // Use React Query hooks for data fetching with caching
   const { data: profileData, isPending: profilePending, error: profileError } = useProfile()
   const updateProfileMutation = useUpdateProfile()
+
+  // Set up real-time subscription for profile changes
+  // This ensures profile data stays in sync across tabs and devices
+  useRealtimeProfile(authUser?.id)
 
   // Process profile data
   const profile = profileData?.profile
