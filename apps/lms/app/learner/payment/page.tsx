@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,10 +23,10 @@ export default function PaymentPage() {
 
   const enrollCourseMutation = useEnrollCourse()
 
-  // Prevent multiple payment processing
-  const processingStartedRef = useRef(false)
-  const processingCompletedRef = useRef(false)
-  const processingInProgressRef = useRef(false)
+  // Prevent multiple payment processing - use sessionStorage to persist across remounts
+  const processingStartedKey = `payment-processing-started-${courseId}-${gateway}-${paymentStatus}`
+  const processingCompletedKey = `payment-processing-completed-${courseId}-${gateway}-${paymentStatus}`
+  const processingInProgressKey = `payment-processing-in-progress-${courseId}-${gateway}-${paymentStatus}`
 
   // Get parameters from URL
   const paymentStatus = searchParams.get("status") // "success" or "error"
@@ -35,8 +35,8 @@ export default function PaymentPage() {
   const reason = searchParams.get("reason")
 
   useEffect(() => {
-    // Prevent multiple processing
-    if (processingStartedRef.current) {
+    // Prevent multiple processing - check sessionStorage
+    if (sessionStorage.getItem(processingStartedKey) === 'true') {
       return
     }
 
@@ -47,7 +47,7 @@ export default function PaymentPage() {
     }
 
     // Mark as started to prevent any future runs
-    processingStartedRef.current = true
+    sessionStorage.setItem(processingStartedKey, 'true')
 
     // Handle payment error
     if (paymentStatus === "error") {
@@ -62,15 +62,26 @@ export default function PaymentPage() {
     } else {
       router.push("/learner/courses")
     }
-  }, []) // Empty dependency array - run only once on mount // Removed 'status' from deps to prevent re-runs
+  }, []) // Empty dependency array - run only once on mount
+
+  // Cleanup sessionStorage on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up sessionStorage entries when component unmounts
+      sessionStorage.removeItem(processingStartedKey)
+      sessionStorage.removeItem(processingCompletedKey)
+      sessionStorage.removeItem(processingInProgressKey)
+    }
+  }, [processingStartedKey, processingCompletedKey, processingInProgressKey])
 
   const processPaymentSuccess = async () => {
     // Prevent duplicate processing
-    if (processingCompletedRef.current || processingInProgressRef.current) {
+    if (sessionStorage.getItem(processingCompletedKey) === 'true' ||
+        sessionStorage.getItem(processingInProgressKey) === 'true') {
       return
     }
 
-    processingInProgressRef.current = true
+    sessionStorage.setItem(processingInProgressKey, 'true')
 
     try {
 
@@ -163,15 +174,15 @@ export default function PaymentPage() {
         }
       }
 
-      processingCompletedRef.current = true
-      processingInProgressRef.current = false
+      sessionStorage.setItem(processingCompletedKey, 'true')
+      sessionStorage.removeItem(processingInProgressKey)
       setStatus("success")
       toast.success("Payment successful! You are now enrolled in this course.")
 
     } catch (error: any) {
       console.error("Payment processing failed:", error)
-      processingCompletedRef.current = true
-      processingInProgressRef.current = false
+      sessionStorage.setItem(processingCompletedKey, 'true')
+      sessionStorage.removeItem(processingInProgressKey)
       setStatus("error")
       setError(error.message || "Failed to process payment")
     }
