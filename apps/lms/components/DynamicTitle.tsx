@@ -25,7 +25,6 @@ function getPageNameFromPath(pathname: string): string | null {
     "/learner/courses": "Courses",
     "/learner/profile": "Profile",
     "/learner/purchase": "Purchase",
-    "/learner/support": "Support",
     "/admin/dashboard": "Admin Dashboard",
     "/admin/courses": "Manage Courses",
     "/admin/courses/new": "New Course",
