@@ -104,6 +104,9 @@ export default function CoursePage() {
   const enrollCourseMutation = useEnrollCourse()
   const queryClient = useQueryClient()
 
+  // Get platform settings for currency fallback
+  const platformSettings = settingsData?.platformSettings
+
   // Set up real-time subscription for course enrollment count
   useRealtimeCourseEnrollments(id)
 
@@ -255,8 +258,19 @@ export default function CoursePage() {
 
   const getAccessDetails = () => {
     if (!coursePriceInfo) {
+      // Show platform currency price while loading conversion
+      const platformPrice = coursePrice
+      const platformCurrency = platformSettings?.default_currency || "USD"
+      if (platformPrice > 0) {
+        // Show properly formatted currency while loading
+        return {
+          price: formatCurrency(platformPrice, platformCurrency),
+          buttonText: "Loading...",
+          access: "Loading...",
+        }
+      }
       return {
-        price: "...",
+        price: "Free",
         buttonText: "Loading...",
         access: "Loading...",
       }
