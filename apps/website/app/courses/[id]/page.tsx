@@ -161,6 +161,9 @@ export default function CoursePage() {
     title: "Course Instructor"
       }]
 
+  // Get enrollment count from course data (total enrollments for the course)
+  const enrollmentCount = course?.enrolledStudents || 0
+
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
       <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
