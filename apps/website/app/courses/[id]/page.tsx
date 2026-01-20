@@ -7,9 +7,13 @@ import { extractIdFromSlug } from "@/lib/slug"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, BookOpen, Clock, Users, PlayCircle, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, BookOpen, Clock, Users, PlayCircle, CheckCircle2, FileText, Globe, Award, BrainCircuit } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 import EnrollmentCTA from "@/components/EnrollmentCTA"
+import VideoModal from "@/components/VideoModal"
+import InstructorCard from "@/components/InstructorCard"
+import ReadMore from "@/components/ReadMore"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Module } from "@/lib/types/course"
 import { formatCurrency } from "@/lib/utils/currency"
 
@@ -22,6 +26,7 @@ export default function CoursePage() {
   const [course, setCourse] = useState<Module | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
 
   const slugOrId = params.id as string // Can be either "course-title-123" or just "123"
   const courseId = extractIdFromSlug(slugOrId)
@@ -122,193 +127,383 @@ export default function CoursePage() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/")}
-            className="mb-4"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Courses
-          </Button>
-        </div>
-      </header>
+  // Calculate total resources from lessons
+  const totalResources = (course?.lessons || []).reduce((total, lesson) => {
+    return total + (lesson?.resources?.length || 0)
+  }, 0)
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Course Header */}
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">{course.title}</h1>
-              <div className="flex flex-wrap items-center gap-4 mb-6">
-                {getCourseBadge()}
-                <div className="flex items-center text-muted-foreground">
-                  <BookOpen className="w-4 h-4 mr-1" />
-                  <span>{Array.isArray(course.lessons) ? course.lessons.length : 0} lessons</span>
+  const videoUrl = course?.previewVideo || ""
+
+  // Instructor information - use assigned instructors if available, otherwise fallback to creator
+  const hasInstructors = course?.instructors && course.instructors.length > 0
+  const instructorsEnabled = course?.settings?.instructor?.instructorEnabled || hasInstructors
+
+  // If instructors are enabled and there are instructors, use them
+  // Otherwise, fallback to course creator
+  const instructors = hasInstructors && instructorsEnabled
+    ? course.instructors.map((inst: any) => ({
+        name: inst.name || "Instructor",
+        profileImage: inst.image || "/placeholder.svg?height=200&width=200",
+        bio: inst.bio || "",
+        title: "Course Instructor"
+      }))
+    : course?.creator ? [{
+    name: course.creator.name || "Instructor",
+        profileImage: course.creator.profile_image || "/placeholder.svg?height=200&width=200",
+    bio: course.creator.bio || "",
+    title: course.creator.user_type === "admin" || course.creator.user_type === "instructor"
+      ? "Course Instructor"
+      : "Course Creator"
+      }] : [{
+    name: "Instructor",
+        profileImage: "/placeholder.svg?height=200&width=200",
+    bio: "",
+    title: "Course Instructor"
+      }]
+
+  return (
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
+        <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+        </Button>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
+      </div>
+
+      {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
+      <div className="mb-4 md:mb-6 lg:hidden">
+        <Card className="border-primary/20">
+          <CardContent className="p-4 md:p-6">
+            <div
+              className={`relative aspect-video mb-4 rounded-lg overflow-hidden ${videoUrl ? "cursor-pointer group" : ""}`}
+              onClick={videoUrl ? () => setIsVideoModalOpen(true) : undefined}
+            >
+              <SafeImage
+                src={course?.image || "/placeholder.svg?height=400&width=600"}
+                alt={course?.title || "Course"}
+                fill
+                className="object-cover"
+                priority={true}
+              />
+              {videoUrl && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                  <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <div className="flex items-center text-muted-foreground">
-                  <Clock className="w-4 h-4 mr-1" />
-                  <span>{course.totalHours || 0} hours</span>
+              )}
+            </div>
+            <div className="mt-4 mb-4 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-xl md:text-2xl font-bold text-primary">{getPriceDisplay()}</span>
+              </div>
+              <div className="flex-shrink-0">{getCourseBadge()}</div>
+            </div>
+            <EnrollmentCTA course={course} variant="mobile" />
+            {enrollmentMode !== "free" && (
+              <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+            )}
+            <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
+              {totalResources > 0 && (
+                <div className="flex items-center">
+                  <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                  <span className="text-xs md:text-sm">{totalResources} resources</span>
                 </div>
-                <div className="flex items-center text-muted-foreground">
-                  <Users className="w-4 h-4 mr-1" />
-                  <span>{course.enrolledStudents || 0} students enrolled</span>
-                </div>
+              )}
+              <div className="flex items-center">
+                <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm break-words">Full access for 3 months</span>
+              </div>
+              {course.settings?.certificate?.certificateEnabled && (() => {
+                // Get certificate type from settings, ensuring it's a string and trimmed
+                const certType = course.settings?.certificate?.certificateType
+                  ? String(course.settings.certificate.certificateType).trim().toLowerCase()
+                  : "completion"
+                const certTitle = course.settings?.certificate?.certificateTitle
+                let displayText = "Certificate of Completion"
+
+                // If custom title is provided and not empty, use it
+                if (certTitle && certTitle.trim() !== "") {
+                  displayText = certTitle.trim()
+                } else {
+                  // Map certificate type to display text
+                  switch (certType) {
+                    case "participation":
+                      displayText = "Certificate of Participation"
+                      break
+                    case "achievement":
+                      displayText = "Certificate of Achievement"
+                      break
+                    case "completion":
+                    default:
+                      displayText = "Certificate of Completion"
+                      break
+                  }
+                }
+
+                return (
+                  <div className="flex items-center">
+                    <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                    <span className="text-xs md:text-sm">{displayText}</span>
+                  </div>
+                )
+              })()}
+              <div className="flex items-center">
+                <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
+                <span className="text-xs md:text-sm">{course?.enrolledStudents || 0} learners enrolled</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            {/* Course Image/Video Preview */}
-            <Card>
-              <CardContent className="p-0">
-                <div className="aspect-video relative rounded-lg overflow-hidden">
-                  <SafeImage
-                    src={course.image || "/placeholder.svg"}
-                    alt={course.title}
-                    fill
-                    className="object-cover"
-                  />
-                  {course.previewVideo && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <PlayCircle className="w-16 h-16 text-white cursor-pointer hover:scale-110 transition-transform" />
-                    </div>
-                  )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="lg:col-span-2">
+          {/* Course Overview Section */}
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Overview</h2>
+              <ReadMore text={course?.description || ""} maxLength={1000} className="mb-4 leading-relaxed" />
+              <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-4 border-t">
+                <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                  <span>{course.lessons?.length || 0} lessons</span>
+                  <span>•</span>
+                  <span>{course.totalHours || 0} hours</span>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </CardContent>
+          </Card>
 
-            {/* Course Description */}
-            <Card>
-              <CardHeader>
-                <CardTitle>About This Course</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">{course.description}</p>
-              </CardContent>
-            </Card>
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
+              <Accordion type="single" collapsible className="w-full">
+                {(course.lessons || []).map((lesson, index) => {
+                  const isVideoLesson = (lesson as any).url
+                  const isTextLesson = (lesson as any).html || (lesson as any).text
+                  const LessonIcon = isVideoLesson ? PlayCircle : isTextLesson ? FileText : PlayCircle
 
-            {/* What You'll Learn */}
-            <Card>
-              <CardHeader>
-                <CardTitle>What You'll Learn</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {course.lessons?.slice(0, 6).map((lesson, index) => (
-                    <div key={lesson.id || index} className="flex items-start">
-                      <CheckCircle2 className="w-5 h-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{lesson.title}</span>
+                  return (
+                    <AccordionItem value={`item-${index}`} key={lesson.id || index} className="border-b">
+                      <AccordionTrigger className="py-3 md:py-4">
+                        <div className="flex items-start justify-between w-full text-left">
+                          <div className="flex items-start flex-1 min-w-0 pr-2">
+                            <LessonIcon className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
+                            <span className="font-medium text-sm md:text-base text-left break-words">{lesson.title}</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2 pb-3 md:pt-3 md:pb-4">
+                        <div className="space-y-2 md:space-y-3">
+                          {/* Quiz section */}
+                          {lesson.quiz_questions && lesson.quiz_questions.length > 0 && (
+                            <div className="flex items-center justify-between py-2 pl-6 md:pl-7">
+                              <div className="flex items-center min-w-0 flex-1">
+                                <BrainCircuit className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                <span className="text-xs md:text-sm truncate">Quiz</span>
+                              </div>
+                              <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
+                                {lesson.quiz_questions.length} questions
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Resources */}
+                          {lesson.resources?.map((resource, rIndex) => (
+                            <div key={rIndex} className="flex items-center justify-between py-2 pl-6 md:pl-7">
+                              <div className="flex items-center min-w-0 flex-1">
+                                {resource.type === "document" ? (
+                                  <FileText className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                ) : (
+                                  <Globe className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
+                                )}
+                                <span className="text-xs md:text-sm truncate">{resource.title}</span>
+                              </div>
+                              <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
+                                {resource.type === "document" ? "File" : "Link"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  )
+                })}
+              </Accordion>
+            </CardContent>
+          </Card>
+
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
+              {course?.whoIsThisFor ? (
+                <ReadMore text={course.whoIsThisFor} maxLength={1000} className="leading-relaxed whitespace-pre-line" />
+              ) : (
+                <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
+                  <li>Individuals seeking personal and spiritual growth</li>
+                  <li>Those looking to discover their purpose and calling</li>
+                  <li>Anyone desiring to deepen their relationship with God</li>
+                  <li>People ready to transform their lives and impact others</li>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="mb-4 md:mb-6">
+            <CardContent className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
+              {course?.requirements ? (
+                <ReadMore text={course.requirements} maxLength={1000} className="leading-relaxed whitespace-pre-line" />
+              ) : (
+                <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
+                  <li>Open heart and willingness to learn</li>
+                  <li>Desire for personal and spiritual growth</li>
+                  <li>Commitment to complete the course materials</li>
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Prerequisites Section */}
+          {course?.prerequisites && course.prerequisites.length > 0 && (
+            <Card className="mb-4 md:mb-6">
+              <CardContent className="p-4 md:p-6">
+                <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Prerequisites</h2>
+                <p className="text-sm md:text-base text-muted-foreground mb-4">
+                  Complete these courses before enrolling in this course:
+                </p>
+                <div className="space-y-3">
+                  {course.prerequisites.map((prereq: any) => (
+                    <div
+                      key={prereq.id}
+                      className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
+                        <SafeImage
+                          src={prereq.image || "/placeholder.svg"}
+                          alt={prereq.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-sm md:text-base truncate">{prereq.title}</h3>
+                      </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Who This Course Is For */}
-            {course.whoIsThisFor && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Who This Course Is For</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{course.whoIsThisFor}</p>
-                </CardContent>
-              </Card>
-            )}
+          {/* Instructor Profile Cards */}
+          {instructors && instructors.length > 0 && (
+            <div className="space-y-4">
+              {instructors.map((instructor: any, index: number) => (
+            <InstructorCard
+                  key={index}
+              name={instructor.name}
+              image={instructor.profileImage}
+              bio={instructor.bio}
+              title={instructor.title}
+              className="mb-4"
+            />
+              ))}
+            </div>
+          )}
+        </div>
 
-            {/* Requirements */}
-            {course.requirements && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Requirements</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{course.requirements}</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Prerequisites */}
-            {course.prerequisites && course.prerequisites.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Prerequisites</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">
-                    Complete these courses before enrolling:
-                  </p>
-                  <div className="space-y-3">
-                    {course.prerequisites.map((prereq) => (
-                      <div key={prereq.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                        <div className="w-12 h-12 rounded-md overflow-hidden bg-muted flex-shrink-0">
-                          <SafeImage
-                            src={prereq.image || "/placeholder.svg"}
-                            alt={prereq.title}
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium">{prereq.title}</h4>
-                        </div>
-                      </div>
-                    ))}
+        {/* Video Preview Section - Show only on large screens */}
+        <div className="hidden lg:block lg:col-span-1">
+          <Card className="sticky top-24 border-primary/20 h-fit">
+            <CardContent className="p-6">
+              <div
+                className={`relative aspect-video mb-4 rounded-lg overflow-hidden ${videoUrl ? "cursor-pointer group" : ""}`}
+                onClick={videoUrl ? () => setIsVideoModalOpen(true) : undefined}
+              >
+                <SafeImage
+                  src={course?.image || "/placeholder.svg"}
+                  alt={course?.title || "Course"}
+                  fill
+                  className="object-cover"
+                  priority={true}
+                />
+                {videoUrl && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center group-hover:bg-black/60 transition-colors">
+                    <PlayCircle className="w-16 h-16 text-white opacity-90 group-hover:opacity-100 transition-opacity" />
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Instructor Information */}
-            {course.instructors && course.instructors.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Instructor</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {course.instructors.map((instructor, index) => (
-                      <div key={index} className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                          <SafeImage
-                            src={instructor.profileImage || "/placeholder.svg"}
-                            alt={instructor.name}
-                            width={64}
-                            height={64}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg">{instructor.name}</h3>
-                          <p className="text-primary font-medium mb-2">{instructor.title}</p>
-                          {instructor.bio && (
-                            <p className="text-muted-foreground">{instructor.bio}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                )}
+              </div>
+              <div className="mt-4 mb-4 flex items-center justify-between">
+                <div>
+                  <span className="text-2xl font-bold text-primary">{getPriceDisplay()}</span>
+                  {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
+                </div>
+                {getCourseBadge()}
+              </div>
+              <EnrollmentCTA course={course} variant="sidebar" />
+              {enrollmentMode !== "free" && (
+                <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+              )}
+              <div className="space-y-2 text-muted-foreground">
+                {totalResources > 0 && (
+                  <div className="flex items-center">
+                    <FileText className="w-5 h-5 mr-2 text-primary" />
+                    <span>{totalResources} resources</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                )}
+                <div className="flex items-center">
+                  <Globe className="w-5 h-5 mr-2 text-primary" />
+                  <span>Full access for 3 months</span>
+                </div>
+                {course.settings?.certificate?.certificateEnabled && (() => {
+                  // Get certificate type from settings, ensuring it's a string and trimmed
+                  const certType = course.settings?.certificate?.certificateType
+                    ? String(course.settings.certificate.certificateType).trim().toLowerCase()
+                    : "completion"
+                  const certTitle = course.settings?.certificate?.certificateTitle
+                  let displayText = "Certificate of Completion"
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <Card className="sticky top-8">
-              <CardContent className="p-6">
-                <EnrollmentCTA course={course} variant="sidebar" />
+                  // If custom title is provided and not empty, use it
+                  if (certTitle && certTitle.trim() !== "") {
+                    displayText = certTitle.trim()
+                  } else {
+                    // Map certificate type to display text
+                    switch (certType) {
+                      case "participation":
+                        displayText = "Certificate of Participation"
+                        break
+                      case "achievement":
+                        displayText = "Certificate of Achievement"
+                        break
+                      case "completion":
+                      default:
+                        displayText = "Certificate of Completion"
+                        break
+                    }
+                  }
 
-              </CardContent>
-            </Card>
-          </div>
+                  return (
+                    <div className="flex items-center">
+                      <Award className="w-5 h-5 mr-2 text-primary" />
+                      <span>{displayText}</span>
+                    </div>
+                  )
+                })()}
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 mr-2 text-primary" />
+                  <span>{enrollmentCount} learners enrolled</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <VideoModal
+        isOpen={isVideoModalOpen}
+        onClose={() => setIsVideoModalOpen(false)}
+        videoUrl={videoUrl}
+        title={course?.title || ""}
+      />
     </div>
   )
 }
