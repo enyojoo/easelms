@@ -76,7 +76,7 @@ export default async function RootLayout({
 
                 // Set theme
                 const storageKey = 'ui-theme';
-                const theme = localStorage.getItem(storageKey) || 'dark';
+                const theme = localStorage.getItem(storageKey) || 'system';
                 let rootClass = '';
 
                 if (theme === 'system') {
@@ -93,7 +93,7 @@ export default async function RootLayout({
           }}
         />
         <QueryProvider>
-          <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
+          <ThemeProvider defaultTheme="system" storageKey="ui-theme">
             {children}
           </ThemeProvider>
         </QueryProvider>

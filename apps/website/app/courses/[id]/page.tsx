@@ -15,6 +15,7 @@ import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import Logo from "@/components/Logo"
+import { ThemeToggle } from "@/components/ThemeToggle"
 import { Module } from "@/lib/types/course"
 import { formatCurrency } from "@/lib/utils/currency"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
@@ -593,9 +594,12 @@ export default function CoursePage() {
             </p>
             <div className="mb-6">
               <h3 className="font-semibold mb-4">Terms, Policy</h3>
-              <div className="flex justify-center gap-6 text-sm text-muted-foreground">
+              <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
                 <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
                 <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              </div>
+              <div className="flex justify-center">
+                <ThemeToggle />
               </div>
             </div>
           </div>
