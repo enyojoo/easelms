@@ -366,6 +366,7 @@ export default function VideoPreviewPlayer({
         loop={false}
         poster={poster}
         autoPlay={autoplay}
+        controls
       />
       {showOverlay && (
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">

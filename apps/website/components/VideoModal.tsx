@@ -24,13 +24,15 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoMo
 
         <div className="relative bg-black w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
           {videoUrl ? (
-            <video
-              src={videoUrl}
-              controls
-              className="w-full h-full"
-              style={{ aspectRatio: '16/9' }}
-              title={title}
-            />
+            <div className="w-full h-full absolute inset-0">
+              <VideoPreviewPlayer
+                key={videoUrl}
+                src={videoUrl}
+                className="w-full h-full"
+                autoplay={isOpen}
+                showControlsOnHover={true}
+              />
+            </div>
           ) : (
             <div className="w-full h-full absolute inset-0 flex items-center justify-center">
               <p className="text-white">No video available</p>
