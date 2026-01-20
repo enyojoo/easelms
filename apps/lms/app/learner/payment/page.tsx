@@ -23,20 +23,20 @@ export default function PaymentPage() {
 
   const enrollCourseMutation = useEnrollCourse()
 
-  // Prevent multiple payment processing - use sessionStorage to persist across remounts
-  const processingStartedKey = `payment-processing-started-${courseId}-${gateway}-${paymentStatus}`
-  const processingCompletedKey = `payment-processing-completed-${courseId}-${gateway}-${paymentStatus}`
-  const processingInProgressKey = `payment-processing-in-progress-${courseId}-${gateway}-${paymentStatus}`
-
   // Get parameters from URL
   const paymentStatus = searchParams.get("status") // "success" or "error"
   const gateway = searchParams.get("gateway") // "stripe" or "flutterwave"
   const courseId = searchParams.get("courseId")
   const reason = searchParams.get("reason")
 
+  // Prevent multiple payment processing - use sessionStorage to persist across remounts
+  // Use a simple key based on URL to avoid initialization issues
+  const sessionKey = `payment-processed-${courseId || 'unknown'}-${gateway || 'unknown'}-${paymentStatus || 'unknown'}`
+
   useEffect(() => {
-    // Prevent multiple processing - check sessionStorage
-    if (sessionStorage.getItem(processingStartedKey) === 'true') {
+    // Check if this payment has already been processed
+    if (sessionStorage.getItem(sessionKey) === 'completed') {
+      setStatus("success")
       return
     }
 
@@ -46,8 +46,10 @@ export default function PaymentPage() {
       return
     }
 
-    // Mark as started to prevent any future runs
-    sessionStorage.setItem(processingStartedKey, 'true')
+    // Ensure we have required parameters before processing
+    if (!gateway || !paymentStatus) {
+      return
+    }
 
     // Handle payment error
     if (paymentStatus === "error") {
@@ -62,26 +64,24 @@ export default function PaymentPage() {
     } else {
       router.push("/learner/courses")
     }
-  }, []) // Empty dependency array - run only once on mount
+  }, [courseId, gateway, paymentStatus, sessionKey]) // Include dependencies
 
   // Cleanup sessionStorage on unmount
   useEffect(() => {
     return () => {
-      // Clean up sessionStorage entries when component unmounts
-      sessionStorage.removeItem(processingStartedKey)
-      sessionStorage.removeItem(processingCompletedKey)
-      sessionStorage.removeItem(processingInProgressKey)
+      // Clean up sessionStorage entry when component unmounts
+      sessionStorage.removeItem(sessionKey)
     }
-  }, [processingStartedKey, processingCompletedKey, processingInProgressKey])
+  }, [sessionKey])
 
   const processPaymentSuccess = async () => {
     // Prevent duplicate processing
-    if (sessionStorage.getItem(processingCompletedKey) === 'true' ||
-        sessionStorage.getItem(processingInProgressKey) === 'true') {
+    const currentStatus = sessionStorage.getItem(sessionKey)
+    if (currentStatus === 'processing' || currentStatus === 'completed') {
       return
     }
 
-    sessionStorage.setItem(processingInProgressKey, 'true')
+    sessionStorage.setItem(sessionKey, 'processing')
 
     try {
 
@@ -174,15 +174,13 @@ export default function PaymentPage() {
         }
       }
 
-      sessionStorage.setItem(processingCompletedKey, 'true')
-      sessionStorage.removeItem(processingInProgressKey)
+      sessionStorage.setItem(sessionKey, 'completed')
       setStatus("success")
       toast.success("Payment successful! You are now enrolled in this course.")
 
     } catch (error: any) {
       console.error("Payment processing failed:", error)
-      sessionStorage.setItem(processingCompletedKey, 'true')
-      sessionStorage.removeItem(processingInProgressKey)
+      sessionStorage.setItem(sessionKey, 'error')
       setStatus("error")
       setError(error.message || "Failed to process payment")
     }
