@@ -28,6 +28,7 @@ export default function VideoPreviewPlayer({
   const [duration, setDuration] = useState(0)
   const [showControls, setShowControls] = useState(true) // Controls visibility state
   const [isLoading, setIsLoading] = useState(false) // Track loading state - start false, only show when buffering
+  const [hasError, setHasError] = useState(false) // Track if video failed to load
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -65,8 +66,9 @@ export default function VideoPreviewPlayer({
     }
 
     const handleError = () => {
-      // Stop loading on error
+      // Stop loading on error and mark as having error
       setIsLoading(false)
+      setHasError(true)
     }
 
     // Check initial state - if video is already ready (cached), don't show loading
@@ -254,10 +256,21 @@ export default function VideoPreviewPlayer({
     })
   }, [autoplay])
 
-  if (!src || !src.trim()) {
+  if (!src || !src.trim() || src.includes("your_cloudfront_domain") || src.includes("your_cloudfront-domain")) {
     return (
       <div className={`relative w-full aspect-video bg-muted flex items-center justify-center ${className}`}>
         <p className="text-muted-foreground text-sm">No video source provided</p>
+      </div>
+    )
+  }
+
+  if (hasError) {
+    return (
+      <div className={`relative w-full aspect-video bg-muted flex items-center justify-center ${className}`}>
+        <div className="text-center p-4">
+          <p className="text-muted-foreground text-sm mb-2">Video unavailable</p>
+          <p className="text-muted-foreground text-xs">This video cannot be played from this domain</p>
+        </div>
       </div>
     )
   }
@@ -366,7 +379,6 @@ export default function VideoPreviewPlayer({
         loop={false}
         poster={poster}
         autoPlay={autoplay}
-        controls
       />
       {showOverlay && (
         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">

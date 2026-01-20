@@ -151,8 +151,6 @@ export default function CoursePage() {
     return total + (lesson?.resources?.length || 0)
   }, 0)
 
-  const videoUrl = course?.previewVideo || ""
-
   // Instructor information - use assigned instructors if available, otherwise fallback to creator
   const hasInstructors = course?.instructors && course.instructors.length > 0
   const instructorsEnabled = course?.settings?.instructor?.instructorEnabled || hasInstructors
@@ -182,6 +180,14 @@ export default function CoursePage() {
 
   // Get enrollment count from course data (total enrollments for the course)
   const enrollmentCount = course?.enrolledStudents || 0
+
+  // Transform video URL to use proxy to avoid CORS issues
+  const getProxiedVideoUrl = (originalUrl: string | null) => {
+    if (!originalUrl) return null
+    return `/api/video-proxy?url=${encodeURIComponent(originalUrl)}`
+  }
+
+  const videoUrl = getProxiedVideoUrl(course?.previewVideo)
 
   return (
     <div className="min-h-screen flex flex-col">
