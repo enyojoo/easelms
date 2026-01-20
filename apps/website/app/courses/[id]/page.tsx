@@ -240,7 +240,7 @@ export default function CoursePage() {
             </div>
             <Button
               className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
-              onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+              onClick={() => window.open(`${APP_URL}/learner/courses/${slugOrId}`, '_blank')}
             >
               {buttonText}
             </Button>
@@ -294,7 +294,7 @@ export default function CoursePage() {
               })()}
               <div className="flex items-center">
                 <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm">{course?.enrolledStudents || 0} learners enrolled</span>
+                <span className="text-xs md:text-sm">{enrollmentCount} learners enrolled</span>
               </div>
             </div>
           </CardContent>
@@ -487,7 +487,7 @@ export default function CoursePage() {
               </div>
               <Button
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+                onClick={() => window.open(`${APP_URL}/learner/courses/${slugOrId}`, '_blank')}
               >
                 {buttonText}
               </Button>
