@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ShoppingBag, Calendar, DollarSign, Search, Loader2, User, ExternalLink } from "lucide-react"
+import { ShoppingBag, Calendar, Search, Loader2, User } from "lucide-react"
 import Link from "next/link"
 import { useClientAuthState } from "@/utils/client-auth"
 import { toast } from "sonner"
@@ -65,8 +65,7 @@ export default function AdminPurchasesPage() {
     const matchesSearch =
       purchase.courseTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       purchase.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      purchase.userEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      purchase.transactionId?.toLowerCase().includes(searchTerm.toLowerCase())
+      purchase.userEmail?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus = statusFilter === "all" || purchase.status === statusFilter
 
@@ -105,13 +104,13 @@ export default function AdminPurchasesPage() {
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <CardTitle className="flex items-center">
                   <ShoppingBag className="mr-2 h-5 w-5" />
-                  All Purchases ({filteredPurchases.length})
+                  Purchases
                 </CardTitle>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                   <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Search by course, user, or transaction ID..."
+                      placeholder="Search by course or user..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
@@ -140,16 +139,14 @@ export default function AdminPurchasesPage() {
                       <TableHead>Course</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Type</TableHead>
                       <TableHead>Date</TableHead>
-                      <TableHead>Transaction ID</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredPurchases.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           No purchases found
                         </TableCell>
                       </TableRow>
@@ -181,12 +178,9 @@ export default function AdminPurchasesPage() {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1">
-                                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">
-                                  {formatCurrency(purchase.amount, purchase.currency || "USD")}
-                                </span>
-                              </div>
+                              <span className="font-medium">
+                                {formatCurrency(purchase.amount, purchase.currency || "USD")}
+                              </span>
                             </TableCell>
                             <TableCell>
                               <Badge
@@ -201,26 +195,12 @@ export default function AdminPurchasesPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                One-time Purchase
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
                               <div className="flex items-center gap-1 text-sm">
                                 <Calendar className="h-3 w-3 text-muted-foreground" />
                                 <span>
                                   {new Date(purchase.purchasedAt || purchase.createdAt || "").toLocaleDateString()}
                                 </span>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              {purchase.transactionId ? (
-                                <code className="text-xs bg-muted px-2 py-1 rounded">
-                                  {purchase.transactionId.substring(0, 12)}...
-                                </code>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">N/A</span>
-                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
@@ -232,11 +212,6 @@ export default function AdminPurchasesPage() {
                                     </Button>
                                   </Link>
                                 )}
-                                <Link href={`/admin/courses/${purchase.courseId}`}>
-                                  <Button variant="outline" size="sm">
-                                    <ExternalLink className="h-4 w-4" />
-                                  </Button>
-                                </Link>
                               </div>
                             </TableCell>
                           </TableRow>
