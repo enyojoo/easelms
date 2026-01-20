@@ -203,8 +203,7 @@ export default function CoursePage() {
       </header>
 
       <main className="flex-grow">
-        <div className="py-12 md:py-16">
-          <div className="container mx-auto px-4">
+        <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
           <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
             <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -547,7 +546,6 @@ export default function CoursePage() {
               </div>
             </CardContent>
           </Card>
-        </div>
         </div>
             </div>
           </div>
