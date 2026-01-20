@@ -29,7 +29,7 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoMo
                 key={videoUrl}
                 src={videoUrl}
                 className="w-full h-full"
-                autoplay={isOpen}
+                autoplay={false}
                 showControlsOnHover={true}
               />
             </div>

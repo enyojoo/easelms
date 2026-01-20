@@ -254,7 +254,7 @@ export default function VideoPreviewPlayer({
     })
   }, [autoplay])
 
-  if (!src || !src.trim() || src.includes("your_cloudfront_domain") || src.includes("your-cloudfront-domain")) {
+  if (!src || !src.trim()) {
     return (
       <div className={`relative w-full aspect-video bg-muted flex items-center justify-center ${className}`}>
         <p className="text-muted-foreground text-sm">No video source provided</p>

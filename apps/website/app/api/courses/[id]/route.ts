@@ -57,7 +57,11 @@ export async function GET(
       totalHours: course.totalHours || 0,
       totalDurationMinutes: course.totalDurationMinutes || 0,
       enrolledStudents: course.enrolledStudents || 0,
-      previewVideo: course.preview_video || null,
+      previewVideo: course.preview_video ? (
+        course.preview_video.startsWith('http')
+          ? course.preview_video
+          : `${lmsUrl}${course.preview_video}`
+      ) : null,
       whoIsThisFor: course.who_is_this_for || null,
       requirements: course.requirements || null,
       prerequisites: course.prerequisites || [],
