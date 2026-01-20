@@ -198,7 +198,6 @@ const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").r
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <div className="text-lg font-bold text-primary">{getPriceDisplay()}</div>
-      {getCourseBadge()}
       <Button
         size="sm"
         onClick={getCTAAction}
