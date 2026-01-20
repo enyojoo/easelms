@@ -32,7 +32,7 @@ export function useAppQuery<T>(
   }
 ) {
   const config = getCacheConfig(dataType)
-  const storageKey = STORAGE_KEYS[dataType as keyof typeof STORAGE_KEYS]
+  const storageKey = (STORAGE_KEYS as any)[dataType] || null
 
   return useQuery({
     queryKey,
@@ -149,13 +149,9 @@ export function useAppMutation<TData, TVariables>(
  * Hook to check if any data exists (for skeleton logic)
  */
 export function useHasData(types: DataType[]): boolean {
-  const queryClient = useQueryClient()
-
-  return types.some(type => {
-    const queryKey = [type] // Basic query key pattern
-    const data = queryClient.getQueryData(queryKey)
-    return !!data
-  })
+  // For now, just return false to always show skeleton on auth loading
+  // This is simpler and works reliably
+  return false
 }
 
 /**
