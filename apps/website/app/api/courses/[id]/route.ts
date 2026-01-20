@@ -1,19 +1,27 @@
 import { NextResponse } from "next/server"
+import { extractIdFromSlug } from "@/lib/slug"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     if (!id) {
       return NextResponse.json({ error: "Course ID is required" }, { status: 400 })
     }
 
+    // Extract numeric ID from slug (handles both "course-title-123" and "123" formats)
+    const courseId = extractIdFromSlug(id)
+
+    if (!courseId || isNaN(parseInt(courseId))) {
+      return NextResponse.json({ error: "Invalid course ID format" }, { status: 400 })
+    }
+
     // For public course detail on website, fetch from LMS API
     const lmsUrl = (process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001").replace(/\/$/, '') // Remove trailing slash
-    const apiUrl = `${lmsUrl}/api/courses/${id}`
+    const apiUrl = `${lmsUrl}/api/courses/${courseId}`
 
     const response = await fetch(apiUrl, {
       method: "GET",

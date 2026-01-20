@@ -30,7 +30,8 @@ export default function CoursePage() {
     const fetchCourse = async () => {
       try {
         setLoading(true)
-        const response = await fetch(`/api/courses/${courseId}`)
+        // Use the original slug/ID from params, let the API route handle extraction
+        const response = await fetch(`/api/courses/${slugOrId}`)
         if (!response.ok) {
           if (response.status === 404) {
             setError("Course not found")
