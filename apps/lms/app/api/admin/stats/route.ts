@@ -137,19 +137,19 @@ export async function GET() {
     // Calculate revenue in admin's default currency using exchange rates
     const totalRevenue = isAdmin
       ? (payments?.reduce((sum, payment) => {
-          // Convert payment to admin's currency
-          let convertedAmount = payment.payment_amount
+          // All payments have exchange_rate = payment_amount / usd_equivalent
+          // So to get USD equivalent: payment_amount / exchange_rate
+          const usdEquivalent = payment.payment_amount / (payment.exchange_rate || 1)
 
-          if (payment.payment_currency !== adminCurrency) {
-            // If payment currency differs from admin currency, convert using exchange_rate
-            if (adminCurrency === "NGN") {
-              // Convert to NGN: multiply by exchange rate
-              convertedAmount = payment.payment_amount * (payment.exchange_rate || 1)
-            } else if (adminCurrency === "USD") {
-              // Convert to USD: divide by exchange rate
-              convertedAmount = payment.payment_amount / (payment.exchange_rate || 1)
-            }
+          // Convert USD to admin currency
+          let convertedAmount = usdEquivalent
+          if (adminCurrency === "NGN") {
+            // Convert USD to NGN using current approximate rate
+            // This is a simplification - in production, you'd want real exchange rates
+            const USD_TO_NGN_RATE = 1000 // Approximate: 1 USD = 1000 NGN
+            convertedAmount = usdEquivalent * USD_TO_NGN_RATE
           }
+          // For USD, usdEquivalent is already in USD
 
           return sum + convertedAmount
         }, 0) || 0)
