@@ -42,6 +42,36 @@ export function generateBaseEmailTemplate(
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${title}</title>
   <style>
+    @media (max-width: 600px) {
+      .email-wrapper {
+        padding: 20px 10px !important;
+      }
+      .email-container {
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      .email-header {
+        padding: 30px 20px 20px !important;
+      }
+      .email-content {
+        padding: 0 20px 30px !important;
+      }
+      .email-title {
+        font-size: 24px !important;
+      }
+      .email-footer {
+        padding: 24px 20px !important;
+      }
+      .footer-contact-mobile::before {
+        content: "Need help? Contact us at\\A";
+        white-space: pre;
+      }
+      .footer-contact-mobile .email-footer-link {
+        display: block !important;
+        margin-top: 4px !important;
+      }
+    }
+
     @media (prefers-color-scheme: dark) {
       .email-wrapper {
         background-color: #0a0a0a !important;
@@ -329,7 +359,7 @@ export function generateFooter(
   return `
           <tr>
             <td class="email-footer" style="padding: 32px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
-              <p class="email-footer-text" style="margin: 0; font-size: 14px; color: #666666; line-height: 1.6;">
+              <p class="email-footer-text footer-contact-mobile" style="margin: 0; font-size: 14px; color: #666666; line-height: 1.6;">
                 Need help? Contact us at <a href="mailto:${supportEmail}" class="email-footer-link" style="color: hsl(240, 5.9%, 10%); text-decoration: none;">${supportEmail}</a>
               </p>
             </td>
