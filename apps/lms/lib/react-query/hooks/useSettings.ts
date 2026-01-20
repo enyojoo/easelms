@@ -80,7 +80,14 @@ export function useUpdateSettings() {
         },
       }
       queryClient.setQueryData(["settings"], updatedData)
-      // DON'T invalidate - this causes refetch and flicker
+
+      // Check for invalidation hints from the API response
+      if (data?.invalidationHints?.invalidateAdminStats) {
+        // Invalidate admin stats cache when platform settings change (e.g., currency)
+        queryClient.invalidateQueries({ queryKey: ["admin-stats"] })
+      }
+
+      // DON'T invalidate settings - this causes refetch and flicker
       // The cache is already updated with the new data
     },
   })

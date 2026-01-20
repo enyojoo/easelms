@@ -280,6 +280,18 @@ export async function PUT(request: Request) {
           platformError = insertError
         }
 
+        // If platform settings were updated successfully, invalidate admin stats cache
+        // This ensures revenue recalculates when admin changes currency
+        if (!platformError) {
+          // Note: We can't directly invalidate React Query cache from server-side
+          // But we can log this for client-side invalidation
+          logInfo("Platform settings updated, admin stats cache should be invalidated", {
+            component: "settings/route",
+            action: "PUT",
+            userId: user.id,
+          })
+        }
+
         if (platformError) {
           // If table doesn't exist, that's okay - just log and continue
           if (platformError.code === "42P01" || platformError.code === "PGRST116" || platformError.message?.includes("schema cache")) {
@@ -313,7 +325,15 @@ export async function PUT(request: Request) {
       }
     }
 
-    return NextResponse.json({ message: "Settings updated successfully" })
+    // Determine what caches need to be invalidated based on what was updated
+    const invalidationHints = {
+      invalidateAdminStats: !!platformSettings, // If platform settings changed, invalidate admin stats
+    }
+
+    return NextResponse.json({
+      message: "Settings updated successfully",
+      invalidationHints
+    })
   } catch (error: any) {
     logError("Settings API PUT error", error, {
       component: "settings/route",

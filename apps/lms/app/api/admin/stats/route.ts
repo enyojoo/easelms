@@ -119,11 +119,11 @@ export async function GET() {
       }
     }
 
-    // Get total revenue from completed payments
+    // Get total revenue from completed/successful payments
     const { data: payments, error: paymentsError } = await adminClient
       .from("payments")
-      .select("payment_amount, payment_currency, exchange_rate")
-      .eq("status", "completed")
+      .select("payment_amount, payment_currency, exchange_rate, status")
+      .in("status", ["completed", "successful"])
 
     if (paymentsError) {
       logError("Error fetching payments", paymentsError, {
