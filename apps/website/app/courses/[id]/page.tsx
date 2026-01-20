@@ -526,7 +526,8 @@ export default function CoursePage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
+    </main>
 
       {/* Footer */}
       <footer className="border-t bg-muted/30">
