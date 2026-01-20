@@ -32,7 +32,7 @@ export function useAppQuery<T>(
   }
 ) {
   const config = getCacheConfig(dataType)
-  const storageKey = (STORAGE_KEYS as any)[dataType] || null
+  const storageKey = STORAGE_KEYS[dataType as keyof typeof STORAGE_KEYS]
 
   return useQuery({
     queryKey,
@@ -149,9 +149,52 @@ export function useAppMutation<TData, TVariables>(
  * Hook to check if any data exists (for skeleton logic)
  */
 export function useHasData(types: DataType[]): boolean {
-  // For now, just return false to always show skeleton on auth loading
-  // This is simpler and works reliably
-  return false
+  const queryClient = useQueryClient()
+
+  return types.some(type => {
+    // Check for actual query keys used in the app based on data type
+    let possibleKeys: any[][] = []
+
+    switch (type) {
+      case 'courses':
+        possibleKeys = [["courses"], ["courses", undefined], ["courses", {}]]
+        break
+      case 'enrollments':
+        possibleKeys = [["enrollments"]]
+        break
+      case 'purchases':
+        possibleKeys = [["purchases"], ["purchases", undefined], ["purchases", {}]]
+        break
+      case 'progress':
+        possibleKeys = [["progress"], ["progress", "all"]]
+        break
+      case 'profile':
+        possibleKeys = [["profile"]]
+        break
+      case 'settings':
+        possibleKeys = [["settings"]]
+        break
+      case 'adminStats':
+        possibleKeys = [["admin-stats"]]
+        break
+      case 'adminLearners':
+        possibleKeys = [["learners"], ["learners", undefined], ["learners", {}]]
+        break
+      case 'adminCourses':
+        possibleKeys = [["courses"], ["courses", undefined], ["courses", {}]]
+        break
+      case 'adminPurchases':
+        possibleKeys = [["purchases"], ["purchases", undefined], ["purchases", {}]]
+        break
+      default:
+        possibleKeys = [[type]]
+    }
+
+    return possibleKeys.some(key => {
+      const data = queryClient.getQueryData(key)
+      return !!data
+    })
+  })
 }
 
 /**

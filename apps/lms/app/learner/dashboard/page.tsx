@@ -162,7 +162,7 @@ export default function LearnerDashboard() {
   const coursesInProgress = enrolledCourses.filter((course) => (course.progress ?? 0) < 100)
 
   // Use unified skeleton logic - show skeleton only on first load with no cached data
-  const showSkeleton = usePageSkeleton(authLoading, !!dashboardUser, ['courses', 'enrollments', 'progress'])
+  const showSkeleton = usePageSkeleton(authLoading, !!dashboardUser, [coursesData, enrollmentsData, progressData])
 
   // Only calculate firstName when user data is available to prevent flicker
   const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"

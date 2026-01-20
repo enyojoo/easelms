@@ -94,7 +94,7 @@ export default function CoursesPage() {
   }, [user, userType, authLoading, router])
 
   // Use unified skeleton logic - show skeleton only on first load with no cached data
-  const showSkeleton = usePageSkeleton(authLoading, !!dashboardUser, ['courses', 'enrollments'])
+  const showSkeleton = usePageSkeleton(authLoading, !!dashboardUser, [coursesData, enrollmentsData])
 
   // Get enrolled and completed course IDs from enrollments
   const enrolledCourseIds = enrollments.map((e: any) => e.course_id)

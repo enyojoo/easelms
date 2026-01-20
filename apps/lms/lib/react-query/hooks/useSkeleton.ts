@@ -1,14 +1,11 @@
-import { useHasData } from "./useAppCache"
-import type { DataType } from "../cache-config"
-
 /**
  * Unified Skeleton Logic Hook
  * Provides consistent skeleton behavior across all pages
  */
 
 export interface SkeletonOptions {
-  /** Data types to check for cached data */
-  dataTypes: DataType[]
+  /** Direct data objects to check */
+  dataObjects?: any[]
   /** Additional loading conditions */
   additionalChecks?: boolean[]
 }
@@ -18,18 +15,18 @@ export interface SkeletonOptions {
  * Returns true only on the very first load when no cached data exists
  */
 export function useSkeletonLogic(options: SkeletonOptions): boolean {
-  const { dataTypes, additionalChecks = [] } = options
+  const { dataObjects = [], additionalChecks = [] } = options
 
-  // Check if any cached data exists for the required types
-  const hasAnyData = useHasData(dataTypes)
+  // Check if any data objects exist
+  const hasDataObjects = dataObjects.some(data => data !== undefined && data !== null)
 
   // Check additional conditions (like auth loading)
   const additionalConditions = additionalChecks.some(check => check)
 
   // Show skeleton only if:
-  // 1. No cached data exists for required types, AND
+  // 1. No data exists, AND
   // 2. At least one additional condition is true (e.g., auth loading)
-  return !hasAnyData && additionalConditions
+  return !hasDataObjects && additionalConditions
 }
 
 /**
@@ -39,10 +36,10 @@ export function useSkeletonLogic(options: SkeletonOptions): boolean {
 export function usePageSkeleton(
   authLoading: boolean,
   userExists: boolean,
-  requiredDataTypes: DataType[]
+  dataObjects: any[]
 ): boolean {
   return useSkeletonLogic({
-    dataTypes: requiredDataTypes,
+    dataObjects,
     additionalChecks: [authLoading || !userExists]
   })
 }
@@ -53,10 +50,10 @@ export function usePageSkeleton(
  */
 export function useComponentSkeleton(
   isLoading: boolean,
-  requiredDataTypes: DataType[]
+  dataObjects: any[]
 ): boolean {
   return useSkeletonLogic({
-    dataTypes: requiredDataTypes,
+    dataObjects,
     additionalChecks: [isLoading]
   })
 }

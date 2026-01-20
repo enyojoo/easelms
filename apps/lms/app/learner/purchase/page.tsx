@@ -71,7 +71,7 @@ export default function PurchaseHistoryPage() {
   const enrolledCourses = coursesData?.courses || []
   
   // Use unified skeleton logic - show skeleton only on first load with no cached data
-  const showSkeleton = usePageSkeleton(authLoading, !!user && userType === "user", ['purchases', 'enrollments'])
+  const showSkeleton = usePageSkeleton(authLoading, !!user && userType === "user", [purchasesData, enrollmentsData])
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
