@@ -81,6 +81,13 @@ export default function PaymentPage() {
       return
     }
 
+    // Wait for user authentication to be available
+    if (!user?.id) {
+      console.warn("User not authenticated yet, retrying in 1 second...")
+      setTimeout(() => processPaymentSuccess(), 1000)
+      return
+    }
+
     sessionStorage.setItem(sessionKey, 'processing')
 
     try {
