@@ -14,8 +14,10 @@ import VideoModal from "@/components/VideoModal"
 import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import Logo from "@/components/Logo"
 import { Module } from "@/lib/types/course"
 import { formatCurrency } from "@/lib/utils/currency"
+import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
 
 // You can use environment variables for the app URL
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").replace(/\/$/, '') // Remove trailing slash
@@ -27,6 +29,9 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+
+  const brandSettings = useBrandSettings()
+  const platformName = brandSettings.platformName || "EaseLMS"
 
   const slugOrId = params.id as string // Can be either "course-title-123" or just "123"
   const courseId = extractIdFromSlug(slugOrId)
@@ -165,13 +170,33 @@ export default function CoursePage() {
   const enrollmentCount = course?.enrolledStudents || 0
 
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-      <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-        </Button>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <Link href="/">
+            <Logo className="w-44" />
+          </Link>
+          <div className="flex gap-2">
+            <Link href={`${APP_URL}/auth/learner/login`}>
+              <Button variant="ghost" size="sm">Login</Button>
+            </Link>
+            <Link href={`${APP_URL}/auth/learner/signup`}>
+              <Button size="sm">Get Started</Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-grow">
+        <div className="pt-4 md:pt-8 pb-4 md:pb-8">
+          <div className="container mx-auto px-4 lg:px-6">
+            <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+              </Button>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
+            </div>
 
       {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
       <div className="mb-4 md:mb-6 lg:hidden">
@@ -498,8 +523,41 @@ export default function CoursePage() {
               </div>
             </CardContent>
           </Card>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t bg-muted/30">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div className="md:col-span-2">
+              <Logo className="w-32 mb-4" />
+              <p className="text-muted-foreground mb-4 max-w-md">
+                Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Platform</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
+                <li><Link href="/#courses" className="hover:text-primary transition-colors">Courses</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t pt-8 text-center text-sm text-muted-foreground">
+            <p>© {new Date().getFullYear()} {platformName}. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
 
       <VideoModal
         isOpen={isVideoModalOpen}
