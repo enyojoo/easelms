@@ -3,6 +3,15 @@ import { convertCurrency } from "@/lib/payments/currency"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
+  // Temporarily suppress url.parse() deprecation warning from payment dependencies
+  const originalWarn = console.warn
+  console.warn = (...args) => {
+    if (args[0] && typeof args[0] === 'string' && args[0].includes('url.parse()')) {
+      return // Suppress this specific warning
+    }
+    originalWarn(...args)
+  }
+
   try {
     // Get authenticated user from server-side
     const supabase = await createClient()
@@ -164,5 +173,8 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Payment recording error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  } finally {
+    // Restore console.warn
+    console.warn = originalWarn
   }
 }
