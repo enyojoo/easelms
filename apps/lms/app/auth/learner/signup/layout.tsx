@@ -3,16 +3,7 @@ import { generatePageMetadata } from "@/lib/metadata"
 import { getBrandSettings } from "@/lib/supabase/brand-settings"
 
 export async function generateMetadata(): Promise<Metadata> {
-  const metadata = await generatePageMetadata("Sign Up")
-
-  // Hide authentication pages from search engines
-  return {
-    ...metadata,
-    robots: {
-      index: false,
-      follow: false,
-    },
-  }
+  return generatePageMetadata("Sign Up")
 }
 
 export default async function LearnerSignupLayout({
