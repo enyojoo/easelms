@@ -115,7 +115,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href={`${APP_URL}/auth/learner/signup`}>
-                <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-100 font-semibold shadow-lg">Create Free Account</Button>
+                <Button size="lg" className="bg-white text-gray-900 hover:bg-gray-100 font-semibold shadow-lg border-0">Create Free Account</Button>
               </Link>
               <Link href={`${APP_URL}/learner/courses`}>
                 <Button size="lg" variant="outline" className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold shadow-lg">Browse All Courses</Button>

@@ -43,6 +43,7 @@ const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").r
   }
 
   const getButtonText = () => {
+    if (isRedirecting) return "" // Show only spinner when redirecting
     if (isCompleted) return "View Certificate"
     if (isEnrolled) return "Continue Learning"
     if (enrollmentMode === "free") return "Enroll for Free"
@@ -51,7 +52,7 @@ const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").r
   }
 
   const getButtonIcon = () => {
-    if (isRedirecting) return <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+    if (isRedirecting) return <Loader2 className="w-4 h-4 animate-spin" /> // No margin when only spinner
     if (isCompleted) return <CheckCircle2 className="w-4 h-4 mr-2" />
     if (isEnrolled) return <Play className="w-4 h-4 mr-2" />
     return null
