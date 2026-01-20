@@ -112,17 +112,17 @@ const enrollCourse = useAppMutation(
 ```typescript
 import { usePageSkeleton } from '@/lib/react-query/hooks'
 
-// For page-level skeleton
+// For page-level skeleton - pass actual data objects
 const showSkeleton = usePageSkeleton(
   authLoading,           // Auth loading state
   !!user,               // User exists
-  ['courses', 'enrollments'] // Required data types
+  [coursesData, enrollmentsData] // Actual data objects
 )
 
-// For component-level skeleton
+// For component-level skeleton - pass actual data objects
 const showComponentSkeleton = useComponentSkeleton(
   isLoading,            // Component loading state
-  ['progress']          // Required data types
+  [progressData]        // Actual data objects
 )
 ```
 
@@ -383,9 +383,10 @@ const { data } = useAppQuery('courses', ['courses'], fetchCourses)
 - Check network connectivity
 
 **"Skeleton showing on every load"**
-- Verify `usePageSkeleton` is used correctly
-- Check if cached data exists: `queryClient.getQueryData(['courses'])`
-- Ensure data types match in skeleton hook
+- Verify `usePageSkeleton` is passed actual data objects, not data types
+- Check if data objects exist: `coursesData`, `enrollmentsData`, etc.
+- Ensure skeleton only shows when `authLoading || !user` AND no data exists
+- For navigation, skeleton should not show if data was previously loaded
 
 **"Stale data showing"**
 - Check cache configuration for data type
