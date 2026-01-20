@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { BookOpen, Clock, Banknote, Users } from "lucide-react"
 import { formatCurrency } from "@/lib/utils/currency"
+import { createCourseSlug } from "@/lib/slug"
 import type { Module } from "@/lib/types/course"
 
 interface CourseCardProps {
@@ -46,8 +47,19 @@ export default function CourseCard({
             Subscription
           </Badge>
         )
+      case "premium":
+        return (
+          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            Premium
+          </Badge>
+        )
       default:
-        return null
+        // Debug: show the actual enrollmentMode if it's unrecognized
+        return enrollmentMode ? (
+          <Badge variant="secondary" className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+            {enrollmentMode}
+          </Badge>
+        ) : null
     }
   }
 
@@ -67,7 +79,7 @@ export default function CourseCard({
   return (
     <Card className={`flex flex-col h-full hover:shadow-lg transition-shadow ${className || ""}`}>
       <CardHeader className="p-6">
-        <Link href={`/courses/${course.id}`} className="block">
+        <Link href={`/courses/${createCourseSlug(course.title, course.id)}`} className="block">
           <div className="aspect-video relative rounded-md overflow-hidden mb-4 cursor-pointer hover:opacity-90 transition-opacity">
             <SafeImage
               src={imageSrc}
@@ -81,7 +93,7 @@ export default function CourseCard({
             </div>
           </div>
         </Link>
-        <Link href={`/courses/${course.id}`} className="block">
+        <Link href={`/courses/${createCourseSlug(course.title, course.id)}`} className="block">
           <CardTitle className="text-lg mb-2 hover:text-primary transition-colors cursor-pointer line-clamp-2">
             {course.title}
           </CardTitle>

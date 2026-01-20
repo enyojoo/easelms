@@ -7,7 +7,7 @@ import CourseGrid from "@/components/CourseGrid"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
 
 // You can use environment variables for the app URL
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com"
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").replace(/\/$/, '') // Remove trailing slash
 
 export default function LandingPage() {
   const brandSettings = useBrandSettings()
@@ -18,22 +18,11 @@ export default function LandingPage() {
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Logo className="w-44" />
-          <nav className="hidden md:flex items-center space-x-6">
-            <Link href="#courses" className="text-sm font-medium hover:text-primary transition-colors">
-              Courses
-            </Link>
-            <Link href="/about" className="text-sm font-medium hover:text-primary transition-colors">
-              About
-            </Link>
-            <Link href="/contact" className="text-sm font-medium hover:text-primary transition-colors">
-              Contact
-            </Link>
-          </nav>
           <div className="flex gap-2">
-            <Link href={`${APP_URL}/auth/user/login`}>
+            <Link href={`${APP_URL}/auth/learner/login`}>
               <Button variant="ghost" size="sm">Login</Button>
             </Link>
-            <Link href={`${APP_URL}/auth/user/signup`}>
+            <Link href={`${APP_URL}/auth/learner/signup`}>
               <Button size="sm">Get Started</Button>
             </Link>
           </div>
@@ -51,7 +40,7 @@ export default function LandingPage() {
             Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals and unlock your potential.
           </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href={`${APP_URL}/auth/user/signup`}>
+              <Link href={`${APP_URL}/auth/learner/signup`}>
                 <Button size="lg" className="text-lg px-8 py-6">
                   Start Your Journey
                 </Button>
@@ -61,20 +50,6 @@ export default function LandingPage() {
                   Explore Courses
                 </Button>
               </Link>
-            </div>
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-2">100+</div>
-                <div className="text-muted-foreground">Expert Courses</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-2">10K+</div>
-                <div className="text-muted-foreground">Students Learning</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary mb-2">24/7</div>
-                <div className="text-muted-foreground">Support Available</div>
-              </div>
             </div>
           </div>
         </section>
@@ -94,7 +69,7 @@ export default function LandingPage() {
         <section className="py-20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Enthronement University?</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose {platformName}?</h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 We're committed to providing exceptional learning experiences that drive real results.
               </p>
@@ -132,21 +107,21 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-primary text-primary-foreground">
+        <section className="py-20 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start Learning?</h2>
             <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
               Join thousands of learners who are already transforming their lives through our courses.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href={`${APP_URL}/auth/user/signup`}>
-                <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
-                  Create Free Account
+              <Link href={`${APP_URL}/auth/learner/signup`}>
+                <Button size="lg" className="text-lg px-8 py-6 bg-white text-primary hover:bg-gray-100 font-semibold shadow-lg">
+                  🚀 Create Free Account
                 </Button>
               </Link>
               <Link href={`${APP_URL}/learner/courses`}>
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-                  Browse All Courses
+                <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-white text-white hover:bg-white hover:text-primary font-semibold shadow-lg">
+                  📚 Browse All Courses
                 </Button>
               </Link>
             </div>
@@ -171,8 +146,8 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">Platform</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href={`${APP_URL}/learner/courses`} className="hover:text-primary transition-colors">Courses</Link></li>
-                <li><Link href={`${APP_URL}/auth/user/login`} className="hover:text-primary transition-colors">Login</Link></li>
-                <li><Link href={`${APP_URL}/auth/user/signup`} className="hover:text-primary transition-colors">Sign Up</Link></li>
+                <li><Link href={`${APP_URL}/auth/learner/login`} className="hover:text-primary transition-colors">Login</Link></li>
+                <li><Link href={`${APP_URL}/auth/learner/signup`} className="hover:text-primary transition-colors">Sign Up</Link></li>
               </ul>
             </div>
             <div>

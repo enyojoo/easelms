@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+import { extractIdFromSlug } from "@/lib/slug"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +14,7 @@ import { Module } from "@/lib/types/course"
 import { formatCurrency } from "@/lib/utils/currency"
 
 // You can use environment variables for the app URL
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com"
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").replace(/\/$/, '') // Remove trailing slash
 
 export default function CoursePage() {
   const params = useParams()
@@ -22,7 +23,8 @@ export default function CoursePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const courseId = params.id as string
+  const slugOrId = params.id as string // Can be either "course-title-123" or just "123"
+  const courseId = extractIdFromSlug(slugOrId)
 
   useEffect(() => {
     const fetchCourse = async () => {

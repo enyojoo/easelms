@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Play, Eye } from "lucide-react"
+import { CheckCircle2, Play, Eye, Loader2 } from "lucide-react"
 import { Module } from "@/lib/types/course"
 import { formatCurrency } from "@/lib/utils/currency"
 
@@ -21,8 +21,8 @@ export default function EnrollmentCTA({
 }: EnrollmentCTAProps) {
   const [isRedirecting, setIsRedirecting] = useState(false)
 
-  // You can use environment variables for the app URL
-  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com"
+// You can use environment variables for the app URL
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").replace(/\/$/, '') // Remove trailing slash
 
   const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
   const coursePrice = course.price || course.settings?.enrollment?.price || 0
@@ -43,8 +43,6 @@ export default function EnrollmentCTA({
   }
 
   const getButtonText = () => {
-    if (isRedirecting) return "Redirecting..."
-
     if (isCompleted) return "View Certificate"
     if (isEnrolled) return "Continue Learning"
     if (enrollmentMode === "free") return "Enroll for Free"
@@ -53,6 +51,7 @@ export default function EnrollmentCTA({
   }
 
   const getButtonIcon = () => {
+    if (isRedirecting) return <Loader2 className="w-4 h-4 mr-2 animate-spin" />
     if (isCompleted) return <CheckCircle2 className="w-4 h-4 mr-2" />
     if (isEnrolled) return <Play className="w-4 h-4 mr-2" />
     return null
@@ -64,7 +63,7 @@ export default function EnrollmentCTA({
     // Build the URL for LMS enrollment/signup
     const baseUrl = isAuthenticated
       ? `${APP_URL}/learner/courses/${course.id}` // Direct to course if already logged in
-      : `${APP_URL}/auth/user/signup` // Sign up flow if not logged in
+      : `${APP_URL}/auth/learner/signup` // Sign up flow if not logged in
 
     const params = new URLSearchParams()
     params.append("course", course.id.toString())
