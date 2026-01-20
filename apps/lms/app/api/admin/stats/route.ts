@@ -1,6 +1,7 @@
 import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
+import { convertCurrency } from "@/lib/payments/currency"
 
 export async function GET() {
   const supabase = await createClient()
@@ -122,7 +123,7 @@ export async function GET() {
     // Get total revenue from completed/successful payments
     const { data: payments, error: paymentsError } = await adminClient
       .from("payments")
-      .select("payment_amount, payment_currency, exchange_rate, status")
+      .select("payment_amount, payment_currency, status")
       .in("status", ["completed", "successful"])
 
     if (paymentsError) {
@@ -134,26 +135,36 @@ export async function GET() {
     }
 
     // Only calculate revenue for admins (instructors should not see revenue)
-    // Calculate revenue in admin's default currency using exchange rates
-    const totalRevenue = isAdmin
-      ? (payments?.reduce((sum, payment) => {
-          // All payments have exchange_rate = payment_amount / usd_equivalent
-          // So to get USD equivalent: payment_amount / exchange_rate
-          const usdEquivalent = payment.payment_amount / (payment.exchange_rate || 1)
+    // Calculate revenue in admin's default currency using current exchange rates
+    let totalRevenue = 0
 
-          // Convert USD to admin currency
-          let convertedAmount = usdEquivalent
-          if (adminCurrency === "NGN") {
-            // Convert USD to NGN using current approximate rate
-            // This is a simplification - in production, you'd want real exchange rates
-            const USD_TO_NGN_RATE = 1000 // Approximate: 1 USD = 1000 NGN
-            convertedAmount = usdEquivalent * USD_TO_NGN_RATE
-          }
-          // For USD, usdEquivalent is already in USD
+    if (isAdmin && payments && payments.length > 0) {
+      // Convert each payment to admin's currency using current exchange rates
+      const conversionPromises = payments.map(async (payment) => {
+        try {
+          // Convert payment amount to admin's currency
+          const convertedAmount = await convertCurrency(
+            payment.payment_amount,
+            payment.payment_currency,
+            adminCurrency
+          )
+          return convertedAmount
+        } catch (error) {
+          logWarning("Currency conversion failed for payment", {
+            component: "admin/stats/route",
+            action: "GET",
+            paymentId: payment.id,
+            error: error.message,
+            fallbackAmount: payment.payment_amount
+          })
+          // Fallback: use original amount if conversion fails
+          return payment.payment_amount
+        }
+      })
 
-          return sum + convertedAmount
-        }, 0) || 0)
-      : 0
+      const convertedAmounts = await Promise.all(conversionPromises)
+      totalRevenue = convertedAmounts.reduce((sum, amount) => sum + amount, 0)
+    }
 
     // Get total completed courses count (enrollments with status = 'completed')
     const { count: totalCompleted, error: completedError } = await adminClient
