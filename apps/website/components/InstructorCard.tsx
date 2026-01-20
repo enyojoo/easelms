@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card"
 import SafeImage from "@/components/SafeImage"
+import ReadMore from "@/components/ReadMore"
 
 interface InstructorCardProps {
   name: string
@@ -29,7 +30,7 @@ export default function InstructorCard({ name, image, bio, title, className }: I
             <h3 className="font-semibold text-lg mb-1">{name}</h3>
             <p className="text-primary font-medium mb-3">{title}</p>
             {bio && (
-              <p className="text-muted-foreground leading-relaxed">{bio}</p>
+              <ReadMore text={bio} maxLength={150} className="text-muted-foreground leading-relaxed" />
             )}
           </div>
         </div>

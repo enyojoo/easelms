@@ -109,15 +109,29 @@ export default function CoursePage() {
   const enrollmentMode = course.settings?.enrollment?.enrollmentMode || "free"
   const coursePrice = course.price || course.settings?.enrollment?.price || 0
 
-  const getPriceDisplay = () => {
+  const getAccessDetails = () => {
     if (enrollmentMode === "free") {
-      return "Free"
+      return {
+        price: "Free",
+        buttonText: "Enroll",
+        access: "Full access for 3 months",
+      }
     }
     if (enrollmentMode === "buy" && coursePrice > 0) {
-      return formatCurrency(coursePrice, "USD")
+      return {
+        price: formatCurrency(coursePrice, "USD"),
+        buttonText: "Buy",
+        access: "Full access for 3 months",
+      }
     }
-    return "Free"
+    return {
+      price: "Free",
+      buttonText: "Enroll",
+      access: "Full access for 3 months",
+    }
   }
+
+  const { price, buttonText, access } = getAccessDetails()
 
   const getCourseBadge = () => {
     switch (enrollmentMode) {
@@ -189,14 +203,14 @@ export default function CoursePage() {
       </header>
 
       <main className="flex-grow">
-        <div className="pt-4 md:pt-8 pb-4 md:pb-8">
-          <div className="container mx-auto px-4 lg:px-6">
-            <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
-              <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-              </Button>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
-            </div>
+        <div className="py-12 md:py-16">
+          <div className="container mx-auto px-4">
+          <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+            </Button>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
+          </div>
 
       {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
       <div className="mb-4 md:mb-6 lg:hidden">
@@ -221,11 +235,16 @@ export default function CoursePage() {
             </div>
             <div className="mt-4 mb-4 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <span className="text-xl md:text-2xl font-bold text-primary">{getPriceDisplay()}</span>
+                <span className="text-xl md:text-2xl font-bold text-primary">{price}</span>
               </div>
               <div className="flex-shrink-0">{getCourseBadge()}</div>
             </div>
-            <EnrollmentCTA course={course} variant="mobile" />
+            <Button
+              className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
+              onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+            >
+              {buttonText}
+            </Button>
             {enrollmentMode !== "free" && (
               <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
             )}
@@ -238,7 +257,7 @@ export default function CoursePage() {
               )}
               <div className="flex items-center">
                 <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm break-words">Full access for 3 months</span>
+                <span className="text-xs md:text-sm break-words">{access}</span>
               </div>
               {course.settings?.certificate?.certificateEnabled && (() => {
                 // Get certificate type from settings, ensuring it's a string and trimmed
@@ -462,12 +481,17 @@ export default function CoursePage() {
               </div>
               <div className="mt-4 mb-4 flex items-center justify-between">
                 <div>
-                  <span className="text-2xl font-bold text-primary">{getPriceDisplay()}</span>
+                  <span className="text-2xl font-bold text-primary">{price}</span>
                   {enrollmentMode === "recurring" && <span className="text-sm text-muted-foreground">/month</span>}
                 </div>
                 {getCourseBadge()}
               </div>
-              <EnrollmentCTA course={course} variant="sidebar" />
+              <Button
+                className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+              >
+                {buttonText}
+              </Button>
               {enrollmentMode !== "free" && (
                 <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               )}
@@ -480,7 +504,7 @@ export default function CoursePage() {
                 )}
                 <div className="flex items-center">
                   <Globe className="w-5 h-5 mr-2 text-primary" />
-                  <span>Full access for 3 months</span>
+                  <span>{access}</span>
                 </div>
                 {course.settings?.certificate?.certificateEnabled && (() => {
                   // Get certificate type from settings, ensuring it's a string and trimmed
@@ -523,11 +547,11 @@ export default function CoursePage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+        </div>
             </div>
           </div>
-        </div>
-      </div>
-    </main>
+      </main>
 
       {/* Footer */}
       <footer className="border-t bg-muted/30">
