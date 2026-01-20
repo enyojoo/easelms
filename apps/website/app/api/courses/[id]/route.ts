@@ -12,7 +12,7 @@ export async function GET(
     }
 
     // For public course detail on website, fetch from LMS API
-    const lmsUrl = process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001"
+    const lmsUrl = (process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001").replace(/\/$/, '') // Remove trailing slash
     const apiUrl = `${lmsUrl}/api/courses/${id}`
 
     const response = await fetch(apiUrl, {

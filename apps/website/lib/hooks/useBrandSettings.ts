@@ -41,7 +41,7 @@ export function useBrandSettings(): BrandSettings & { isLoading: boolean; hasDat
     queryFn: async () => {
       try {
         // Fetch from LMS brand settings API
-        const lmsUrl = process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001"
+        const lmsUrl = (process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001").replace(/\/$/, '') // Remove trailing slash
         const response = await fetch(`${lmsUrl}/api/brand-settings`)
 
         if (!response.ok) {

@@ -2,6 +2,7 @@
 
 import SafeImage from "@/components/SafeImage"
 import Link from "next/link"
+import EnrollmentCTA from "@/components/EnrollmentCTA"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

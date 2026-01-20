@@ -8,7 +8,7 @@ export async function GET(request: Request) {
 
     // For public course listing on website, fetch from LMS API
     // The LMS API handles authentication and RLS internally
-    const lmsUrl = process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001"
+    const lmsUrl = (process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001").replace(/\/$/, '') // Remove trailing slash
     const apiUrl = new URL(`${lmsUrl}/api/courses`)
 
     // Forward query parameters
