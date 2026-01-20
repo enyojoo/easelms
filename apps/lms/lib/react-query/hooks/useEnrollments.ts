@@ -51,7 +51,7 @@ export function useEnrollments() {
       return previousData
     },
     refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
-    refetchOnMount: 'always', // Always refetch on mount but use cached data initially
+    refetchOnMount: false, // Don't refetch on mount if we have cached data
   })
 }
 
