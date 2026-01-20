@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useEnhancedQuery, useEnhancedMutation, cacheUtils } from "@/lib/cache/react-query-integration"
 
 export interface Enrollment {
   id: string
@@ -15,52 +15,34 @@ interface EnrollmentsResponse {
   enrollments: Enrollment[]
 }
 
-// Fetch user enrollments
+// Fetch user enrollments with enhanced caching
 export function useEnrollments() {
-  return useQuery<EnrollmentsResponse>({
-    queryKey: ["enrollments"],
-    queryFn: async () => {
+  return useEnhancedQuery<EnrollmentsResponse>(
+    ["enrollments"],
+    async () => {
       const response = await fetch("/api/enrollments")
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch enrollments")
       }
-      const data = await response.json()
-
-      // Cache in localStorage for better persistence
-      try {
-        localStorage.setItem('easelms_enrollments', JSON.stringify(data))
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-
-      return data
+      return response.json()
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes - match courses page, enrollments don't change frequently
-    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    placeholderData: (previousData) => {
-      // Try to get from localStorage if no previous data
-      if (!previousData) {
-        try {
-          const cached = localStorage.getItem('easelms_enrollments')
-          return cached ? JSON.parse(cached) : undefined
-        } catch (e) {
-          return undefined
-        }
-      }
-      return previousData
-    },
-    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
-    // Remove refetchOnMount to use default behavior - don't force refetch on every visit
-  })
+    {
+      cache: {
+        ttl: 10 * 60 * 1000, // 10 minutes for enrollments
+        version: '1.0',
+        compress: true,
+        priority: 'high' // Critical user data
+      },
+      enablePersistence: true
+    }
+  )
 }
 
-// Enroll in a course
+// Enroll in a course with optimistic updates
 export function useEnrollCourse() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({ courseId, bypassPrerequisites = false }: { courseId: number; bypassPrerequisites?: boolean }) => {
+  return useEnhancedMutation(
+    async ({ courseId, bypassPrerequisites = false }: { courseId: number; bypassPrerequisites?: boolean }) => {
       const response = await fetch("/api/enrollments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,11 +58,16 @@ export function useEnrollCourse() {
       }
       return response.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["enrollments"] })
-      queryClient.invalidateQueries({ queryKey: ["courses"] })
-    },
-  })
+    {
+      mutationKey: ["enrollments"],
+      optimistic: true,
+      rollbackOnError: true,
+      onSuccess: (data, variables) => {
+        // Invalidate related queries
+        cacheUtils.clearCache(["courses"]) // Clear courses cache to reflect enrollment status
+      }
+    }
+  )
 }
 
 // Invalidate enrollments cache

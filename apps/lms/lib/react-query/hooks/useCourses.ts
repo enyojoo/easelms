@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useEnhancedQuery, cacheUtils } from "@/lib/cache/react-query-integration"
 
 export interface Course {
   id: number
@@ -16,11 +16,11 @@ interface CoursesResponse {
   courses: Course[]
 }
 
-// Fetch all courses
+// Fetch all courses with enhanced caching
 export function useCourses(options?: { recommended?: boolean; all?: boolean }) {
-  return useQuery<CoursesResponse>({
-    queryKey: ["courses", options],
-    queryFn: async () => {
+  return useEnhancedQuery<CoursesResponse>(
+    ["courses", options],
+    async () => {
       const params = new URLSearchParams()
       if (options?.recommended) params.append("recommended", "true")
       if (options?.all) params.append("all", "true")
@@ -32,18 +32,23 @@ export function useCourses(options?: { recommended?: boolean; all?: boolean }) {
       }
       return response.json()
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes - courses don't change often
-    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
-    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
-  })
+    {
+      cache: {
+        ttl: 10 * 60 * 1000, // 10 minutes for courses
+        version: '1.0',
+        compress: true,
+        priority: 'medium' // Medium priority - courses change occasionally
+      },
+      enablePersistence: true
+    }
+  )
 }
 
-// Fetch single course
+// Fetch single course with enhanced caching
 export function useCourse(id: string | number | null) {
-  return useQuery<{ course: Course }>({
-    queryKey: ["course", id],
-    queryFn: async () => {
+  return useEnhancedQuery<{ course: Course }>(
+    ["course", id],
+    async () => {
       if (!id) throw new Error("Course ID is required")
       const response = await fetch(`/api/courses/${id}`)
       if (!response.ok) {
@@ -52,13 +57,17 @@ export function useCourse(id: string | number | null) {
       }
       return response.json()
     },
-    enabled: !!id,
-    staleTime: 15 * 60 * 1000, // 15 minutes - course details don't change often
-    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes even when inactive
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
-    refetchOnWindowFocus: false, // Don't refetch when window regains focus
-    refetchOnReconnect: false, // Don't refetch when reconnecting
-  })
+    {
+      enabled: !!id,
+      cache: {
+        ttl: 15 * 60 * 1000, // 15 minutes for course details
+        version: '1.0',
+        compress: true,
+        priority: 'medium'
+      },
+      enablePersistence: true
+    }
+  )
 }
 
 // Invalidate courses cache

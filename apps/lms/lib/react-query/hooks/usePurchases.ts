@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useEnhancedQuery, cacheUtils } from "@/lib/cache/react-query-integration"
 
 export interface Purchase {
   id: string
@@ -18,11 +18,11 @@ interface PurchasesResponse {
   purchases: Purchase[]
 }
 
-// Fetch user purchases
+// Fetch user purchases with enhanced caching
 export function usePurchases(options?: { all?: boolean }) {
-  return useQuery<PurchasesResponse>({
-    queryKey: ["purchases", options],
-    queryFn: async () => {
+  return useEnhancedQuery<PurchasesResponse>(
+    ["purchases", options],
+    async () => {
       const params = new URLSearchParams()
       if (options?.all) params.append("all", "true")
 
@@ -31,34 +31,18 @@ export function usePurchases(options?: { all?: boolean }) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch purchases")
       }
-      const data = await response.json()
-
-      // Cache in localStorage for better persistence
-      try {
-        localStorage.setItem('easelms_purchases', JSON.stringify(data))
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-
-      return data
+      return response.json()
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes - match courses page, purchases don't change frequently
-    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
-    placeholderData: (previousData) => {
-      // Try to get from localStorage if no previous data
-      if (!previousData) {
-        try {
-          const cached = localStorage.getItem('easelms_purchases')
-          return cached ? JSON.parse(cached) : undefined
-        } catch (e) {
-          return undefined
-        }
-      }
-      return previousData
-    },
-    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
-    // Remove refetchOnMount to use default behavior - don't force refetch on every visit
-  })
+    {
+      cache: {
+        ttl: 15 * 60 * 1000, // 15 minutes for purchases (they change less frequently)
+        version: '1.0',
+        compress: true, // Compress purchase data
+        priority: 'high' // High priority - important user data
+      },
+      enablePersistence: true
+    }
+  )
 }
 
 // Invalidate purchases cache
