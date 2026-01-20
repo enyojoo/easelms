@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAppQuery } from "./useAppCache"
 
 export interface Learner {
   id: string
@@ -16,30 +17,30 @@ interface LearnersResponse {
 
 // Fetch learners (admin only)
 export function useLearners(options?: { search?: string; enrollmentFilter?: string }) {
-  return useQuery<LearnersResponse>({
-    queryKey: ["learners", options],
-    queryFn: async () => {
+  return useAppQuery<LearnersResponse>(
+    'adminLearners',
+    ["learners", options],
+    async () => {
       const params = new URLSearchParams()
       if (options?.search) params.append("search", options.search)
       if (options?.enrollmentFilter) params.append("enrollmentFilter", options.enrollmentFilter)
-      
+
       const response = await fetch(`/api/learners?${params.toString()}`)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch learners")
       }
       return response.json()
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes - learner list doesn't change frequently
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
-  })
+    }
+  )
 }
 
 // Fetch single learner details
 export function useLearner(learnerId: string | null) {
-  return useQuery<{ learner: Learner }>({
-    queryKey: ["learner", learnerId],
-    queryFn: async () => {
+  return useAppQuery<{ learner: Learner }>(
+    'adminLearners',
+    ["learner", learnerId],
+    async () => {
       if (!learnerId) throw new Error("Learner ID is required")
       const response = await fetch(`/api/learners/${learnerId}`)
       if (!response.ok) {
@@ -48,9 +49,8 @@ export function useLearner(learnerId: string | null) {
       }
       return response.json()
     },
-    enabled: !!learnerId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - learner details don't change frequently
-  })
+    { enabled: !!learnerId }
+  )
 }
 
 // Invalidate learners cache

@@ -25,6 +25,7 @@ import { createCourseSlug } from "@/lib/slug"
 import { formatCurrency } from "@/lib/utils/currency"
 import AdminLearnerDetailSkeleton from "@/components/AdminLearnerDetailSkeleton"
 import { useLearner, useRealtimeAdminStats } from "@/lib/react-query/hooks"
+import { usePageSkeleton } from "@/lib/react-query/hooks/useSkeleton"
 
 interface Learner {
   id: string
@@ -104,63 +105,91 @@ function LearnerDetailsPage() {
 
   useEffect(() => {
     const fetchCoursesAndProgress = async () => {
-      if (!learner || learner.enrolledCourses.length === 0) return
+      if (!learner || learner.enrolledCourses.length === 0) {
+        setCourses([])
+        return
+      }
 
       try {
         const courseIds = learner.enrolledCourses.join(",")
         const coursesResponse = await fetch(`/api/courses?ids=${courseIds}`)
         if (!coursesResponse.ok) {
-          const errorData = await coursesResponse.json().catch(() => ({}))
-          throw new Error(errorData.error || "Failed to fetch courses")
+          console.warn("Failed to fetch courses, showing basic course info")
+          // Don't throw error, just show basic course info without progress
+          setCourses(learner.enrolledCourses.map(id => ({
+            id,
+            title: `Course ${id}`,
+            calculatedProgress: 0
+          })))
+          return
         }
 
         const coursesData = await coursesResponse.json()
         let coursesList = coursesData.courses || []
 
-        const progressResponse = await fetch(`/api/learners/${learner.id}/progress`)
+        // Try to get progress data, but don't fail if it doesn't work
         let progressList: any[] = []
-        if (progressResponse.ok) {
-          const progressData = await progressResponse.json()
-          progressList = progressData.progress || []
+        try {
+          const progressResponse = await fetch(`/api/learners/${learner.id}/progress`)
+          if (progressResponse.ok) {
+            const progressData = await progressResponse.json()
+            progressList = progressData.progress || []
+          }
+        } catch (progressError) {
+          console.warn("Failed to fetch progress data:", progressError)
+          // Continue without progress data
         }
 
         const coursesWithProgress = await Promise.all(
           coursesList.map(async (course: Course) => {
-            const courseDetailResponse = await fetch(`/api/courses/${course.id}`)
-            if (!courseDetailResponse.ok) {
-              console.warn(`Failed to fetch details for course ID: ${course.id}`)
-              return { ...course, calculatedProgress: 0 }
+            let calculatedProgress = 0
+
+            // Try to get detailed course info for progress calculation
+            try {
+              const courseDetailResponse = await fetch(`/api/courses/${course.id}`)
+              if (courseDetailResponse.ok) {
+                const courseDetailData = await courseDetailResponse.json()
+                const fullCourse = courseDetailData.course
+
+                if (fullCourse && Array.isArray(fullCourse.lessons)) {
+                  const lessonsProgress = progressList.filter(
+                    (p) => p.course_id === course.id && p.completed
+                  )
+                  const completedLessonCount = lessonsProgress.length
+                  const totalLessons = fullCourse.lessons.length
+
+                  calculatedProgress = totalLessons > 0
+                    ? Math.round((completedLessonCount / totalLessons) * 100)
+                    : 0
+
+                  return {
+                    ...course,
+                    lessons: fullCourse.lessons,
+                    calculatedProgress,
+                  }
+                }
+              }
+            } catch (detailError) {
+              console.warn(`Failed to fetch course details for ${course.id}:`, detailError)
             }
 
-            const courseDetailData = await courseDetailResponse.json()
-            const fullCourse = courseDetailData.course
-
-            if (!fullCourse || !Array.isArray(fullCourse.lessons)) {
-              console.warn(`Course ID ${course.id} has no lessons or invalid structure.`)
-              return { ...course, calculatedProgress: 0 }
-            }
-
-            const lessonsProgress = progressList.filter(
-              (p) => p.course_id === course.id && p.completed
-            )
-            const completedLessonCount = lessonsProgress.length
-            const totalLessons = fullCourse.lessons.length
-
-            const calculatedProgress = totalLessons > 0
-              ? Math.round((completedLessonCount / totalLessons) * 100)
-              : 0
-
+            // Fallback: return course with basic progress calculation or 0
             return {
               ...course,
-              lessons: fullCourse.lessons,
-              calculatedProgress: calculatedProgress,
+              calculatedProgress,
             }
           })
         )
 
         setCourses(coursesWithProgress)
       } catch (err: any) {
-        console.error("Error fetching courses or progress:", err)
+        console.error("Error fetching courses data:", err)
+        // Set basic course data as fallback
+        setCourses(learner.enrolledCourses.map(id => ({
+          id,
+          title: `Course ${id}`,
+          calculatedProgress: 0
+        })))
       }
     }
 
@@ -169,13 +198,16 @@ function LearnerDetailsPage() {
 
   useEffect(() => {
     const fetchPurchases = async () => {
-      if (authLoading || !user || !params.id) return
+      if (authLoading || !user || !params.id) {
+        setPurchases([])
+        return
+      }
 
       try {
         const response = await fetch(`/api/learners/${params.id}/purchases`)
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.warn("Error fetching purchases:", errorData.error)
+          console.warn("Failed to fetch purchases, showing empty list")
+          setPurchases([])
           return
         }
 
@@ -183,16 +215,15 @@ function LearnerDetailsPage() {
         setPurchases(data.purchases || [])
       } catch (err: any) {
         console.error("Error fetching purchases:", err)
+        setPurchases([])
       }
     }
 
     fetchPurchases()
   }, [params.id, authLoading, user])
 
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  const hasData = learnerData
-  const showSkeleton = (authLoading || !user || userType !== "admin") && !hasData
+  // Use unified skeleton logic - show skeleton only on first load with no cached data
+  const showSkeleton = usePageSkeleton(authLoading, !!user && userType === "admin", [learnerData])
 
   if (showSkeleton) {
     return <AdminLearnerDetailSkeleton />
