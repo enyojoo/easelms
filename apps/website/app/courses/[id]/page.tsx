@@ -240,7 +240,7 @@ export default function CoursePage() {
             </div>
             <Button
               className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
-              onClick={() => window.open(`${APP_URL}/learner/courses/${slugOrId}`, '_blank')}
+              onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
             >
               {buttonText}
             </Button>
@@ -487,7 +487,7 @@ export default function CoursePage() {
               </div>
               <Button
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => window.open(`${APP_URL}/learner/courses/${slugOrId}`, '_blank')}
+                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
               >
                 {buttonText}
               </Button>
