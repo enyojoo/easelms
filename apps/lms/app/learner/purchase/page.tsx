@@ -16,33 +16,33 @@ import { usePurchasePrice } from "@/lib/react-query/hooks/useCoursePrice"
 import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
 import { useRealtimePurchases } from "@/lib/react-query/hooks/useRealtime"
 import { usePageSkeleton } from "@/lib/react-query/hooks/useSkeleton"
-import { useQueryClient } from "@tanstack/react-query"
+import { useAppQuery } from "@/lib/react-query/hooks/useAppCache"
 import { toast } from "sonner"
 
 export default function PurchaseHistoryPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const queryClient = useQueryClient()
-  
+
   // Fetch purchases, enrollments, and courses using React Query
   const { data: purchasesData, isPending: purchasesPending } = usePurchases()
   const { data: enrollmentsData, isPending: enrollmentsPending } = useEnrollments()
 
   // Set up real-time subscription for purchases
   useRealtimePurchases(user?.id)
-  
+
   // Get enrolled course IDs (sorted for stable query key)
   const enrolledIds = enrollmentsData?.enrollments
     ?.map((e) => e.course_id)
     .filter(Boolean)
     .sort((a, b) => a - b) || []
-  
+
   const enrolledIdsKey = enrolledIds.join(',')
-  
-  // Fetch courses for enrolled IDs using a separate query
-  const { data: coursesData, isPending: coursesPending } = useQuery({
-    queryKey: ["courses", "enrolled", enrolledIdsKey],
-    queryFn: async () => {
+
+  // Fetch courses for enrolled IDs using unified query system
+  const { data: coursesData, isPending: coursesPending } = useAppQuery(
+    'courses',
+    ["courses", "enrolled", enrolledIdsKey],
+    async () => {
       if (enrolledIds.length === 0) {
         return { courses: [] }
       }
@@ -53,10 +53,8 @@ export default function PurchaseHistoryPage() {
       }
       return response.json()
     },
-    enabled: enrolledIds.length > 0,
-    staleTime: 10 * 60 * 1000,
-    placeholderData: (previousData) => previousData,
-  })
+    { enabled: enrolledIds.length > 0 }
+  )
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -67,36 +65,7 @@ export default function PurchaseHistoryPage() {
     }
   }, [authLoading, user, userType, router])
 
-  // Pre-fetch data when user is authenticated
-  useEffect(() => {
-    if (!authLoading && user && userType === "user") {
-      // Pre-fetch purchases
-      queryClient.prefetchQuery({
-        queryKey: ["purchases"],
-        queryFn: async () => {
-          const response = await fetch("/api/purchases")
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error || "Failed to fetch purchases")
-          }
-          return response.json()
-        },
-      })
-      
-      // Pre-fetch enrollments
-      queryClient.prefetchQuery({
-        queryKey: ["enrollments"],
-        queryFn: async () => {
-          const response = await fetch("/api/enrollments")
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error || "Failed to fetch enrollments")
-          }
-          return response.json()
-        },
-      })
-    }
-  }, [authLoading, user, userType, queryClient])
+  // Unified caching system handles data fetching automatically
 
   const purchases: Purchase[] = purchasesData?.purchases || []
   const enrolledCourses = coursesData?.courses || []
