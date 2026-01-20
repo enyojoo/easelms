@@ -100,9 +100,11 @@ export default function PurchaseHistoryPage() {
   const purchases: Purchase[] = purchasesData?.purchases || []
   const enrolledCourses = coursesData?.courses || []
   
-  // Show skeleton only during initial authentication
-  // Once authenticated, show content immediately (data will load with improved caching)
-  const showSkeleton = authLoading || (!user || userType !== "user")
+  // Show skeleton ONLY on true initial load (no cached data exists)
+  // Once we have data, never show skeleton again (even during refetches)
+  // Match the behavior from /learner/courses page
+  const hasAnyData = purchasesData?.purchases?.length > 0 || enrollmentsData?.enrollments?.length > 0
+  const showSkeleton = (authLoading || !user || userType !== "user") && !hasAnyData
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
