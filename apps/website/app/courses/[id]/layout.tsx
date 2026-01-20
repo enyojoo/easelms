@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import { extractIdFromSlug } from "@/lib/slug"
+import { generatePageMetadata } from "@/lib/metadata"
 
 export async function generateMetadata({
   params,
@@ -11,10 +12,7 @@ export async function generateMetadata({
   const numericId = parseInt(idStr, 10)
 
   if (isNaN(numericId)) {
-    return {
-      title: "Course - EaseLMS",
-      description: "Learn new skills with our comprehensive online courses.",
-    }
+    return generatePageMetadata("Course")
   }
 
   try {
@@ -28,21 +26,11 @@ export async function generateMetadata({
       const course = data.course
 
       if (course) {
-        return {
-          title: `${course.title} - EaseLMS`,
+        return generatePageMetadata("Course", {
+          courseTitle: course.title,
           description: course.description || "Learn new skills with our comprehensive online courses.",
-          openGraph: {
-            title: course.title,
-            description: course.description || "Learn new skills with our comprehensive online courses.",
-            images: course.image ? [{ url: course.image, alt: course.title }] : undefined,
-          },
-          twitter: {
-            card: "summary_large_image",
-            title: course.title,
-            description: course.description || "Learn new skills with our comprehensive online courses.",
-            images: course.image ? [course.image] : undefined,
-          },
-        }
+          image: course.image || undefined,
+        })
       }
     }
   } catch (error) {
@@ -50,10 +38,7 @@ export async function generateMetadata({
     console.error("Error fetching course metadata:", error)
   }
 
-  return {
-    title: "Course - EaseLMS",
-    description: "Learn new skills with our comprehensive online courses.",
-  }
+  return generatePageMetadata("Course")
 }
 
 export default function CourseLayout({
