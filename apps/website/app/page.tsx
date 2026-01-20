@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Logo from "@/components/Logo"
 import CourseGrid from "@/components/CourseGrid"
+import { ThemeToggle } from "@/components/ThemeToggle"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
 
 // You can use environment variables for the app URL
@@ -126,36 +127,26 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-12 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="md:col-span-2">
-              <Logo className="w-32 mb-4" />
-              <p className="text-muted-foreground mb-4 max-w-md">
-                Empowering learners worldwide with quality education and transformative experiences.
-              </p>
-              <div className="flex space-x-4">
-                {/* Social links can be added here */}
+      <footer className="border-t bg-muted/30">
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <Logo className="w-32 mx-auto mb-4" />
+            <p className="text-muted-foreground mb-6">
+              Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
+            </p>
+            <div className="mb-6">
+              <h3 className="font-semibold mb-4">Terms, Policy</h3>
+              <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
+                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              </div>
+              <div className="flex justify-center">
+                <ThemeToggle />
               </div>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">Platform</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href={`${APP_URL}/learner/courses`} className="hover:text-primary transition-colors">Courses</Link></li>
-                <li><Link href={`${APP_URL}/auth/learner/login`} className="hover:text-primary transition-colors">Login</Link></li>
-                <li><Link href={`${APP_URL}/auth/learner/signup`} className="hover:text-primary transition-colors">Sign Up</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              </ul>
-            </div>
           </div>
-          <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} {platformName}. All rights reserved.</p>
+          <div className="text-center text-sm text-muted-foreground">
+            <p>© {new Date().getFullYear()} {platformName}</p>
           </div>
         </div>
       </footer>
