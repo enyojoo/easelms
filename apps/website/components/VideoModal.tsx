@@ -1,7 +1,8 @@
 "use client"
 
-import * as Dialog from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import type React from "react"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import VideoPreviewPlayer from "@/components/VideoPreviewPlayer"
 
 interface VideoModalProps {
   isOpen: boolean
@@ -12,25 +13,33 @@ interface VideoModalProps {
 
 export default function VideoModal({ isOpen, onClose, videoUrl, title }: VideoModalProps) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80" />
-        <Dialog.Content className="fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%] w-full max-w-4xl">
-          <div className="relative bg-black rounded-lg overflow-hidden">
-            <Dialog.Close className="absolute right-4 top-4 z-10 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-              <X className="h-4 w-4 text-white" />
-              <span className="sr-only">Close</span>
-            </Dialog.Close>
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              className="w-full aspect-video"
-              title={title}
-            />
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="!left-4 !right-4 !top-[50%] !-translate-y-1/2 !translate-x-0 max-w-none w-[calc(100vw-2rem)] sm:!left-[50%] sm:!right-auto sm:!top-[50%] sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:w-full sm:max-w-[800px] p-0 sm:rounded-t-lg sm:rounded-b-none overflow-hidden rounded-lg [&>button]:rounded-t-lg">
+        <div className="p-4 border-b">
+          <div>
+            <div className="text-sm font-medium text-muted-foreground">Course Preview</div>
+            <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </div>
+
+        <div className="relative bg-black w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+          {videoUrl ? (
+            <div className="w-full h-full absolute inset-0">
+              <VideoPreviewPlayer
+                key={videoUrl}
+                src={videoUrl}
+                className="w-full h-full"
+                autoplay={isOpen}
+                showControlsOnHover={true}
+              />
+            </div>
+          ) : (
+            <div className="w-full h-full absolute inset-0 flex items-center justify-center">
+              <p className="text-white">No video available</p>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
