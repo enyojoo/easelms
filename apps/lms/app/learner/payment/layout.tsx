@@ -2,9 +2,9 @@ import { Metadata } from "next"
 import { generatePageMetadata } from "@/lib/metadata"
 
 export async function generateMetadata(): Promise<Metadata> {
-  const metadata = await generatePageMetadata("Purchases")
+  const metadata = await generatePageMetadata("Payment")
 
-  // Hide admin pages from search engines
+  // Hide payment page from search engines
   return {
     ...metadata,
     robots: {
@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function PurchasesLayout({
+export default function PaymentLayout({
   children,
 }: {
   children: React.ReactNode

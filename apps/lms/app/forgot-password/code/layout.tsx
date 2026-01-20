@@ -3,7 +3,16 @@ import { generatePageMetadata } from "@/lib/metadata"
 import { getBrandSettings } from "@/lib/supabase/brand-settings"
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("Reset Password")
+  const metadata = await generatePageMetadata("Reset Password")
+
+  // Hide password reset pages from search engines
+  return {
+    ...metadata,
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
 }
 
 export default async function ResetPasswordCodeLayout({

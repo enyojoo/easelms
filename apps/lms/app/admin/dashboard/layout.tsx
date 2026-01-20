@@ -2,7 +2,16 @@ import { Metadata } from "next"
 import { generatePageMetadata } from "@/lib/metadata"
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("Admin Dashboard")
+  const metadata = await generatePageMetadata("Admin Dashboard")
+
+  // Hide admin pages from search engines
+  return {
+    ...metadata,
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
 }
 
 export default function AdminDashboardLayout({
