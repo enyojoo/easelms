@@ -25,10 +25,33 @@ export function useEnrollments() {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch enrollments")
       }
-      return response.json()
+      const data = await response.json()
+
+      // Cache in localStorage for better persistence
+      try {
+        localStorage.setItem('easelms_enrollments', JSON.stringify(data))
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+
+      return data
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - enrollments don't change frequently
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    placeholderData: (previousData) => {
+      // Try to get from localStorage if no previous data
+      if (!previousData) {
+        try {
+          const cached = localStorage.getItem('easelms_enrollments')
+          return cached ? JSON.parse(cached) : undefined
+        } catch (e) {
+          return undefined
+        }
+      }
+      return previousData
+    },
+    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
+    refetchOnMount: 'always', // Always refetch on mount but use cached data initially
   })
 }
 

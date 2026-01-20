@@ -100,11 +100,9 @@ export default function PurchaseHistoryPage() {
   const purchases: Purchase[] = purchasesData?.purchases || []
   const enrolledCourses = coursesData?.courses || []
   
-  // Show skeleton during initial load and data fetching
-  // Hide skeleton once we have data or when user is not authenticated
-  const isLoadingInitial = authLoading || (!user || userType !== "user")
-  const isLoadingData = purchasesPending || enrollmentsPending || (enrolledIds.length > 0 && coursesPending)
-  const showSkeleton = isLoadingInitial || (user && userType === "user" && isLoadingData && !purchasesData && !enrollmentsData)
+  // Show skeleton only during initial authentication
+  // Once authenticated, show content immediately (data will load with improved caching)
+  const showSkeleton = authLoading || (!user || userType !== "user")
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
@@ -113,7 +111,7 @@ export default function PurchaseHistoryPage() {
       ) : (
         <>
       <h1 className="text-2xl md:text-3xl font-bold text-primary mb-4 md:mb-8">Purchase History</h1>
-      
+
       <Card>
         <CardContent className="p-4 md:p-6">
           {purchases.length > 0 ? (
