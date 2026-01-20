@@ -247,12 +247,21 @@ export default function CoursePage() {
               </div>
               <div className="flex-shrink-0">{getCourseBadge()}</div>
             </div>
-            <Button
-              className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
-              onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
-            >
-              {buttonText}
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <Button
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
+                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+              >
+                {buttonText}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 border-2 h-11 md:h-10"
+                onClick={() => router.push("/")}
+              >
+                Back to Courses
+              </Button>
+            </div>
             {enrollmentMode !== "free" && (
               <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
             )}
@@ -494,12 +503,21 @@ export default function CoursePage() {
                 </div>
                 {getCourseBadge()}
               </div>
-              <Button
-                className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
-              >
-                {buttonText}
-              </Button>
+              <div className="flex flex-col gap-3 mb-4">
+                <Button
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+                >
+                  {buttonText}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full border-2"
+                  onClick={() => router.push("/")}
+                >
+                  Back to Courses
+                </Button>
+              </div>
               {enrollmentMode !== "free" && (
                 <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               )}
@@ -564,7 +582,7 @@ export default function CoursePage() {
       {/* Footer */}
       <footer className="border-t bg-muted/30">
         <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
             <div className="md:col-span-2">
               <Logo className="w-32 mb-4" />
               <p className="text-muted-foreground mb-4 max-w-md">
@@ -572,22 +590,15 @@ export default function CoursePage() {
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Platform</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
-                <li><Link href="/#courses" className="hover:text-primary transition-colors">Courses</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
+              <h3 className="font-semibold mb-4">Terms, Policy</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
-          <div className="border-t pt-8 text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} {platformName}. All rights reserved.</p>
+          <div className="text-center text-sm text-muted-foreground">
+            <p>© {new Date().getFullYear()} {platformName}</p>
           </div>
         </div>
       </footer>
