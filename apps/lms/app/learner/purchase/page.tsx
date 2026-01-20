@@ -16,6 +16,7 @@ import { usePurchasePrice } from "@/lib/react-query/hooks/useCoursePrice"
 import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
 import { useRealtimePurchases } from "@/lib/react-query/hooks/useRealtime"
 import { usePageSkeleton } from "@/lib/react-query/hooks/useSkeleton"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 export default function PurchaseHistoryPage() {
