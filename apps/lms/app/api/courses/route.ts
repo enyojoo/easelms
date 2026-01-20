@@ -155,6 +155,40 @@ export async function GET(request: Request) {
       }, { status: 500 })
     }
 
+    // Get enrollment counts for all courses to ensure accurate numbers
+    const courseIds = (data || []).map((course: any) => course.id)
+    let enrollmentCounts: { [key: number]: number } = {}
+
+    if (courseIds.length > 0) {
+      try {
+        // Get enrollment counts for all courses in a single query
+        const { data: enrollmentsData, error: enrollmentsError } = await supabase
+          .from("enrollments")
+          .select("course_id")
+          .in("course_id", courseIds)
+
+        if (!enrollmentsError && enrollmentsData) {
+          // Count enrollments per course
+          enrollmentCounts = enrollmentsData.reduce((acc: { [key: number]: number }, enrollment: any) => {
+            acc[enrollment.course_id] = (acc[enrollment.course_id] || 0) + 1
+            return acc
+          }, {})
+        } else {
+          logWarning("Courses API: Failed to fetch enrollment counts", {
+            component: "courses/route",
+            action: "GET",
+            error: enrollmentsError?.message,
+          })
+        }
+      } catch (enrollmentError: any) {
+        logWarning("Courses API: Error calculating enrollment counts", {
+          component: "courses/route",
+          action: "GET",
+          error: enrollmentError.message,
+        })
+      }
+    }
+
     // Process courses to ensure they have the expected structure
     const processedCourses = (data || []).map((course: any) => {
       // Ensure lessons is an array (either from relation or empty array)
@@ -189,6 +223,7 @@ export async function GET(request: Request) {
         image: course.image || course.thumbnail || "/placeholder.svg",
         description: course.description || "",
         price: course.price || 0,
+        enrolledStudents: enrollmentCounts[course.id] || 0, // Use dynamic count instead of stored field
       }
     })
 
