@@ -107,7 +107,7 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground">
+        <section className="py-20 bg-primary text-primary-foreground">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start Learning?</h2>
             <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
@@ -115,14 +115,10 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href={`${APP_URL}/auth/learner/signup`}>
-                <Button size="lg" className="text-lg px-8 py-6 bg-white text-primary hover:bg-gray-100 font-semibold shadow-lg">
-                  🚀 Create Free Account
-                </Button>
+                <Button size="lg">Create Free Account</Button>
               </Link>
               <Link href={`${APP_URL}/learner/courses`}>
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-white text-white hover:bg-white hover:text-primary font-semibold shadow-lg">
-                  📚 Browse All Courses
-                </Button>
+                <Button size="lg" variant="outline">Browse All Courses</Button>
               </Link>
             </div>
           </div>

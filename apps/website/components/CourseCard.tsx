@@ -47,19 +47,8 @@ export default function CourseCard({
             Subscription
           </Badge>
         )
-      case "premium":
-        return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-            Premium
-          </Badge>
-        )
       default:
-        // Debug: show the actual enrollmentMode if it's unrecognized
-        return enrollmentMode ? (
-          <Badge variant="secondary" className="bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-            {enrollmentMode}
-          </Badge>
-        ) : null
+        return null
     }
   }
 
