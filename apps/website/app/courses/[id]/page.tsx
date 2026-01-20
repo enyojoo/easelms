@@ -196,7 +196,7 @@ export default function CoursePage() {
             <Link href={`${APP_URL}/auth/learner/login`}>
               <Button variant="ghost" size="sm">Login</Button>
             </Link>
-            <Link href={`${APP_URL}/auth/learner/signup`}>
+            <Link href={`${APP_URL}/auth/learner/signup`} className="hidden sm:inline-block">
               <Button size="sm">Get Started</Button>
             </Link>
           </div>
