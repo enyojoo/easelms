@@ -40,6 +40,18 @@ export default function PaymentPage() {
       return
     }
 
+    // Wait for authentication to load
+    if (authLoading) {
+      return
+    }
+
+    // Ensure user is authenticated
+    if (!user?.id) {
+      setStatus("error")
+      setError("You must be logged in to process payments")
+      return
+    }
+
     // If no courseId, redirect to courses
     if (!courseId) {
       router.push("/learner/courses")
@@ -64,7 +76,7 @@ export default function PaymentPage() {
     } else {
       router.push("/learner/courses")
     }
-  }, [courseId, gateway, paymentStatus, sessionKey]) // Include dependencies
+  }, [courseId, gateway, paymentStatus, sessionKey, authLoading, user?.id]) // Include dependencies
 
   // Cleanup sessionStorage on unmount
   useEffect(() => {
@@ -78,13 +90,6 @@ export default function PaymentPage() {
     // Prevent duplicate processing
     const currentStatus = sessionStorage.getItem(sessionKey)
     if (currentStatus === 'processing' || currentStatus === 'completed') {
-      return
-    }
-
-    // Wait for user authentication to be available
-    if (!user?.id) {
-      console.warn("User not authenticated yet, retrying in 1 second...")
-      setTimeout(() => processPaymentSuccess(), 1000)
       return
     }
 
@@ -139,13 +144,12 @@ export default function PaymentPage() {
         // We only need to handle enrollment here
       } else {
         // For Flutterwave and other gateways, create the payment record
-        console.log("Creating payment record for", gateway)
+        console.log("Creating payment record for", gateway, "courseId:", courseId)
         const paymentResponse = await fetch("/api/payments/record-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             courseId: courseId,
-            userId: user?.id,
             amount: courseData.course?.price || 0,
             gateway: gateway
           })

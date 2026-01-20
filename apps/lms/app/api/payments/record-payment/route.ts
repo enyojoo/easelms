@@ -1,16 +1,25 @@
-import { createServiceRoleClient } from "@/lib/supabase/server"
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server"
 import { convertCurrency } from "@/lib/payments/currency"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
+    // Get authenticated user from server-side
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+    }
+
     const serviceSupabase = createServiceRoleClient()
-    const { courseId, userId, amount, gateway } = await request.json()
+    const { courseId, amount, gateway } = await request.json()
+    const userId = user.id // Use authenticated user ID
 
     console.log("Record payment API called:", { courseId, userId, amount, gateway })
 
-    if (!courseId || !userId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    if (!courseId) {
+      return NextResponse.json({ error: "Missing courseId" }, { status: 400 })
     }
 
     // Get course details to understand the original pricing
