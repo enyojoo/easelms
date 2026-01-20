@@ -247,16 +247,18 @@ export default function CoursePage() {
               </div>
               <div className="flex-shrink-0">{getCourseBadge()}</div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
+                size="lg"
+                className="text-lg px-8 py-6"
                 onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
               >
                 {buttonText}
               </Button>
               <Button
+                size="lg"
                 variant="outline"
-                className="flex-1 border-2 h-11 md:h-10"
+                className="text-lg px-8 py-6 border-2"
                 onClick={() => router.push("/")}
               >
                 Back to Courses
@@ -505,14 +507,16 @@ export default function CoursePage() {
               </div>
               <div className="flex flex-col gap-3 mb-4">
                 <Button
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  size="lg"
+                  className="text-lg px-8 py-6 w-full"
                   onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
                 >
                   {buttonText}
                 </Button>
                 <Button
+                  size="lg"
                   variant="outline"
-                  className="w-full border-2"
+                  className="text-lg px-8 py-6 w-full border-2"
                   onClick={() => router.push("/")}
                 >
                   Back to Courses
@@ -582,19 +586,17 @@ export default function CoursePage() {
       {/* Footer */}
       <footer className="border-t bg-muted/30">
         <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-            <div className="md:col-span-2">
-              <Logo className="w-32 mb-4" />
-              <p className="text-muted-foreground mb-4 max-w-md">
-                Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
-              </p>
-            </div>
-            <div>
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <Logo className="w-32 mx-auto mb-4" />
+            <p className="text-muted-foreground mb-6">
+              Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
+            </p>
+            <div className="mb-6">
               <h3 className="font-semibold mb-4">Terms, Policy</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-                <li><Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-              </ul>
+              <div className="flex justify-center gap-6 text-sm text-muted-foreground">
+                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+              </div>
             </div>
           </div>
           <div className="text-center text-sm text-muted-foreground">
