@@ -97,10 +97,32 @@ export async function GET() {
       throw learnersError
     }
 
+    // Get admin's default currency from platform settings
+    let adminCurrency = "USD"
+    if (isAdmin) {
+      try {
+        const { data: platformSettings } = await adminClient
+          .from("platform_settings")
+          .select("default_currency")
+          .single()
+
+        if (platformSettings?.default_currency) {
+          adminCurrency = platformSettings.default_currency
+        }
+      } catch (settingsError) {
+        // If platform_settings doesn't exist or error, use USD as default
+        logWarning("Could not fetch admin currency, using USD", {
+          component: "admin/stats/route",
+          action: "GET",
+          error: settingsError.message,
+        })
+      }
+    }
+
     // Get total revenue from completed payments
     const { data: payments, error: paymentsError } = await adminClient
       .from("payments")
-      .select("payment_amount, exchange_rate")
+      .select("payment_amount, payment_currency, exchange_rate")
       .eq("status", "completed")
 
     if (paymentsError) {
@@ -112,11 +134,24 @@ export async function GET() {
     }
 
     // Only calculate revenue for admins (instructors should not see revenue)
-    // Calculate USD equivalent using payment_amount and exchange_rate
+    // Calculate revenue in admin's default currency using exchange rates
     const totalRevenue = isAdmin
       ? (payments?.reduce((sum, payment) => {
-          const usdEquivalent = payment.payment_amount / (payment.exchange_rate || 1)
-          return sum + usdEquivalent
+          // Convert payment to admin's currency
+          let convertedAmount = payment.payment_amount
+
+          if (payment.payment_currency !== adminCurrency) {
+            // If payment currency differs from admin currency, convert using exchange_rate
+            if (adminCurrency === "NGN") {
+              // Convert to NGN: multiply by exchange rate
+              convertedAmount = payment.payment_amount * (payment.exchange_rate || 1)
+            } else if (adminCurrency === "USD") {
+              // Convert to USD: divide by exchange rate
+              convertedAmount = payment.payment_amount / (payment.exchange_rate || 1)
+            }
+          }
+
+          return sum + convertedAmount
         }, 0) || 0)
       : 0
 
@@ -384,6 +419,7 @@ export async function GET() {
       totalCourses: totalCourses || 0,
       totalLearners: totalLearners || 0,
       totalRevenue: totalRevenue,
+      revenueCurrency: isAdmin ? adminCurrency : "USD",
       totalCompleted: totalCompleted || 0,
       recentActivity: recentActivity
     })

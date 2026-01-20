@@ -5,6 +5,8 @@ export interface AdminStats {
   totalCourses: number
   totalEnrollments: number
   totalRevenue: number
+  revenueCurrency: string
+  totalCompleted: number
   recentActivity: Array<{
     id: string
     type: "enrollment" | "completion" | "purchase"

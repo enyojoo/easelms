@@ -15,6 +15,7 @@ interface DashboardStats {
   totalCourses: number
   totalLearners: number
   totalRevenue: number
+  revenueCurrency: string
   totalCompleted: number
   recentActivity: Array<{
     id: string
@@ -104,7 +105,8 @@ export default function InstructorDashboard() {
                 <p className="text-sm text-destructive">Error loading revenue</p>
               ) : (
                   <p className="text-2xl font-bold">
-                    ${stats?.totalRevenue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
+                    {stats?.revenueCurrency === "NGN" ? "₦" : "$"}
+                    {stats?.totalRevenue?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}
                   </p>
               )}
             </CardContent>
