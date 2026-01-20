@@ -92,7 +92,7 @@ const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "https://app.example.com").r
       case "free":
         return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Free</Badge>
       case "buy":
-        return <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Premium</Badge>
+        return <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">Paid</Badge>
       case "recurring":
         return <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">Subscription</Badge>
       default:
