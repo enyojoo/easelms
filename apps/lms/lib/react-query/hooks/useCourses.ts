@@ -1,4 +1,5 @@
-import { useEnhancedQuery, cacheUtils } from "@/lib/cache/react-query-integration"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAppQuery, useAppMutation } from "./useAppCache"
 
 export interface Course {
   id: number
@@ -16,9 +17,10 @@ interface CoursesResponse {
   courses: Course[]
 }
 
-// Fetch all courses with enhanced caching
+// Fetch all courses
 export function useCourses(options?: { recommended?: boolean; all?: boolean }) {
-  return useEnhancedQuery<CoursesResponse>(
+  return useAppQuery<CoursesResponse>(
+    'courses',
     ["courses", options],
     async () => {
       const params = new URLSearchParams()
@@ -31,22 +33,14 @@ export function useCourses(options?: { recommended?: boolean; all?: boolean }) {
         throw new Error(errorData.error || "Failed to fetch courses")
       }
       return response.json()
-    },
-    {
-      cache: {
-        ttl: 10 * 60 * 1000, // 10 minutes for courses
-        version: '1.0',
-        compress: true,
-        priority: 'medium' // Medium priority - courses change occasionally
-      },
-      enablePersistence: true
     }
   )
 }
 
-// Fetch single course with enhanced caching
+// Fetch single course
 export function useCourse(id: string | number | null) {
-  return useEnhancedQuery<{ course: Course }>(
+  return useAppQuery<{ course: Course }>(
+    'course',
     ["course", id],
     async () => {
       if (!id) throw new Error("Course ID is required")
@@ -57,16 +51,7 @@ export function useCourse(id: string | number | null) {
       }
       return response.json()
     },
-    {
-      enabled: !!id,
-      cache: {
-        ttl: 15 * 60 * 1000, // 15 minutes for course details
-        version: '1.0',
-        compress: true,
-        priority: 'medium'
-      },
-      enablePersistence: true
-    }
+    { enabled: !!id }
   )
 }
 

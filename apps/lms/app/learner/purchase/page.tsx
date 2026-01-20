@@ -15,7 +15,7 @@ import { usePurchases, type Purchase } from "@/lib/react-query/hooks/usePurchase
 import { usePurchasePrice } from "@/lib/react-query/hooks/useCoursePrice"
 import { useEnrollments } from "@/lib/react-query/hooks/useEnrollments"
 import { useRealtimePurchases } from "@/lib/react-query/hooks/useRealtime"
-import { useQueryClient, useQuery } from "@tanstack/react-query"
+import { usePageSkeleton } from "@/lib/react-query/hooks/useSkeleton"
 import { toast } from "sonner"
 
 export default function PurchaseHistoryPage() {
@@ -100,11 +100,8 @@ export default function PurchaseHistoryPage() {
   const purchases: Purchase[] = purchasesData?.purchases || []
   const enrolledCourses = coursesData?.courses || []
   
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  // Once we have data, never show skeleton again (even during refetches)
-  // Match the behavior from /learner/courses page
-  const hasAnyData = purchasesData?.purchases?.length > 0 || enrollmentsData?.enrollments?.length > 0
-  const showSkeleton = (authLoading || !user || userType !== "user") && !hasAnyData
+  // Use unified skeleton logic - show skeleton only on first load with no cached data
+  const showSkeleton = usePageSkeleton(authLoading, !!user && userType === "user", ['purchases', 'enrollments'])
 
   return (
     <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">

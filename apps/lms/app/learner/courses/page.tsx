@@ -13,6 +13,7 @@ import CourseCard from "@/components/CourseCard"
 import CourseCardSkeleton from "@/components/CourseCardSkeleton"
 import CoursesPageSkeleton from "@/components/CoursesPageSkeleton"
 import { useCourses, useEnrollments, useRealtimeEnrollments, useRealtimeCourses, useSettings, useProfile } from "@/lib/react-query/hooks"
+import { usePageSkeleton } from "@/lib/react-query/hooks/useSkeleton"
 
 interface Course {
   id: number
@@ -92,10 +93,8 @@ export default function CoursesPage() {
     }
   }, [user, userType, authLoading, router])
 
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  // Once we have data, never show skeleton again (even during refetches)
-  const hasAnyData = coursesData || enrollmentsData
-  const showSkeleton = (authLoading || !dashboardUser) && !hasAnyData
+  // Use unified skeleton logic - show skeleton only on first load with no cached data
+  const showSkeleton = usePageSkeleton(authLoading, !!dashboardUser, ['courses', 'enrollments'])
 
   // Get enrolled and completed course IDs from enrollments
   const enrolledCourseIds = enrollments.map((e: any) => e.course_id)

@@ -1,4 +1,5 @@
-import { useEnhancedQuery, useEnhancedMutation, cacheUtils } from "@/lib/cache/react-query-integration"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAppQuery, useAppMutation } from "./useAppCache"
 
 export interface Enrollment {
   id: string
@@ -15,9 +16,10 @@ interface EnrollmentsResponse {
   enrollments: Enrollment[]
 }
 
-// Fetch user enrollments with enhanced caching
+// Fetch user enrollments
 export function useEnrollments() {
-  return useEnhancedQuery<EnrollmentsResponse>(
+  return useAppQuery<EnrollmentsResponse>(
+    'enrollments',
     ["enrollments"],
     async () => {
       const response = await fetch("/api/enrollments")
@@ -26,22 +28,13 @@ export function useEnrollments() {
         throw new Error(errorData.error || "Failed to fetch enrollments")
       }
       return response.json()
-    },
-    {
-      cache: {
-        ttl: 10 * 60 * 1000, // 10 minutes for enrollments
-        version: '1.0',
-        compress: true,
-        priority: 'high' // Critical user data
-      },
-      enablePersistence: true
     }
   )
 }
 
 // Enroll in a course with optimistic updates
 export function useEnrollCourse() {
-  return useEnhancedMutation(
+  return useAppMutation(
     async ({ courseId, bypassPrerequisites = false }: { courseId: number; bypassPrerequisites?: boolean }) => {
       const response = await fetch("/api/enrollments", {
         method: "POST",
@@ -59,12 +52,27 @@ export function useEnrollCourse() {
       return response.json()
     },
     {
-      mutationKey: ["enrollments"],
-      optimistic: true,
-      rollbackOnError: true,
-      onSuccess: (data, variables) => {
-        // Invalidate related queries
-        cacheUtils.clearCache(["courses"]) // Clear courses cache to reflect enrollment status
+      invalidateQueries: [["enrollments"], ["courses"]],
+      optimisticUpdate: {
+        queryKey: ["enrollments"],
+        updater: (oldData: EnrollmentsResponse | undefined, variables: { courseId: number }) => {
+          if (!oldData) return oldData
+
+          // Optimistically add the enrollment
+          const newEnrollment = {
+            id: `temp-${variables.courseId}`,
+            user_id: "current-user", // Will be replaced by real data
+            course_id: variables.courseId,
+            enrolled_at: new Date().toISOString(),
+            status: "active",
+            progress: 0,
+          }
+
+          return {
+            ...oldData,
+            enrollments: [...oldData.enrollments, newEnrollment]
+          }
+        }
       }
     }
   )

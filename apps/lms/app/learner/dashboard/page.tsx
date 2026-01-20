@@ -11,6 +11,7 @@ import { useClientAuthState } from "@/utils/client-auth"
 import { createCourseSlug } from "@/lib/slug"
 import type { User } from "@/data/users"
 import { useEnrollments, useProgress, useCourses, useRealtimeEnrollments, useRealtimeProgress, useProfile } from "@/lib/react-query/hooks"
+import { usePageSkeleton } from "@/lib/react-query/hooks/useSkeleton"
 
 interface Course {
   id: number
@@ -160,10 +161,8 @@ export default function LearnerDashboard() {
   // Get courses in progress (enrolled but not completed)
   const coursesInProgress = enrolledCourses.filter((course) => (course.progress ?? 0) < 100)
 
-  // Show skeleton ONLY on true initial load (no cached data exists)
-  // Once we have data, never show skeleton again (even during refetches)
-  const hasAnyData = enrollmentsData || progressData || recommendedData || enrolledCourses.length > 0
-  const showSkeleton = (authLoading || !dashboardUser) && !hasAnyData
+  // Use unified skeleton logic - show skeleton only on first load with no cached data
+  const showSkeleton = usePageSkeleton(authLoading, !!dashboardUser, ['courses', 'enrollments', 'progress'])
 
   // Only calculate firstName when user data is available to prevent flicker
   const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"

@@ -1,4 +1,5 @@
-import { useEnhancedQuery, cacheUtils } from "@/lib/cache/react-query-integration"
+import { useQueryClient } from "@tanstack/react-query"
+import { useAppQuery } from "./useAppCache"
 
 export interface Purchase {
   id: string
@@ -18,9 +19,10 @@ interface PurchasesResponse {
   purchases: Purchase[]
 }
 
-// Fetch user purchases with enhanced caching
+// Fetch user purchases
 export function usePurchases(options?: { all?: boolean }) {
-  return useEnhancedQuery<PurchasesResponse>(
+  return useAppQuery<PurchasesResponse>(
+    'purchases',
     ["purchases", options],
     async () => {
       const params = new URLSearchParams()
@@ -32,15 +34,6 @@ export function usePurchases(options?: { all?: boolean }) {
         throw new Error(errorData.error || "Failed to fetch purchases")
       }
       return response.json()
-    },
-    {
-      cache: {
-        ttl: 15 * 60 * 1000, // 15 minutes for purchases (they change less frequently)
-        version: '1.0',
-        compress: true, // Compress purchase data
-        priority: 'high' // High priority - important user data
-      },
-      enablePersistence: true
     }
   )
 }

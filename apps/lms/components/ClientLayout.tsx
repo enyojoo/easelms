@@ -15,7 +15,6 @@ import { QueryProvider } from "@/lib/react-query/QueryProvider"
 import { ErrorBoundary } from "./ErrorBoundary"
 import DynamicTitle from "./DynamicTitle"
 import DynamicFavicon from "./DynamicFavicon"
-import { PrefetchProvider } from "@/lib/prefetching/prefetch-provider"
 import { useQueryClient } from "@tanstack/react-query"
 
 export default function ClientLayout({
@@ -309,8 +308,7 @@ export default function ClientLayout({
   return (
     <ErrorBoundary>
       <QueryProvider>
-        <PrefetchProvider>
-          <BrandSettingsPrefetcher initialData={initialSettingsData}>
+        <BrandSettingsPrefetcher initialData={initialSettingsData}>
           <ThemeProvider defaultTheme="dark" storageKey="easelms-theme">
             <DynamicTitle />
             <DynamicFavicon />
@@ -342,7 +340,6 @@ export default function ClientLayout({
             <Toaster />
           </ThemeProvider>
         </BrandSettingsPrefetcher>
-        </PrefetchProvider>
       </QueryProvider>
     </ErrorBoundary>
   )

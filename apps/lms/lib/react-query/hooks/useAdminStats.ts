@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useAppQuery } from "./useAppCache"
 
 export interface AdminStats {
   totalLearners: number
@@ -23,19 +23,17 @@ export interface AdminStats {
 
 // Fetch admin dashboard stats
 export function useAdminStats() {
-  return useQuery<AdminStats>({
-    queryKey: ["admin-stats"],
-    queryFn: async () => {
+  return useAppQuery<AdminStats>(
+    'adminStats',
+    ["admin-stats"],
+    async () => {
       const response = await fetch("/api/admin/stats")
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch admin stats")
       }
       return response.json()
-    },
-    staleTime: 2 * 60 * 1000, // 2 minutes - stats can be slightly stale
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes in background
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
-  })
+    }
+  )
 }
 
