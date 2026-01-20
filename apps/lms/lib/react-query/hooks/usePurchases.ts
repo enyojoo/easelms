@@ -42,7 +42,7 @@ export function usePurchases(options?: { all?: boolean }) {
 
       return data
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - purchases don't change frequently
+    staleTime: 10 * 60 * 1000, // 10 minutes - match courses page, purchases don't change frequently
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
     placeholderData: (previousData) => {
       // Try to get from localStorage if no previous data
@@ -57,7 +57,7 @@ export function usePurchases(options?: { all?: boolean }) {
       return previousData
     },
     refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
-    refetchOnMount: false, // Don't refetch on mount if we have cached data
+    // Remove refetchOnMount to use default behavior - don't force refetch on every visit
   })
 }
 

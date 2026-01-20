@@ -24,7 +24,7 @@ export function useCourses(options?: { recommended?: boolean; all?: boolean }) {
       const params = new URLSearchParams()
       if (options?.recommended) params.append("recommended", "true")
       if (options?.all) params.append("all", "true")
-      
+
       const response = await fetch(`/api/courses?${params.toString()}`)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -33,7 +33,9 @@ export function useCourses(options?: { recommended?: boolean; all?: boolean }) {
       return response.json()
     },
     staleTime: 10 * 60 * 1000, // 10 minutes - courses don't change often
+    gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
     placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
+    refetchOnWindowFocus: false, // Don't refetch on window focus to prevent loading states
   })
 }
 
