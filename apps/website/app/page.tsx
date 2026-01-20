@@ -128,7 +128,7 @@ export default function LandingPage() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold mb-3 text-foreground">Flexible Learning</h3>
-                <p className="text-muted-foreground">Study at your own pace with lifetime access to course materials and updates.</p>
+                <p className="text-muted-foreground leading-relaxed">Study at your own pace with lifetime access to course materials and updates.</p>
               </div>
               <div className="group text-center p-6 rounded-xl bg-card border border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -144,27 +144,27 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="relative py-20 md:py-24 overflow-hidden">
-          {/* Background with theme-aware gradients */}
-          <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/90 dark:from-primary dark:via-primary/95 dark:to-primary" />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/20 via-transparent to-transparent" />
+        <section className="relative py-20 md:py-24 overflow-hidden bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 dark:from-primary/10 dark:via-primary/20 dark:to-primary/10">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10 dark:to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/40 to-transparent dark:from-background/90 dark:via-background/60 dark:to-transparent" />
 
           {/* Floating elements for visual interest */}
-          <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl" />
-          <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+          <div className="absolute top-10 left-10 w-20 h-20 bg-primary/10 dark:bg-primary/20 rounded-full blur-xl" />
+          <div className="absolute bottom-10 right-10 w-32 h-32 bg-primary/5 dark:bg-primary/15 rounded-full blur-2xl" />
 
           <div className="relative container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-white">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
               Ready to Start Learning?
             </h2>
-            <p className="text-lg md:text-xl mb-10 text-white/90 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl mb-10 text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Join thousands of learners who are already transforming their lives through our courses.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href={`${APP_URL}/auth/learner/signup`}>
                 <Button
                   size="lg"
-                  className="bg-white text-primary hover:bg-white/90 font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
                 >
                   Create Free Account
                 </Button>
@@ -173,7 +173,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-2 border-white/80 text-white hover:bg-white hover:text-primary font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg backdrop-blur-sm"
+                  className="border-2 border-primary/20 hover:border-primary/40 bg-background/80 backdrop-blur-sm hover:bg-background text-foreground font-semibold shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-6 text-lg"
                 >
                   Browse All Courses
                 </Button>
