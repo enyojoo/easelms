@@ -204,9 +204,9 @@ export default function CoursePage() {
 
       <main className="flex-grow">
         {/* Course Header Section */}
-        <section className="py-12 md:py-16">
+        <section className="pt-12 md:pt-16 pb-6 md:pb-8">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-2 mb-8 flex-wrap">
+            <div className="flex items-center gap-2 mb-6 flex-wrap">
               <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
                 <ArrowLeft className="mr-2 h-4 w-4" />
               </Button>
@@ -216,7 +216,7 @@ export default function CoursePage() {
         </section>
 
         {/* Course Content Section */}
-        <section className="pb-16">
+        <section className="pb-16 pt-0">
           <div className="container mx-auto px-4">
 
       {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
