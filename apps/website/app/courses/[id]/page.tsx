@@ -181,13 +181,8 @@ export default function CoursePage() {
   // Get enrollment count from course data (total enrollments for the course)
   const enrollmentCount = course?.enrolledStudents || 0
 
-  // Transform video URL to use proxy to avoid CORS issues
-  const getProxiedVideoUrl = (originalUrl: string | null) => {
-    if (!originalUrl) return null
-    return `/api/video-proxy?url=${encodeURIComponent(originalUrl)}`
-  }
-
-  const videoUrl = getProxiedVideoUrl(course?.previewVideo)
+  // Use direct video URL now that S3 CORS is configured
+  const videoUrl = course?.previewVideo || ""
 
   return (
     <div className="min-h-screen flex flex-col">
