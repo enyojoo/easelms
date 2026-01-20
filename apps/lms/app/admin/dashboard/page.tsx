@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, BookOpen, DollarSign, Activity, UserPlus, Award } from "lucide-react"
+import { Users, BookOpen, TrendingUp, Activity, UserPlus, Award } from "lucide-react"
 import { useClientAuthState } from "@/utils/client-auth"
 import { useAdminStats, useRealtimeAdminStats, useProfile } from "@/lib/react-query/hooks"
 import type { User } from "@/data/users"
@@ -97,7 +97,7 @@ export default function InstructorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-sm">
-                <DollarSign className="mr-2 h-4 w-4" /> Total Revenue
+                <TrendingUp className="mr-2 h-4 w-4" /> Total Revenue
               </CardTitle>
             </CardHeader>
             <CardContent>
