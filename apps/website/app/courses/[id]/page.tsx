@@ -248,23 +248,12 @@ export default function CoursePage() {
               </div>
               <div className="flex-shrink-0">{getCourseBadge()}</div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button
-                size="lg"
-                className="text-lg px-8 py-6"
-                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
-              >
-                {buttonText}
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="text-lg px-8 py-6 border-2"
-                onClick={() => router.push("/")}
-              >
-                Back to Courses
-              </Button>
-            </div>
+            <Button
+              className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
+              onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+            >
+              {buttonText}
+            </Button>
             {enrollmentMode !== "free" && (
               <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
             )}
@@ -506,23 +495,12 @@ export default function CoursePage() {
                 </div>
                 {getCourseBadge()}
               </div>
-              <div className="flex flex-col gap-3 mb-4">
-                <Button
-                  size="lg"
-                  className="text-lg px-8 py-6 w-full"
-                  onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
-                >
-                  {buttonText}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 py-6 w-full border-2"
-                  onClick={() => router.push("/")}
-                >
-                  Back to Courses
-                </Button>
-              </div>
+              <Button
+                className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+              >
+                {buttonText}
+              </Button>
               {enrollmentMode !== "free" && (
                 <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               )}
@@ -593,7 +571,6 @@ export default function CoursePage() {
               Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
             </p>
             <div className="mb-6">
-              <h3 className="font-semibold mb-4">Terms, Policy</h3>
               <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
                 <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
                 <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>

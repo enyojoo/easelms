@@ -5,6 +5,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useEffect, useState } from "react"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
+import { useTheme } from "./ThemeProvider"
 
 interface LogoProps {
   className?: string
@@ -15,13 +16,14 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
   const [mounted, setMounted] = useState(false)
   const [imageError, setImageError] = useState(false)
   const brandSettings = useBrandSettings()
+  const { theme } = useTheme()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   // Determine which logo to show based on theme
-  const isDark = mounted && window.matchMedia("(prefers-color-scheme: dark)").matches
+  const isDark = theme === "dark" || (theme === "system" && mounted && window.matchMedia("(prefers-color-scheme: dark)").matches)
 
   // Get logo source from brand settings
   const getLogoSrc = (): string => {
