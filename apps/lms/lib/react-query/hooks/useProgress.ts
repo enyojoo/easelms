@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
+import { useAppQuery, useAppMutation } from "./useAppCache"
 
 export interface Progress {
   id?: string
@@ -19,9 +20,10 @@ interface ProgressResponse {
 
 // Fetch progress for a course (or all progress if courseId is null/undefined)
 export function useProgress(courseId: string | number | null | undefined) {
-  return useQuery<ProgressResponse>({
-    queryKey: ["progress", courseId ?? "all"],
-    queryFn: async () => {
+  return useAppQuery<ProgressResponse>(
+    'progress',
+    ["progress", courseId ?? "all"],
+    async () => {
       const url = courseId ? `/api/progress?courseId=${courseId}` : `/api/progress`
       const response = await fetch(url)
       if (!response.ok) {
@@ -29,18 +31,14 @@ export function useProgress(courseId: string | number | null | undefined) {
         throw new Error(errorData.error || "Failed to fetch progress")
       }
       return response.json()
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes - use cached data for instant loading
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
-  })
+    }
+  )
 }
 
-// Save progress
+// Save progress with optimistic updates
 export function useSaveProgress() {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: async (progressData: {
+  return useAppMutation(
+    async (progressData: {
       course_id: number
       lesson_id: number
       completed: boolean
@@ -59,11 +57,36 @@ export function useSaveProgress() {
       }
       return response.json()
     },
-    onSuccess: (_, variables) => {
-      // Invalidate progress for the specific course
-      queryClient.invalidateQueries({ queryKey: ["progress", variables.course_id] })
-    },
-  })
+    {
+      invalidateQueries: [["progress", (variables: any) => variables.course_id]],
+      optimisticUpdate: {
+        queryKey: ["progress", (variables: any) => variables.course_id],
+        updater: (oldData: ProgressResponse | undefined, variables: any) => {
+          if (!oldData) return oldData
+
+          // Find existing progress entry or create new one
+          const existingIndex = oldData.progress.findIndex(
+            (p) => p.course_id === variables.course_id && p.lesson_id === variables.lesson_id
+          )
+
+          const updatedProgress = { ...variables, user_id: "current-user" }
+
+          if (existingIndex >= 0) {
+            // Update existing progress
+            const newProgress = [...oldData.progress]
+            newProgress[existingIndex] = { ...newProgress[existingIndex], ...updatedProgress }
+            return { ...oldData, progress: newProgress }
+          } else {
+            // Add new progress entry
+            return {
+              ...oldData,
+              progress: [...oldData.progress, updatedProgress]
+            }
+          }
+        }
+      }
+    }
+  )
 }
 
 // Invalidate progress cache

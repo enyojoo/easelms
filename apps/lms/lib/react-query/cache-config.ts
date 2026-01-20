@@ -98,6 +98,11 @@ export const DATA_TYPE_CONFIGS = {
   settings: 'static',
   brandSettings: 'static',
   users: 'dynamic',
+
+  // Additional admin types
+  adminLearners: 'admin',
+  adminCourses: 'admin',
+  adminPurchases: 'admin',
 } as const
 
 export type DataType = keyof typeof DATA_TYPE_CONFIGS
