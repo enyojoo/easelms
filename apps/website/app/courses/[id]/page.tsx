@@ -203,13 +203,21 @@ export default function CoursePage() {
       </header>
 
       <main className="flex-grow">
-        <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
-          <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
-            <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-            </Button>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
+        {/* Course Header Section */}
+        <section className="py-12 md:py-16">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-2 mb-8 flex-wrap">
+              <Button variant="ghost" size="sm" onClick={() => router.push("/")} className="flex-shrink-0">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+              </Button>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-primary break-words flex-1 min-w-0">{course?.title || ""}</h1>
+            </div>
           </div>
+        </section>
+
+        {/* Course Content Section */}
+        <section className="pb-16">
+          <div className="container mx-auto px-4">
 
       {/* Video Preview Section - Show on mobile/tablet, hide on large screens */}
       <div className="mb-4 md:mb-6 lg:hidden">
@@ -546,10 +554,11 @@ export default function CoursePage() {
               </div>
             </CardContent>
           </Card>
-        </div>
             </div>
           </div>
-      </main>
+        </div>
+      </section>
+    </main>
 
       {/* Footer */}
       <footer className="border-t bg-muted/30">
