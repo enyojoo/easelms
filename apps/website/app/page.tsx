@@ -34,7 +34,10 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
                 <Link href={`${APP_URL}/auth/learner/signup`}>
-                  <Button size="lg" className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                  <Button
+                    size="lg"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
+                  >
                     Start Your Journey
                   </Button>
                 </Link>
@@ -42,7 +45,7 @@ export default function LandingPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="text-lg px-8 py-6 border-2 border-primary/20 hover:border-primary/40 bg-background/50 backdrop-blur-sm hover:bg-background/80 text-foreground shadow-lg hover:shadow-xl transition-all duration-200"
+                    className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
                   >
                     Explore Courses
                   </Button>
