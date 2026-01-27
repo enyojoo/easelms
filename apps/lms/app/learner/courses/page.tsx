@@ -136,7 +136,7 @@ export default function CoursesPage() {
   // Handle error state
   if (coursesError && !coursesPending) {
     return (
-      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
         <div className="text-center py-12">
           <p className="text-destructive mb-4">
             {coursesError instanceof Error ? coursesError.message : "Failed to load courses"}
@@ -147,7 +147,7 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
       {showSkeleton ? (
         <CoursesPageSkeleton />
       ) : (

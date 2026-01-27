@@ -247,7 +247,7 @@ export default function InstructorCoursePreviewPage() {
       }]
 
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
       <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
         <Button variant="ghost" size="sm" asChild className="flex-shrink-0">
           <Link href="/admin/courses" prefetch={true}>

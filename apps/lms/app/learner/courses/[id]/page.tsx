@@ -170,7 +170,7 @@ export default function CoursePage() {
       notFound()
     }
     return (
-      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
           <p className="text-destructive">{courseError instanceof Error ? courseError.message : "Course not found"}</p>
           <Button asChild>
@@ -203,7 +203,7 @@ export default function CoursePage() {
       notFound()
     }
     return (
-      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+      <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
           <p className="text-destructive">{courseError instanceof Error ? courseError.message : "Course not found"}</p>
           <Button asChild>
@@ -438,7 +438,7 @@ export default function CoursePage() {
   }
 
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 lg:px-6">
+    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
       <div className="flex items-center gap-2 mb-4 md:mb-6 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => router.push("/learner/courses")} className="flex-shrink-0">
           <ArrowLeft className="mr-2 h-4 w-4" />
