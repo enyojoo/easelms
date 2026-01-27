@@ -109,7 +109,7 @@ export default function AdminCoursePreviewLearningPage() {
 
   if (error || !course) {
     return (
-      <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 md:px-6 lg:px-8">
+      <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
           <p className="text-destructive">{error || "Course not found"}</p>
           <Button onClick={() => router.push("/admin/courses")}>Back to Courses</Button>
@@ -138,7 +138,7 @@ export default function AdminCoursePreviewLearningPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-4 md:py-6 px-4 md:px-6 lg:px-8">
+      <div className="container mx-auto py-4 md:py-6 px-4 lg:px-6">
         {/* Header */}
         <div className="flex items-center gap-2 mb-6">
           <Button 

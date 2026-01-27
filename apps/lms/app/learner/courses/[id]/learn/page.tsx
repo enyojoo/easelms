@@ -890,7 +890,7 @@ export default function CourseLearningPage() {
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-background z-50 touch-pan-y">
       {/* Header - Fixed */}
       <div className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur">
-        <div className="px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4">
+        <div className="px-4 sm:px-6 md:px-6 py-2 sm:py-3 md:py-4">
           <div className="max-w-[1800px] mx-auto flex items-center gap-2 sm:gap-3">
             <Button variant="ghost" size="sm" onClick={() => router.push(`/learner/courses/${createCourseSlug(course.title, courseId)}`)} className="flex-shrink-0 h-8 sm:h-9 md:h-10">
               <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />

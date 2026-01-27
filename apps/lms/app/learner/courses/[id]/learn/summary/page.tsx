@@ -324,7 +324,7 @@ export default function CourseCompletionPage() {
   // Show error only if no cached data exists
   if (courseError && !course && !authLoading) {
     return (
-      <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 md:px-6 lg:px-8">
+      <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
           <p className="text-destructive">{courseError?.message || "Failed to load completion data"}</p>
           <Button onClick={() => router.push("/learner/courses")}>Back to Courses</Button>
