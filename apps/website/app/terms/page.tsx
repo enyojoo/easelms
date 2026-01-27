@@ -146,6 +146,7 @@ export default function TermsPage() {
             </p>
           </div>
         </div>
+        </div>
       </main>
 
       <Footer />
