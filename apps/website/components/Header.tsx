@@ -11,7 +11,7 @@ export default function Header() {
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link href="/">
-          <Logo className="w-44" />
+          <Logo className="w-32 md:w-44" />
         </Link>
         <div className="flex gap-2">
           <Link href={`${APP_URL}/auth/learner/login`}>
