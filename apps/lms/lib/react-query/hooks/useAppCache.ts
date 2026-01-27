@@ -15,6 +15,8 @@ const STORAGE_KEYS = {
   courses: 'easelms_courses',
   settings: 'easelms_settings',
   progress: 'easelms_progress',
+  platformUsers: 'easelms_platform_users',
+  teamMembers: 'easelms_team_members',
 } as const
 
 /**

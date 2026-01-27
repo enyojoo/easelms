@@ -25,7 +25,6 @@ import BrandSettings from "./components/BrandSettings"
 import { US } from "country-flag-icons/react/3x2"
 import AdminSettingsSkeleton from "@/components/AdminSettingsSkeleton"
 import { toast } from "sonner"
-import { useQueryClient } from "@tanstack/react-query"
 import { useSettings, useUpdateSettings } from "@/lib/react-query/hooks"
 
 const NigeriaFlag = () => (
@@ -40,7 +39,7 @@ const NigeriaFlag = () => (
 export default function SettingsPage() {
   const router = useRouter()
   const { user, loading: authLoading, userType } = useClientAuthState()
-  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState("notifications")
   const [settings, setSettings] = useState({
     emailNotifications: true,
     courseEnrollmentNotifications: true,
@@ -65,48 +64,9 @@ export default function SettingsPage() {
     }
   }, [user, userType, authLoading, router])
 
-  // Pre-fetch users and team data when user is authenticated (only if not already cached)
-  // This ensures data is available immediately when tabs are opened
-  useEffect(() => {
-    if (authLoading || !user || userType !== "admin") return
-    
-    // Prefetch both queries to ensure data is cached before tabs are opened
-    // React Query will use cached data instantly when hooks are called in child components
-    const platformUsersData = queryClient.getQueryData(["platformUsers"])
-    const teamMembersData = queryClient.getQueryData(["teamMembers"])
-    
-    if (!platformUsersData) {
-      queryClient.prefetchQuery({
-        queryKey: ["platformUsers"],
-        queryFn: async () => {
-          const response = await fetch("/api/users?userType=user")
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error || "Failed to fetch users")
-          }
-          return response.json()
-        },
-        staleTime: Infinity, // Never consider data stale
-        gcTime: Infinity, // Keep cache forever
-      })
-    }
-    
-    if (!teamMembersData) {
-      queryClient.prefetchQuery({
-        queryKey: ["teamMembers"],
-        queryFn: async () => {
-          const response = await fetch("/api/users?userType=admin")
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error || "Failed to fetch team members")
-          }
-          return response.json()
-        },
-        staleTime: Infinity, // Never consider data stale
-        gcTime: Infinity, // Keep cache forever
-      })
-    }
-  }, [authLoading, user, userType, queryClient])
+  // Note: Users and Team data will be fetched automatically when components mount
+  // useAppQuery provides localStorage persistence and unified caching
+  // No need for manual prefetching - components will fetch on first mount and cache persists
 
   // Process settings data from React Query
   useEffect(() => {
@@ -195,7 +155,7 @@ export default function SettingsPage() {
         <>
       <div className="space-y-6">
         <h1 className="text-3xl font-bold text-primary mb-6">Settings</h1>
-        <Tabs defaultValue="notifications" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted p-1 rounded-lg w-full grid grid-cols-4 gap-2">
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
@@ -215,7 +175,12 @@ export default function SettingsPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="notifications">
+          {/* All tab content is always mounted, conditionally shown/hidden with CSS */}
+          {/* This prevents component unmounting/remounting that causes flickering */}
+          {/* All tabs use consistent manual visibility control for reliability */}
+          
+          {/* Platform Tab - Always mounted, hidden when inactive */}
+          <div className={activeTab !== "notifications" ? "hidden" : ""}>
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -338,19 +303,22 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="brand">
+          {/* Brand Tab - Always mounted, hidden when inactive */}
+          <div className={activeTab !== "brand" ? "hidden" : ""}>
             <BrandSettings />
-          </TabsContent>
+          </div>
 
-          <TabsContent value="users" className="data-[state=inactive]:hidden">
+          {/* Users Tab - Always mounted, hidden when inactive */}
+          <div className={activeTab !== "users" ? "hidden" : ""}>
             <UserManagement />
-          </TabsContent>
+          </div>
 
-          <TabsContent value="team" className="data-[state=inactive]:hidden">
+          {/* Team Tab - Always mounted, hidden when inactive */}
+          <div className={activeTab !== "team" ? "hidden" : ""}>
             <TeamManagement />
-          </TabsContent>
+          </div>
         </Tabs>
       </div>
         </>

@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAppQuery } from "./useAppCache"
 
 export interface PlatformUser {
   id: string
@@ -21,45 +22,41 @@ interface UsersResponse {
 }
 
 // Fetch platform users (regular users)
+// Uses useAppQuery for unified caching and localStorage persistence
 export function usePlatformUsers() {
-  return useQuery<UsersResponse>({
-    queryKey: ["platformUsers"],
-    queryFn: async () => {
+  return useAppQuery<UsersResponse>(
+    'platformUsers',
+    ["platformUsers"],
+    async () => {
       const response = await fetch("/api/users?userType=user")
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch users")
       }
       return response.json()
-    },
-    staleTime: Infinity, // Never consider data stale - users don't change frequently
-    gcTime: Infinity, // Keep cache forever - once loaded, always use it
-    placeholderData: (previousData) => previousData, // Always use cached data if available
-    refetchOnMount: false, // Don't refetch on mount if we have cached data
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnReconnect: false, // Don't refetch on reconnect
-  })
+    }
+  )
+  // Note: Uses 'admin' config (2 min staleTime) from cache-config.ts
+  // localStorage persistence ensures instant data display on remount
 }
 
 // Fetch team members (admins and instructors)
+// Uses useAppQuery for unified caching and localStorage persistence
 export function useTeamMembers() {
-  return useQuery<UsersResponse>({
-    queryKey: ["teamMembers"],
-    queryFn: async () => {
+  return useAppQuery<UsersResponse>(
+    'teamMembers',
+    ["teamMembers"],
+    async () => {
       const response = await fetch("/api/users?userType=admin")
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch team members")
       }
       return response.json()
-    },
-    staleTime: Infinity, // Never consider data stale - team members don't change frequently
-    gcTime: Infinity, // Keep cache forever - once loaded, always use it
-    placeholderData: (previousData) => previousData, // Always use cached data if available
-    refetchOnMount: false, // Don't refetch on mount if we have cached data
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnReconnect: false, // Don't refetch on reconnect
-  })
+    }
+  )
+  // Note: Uses 'admin' config (2 min staleTime) from cache-config.ts
+  // localStorage persistence ensures instant data display on remount
 }
 
 // Create team member mutation

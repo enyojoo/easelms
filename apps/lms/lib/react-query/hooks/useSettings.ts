@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useAppQuery } from "./useAppCache"
 
 export interface PlatformSettings {
   default_currency?: string
@@ -26,24 +27,24 @@ interface SettingsResponse {
 }
 
 // Fetch platform settings (admin only)
+// Uses useAppQuery for unified caching and localStorage persistence
 export function useSettings() {
-  return useQuery<SettingsResponse>({
-    queryKey: ["settings"],
-    queryFn: async () => {
+  const result = useAppQuery<SettingsResponse>(
+    'settings',
+    ["settings"],
+    async () => {
       const response = await fetch("/api/settings")
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || "Failed to fetch settings")
       }
       return response.json()
-    },
-    staleTime: Infinity, // Never consider data stale - settings don't change frequently
-    gcTime: Infinity, // Keep cache forever - once loaded, always use it
-    placeholderData: (previousData) => previousData, // Keep showing previous data while refetching
-    refetchOnMount: false, // Don't refetch on mount if we have cached data
-    refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnReconnect: false, // Don't refetch on reconnect
-  })
+    }
+  )
+  
+  // Note: Settings use 'static' config (15 min staleTime) from cache-config.ts
+  // localStorage persistence ensures instant data display on remount
+  return result
 }
 
 // Update platform settings

@@ -98,6 +98,8 @@ export const DATA_TYPE_CONFIGS = {
   settings: 'static',
   brandSettings: 'static',
   users: 'dynamic',
+  platformUsers: 'admin',
+  teamMembers: 'admin',
 
   // Additional admin types
   adminLearners: 'admin',
