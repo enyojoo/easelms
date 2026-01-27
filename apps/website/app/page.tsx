@@ -2,9 +2,9 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import Logo from "@/components/Logo"
 import CourseGrid from "@/components/CourseGrid"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
 
 // You can use environment variables for the app URL
@@ -15,20 +15,7 @@ export default function LandingPage() {
   const platformName = brandSettings.platformName || "EaseLMS"
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Logo className="w-44" />
-          <div className="flex gap-2">
-            <Link href={`${APP_URL}/auth/learner/login`}>
-              <Button variant="ghost" size="sm">Login</Button>
-            </Link>
-            <Link href={`${APP_URL}/auth/learner/signup`}>
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="flex-grow">
         {/* Hero Section */}
@@ -60,22 +47,6 @@ export default function LandingPage() {
                     Explore Courses
                   </Button>
                 </Link>
-              </div>
-
-              {/* Stats or Social Proof */}
-              <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <span>10,000+ Learners</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <span>500+ Courses</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                  <span>Expert Instructors</span>
-                </div>
               </div>
             </div>
           </div>
@@ -144,27 +115,19 @@ export default function LandingPage() {
         </section>
 
         {/* CTA Section */}
-        <section className="relative py-20 md:py-24 overflow-hidden bg-black dark:bg-white">
-          {/* Background gradients */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black via-gray-900 to-black dark:from-white dark:via-gray-50 dark:to-white" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent dark:from-white/20" />
-
-          {/* Floating elements for visual interest */}
-          <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl dark:bg-black/10" />
-          <div className="absolute bottom-10 right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl dark:bg-black/5" />
-
+        <section className="relative py-20 md:py-24 overflow-hidden bg-white dark:bg-black">
           <div className="relative container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-white dark:text-black">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground dark:text-white">
               Ready to Start Learning?
             </h2>
-            <p className="text-lg md:text-xl mb-10 text-white/90 dark:text-black/80 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl mb-10 text-muted-foreground dark:text-white/90 max-w-2xl mx-auto leading-relaxed">
               Join thousands of learners who are already transforming their lives through our courses.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href={`${APP_URL}/auth/learner/signup`}>
                 <Button
                   size="lg"
-                  className="bg-white text-black hover:bg-gray-100 dark:bg-black dark:text-white dark:hover:bg-gray-900 font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
                 >
                   Create Free Account
                 </Button>
@@ -173,7 +136,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-2 border-white text-white hover:bg-white hover:text-black dark:border-black dark:text-black dark:hover:bg-black dark:hover:text-white font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg backdrop-blur-sm"
+                  className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
                 >
                   Browse All Courses
                 </Button>
@@ -183,29 +146,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-muted/30">
-        <div className="container mx-auto px-4 py-12">
-          <div className="text-center max-w-2xl mx-auto mb-8">
-            <Logo className="w-32 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-6">
-              Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
-            </p>
-            <div className="mb-6">
-              <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
-                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
-                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-              </div>
-              <div className="flex justify-center">
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
-          <div className="text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} {platformName}</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

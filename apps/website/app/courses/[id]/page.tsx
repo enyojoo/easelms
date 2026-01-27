@@ -14,8 +14,8 @@ import VideoModal from "@/components/VideoModal"
 import InstructorCard from "@/components/InstructorCard"
 import ReadMore from "@/components/ReadMore"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import Logo from "@/components/Logo"
-import { ThemeToggle } from "@/components/ThemeToggle"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
 import { Module } from "@/lib/types/course"
 import { formatCurrency } from "@/lib/utils/currency"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
@@ -187,22 +187,7 @@ export default function CoursePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/">
-            <Logo className="w-44" />
-          </Link>
-          <div className="flex gap-2">
-            <Link href={`${APP_URL}/auth/learner/login`}>
-              <Button variant="ghost" size="sm">Login</Button>
-            </Link>
-            <Link href={`${APP_URL}/auth/learner/signup`} className="hidden sm:inline-block">
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="flex-grow">
         {/* Course Header Section */}
@@ -562,29 +547,7 @@ export default function CoursePage() {
       </section>
     </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-muted/30">
-        <div className="container mx-auto px-4 py-12">
-          <div className="text-center max-w-2xl mx-auto mb-8">
-            <Logo className="w-32 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-6">
-              Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
-            </p>
-            <div className="mb-6">
-              <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
-                <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
-                <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-              </div>
-              <div className="flex justify-center">
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
-          <div className="text-center text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} {platformName}</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       <VideoModal
         isOpen={isVideoModalOpen}

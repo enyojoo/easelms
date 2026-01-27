@@ -1,28 +1,18 @@
 "use client"
 
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
 import { useBrandSettings } from "@/lib/hooks/useBrandSettings"
+import Header from "@/components/Header"
+import Footer from "@/components/Footer"
 
 export default function TermsPage() {
   const brandSettings = useBrandSettings()
   const platformName = brandSettings.platformName || "EaseLMS"
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 py-4">
-          <Button variant="ghost" asChild>
-            <Link href="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Home
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col">
+      <Header />
 
-      <div className="container mx-auto px-4 py-16 max-w-4xl">
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-16 max-w-4xl">
         <div className="prose prose-gray dark:prose-invert max-w-none">
           <h1 className="text-4xl font-bold mb-8">{platformName} Terms of Service</h1>
 
@@ -156,7 +146,9 @@ export default function TermsPage() {
             </p>
           </div>
         </div>
-      </div>
+      </main>
+
+      <Footer />
     </div>
   )
 }
