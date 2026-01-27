@@ -344,11 +344,11 @@ export default function SettingsPage() {
             <BrandSettings />
           </TabsContent>
 
-          <TabsContent value="users">
+          <TabsContent value="users" className="data-[state=inactive]:hidden">
             <UserManagement />
           </TabsContent>
 
-          <TabsContent value="team">
+          <TabsContent value="team" className="data-[state=inactive]:hidden">
             <TeamManagement />
           </TabsContent>
         </Tabs>

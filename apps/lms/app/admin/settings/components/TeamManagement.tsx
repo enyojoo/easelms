@@ -33,22 +33,19 @@ export default function TeamManagement() {
   })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
 
   // Call hook directly - React Query will use cached data instantly if available
   const { data: teamData, isPending: teamPending, error: teamError } = useTeamMembers()
   const createMemberMutation = useCreateTeamMember()
   const deleteUserMutation = useDeleteUser()
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   // Don't render if not authenticated or not admin
   if (authLoading || !user || userType !== "admin") {
     return null
   }
 
+  // Always use cached data if available, even during pending state
+  // This prevents flickering when switching tabs
   const teamMembers: TeamMember[] = (teamData?.users || []).map((user: any) => ({
     id: user.id,
     name: user.name || "",
@@ -61,8 +58,10 @@ export default function TeamManagement() {
   const hasCachedData = teamData?.users !== undefined
   
   // Show skeleton ONLY on true initial load (no cached data exists and pending)
-  // Once we have data, never show skeleton again (even during refetches)
+  // Once we have data, never show skeleton again (even during refetches or remounts)
   // Show cached data instantly even if isPending is true
+  // Never show skeleton if we have any cached data, even if it's an empty array
+  // This prevents flickering when switching tabs
   const showSkeleton = !hasCachedData && teamPending
   
   // Show error only if we have no cached data
@@ -186,7 +185,7 @@ export default function TeamManagement() {
         <div className="mt-6">
           {showSkeleton ? (
             <TableSkeleton columns={4} rows={5} />
-          ) : teamMembers.length === 0 && !teamPending ? (
+          ) : teamMembers.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               No team members found
             </div>

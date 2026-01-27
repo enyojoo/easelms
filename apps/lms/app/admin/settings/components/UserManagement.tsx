@@ -27,21 +27,17 @@ export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string | null>(null)
-  const [mounted, setMounted] = useState(false)
-  
   // Call hook directly - React Query will use cached data instantly if available
   const { data: usersData, isPending: usersPending, error: usersError } = usePlatformUsers()
   const deleteUserMutation = useDeleteUser()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Don't render if not authenticated or not admin
   if (authLoading || !user || userType !== "admin") {
     return null
   }
 
+  // Always use cached data if available, even during pending state
+  // This prevents flickering when switching tabs
   const users: PlatformUser[] = (usersData?.users || []).map((user: any) => ({
     id: user.id,
     name: user.name || "",
@@ -56,8 +52,10 @@ export default function UserManagement() {
   const hasCachedData = usersData?.users !== undefined
   
   // Show skeleton ONLY on true initial load (no cached data exists and pending)
-  // Once we have data, never show skeleton again (even during refetches)
+  // Once we have data, never show skeleton again (even during refetches or remounts)
   // Show cached data instantly even if isPending is true
+  // Never show skeleton if we have any cached data, even if it's an empty array
+  // This prevents flickering when switching tabs
   const showSkeleton = !hasCachedData && usersPending
   
   // Show error only if we have no cached data
@@ -150,7 +148,7 @@ export default function UserManagement() {
         <div className="mt-6">
           {showSkeleton ? (
             <TableSkeleton columns={6} rows={5} />
-          ) : filteredUsers.length === 0 && !usersPending ? (
+          ) : filteredUsers.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {searchQuery ? "No users found matching your search" : "No users found"}
             </div>
