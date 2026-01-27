@@ -81,7 +81,7 @@ export default function InstructorDashboard() {
   const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
 
   return (
-    <div className="pt-4 md:pt-8 h-[calc(100vh-8rem)] flex flex-col">
+    <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6 h-[calc(100vh-8rem)] flex flex-col">
       {showSkeleton ? (
         <AdminDashboardSkeleton />
       ) : (

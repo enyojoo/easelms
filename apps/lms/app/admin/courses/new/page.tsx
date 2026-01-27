@@ -579,7 +579,7 @@ function NewCourseContent() {
   // Show skeleton while loading course data (only when editing)
   if (loading && editCourseId) {
     return (
-      <div className="pt-4 md:pt-8 pb-8">
+      <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-4">
             <Skeleton className="h-8 w-8" />
@@ -603,7 +603,7 @@ function NewCourseContent() {
   }
 
   return (
-    <div className="pt-4 md:pt-8 pb-8">
+    <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <Button
@@ -723,7 +723,7 @@ function NewCourseContent() {
 
 function CourseBuilderSkeleton() {
   return (
-    <div className="pt-4 md:pt-8 pb-8">
+    <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <Skeleton className="h-8 w-8" />

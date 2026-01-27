@@ -271,7 +271,7 @@ function LearnerDetailsPage() {
     : 0
 
   return (
-    <div className="pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
       <div className="mb-6">
         <Link href="/admin/learners">
           <Button variant="ghost" className="mb-4">

@@ -179,7 +179,7 @@ export default function ProfilePage() {
   const showSkeleton = (authLoading || !authUser || userType !== "admin") && !hasData
 
   return (
-    <div className="pt-4 md:pt-8">
+    <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 lg:px-6">
       {showSkeleton ? (
         <AdminProfileSkeleton />
       ) : profileError && !authUser ? (
