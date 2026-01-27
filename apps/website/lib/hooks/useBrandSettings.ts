@@ -34,25 +34,25 @@ export interface PlatformSettings {
 }
 
 // Hook to get brand settings from LMS
-// Fetches brand settings from the LMS API to ensure consistency
+// Fetches brand settings through website API proxy to avoid CORS issues
 export function useBrandSettings(): BrandSettings & { isLoading: boolean; hasData: boolean } {
   const { data, isPending } = useQuery<{ platformSettings: PlatformSettings | null }>({
     queryKey: ["brand-settings"],
     queryFn: async () => {
       try {
-        // Fetch from LMS brand settings API
-        const lmsUrl = (process.env.NEXT_PUBLIC_LMS_URL || "http://localhost:3001").replace(/\/$/, '') // Remove trailing slash
-        const response = await fetch(`${lmsUrl}/api/brand-settings`)
+        // Fetch from website API proxy (which fetches from LMS server-side)
+        // This avoids CORS issues when website and LMS are on different domains
+        const response = await fetch("/api/brand-settings")
 
         if (!response.ok) {
-          // If LMS API is not available, return null
+          // If API is not available, return null
           return { platformSettings: null }
         }
 
         return response.json()
       } catch (error) {
         // If fetch fails, return null - this means we've checked and found nothing
-        console.warn("Failed to fetch brand settings from LMS:", error)
+        console.warn("Failed to fetch brand settings:", error)
         return { platformSettings: null }
       }
     },
