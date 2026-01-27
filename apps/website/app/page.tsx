@@ -45,7 +45,7 @@ export default function LandingPage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
+                    className="border-2 border-border text-foreground hover:bg-border hover:text-background font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
                   >
                     Explore Courses
                   </Button>
@@ -139,7 +139,7 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-2 border-foreground text-foreground hover:bg-foreground hover:text-background dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
+                  className="border-2 border-border text-foreground hover:bg-border hover:text-background font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
                 >
                   Browse All Courses
                 </Button>
