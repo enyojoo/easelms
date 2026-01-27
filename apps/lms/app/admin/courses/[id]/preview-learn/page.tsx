@@ -109,7 +109,7 @@ export default function AdminCoursePreviewLearningPage() {
 
   if (error || !course) {
     return (
-      <div className="pt-4 md:pt-8 pb-20 md:pb-8 px-4 md:px-6 lg:px-8">
+      <div className="pt-4 md:pt-8 pb-[30px] md:pb-8 px-4 md:px-6 lg:px-8">
         <div className="flex flex-col justify-center items-center h-64 space-y-4">
           <p className="text-destructive">{error || "Course not found"}</p>
           <Button onClick={() => router.push("/admin/courses")}>Back to Courses</Button>
