@@ -328,7 +328,7 @@ export default function ClientLayout({
                     </div>
                   </div>
                 </div>
-                <div className="lg:hidden flex-grow mt-16 mb-16 pb-4">
+                <div className="lg:hidden flex-grow mt-16 mb-20 pb-20">
                   <main className="container-fluid">
                     {children}
                   </main>

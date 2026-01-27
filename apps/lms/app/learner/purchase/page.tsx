@@ -74,7 +74,7 @@ export default function PurchaseHistoryPage() {
   const showSkeleton = usePageSkeleton(authLoading, !!user && userType === "user", [purchasesData, enrollmentsData])
 
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 px-4 md:px-6 lg:px-8">
+    <div className="pt-4 md:pt-8 pb-20 md:pb-8 px-4 md:px-6 lg:px-8">
       {showSkeleton ? (
         <PurchaseHistorySkeleton />
       ) : (

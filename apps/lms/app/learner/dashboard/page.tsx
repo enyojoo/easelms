@@ -168,7 +168,7 @@ export default function LearnerDashboard() {
   const firstName = dashboardUser?.name?.split(" ")[0] || dashboardUser?.name || "there"
 
   return (
-    <div className="pt-4 md:pt-8 pb-4 md:pb-8 max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+    <div className="pt-4 md:pt-8 pb-20 md:pb-8 max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
       {showSkeleton ? (
         <div className="space-y-4 md:space-y-6">
           <div className="h-8 w-48 bg-muted animate-pulse rounded" />
