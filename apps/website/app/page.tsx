@@ -34,19 +34,12 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
                 <Link href={`${APP_URL}/auth/learner/signup`}>
-                  <Button
-                    size="lg"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
-                  >
+                  <Button size="lg">
                     Start Your Journey
                   </Button>
                 </Link>
                 <Link href="#courses">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-2 border-border text-foreground hover:bg-border hover:text-background font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
-                  >
+                  <Button size="lg" variant="outline">
                     Explore Courses
                   </Button>
                 </Link>
@@ -120,19 +113,12 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link href={`${APP_URL}/auth/learner/signup`}>
-                <Button
-                  size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-lg"
-                >
+                <Button size="lg">
                   Create Free Account
                 </Button>
               </Link>
               <Link href={`${APP_URL}/learner/courses`}>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-border text-foreground hover:bg-border hover:text-background font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 px-8 py-6 text-lg"
-                >
+                <Button size="lg" variant="outline">
                   Browse All Courses
                 </Button>
               </Link>
