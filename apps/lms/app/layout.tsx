@@ -15,16 +15,36 @@ const poppins = Poppins({
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching for metadata
 
+// Get LMS URL from environment variable
+const getLmsUrl = () => {
+  return process.env.NEXT_PUBLIC_APP_URL || 'https://app.example.com'
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const brandSettings = await getBrandSettings()
-  
-  const title = brandSettings.seoTitle || `${brandSettings.platformName} - Learning Management System`
-  const description = brandSettings.seoDescription || brandSettings.platformDescription
+  const lmsUrl = getLmsUrl()
+  const platformName = brandSettings.platformName || "EaseLMS"
+  const title = brandSettings.seoTitle || `${platformName} - Learning Management System`
+  const description = brandSettings.seoDescription || brandSettings.platformDescription || "Access your courses and continue learning."
   
   return {
-    title,
+    metadataBase: new URL(lmsUrl),
+    title: {
+      default: title,
+      template: `%s - ${platformName}`, // For child pages
+    },
     description,
     generator: "Next.js",
+    // Block indexing by default - individual pages can override
+    robots: {
+      index: false,
+      follow: false,
+      googleBot: {
+        index: false,
+        follow: false,
+        noarchive: true,
+      },
+    },
     icons: {
       icon: [
         { url: brandSettings.favicon, sizes: "512x512", type: "image/png" },
@@ -41,9 +61,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     keywords: brandSettings.seoKeywords?.split(",").map(k => k.trim()).filter(Boolean),
     openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: lmsUrl,
+      siteName: platformName,
       title,
       description,
-      images: brandSettings.seoImage ? [brandSettings.seoImage] : undefined,
+      images: brandSettings.seoImage ? [{ url: brandSettings.seoImage, width: 1200, height: 630 }] : undefined,
     },
     twitter: {
       card: "summary_large_image",

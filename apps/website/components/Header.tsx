@@ -14,12 +14,12 @@ export default function Header() {
           <Logo className="w-32 md:w-44" />
         </Link>
         <div className="flex gap-2">
-          <Link href={`${APP_URL}/auth/learner/login`}>
+          <a href={`${APP_URL}/auth/learner/login`} target="_blank" rel="noopener noreferrer">
             <Button variant="ghost" size="sm">Login</Button>
-          </Link>
-          <Link href={`${APP_URL}/auth/learner/signup`} className="hidden sm:inline-block">
+          </a>
+          <a href={`${APP_URL}/auth/learner/signup`} target="_blank" rel="noopener noreferrer" className="hidden sm:inline-block">
             <Button size="sm">Get Started</Button>
-          </Link>
+          </a>
         </div>
       </div>
     </header>

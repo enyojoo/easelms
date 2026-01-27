@@ -12,8 +12,10 @@ import {
   Quote,
   Undo,
   Redo,
+  List,
+  ListOrdered,
 } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface RichTextEditorProps {
   content: string
@@ -24,14 +26,23 @@ interface RichTextEditorProps {
 export default function RichTextEditor({ content, onChange, placeholder = "Start typing..." }: RichTextEditorProps) {
   const [isEmpty, setIsEmpty] = useState(true)
   const [updateCount, setUpdateCount] = useState(0)
+  const isUpdatingFromPropRef = useRef(false)
   
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         codeBlock: true,
         heading: false,
-        bulletList: false,
-        orderedList: false,
+        bulletList: {
+          HTMLAttributes: {
+            class: "list-disc list-inside my-2",
+          },
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: "list-decimal list-inside my-2",
+          },
+        },
         blockquote: {
           HTMLAttributes: {
             class: "border-l-4 border-primary pl-4 italic",
@@ -45,7 +56,10 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
     content,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      // Don't trigger onChange if we're updating from prop to avoid circular updates
+      if (!isUpdatingFromPropRef.current) {
+        onChange(editor.getHTML())
+      }
       setIsEmpty(editor.isEmpty)
       setUpdateCount(c => c + 1)
     },
@@ -60,11 +74,38 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
     },
   })
 
-  // Update editor content when content prop changes
+  // Update editor content when content prop changes (only if different from current content)
   useEffect(() => {
-    if (editor && content) {
-      editor.commands.setContent(content)
+    if (!editor) return
+    
+    const currentContent = editor.getHTML()
+    const normalizedContent = content || ""
+    const normalizedCurrent = currentContent || ""
+    
+    // Only update if content is actually different from what's in the editor
+    // This prevents cursor jumps when user types (content prop matches editor content)
+    if (normalizedContent !== normalizedCurrent) {
+      // Preserve cursor position when updating from external source
+      const { from, to } = editor.state.selection
+      isUpdatingFromPropRef.current = true
+      
+      editor.commands.setContent(normalizedContent, false)
       setIsEmpty(editor.isEmpty)
+      
+      // Try to restore cursor position if it's still valid
+      try {
+        const docSize = editor.state.doc.content.size
+        if (from <= docSize && to <= docSize) {
+          editor.commands.setTextSelection({ from, to })
+        }
+      } catch {
+        // If restoration fails, cursor will be at the end (default behavior)
+      }
+      
+      // Reset flag after update completes
+      setTimeout(() => {
+        isUpdatingFromPropRef.current = false
+      }, 0)
     }
   }, [editor, content])
 
@@ -100,6 +141,33 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
           className={editor.isActive("italic") ? "bg-muted" : ""}
         >
           <Italic className="w-4 h-4" />
+        </Button>
+        <div className="w-px h-6 bg-border mx-1" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            editor.chain().focus().toggleBulletList().run()
+          }}
+          disabled={!editor.can().chain().focus().toggleBulletList().run()}
+          className={editor.isActive("bulletList") ? "bg-muted" : ""}
+        >
+          <List className="w-4 h-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onMouseDown={(e) => {
+            e.preventDefault()
+            editor.chain().focus().toggleOrderedList().run()
+          }}
+          disabled={!editor.can().chain().focus().toggleOrderedList().run()}
+          className={editor.isActive("orderedList") ? "bg-muted" : ""}
+        >
+          <ListOrdered className="w-4 h-4" />
         </Button>
         <div className="w-px h-6 bg-border mx-1" />
         <Button

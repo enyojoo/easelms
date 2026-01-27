@@ -24,7 +24,7 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.05]" />
           <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-primary/5 dark:to-primary/3" />
 
-          <div className="relative py-20 md:py-32 lg:py-40">
+          <div className="relative pt-20 md:pt-32 lg:pt-40 pb-12 md:pb-16 lg:pb-20">
             <div className="container mx-auto px-4 text-center">
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/80 dark:from-foreground dark:to-foreground/90 bg-clip-text text-transparent">
                 Learn. Grow. Succeed.
@@ -33,11 +33,11 @@ export default function LandingPage() {
                 Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals and unlock your potential.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-                <Link href={`${APP_URL}/auth/learner/signup`}>
+                <a href={`${APP_URL}/auth/learner/signup`} target="_blank" rel="noopener noreferrer">
                   <Button size="lg">
                     Start Your Journey
                   </Button>
-                </Link>
+                </a>
                 <Link href="#courses">
                   <Button size="lg" variant="outline">
                     Explore Courses
@@ -49,7 +49,7 @@ export default function LandingPage() {
         </section>
 
         {/* Courses Section */}
-        <section id="courses" className="py-20 bg-muted/30 dark:bg-muted/10">
+        <section id="courses" className="pt-12 md:pt-16 pb-20 bg-muted/30 dark:bg-muted/10">
           <div className="container mx-auto px-4">
             <CourseGrid
               limit={6}
@@ -112,16 +112,16 @@ export default function LandingPage() {
               Join thousands of learners who are already transforming their lives through our courses.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href={`${APP_URL}/auth/learner/signup`}>
+              <a href={`${APP_URL}/auth/learner/signup`} target="_blank" rel="noopener noreferrer">
                 <Button size="lg">
                   Create Free Account
                 </Button>
-              </Link>
-              <Link href={`${APP_URL}/learner/courses`}>
+              </a>
+              <a href={`${APP_URL}/learner/courses`} target="_blank" rel="noopener noreferrer">
                 <Button size="lg" variant="outline">
                   Browse All Courses
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         </section>

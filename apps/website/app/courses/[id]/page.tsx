@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { extractIdFromSlug } from "@/lib/slug"
+import { extractIdFromSlug, createCourseSlug } from "@/lib/slug"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -134,6 +134,17 @@ export default function CoursePage() {
 
   const { price, buttonText, access } = getAccessDetails()
 
+  // Build LMS course URL with slug format and returnUrl for redirect after login
+  const getLmsCourseUrl = () => {
+    if (!course) return `${APP_URL}/auth/learner/signup`
+    const courseSlug = createCourseSlug(course.title, course.id)
+    const courseUrl = `/learner/courses/${courseSlug}`
+    const params = new URLSearchParams()
+    params.append("course", course.id.toString())
+    params.append("returnUrl", courseUrl)
+    return `${APP_URL}/auth/learner/signup?${params.toString()}`
+  }
+
   const getCourseBadge = () => {
     switch (enrollmentMode) {
       case "free":
@@ -235,7 +246,7 @@ export default function CoursePage() {
             </div>
             <Button
               className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90 h-11 md:h-10"
-              onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+              onClick={() => window.open(getLmsCourseUrl(), '_blank')}
             >
               {buttonText}
             </Button>
@@ -482,7 +493,7 @@ export default function CoursePage() {
               </div>
               <Button
                 className="w-full mb-4 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => window.open(`${APP_URL}/auth/learner/login`, '_blank')}
+                onClick={() => window.open(getLmsCourseUrl(), '_blank')}
               >
                 {buttonText}
               </Button>

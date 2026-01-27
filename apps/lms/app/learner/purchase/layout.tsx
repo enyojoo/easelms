@@ -2,7 +2,16 @@ import { Metadata } from "next"
 import { generatePageMetadata } from "@/lib/metadata"
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("Purchase")
+  const metadata = await generatePageMetadata("Purchase")
+  
+  // Hide learner pages from search engines
+  return {
+    ...metadata,
+    robots: {
+      index: false,
+      follow: false,
+    },
+  }
 }
 
 export default function PurchaseLayout({

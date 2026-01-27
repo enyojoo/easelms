@@ -16,16 +16,42 @@ const poppins = Poppins({
 export const dynamic = 'force-dynamic'
 export const revalidate = 0 // Disable caching for metadata
 
+// Get website URL from environment variable or use default
+const getWebsiteUrl = () => {
+  return process.env.NEXT_PUBLIC_WEBSITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://www.example.com'
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const brandSettings = await getBrandSettings()
-
-  const title = brandSettings.seoTitle || `${brandSettings.platformName} - Learn. Grow. Succeed.`
-  const description = brandSettings.seoDescription || brandSettings.platformDescription
+  const websiteUrl = getWebsiteUrl()
+  const platformName = brandSettings.platformName || "EaseLMS"
+  const title = brandSettings.seoTitle || `${platformName} - Learn. Grow. Succeed.`
+  const description = brandSettings.seoDescription || brandSettings.platformDescription || "Transform your life through knowledge with our comprehensive online courses."
 
   return {
-    title,
+    metadataBase: new URL(websiteUrl),
+    title: {
+      default: title,
+      template: `%s - ${platformName}`, // For child pages
+    },
     description,
     generator: "Next.js",
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        'max-video-preview': -1,
+        'max-image-preview': 'large',
+        'max-snippet': -1,
+        noarchive: true, // Prevents cached versions
+      },
+    },
+    other: {
+      'googlebot': 'noarchive',
+      'robots': 'noarchive',
+    },
     icons: {
       icon: [
         { url: brandSettings.favicon, sizes: "512x512", type: "image/png" },
@@ -42,9 +68,13 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     keywords: brandSettings.seoKeywords?.split(",").map(k => k.trim()).filter(Boolean),
     openGraph: {
+      type: 'website',
+      locale: 'en_US',
+      url: websiteUrl,
+      siteName: platformName,
       title,
       description,
-      images: brandSettings.seoImage ? [brandSettings.seoImage] : undefined,
+      images: brandSettings.seoImage ? [{ url: brandSettings.seoImage, width: 1200, height: 630 }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
@@ -64,8 +94,41 @@ export default async function RootLayout({
   const brandSettings = await getBrandSettings()
   const initialTitle = brandSettings.seoTitle || `${brandSettings.platformName} - Learn. Grow. Succeed.`
 
+  const websiteUrl = getWebsiteUrl()
+  const logoUrl = brandSettings.logoBlack || brandSettings.favicon || ''
+  const contactEmail = brandSettings.contactEmail || ''
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Organization Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: brandSettings.platformName || "EaseLMS",
+              legalName: brandSettings.platformName || "EaseLMS",
+              description: brandSettings.platformDescription || "Transform your life through knowledge with our comprehensive online courses.",
+              url: websiteUrl,
+              logo: logoUrl,
+              ...(contactEmail && {
+                contactPoint: {
+                  "@type": "ContactPoint",
+                  email: contactEmail,
+                  contactType: "customer support",
+                },
+              }),
+            }),
+          }}
+        />
+        {/* Additional Meta Tags */}
+        <meta name="googlebot" content="noarchive" />
+        <meta name="robots" content="noarchive" />
+        <meta name="referrer" content="no-referrer-when-downgrade" />
+        <meta name="format-detection" content="telephone=no" />
+      </head>
       <body className={`${poppins.className} bg-background text-text-primary`}>
         <script
           dangerouslySetInnerHTML={{
