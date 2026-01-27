@@ -58,14 +58,6 @@ export default function LandingPage() {
         {/* Courses Section */}
         <section id="courses" className="py-20 bg-muted/30 dark:bg-muted/10">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                Featured Courses
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Discover our most popular courses and start your learning journey today
-              </p>
-            </div>
             <CourseGrid
               limit={6}
               showSearch={false}
@@ -78,10 +70,10 @@ export default function LandingPage() {
         <section className="py-20 bg-gradient-to-b from-background to-muted/20 dark:from-background dark:to-muted/5">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
                 Why Choose {platformName}?
               </h2>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
                 We're committed to providing exceptional learning experiences that drive real results.
               </p>
             </div>
@@ -92,8 +84,8 @@ export default function LandingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Expert-Led Courses</h3>
-                <p className="text-muted-foreground leading-relaxed">Learn from industry professionals and academic experts with years of experience.</p>
+                <h3 className="text-xl md:text-2xl font-semibold mb-3 text-foreground">Expert-Led Courses</h3>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed">Learn from industry professionals and academic experts with years of experience.</p>
               </div>
               <div className="group text-center p-6 rounded-xl bg-card border border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -101,8 +93,8 @@ export default function LandingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Flexible Learning</h3>
-                <p className="text-muted-foreground">Study at your own pace with lifetime access to course materials and updates.</p>
+                <h3 className="text-xl md:text-2xl font-semibold mb-3 text-foreground">Flexible Learning</h3>
+                <p className="text-base md:text-lg text-muted-foreground">Study at your own pace with lifetime access to course materials and updates.</p>
               </div>
               <div className="group text-center p-6 rounded-xl bg-card border border-border/50 hover:border-primary/20 hover:shadow-lg transition-all duration-300">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -110,8 +102,8 @@ export default function LandingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Certified Learning</h3>
-                <p className="text-muted-foreground leading-relaxed">Earn recognized certificates upon course completion to showcase your achievements.</p>
+                <h3 className="text-xl md:text-2xl font-semibold mb-3 text-foreground">Certified Learning</h3>
+                <p className="text-base md:text-lg text-muted-foreground leading-relaxed">Earn recognized certificates upon course completion to showcase your achievements.</p>
               </div>
             </div>
           </div>
@@ -120,10 +112,10 @@ export default function LandingPage() {
         {/* CTA Section */}
         <section className="relative py-20 md:py-24 overflow-hidden bg-white dark:bg-black">
           <div className="relative container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 text-foreground dark:text-white">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 text-foreground dark:text-white">
               Ready to Start Learning?
             </h2>
-            <p className="text-lg md:text-xl mb-10 text-muted-foreground dark:text-white/90 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg mb-10 text-muted-foreground dark:text-white/90 max-w-2xl mx-auto leading-relaxed">
               Join thousands of learners who are already transforming their lives through our courses.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

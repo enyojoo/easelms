@@ -94,8 +94,8 @@ export default function CourseGrid({
       <section className={`py-12 ${className}`}>
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-4">{title}</h2>
-            <p className="text-muted-foreground">{subtitle}</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4">{title}</h2>
+            <p className="text-base md:text-lg text-muted-foreground">{subtitle}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -127,10 +127,10 @@ export default function CourseGrid({
   return (
     <section className={`py-12 ${className}`}>
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-4">{title}</h2>
-          <p className="text-muted-foreground">{subtitle}</p>
-        </div>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4">{title}</h2>
+            <p className="text-base md:text-lg text-muted-foreground">{subtitle}</p>
+          </div>
 
         {/* Search and Filters */}
         {(showSearch || showFilters) && (

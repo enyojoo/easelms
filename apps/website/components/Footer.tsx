@@ -18,9 +18,10 @@ export default function Footer() {
             Transform your life through knowledge with {platformName}. Access world-class courses designed to help you achieve your goals.
           </p>
           <div className="mb-6">
-            <div className="flex justify-center gap-6 text-sm text-muted-foreground mb-4">
-              <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
-              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+            <div className="flex justify-center items-center gap-2 text-sm text-muted-foreground mb-4">
+              <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+              <span className="text-muted-foreground">.</span>
+              <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
             </div>
             <div className="flex justify-center">
               <ThemeToggle />

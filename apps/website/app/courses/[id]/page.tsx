@@ -95,8 +95,8 @@ export default function CoursePage() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center py-16">
-            <h1 className="text-2xl font-bold mb-4">Course Not Found</h1>
-            <p className="text-muted-foreground mb-8">{error}</p>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Course Not Found</h1>
+            <p className="text-base md:text-lg text-muted-foreground mb-8">{error}</p>
             <Button onClick={() => router.push("/")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Home
@@ -239,19 +239,19 @@ export default function CoursePage() {
             >
               {buttonText}
             </Button>
-            {enrollmentMode !== "free" && (
-              <p className="text-left lg:text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
-            )}
+              {enrollmentMode !== "free" && (
+                <p className="text-left lg:text-center text-sm md:text-base text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+              )}
             <div className="space-y-2 md:space-y-2.5 text-muted-foreground">
               {totalResources > 0 && (
                 <div className="flex items-center">
                   <FileText className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                  <span className="text-xs md:text-sm">{totalResources} resources</span>
+                  <span className="text-sm md:text-base">{totalResources} resources</span>
                 </div>
               )}
               <div className="flex items-center">
                 <Globe className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm break-words">{access}</span>
+                <span className="text-sm md:text-base break-words">{access}</span>
               </div>
               {course.settings?.certificate?.certificateEnabled && (() => {
                 // Get certificate type from settings, ensuring it's a string and trimmed
@@ -283,13 +283,13 @@ export default function CoursePage() {
                 return (
                   <div className="flex items-center">
                     <Award className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                    <span className="text-xs md:text-sm">{displayText}</span>
+                    <span className="text-sm md:text-base">{displayText}</span>
                   </div>
                 )
               })()}
               <div className="flex items-center">
                 <Users className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0" />
-                <span className="text-xs md:text-sm">{enrollmentCount} learners enrolled</span>
+                <span className="text-sm md:text-base">{enrollmentCount} learners enrolled</span>
               </div>
             </div>
           </CardContent>
@@ -301,10 +301,10 @@ export default function CoursePage() {
           {/* Course Overview Section */}
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
-              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Overview</h2>
-              <ReadMore text={course?.description || ""} maxLength={1000} className="mb-4 leading-relaxed" />
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-primary">Course Overview</h2>
+              <ReadMore text={course?.description || ""} maxLength={1000} className="text-base md:text-lg mb-4 leading-relaxed" />
               <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-2 text-sm md:text-base text-muted-foreground">
                   <span>{course.lessons?.length || 0} lessons</span>
                   <span>•</span>
                   <span>{course.totalHours || 0} hours</span>
@@ -315,7 +315,7 @@ export default function CoursePage() {
 
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
-              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-primary">Course Content</h2>
               <Accordion type="single" collapsible className="w-full">
                 {(course.lessons || []).map((lesson, index) => {
                   const isVideoLesson = (lesson as any).url
@@ -328,7 +328,7 @@ export default function CoursePage() {
                         <div className="flex items-start justify-between w-full text-left">
                           <div className="flex items-start flex-1 min-w-0 pr-2">
                             <LessonIcon className="w-4 h-4 md:w-5 md:h-5 mr-2 text-primary flex-shrink-0 mt-0.5" />
-                            <span className="font-medium text-sm md:text-base text-left break-words">{lesson.title}</span>
+                            <span className="font-medium text-base md:text-lg text-left break-words">{lesson.title}</span>
                           </div>
                         </div>
                       </AccordionTrigger>
@@ -339,9 +339,9 @@ export default function CoursePage() {
                             <div className="flex items-center justify-between py-2 pl-6 md:pl-7">
                               <div className="flex items-center min-w-0 flex-1">
                                 <BrainCircuit className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
-                                <span className="text-xs md:text-sm truncate">Quiz</span>
+                                <span className="text-sm md:text-base truncate">Quiz</span>
                               </div>
-                              <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
+                              <span className="text-sm md:text-base text-muted-foreground flex-shrink-0 ml-2">
                                 {lesson.quiz_questions.length} questions
                               </span>
                             </div>
@@ -356,9 +356,9 @@ export default function CoursePage() {
                                 ) : (
                                   <Globe className="w-4 h-4 mr-2 text-primary flex-shrink-0" />
                                 )}
-                                <span className="text-xs md:text-sm truncate">{resource.title}</span>
+                                <span className="text-sm md:text-base truncate">{resource.title}</span>
                               </div>
-                              <span className="text-xs md:text-sm text-muted-foreground flex-shrink-0 ml-2">
+                              <span className="text-sm md:text-base text-muted-foreground flex-shrink-0 ml-2">
                                 {resource.type === "document" ? "File" : "Link"}
                               </span>
                             </div>
@@ -374,11 +374,11 @@ export default function CoursePage() {
 
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
-              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-primary">Who this course is for:</h2>
               {course?.whoIsThisFor ? (
-                <ReadMore text={course.whoIsThisFor} maxLength={1000} className="leading-relaxed whitespace-pre-line" />
+                <ReadMore text={course.whoIsThisFor} maxLength={1000} className="text-base md:text-lg leading-relaxed whitespace-pre-line" />
               ) : (
-                <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
+                <ul className="list-disc pl-4 md:pl-5 text-base md:text-lg text-muted-foreground space-y-2">
                   <li>Individuals seeking personal and spiritual growth</li>
                   <li>Those looking to discover their purpose and calling</li>
                   <li>Anyone desiring to deepen their relationship with God</li>
@@ -390,11 +390,11 @@ export default function CoursePage() {
 
           <Card className="mb-4 md:mb-6">
             <CardContent className="p-4 md:p-6">
-              <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-primary">Requirements</h2>
               {course?.requirements ? (
-                <ReadMore text={course.requirements} maxLength={1000} className="leading-relaxed whitespace-pre-line" />
+                <ReadMore text={course.requirements} maxLength={1000} className="text-base md:text-lg leading-relaxed whitespace-pre-line" />
               ) : (
-                <ul className="list-disc pl-4 md:pl-5 text-sm md:text-base text-muted-foreground space-y-2">
+                <ul className="list-disc pl-4 md:pl-5 text-base md:text-lg text-muted-foreground space-y-2">
                   <li>Open heart and willingness to learn</li>
                   <li>Desire for personal and spiritual growth</li>
                   <li>Commitment to complete the course materials</li>
@@ -407,8 +407,8 @@ export default function CoursePage() {
           {course?.prerequisites && course.prerequisites.length > 0 && (
             <Card className="mb-4 md:mb-6">
               <CardContent className="p-4 md:p-6">
-                <h2 className="text-xl md:text-2xl font-bold mb-3 md:mb-4 text-primary">Prerequisites</h2>
-                <p className="text-sm md:text-base text-muted-foreground mb-4">
+                <h2 className="text-2xl md:text-3xl font-bold mb-3 md:mb-4 text-primary">Prerequisites</h2>
+                <p className="text-base md:text-lg text-muted-foreground mb-4">
                   Complete these courses before enrolling in this course:
                 </p>
                 <div className="space-y-3">
@@ -426,7 +426,7 @@ export default function CoursePage() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-sm md:text-base truncate">{prereq.title}</h3>
+                        <h3 className="font-medium text-base md:text-lg truncate">{prereq.title}</h3>
                       </div>
                     </div>
                   ))}
@@ -487,7 +487,7 @@ export default function CoursePage() {
                 {buttonText}
               </Button>
               {enrollmentMode !== "free" && (
-                <p className="text-center text-xs text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
+                <p className="text-center text-sm md:text-base text-muted-foreground mb-4">30-Day Money-Back Guarantee</p>
               )}
               <div className="space-y-2 text-muted-foreground">
                 {totalResources > 0 && (

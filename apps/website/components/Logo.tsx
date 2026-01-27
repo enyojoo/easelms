@@ -15,6 +15,7 @@ interface LogoProps {
 export default function Logo({ className = "", variant = "full" }: LogoProps) {
   const [mounted, setMounted] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const [isDark, setIsDark] = useState(false)
   const brandSettings = useBrandSettings()
   const { theme } = useTheme()
 
@@ -22,8 +23,51 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
     setMounted(true)
   }, [])
 
-  // Determine which logo to show based on theme
-  const isDark = theme === "dark" || (theme === "system" && mounted && window.matchMedia("(prefers-color-scheme: dark)").matches)
+  // Reactively determine dark mode by checking the actual applied class on the document
+  useEffect(() => {
+    if (!mounted) return
+
+    const updateIsDark = () => {
+      const root = document.documentElement
+      const isDarkMode = root.classList.contains("dark")
+      setIsDark(isDarkMode)
+    }
+
+    // Initial check
+    updateIsDark()
+
+    // Watch for class changes on the document element
+    const observer = new MutationObserver(updateIsDark)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"]
+    })
+
+    // Also listen for system theme changes when theme is "system"
+    if (theme === "system") {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+      const handleChange = () => updateIsDark()
+      
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener("change", handleChange)
+      } else if (mediaQuery.addListener) {
+        mediaQuery.addListener(handleChange)
+      }
+
+      return () => {
+        observer.disconnect()
+        if (mediaQuery.removeEventListener) {
+          mediaQuery.removeEventListener("change", handleChange)
+        } else if (mediaQuery.removeListener) {
+          mediaQuery.removeListener(handleChange)
+        }
+      }
+    }
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [mounted, theme])
 
   // Get logo source from brand settings
   const getLogoSrc = (): string => {
@@ -76,6 +120,7 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
           className="h-auto w-auto object-contain"
           priority
           onError={handleImageError}
+          key={logoSrc}
         />
       </Link>
     )
@@ -91,6 +136,7 @@ export default function Logo({ className = "", variant = "full" }: LogoProps) {
         className="h-auto w-auto object-contain"
         priority
         onError={handleImageError}
+        key={logoSrc}
       />
     </Link>
   )
