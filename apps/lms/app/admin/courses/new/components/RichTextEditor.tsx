@@ -35,12 +35,17 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
         heading: false,
         bulletList: {
           HTMLAttributes: {
-            class: "list-disc list-inside my-2",
+            class: "list-disc list-outside ml-6 my-2",
           },
         },
         orderedList: {
           HTMLAttributes: {
-            class: "list-decimal list-inside my-2",
+            class: "list-decimal list-outside ml-6 my-2",
+          },
+        },
+        listItem: {
+          HTMLAttributes: {
+            class: "pl-2",
           },
         },
         blockquote: {
@@ -115,6 +120,48 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
 
   return (
     <div className="border rounded-lg overflow-hidden">
+      <style dangerouslySetInnerHTML={{__html: `
+        /* Override prose styles for lists */
+        .ProseMirror ul,
+        .ProseMirror ol {
+          list-style-position: outside !important;
+          padding-left: 1.5rem !important;
+          margin: 0.5rem 0 !important;
+        }
+        .ProseMirror ul {
+          list-style-type: disc !important;
+        }
+        .ProseMirror ol {
+          list-style-type: decimal !important;
+        }
+        .ProseMirror li {
+          display: list-item !important;
+          padding-left: 0.5rem !important;
+          margin-left: 0 !important;
+          margin-top: 0 !important;
+          margin-bottom: 0 !important;
+        }
+        /* Make paragraph tags inside list items inline so text stays on same line as bullet */
+        .ProseMirror li > p {
+          margin: 0 !important;
+          display: inline !important;
+          padding: 0 !important;
+        }
+        .ProseMirror li > p:first-child {
+          display: inline !important;
+          margin-top: 0 !important;
+        }
+        .ProseMirror li > p:last-child {
+          display: inline !important;
+          margin-bottom: 0 !important;
+        }
+        /* Ensure nested lists work properly */
+        .ProseMirror li ul,
+        .ProseMirror li ol {
+          margin-top: 0.25rem !important;
+          margin-bottom: 0.25rem !important;
+        }
+      `}} />
       <div key={updateCount} className="border-b p-2 flex flex-wrap gap-1 bg-muted/50">
         <Button
           type="button"
