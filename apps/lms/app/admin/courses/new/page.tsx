@@ -392,10 +392,13 @@ function NewCourseContent() {
     setCourseData((prev) => {
       const updatedSection = typeof data === "function" ? data(prev[section]) : data
       if (JSON.stringify(prev[section]) !== JSON.stringify(updatedSection)) {
-        return {
+        const updated = {
           ...prev,
           [section]: updatedSection,
         }
+        // Update ref synchronously to ensure draft/publish always use latest state
+        courseDataRef.current = updated
+        return updated
       }
       return prev
     })
@@ -410,10 +413,15 @@ function NewCourseContent() {
       return
     }
     
-    // Use ref to get the latest courseData from builder (not localStorage)
+    // Get the latest courseData - ref is updated synchronously in updateCourseData
+    // Use a function to get the absolute latest state value
     const currentCourseData = courseDataRef.current
     
-    console.log("Save to Draft clicked", { title: currentCourseData.basicInfo.title })
+    console.log("Save to Draft clicked", { 
+      title: currentCourseData.basicInfo.title,
+      previewVideo: currentCourseData.basicInfo.previewVideo,
+      hasVideo: !!currentCourseData.basicInfo.previewVideo
+    })
     
     // Validate course title is required
     if (!currentCourseData.basicInfo.title || currentCourseData.basicInfo.title.trim() === "") {
@@ -498,12 +506,14 @@ function NewCourseContent() {
       return
     }
     
-    // Use ref to get the latest courseData from builder (not localStorage)
+    // Get the latest courseData - ref is updated synchronously in updateCourseData
     const currentCourseData = courseDataRef.current
     
     console.log("Publish clicked", { 
       title: currentCourseData.basicInfo.title, 
       description: currentCourseData.basicInfo.description,
+      previewVideo: currentCourseData.basicInfo.previewVideo,
+      hasVideo: !!currentCourseData.basicInfo.previewVideo,
       lessonsCount: currentCourseData.lessons.length
     })
     
