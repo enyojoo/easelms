@@ -144,13 +144,16 @@ export function useAutoSave<T>({
   )
 
   // Combined save: localStorage immediately, Supabase only when explicitly forced
+  // IMPORTANT: Auto-save only saves to localStorage to prevent overwriting file uploads
+  // Database saves only happen via explicit Draft/Publish button clicks
   const saveToStorage = useCallback(
     async (dataToSave: T, forceSupabaseSync = false) => {
-      // Always save to localStorage first (fast)
+      // Always save to localStorage first (fast, preserves all data including file URLs)
       saveToLocalStorage(dataToSave)
 
       // Only sync to Supabase if explicitly forced (via Save to Draft or Publish button)
-      // Do NOT sync automatically during auto-save to prevent duplicates
+      // Auto-save does NOT sync to database to prevent overwriting file uploads
+      // This ensures videos, thumbnails, and other file uploads are never lost
       if (forceSupabaseSync) {
         await syncToSupabase(dataToSave)
       }
@@ -176,20 +179,23 @@ export function useAutoSave<T>({
     [interval, saveToStorage]
   )
 
-  // Periodic Supabase sync (independent of localStorage saves)
-  useEffect(() => {
-    if (!enabled) return
-
-    const syncInterval = setInterval(() => {
-      if (dataRef.current) {
-        syncToSupabase(dataRef.current)
-      }
-    }, supabaseSyncInterval)
-
-    return () => {
-      clearInterval(syncInterval)
-    }
-  }, [enabled, supabaseSyncInterval, syncToSupabase])
+  // Periodic Supabase sync DISABLED
+  // Auto-save should only save to localStorage to prevent overwriting file uploads
+  // Database saves should only happen via explicit Draft/Publish button clicks
+  // This ensures file uploads (videos, thumbnails, etc.) are never lost during auto-save
+  // useEffect(() => {
+  //   if (!enabled) return
+  //
+  //   const syncInterval = setInterval(() => {
+  //     if (dataRef.current) {
+  //       syncToSupabase(dataRef.current)
+  //     }
+  //   }, supabaseSyncInterval)
+  //
+  //   return () => {
+  //     clearInterval(syncInterval)
+  //   }
+  // }, [enabled, supabaseSyncInterval, syncToSupabase])
 
   // Auto-save effect
   useEffect(() => {

@@ -14,18 +14,6 @@ import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
 import { useAutoSave } from "./hooks/useAutoSave"
 
-function formatTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffSecs = Math.floor(diffMs / 1000)
-  const diffMins = Math.floor(diffSecs / 60)
-  
-  if (diffSecs < 10) return "just now"
-  if (diffSecs < 60) return `${diffSecs} seconds ago`
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`
-  return "recently"
-}
-
 function NewCourseContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -111,8 +99,11 @@ function NewCourseContent() {
   const editCourseId = searchParams?.get("edit")
   const [currentCourseId, setCurrentCourseId] = useState<string | null>(editCourseId || null)
   
-  // Auto-save hook with last saved tracking
-  const { clearDraft, loadDraft, lastSaved } = useAutoSave({
+  // Auto-save hook - saves silently to localStorage in the background
+  // IMPORTANT: Auto-save only saves to localStorage (every 10 seconds)
+  // Database saves only happen via explicit Draft/Publish button clicks
+  // This prevents file uploads (videos, thumbnails, etc.) from being overwritten
+  const { clearDraft, loadDraft } = useAutoSave({
     data: courseData,
     courseId: currentCourseId || editCourseId || "new",
     enabled: true,
@@ -125,7 +116,6 @@ function NewCourseContent() {
     },
   })
   
-  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
@@ -142,13 +132,6 @@ function NewCourseContent() {
   useEffect(() => {
     courseDataRef.current = courseData
   }, [courseData])
-  
-  // Update last saved time when lastSaved changes
-  useEffect(() => {
-    if (lastSaved) {
-      setLastSavedTime(lastSaved)
-    }
-  }, [lastSaved])
 
   // Update currentCourseId when editCourseId changes
   useEffect(() => {
@@ -648,11 +631,6 @@ function NewCourseContent() {
           </h1>
         </div>
         <div className="space-x-2 flex items-center gap-4">
-          {lastSavedTime && (
-            <span className="text-xs text-muted-foreground">
-              Draft auto-saved {formatTimeAgo(lastSavedTime)}
-            </span>
-          )}
           <Button 
             type="button"
             variant="outline" 
