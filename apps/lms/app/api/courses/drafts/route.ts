@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    const { courseId, courseData, isPublished = false } = await request.json()
+    const { courseId, courseData, isPublished } = await request.json()
 
     if (!courseData) {
       return NextResponse.json({ error: "Course data is required" }, { status: 400 })
@@ -57,6 +57,12 @@ export async function POST(request: Request) {
       ? enrollment.price 
       : (courseData.basicInfo?.price ? parseFloat(courseData.basicInfo.price) : null)
     
+    // Prioritize isPublished parameter from request (for draft/publish buttons)
+    // If not provided, fall back to settings.isPublished, then default to false
+    const finalIsPublished = isPublished !== undefined 
+      ? isPublished 
+      : (settings.isPublished !== undefined ? settings.isPublished : false)
+    
     const dbCourseData = {
       title: courseData.basicInfo?.title || "",
       description: courseData.basicInfo?.description || "",
@@ -70,7 +76,7 @@ export async function POST(request: Request) {
         : null,
       price: priceValue,
       currency: settings.currency || "USD",
-      is_published: isPublished || settings.isPublished || false,
+      is_published: finalIsPublished,
       requires_sequential_progress: settings.requiresSequentialProgress !== undefined ? settings.requiresSequentialProgress : false,
       minimum_quiz_score: settings.minimumQuizScore !== undefined ? settings.minimumQuizScore : null,
       enrollment_mode: enrollment.enrollmentMode || "free",

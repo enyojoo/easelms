@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -136,6 +136,12 @@ function NewCourseContent() {
     bio?: string | null
   }>>([])
   const [instructorsLoading, setInstructorsLoading] = useState(false)
+  
+  // Use ref to track latest courseData to ensure draft/publish use current builder state
+  const courseDataRef = useRef(courseData)
+  useEffect(() => {
+    courseDataRef.current = courseData
+  }, [courseData])
   
   // Update last saved time when lastSaved changes
   useEffect(() => {
@@ -404,10 +410,13 @@ function NewCourseContent() {
       return
     }
     
-    console.log("Save to Draft clicked", { title: courseData.basicInfo.title })
+    // Use ref to get the latest courseData from builder (not localStorage)
+    const currentCourseData = courseDataRef.current
+    
+    console.log("Save to Draft clicked", { title: currentCourseData.basicInfo.title })
     
     // Validate course title is required
-    if (!courseData.basicInfo.title || courseData.basicInfo.title.trim() === "") {
+    if (!currentCourseData.basicInfo.title || currentCourseData.basicInfo.title.trim() === "") {
       console.log("Validation failed: Course title is required")
       toast.error("Course title is required. Please enter a course title before saving.")
       return
@@ -424,7 +433,7 @@ function NewCourseContent() {
         },
         body: JSON.stringify({
           courseId: currentId,
-          courseData: courseData,
+          courseData: currentCourseData, // Use latest builder state, not localStorage
           isPublished: false, // Save as draft
         }),
       })
@@ -459,9 +468,10 @@ function NewCourseContent() {
       
       // Update localStorage with the correct courseId - use the same key format as auto-save
       // This ensures the same course updates the same localStorage entry
+      // Use currentCourseData to ensure we save the latest builder state
       const storageKey = `course-draft-${finalCourseId}`
       const draftData = {
-        data: courseData,
+        data: currentCourseData, // Use latest builder state
         savedAt: new Date().toISOString(),
         courseId: finalCourseId,
       }
@@ -469,8 +479,8 @@ function NewCourseContent() {
       
       toast.success("Draft saved successfully")
       
-      // Navigate to courses page - it will fetch fresh data from API
-      router.push("/admin/courses")
+      // Don't navigate away - stay on the page so user can continue editing
+      // The draft is saved to the database, user can continue working
     } catch (error: any) {
       console.error("Error saving draft:", error)
       toast.error(error.message || "Failed to save draft")
@@ -488,14 +498,17 @@ function NewCourseContent() {
       return
     }
     
+    // Use ref to get the latest courseData from builder (not localStorage)
+    const currentCourseData = courseDataRef.current
+    
     console.log("Publish clicked", { 
-      title: courseData.basicInfo.title, 
-      description: courseData.basicInfo.description,
-      lessonsCount: courseData.lessons.length
+      title: currentCourseData.basicInfo.title, 
+      description: currentCourseData.basicInfo.description,
+      lessonsCount: currentCourseData.lessons.length
     })
     
     // Validate all basic info fields are filled
-    const basicInfo = courseData.basicInfo
+    const basicInfo = currentCourseData.basicInfo
     const validationErrors: string[] = []
     
     if (!basicInfo.title || basicInfo.title.trim() === "") {
@@ -512,13 +525,13 @@ function NewCourseContent() {
     }
     
     // Validate at least one lesson exists
-    if (!courseData.lessons || courseData.lessons.length === 0) {
+    if (!currentCourseData.lessons || currentCourseData.lessons.length === 0) {
       validationErrors.push("At least one lesson is required to publish the course")
     }
     
     // Validate lessons have required fields
-    if (courseData.lessons && courseData.lessons.length > 0) {
-      const invalidLessons = courseData.lessons.filter((lesson: any) => 
+    if (currentCourseData.lessons && currentCourseData.lessons.length > 0) {
+      const invalidLessons = currentCourseData.lessons.filter((lesson: any) => 
         !lesson.title || lesson.title.trim() === ""
       )
       if (invalidLessons.length > 0) {
@@ -542,7 +555,7 @@ function NewCourseContent() {
         },
         body: JSON.stringify({
           courseId: currentCourseId || editCourseId || "new",
-          courseData: courseData,
+          courseData: currentCourseData, // Use latest builder state, not localStorage
           isPublished: true, // Publish the course
         }),
       })

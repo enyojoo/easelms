@@ -675,6 +675,9 @@ export async function GET(
       enrolledStudents: enrollmentCount || 0, // Total enrollment count
       prerequisites: prerequisites, // Add prerequisites
       instructors: instructors, // Add instructors
+      // Transform snake_case database fields to camelCase for frontend compatibility
+      whoIsThisFor: course.who_is_this_for || null,
+      requirements: course.requirements || null,
       // Transform enrollment and certificate settings from database columns to nested structure
       settings: {
         enrollment: {

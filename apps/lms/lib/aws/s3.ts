@@ -241,7 +241,7 @@ export async function getPresignedPutUrl(
 }
 
 /**
- * Get public URL for a file (uses CloudFront if configured, otherwise direct S3)
+ * Get public URL for a file (uses direct S3 URL - CloudFront support removed)
  */
 export function getPublicUrl(key: string): string {
   // Remove leading slash if present
@@ -260,19 +260,7 @@ export function getPublicUrl(key: string): string {
     }).join("/")
   }
   
-  const cloudfrontDomain = process.env.AWS_CLOUDFRONT_DOMAIN
-  // Check if CloudFront is actually configured (not a placeholder)
-  const isCloudFrontConfigured = cloudfrontDomain && 
-    cloudfrontDomain.trim() !== "" && 
-    !cloudfrontDomain.includes("your_cloudfront_domain") &&
-    !cloudfrontDomain.includes("your-cloudfront-domain") &&
-    cloudfrontDomain.includes("cloudfront.net")
-  
-  if (isCloudFrontConfigured) {
-    return `https://${cloudfrontDomain}/${cleanKey}`
-  }
-  
-  // Use direct S3 URL
+  // Always use direct S3 URL (CloudFront removed from environment)
   const region = process.env.AWS_REGION || "us-east-1"
   return `https://${BUCKET_NAME}.s3.${region}.amazonaws.com/${cleanKey}`
 }
