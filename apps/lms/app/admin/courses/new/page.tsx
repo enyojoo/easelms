@@ -132,8 +132,10 @@ function NewCourseContent() {
   const [instructorsLoading, setInstructorsLoading] = useState(false)
   
   // Use ref to track latest courseData to ensure draft/publish use current builder state
+  // CRITICAL: This ref must always be in sync with courseData state to preserve file uploads
   const courseDataRef = useRef(courseData)
   useEffect(() => {
+    // Always keep ref in sync with state - this ensures file URLs are never lost
     courseDataRef.current = courseData
   }, [courseData])
 
@@ -387,9 +389,12 @@ function NewCourseContent() {
         courseDataRef.current = updated
         return updated
       }
+      // Even if section didn't change, update ref to ensure it's always in sync
+      courseDataRef.current = prev
       return prev
     })
   }, [])
+  
 
   const handleSaveDraft = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -400,14 +405,88 @@ function NewCourseContent() {
       return
     }
     
-    // Get the latest courseData - ref is updated synchronously in updateCourseData
-    // Use a function to get the absolute latest state value
-    const currentCourseData = courseDataRef.current
+    // Get the latest courseData - ensure we have the absolute latest including file uploads
+    // Use a small delay to ensure any pending state updates have completed
+    await new Promise(resolve => setTimeout(resolve, 0))
+    
+    // Read from both ref and state, merge to ensure we have all file URLs
+    const refData = courseDataRef.current
+    const stateData = courseData
+    
+    // Also check localStorage as fallback (auto-save saves there and should have file URLs)
+    let localStorageData: typeof courseData | null = null
+    try {
+      const currentId = currentCourseId || editCourseId || "new"
+      const storageKey = `course-draft-${currentId}`
+      const draftJson = localStorage.getItem(storageKey)
+      if (draftJson) {
+        const draft = JSON.parse(draftJson)
+        localStorageData = draft.data
+      }
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error)
+    }
+    
+    // Merge: prioritize ref (synchronously updated), then state, then localStorage
+    // This ensures file URLs from any source are preserved
+    // Deep merge lessons by ID to preserve file URLs (works even if lessons are reordered)
+    const refLessonsMap = new Map((refData.lessons || []).map((l: any) => [l.id, l]))
+    const stateLessonsMap = new Map((stateData.lessons || []).map((l: any) => [l.id, l]))
+    const localStorageLessonsMap = new Map((localStorageData?.lessons || []).map((l: any) => [l.id, l]))
+    
+    // Collect all unique lesson IDs
+    const allLessonIds = new Set([
+      ...(refData.lessons || []).map((l: any) => l.id),
+      ...(stateData.lessons || []).map((l: any) => l.id),
+      ...(localStorageData?.lessons || []).map((l: any) => l.id),
+    ])
+    
+    // Merge lessons by ID, preserving file URLs from any source
+    const mergedLessons = Array.from(allLessonIds).map((lessonId: any) => {
+      const refLesson = refLessonsMap.get(lessonId)
+      const stateLesson = stateLessonsMap.get(lessonId)
+      const localStorageLesson = localStorageLessonsMap.get(lessonId)
+      
+      // Merge content objects - priority: ref > state > localStorage (ref is most recent)
+      const mergedContent = {
+        ...(localStorageLesson?.content || {}),
+        ...(stateLesson?.content || {}),
+        ...(refLesson?.content || {}),
+      }
+      
+      return {
+        ...(localStorageLesson || {}),
+        ...(stateLesson || {}),
+        ...(refLesson || {}),
+        content: mergedContent,
+      }
+    })
+    
+    const currentCourseData = {
+      ...(localStorageData || {}),
+      ...stateData,
+      ...refData,
+      basicInfo: {
+        ...(localStorageData?.basicInfo || {}),
+        ...stateData.basicInfo,
+        ...refData.basicInfo,
+      },
+      lessons: mergedLessons,
+    }
     
     console.log("Save to Draft clicked", { 
       title: currentCourseData.basicInfo.title,
       previewVideo: currentCourseData.basicInfo.previewVideo,
-      hasVideo: !!currentCourseData.basicInfo.previewVideo
+      thumbnail: currentCourseData.basicInfo.thumbnail,
+      hasVideo: !!currentCourseData.basicInfo.previewVideo,
+      hasThumbnail: !!currentCourseData.basicInfo.thumbnail,
+      lessonsCount: currentCourseData.lessons.length,
+      lessonsWithVideo: currentCourseData.lessons.filter((l: any) => l.content?.url).length,
+      source: {
+        refHasVideo: !!refData.basicInfo.previewVideo,
+        stateHasVideo: !!stateData.basicInfo.previewVideo,
+        localStorageHasVideo: !!localStorageData?.basicInfo.previewVideo,
+      },
     })
     
     // Validate course title is required
@@ -493,15 +572,89 @@ function NewCourseContent() {
       return
     }
     
-    // Get the latest courseData - ref is updated synchronously in updateCourseData
-    const currentCourseData = courseDataRef.current
+    // Get the latest courseData - ensure we have the absolute latest including file uploads
+    // Use a small delay to ensure any pending state updates have completed
+    await new Promise(resolve => setTimeout(resolve, 0))
+    
+    // Read from both ref and state, merge to ensure we have all file URLs
+    const refData = courseDataRef.current
+    const stateData = courseData
+    
+    // Also check localStorage as fallback (auto-save saves there and should have file URLs)
+    let localStorageData: typeof courseData | null = null
+    try {
+      const currentId = currentCourseId || editCourseId || "new"
+      const storageKey = `course-draft-${currentId}`
+      const draftJson = localStorage.getItem(storageKey)
+      if (draftJson) {
+        const draft = JSON.parse(draftJson)
+        localStorageData = draft.data
+      }
+    } catch (error) {
+      console.error("Failed to read from localStorage:", error)
+    }
+    
+    // Merge: prioritize ref (synchronously updated), then state, then localStorage
+    // This ensures file URLs from any source are preserved
+    // Deep merge lessons by ID to preserve file URLs (works even if lessons are reordered)
+    const refLessonsMap = new Map((refData.lessons || []).map((l: any) => [l.id, l]))
+    const stateLessonsMap = new Map((stateData.lessons || []).map((l: any) => [l.id, l]))
+    const localStorageLessonsMap = new Map((localStorageData?.lessons || []).map((l: any) => [l.id, l]))
+    
+    // Collect all unique lesson IDs
+    const allLessonIds = new Set([
+      ...(refData.lessons || []).map((l: any) => l.id),
+      ...(stateData.lessons || []).map((l: any) => l.id),
+      ...(localStorageData?.lessons || []).map((l: any) => l.id),
+    ])
+    
+    // Merge lessons by ID, preserving file URLs from any source
+    const mergedLessons = Array.from(allLessonIds).map((lessonId: any) => {
+      const refLesson = refLessonsMap.get(lessonId)
+      const stateLesson = stateLessonsMap.get(lessonId)
+      const localStorageLesson = localStorageLessonsMap.get(lessonId)
+      
+      // Merge content objects - priority: ref > state > localStorage (ref is most recent)
+      const mergedContent = {
+        ...(localStorageLesson?.content || {}),
+        ...(stateLesson?.content || {}),
+        ...(refLesson?.content || {}),
+      }
+      
+      return {
+        ...(localStorageLesson || {}),
+        ...(stateLesson || {}),
+        ...(refLesson || {}),
+        content: mergedContent,
+      }
+    })
+    
+    const currentCourseData = {
+      ...(localStorageData || {}),
+      ...stateData,
+      ...refData,
+      basicInfo: {
+        ...(localStorageData?.basicInfo || {}),
+        ...stateData.basicInfo,
+        ...refData.basicInfo,
+      },
+      lessons: mergedLessons,
+    }
     
     console.log("Publish clicked", { 
       title: currentCourseData.basicInfo.title, 
       description: currentCourseData.basicInfo.description,
       previewVideo: currentCourseData.basicInfo.previewVideo,
+      thumbnail: currentCourseData.basicInfo.thumbnail,
       hasVideo: !!currentCourseData.basicInfo.previewVideo,
-      lessonsCount: currentCourseData.lessons.length
+      hasThumbnail: !!currentCourseData.basicInfo.thumbnail,
+      lessonsCount: currentCourseData.lessons.length,
+      lessonsWithVideo: currentCourseData.lessons.filter((l: any) => l.content?.url).length,
+      source: {
+        refHasVideo: !!refData.basicInfo.previewVideo,
+        stateHasVideo: !!stateData.basicInfo.previewVideo,
+        localStorageHasVideo: !!localStorageData?.basicInfo.previewVideo,
+      },
     })
     
     // Validate all basic info fields are filled
