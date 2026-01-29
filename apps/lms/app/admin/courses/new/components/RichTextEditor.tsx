@@ -23,15 +23,23 @@ interface RichTextEditorProps {
   placeholder?: string
 }
 
+// Helper function to check if HTML content is empty
+function isContentEmpty(html: string): boolean {
+  if (!html || html.trim() === "") return true
+  // Remove HTML tags and check if there's any text content
+  const textContent = html.replace(/<[^>]*>/g, "").trim()
+  return textContent === ""
+}
+
 export default function RichTextEditor({ content, onChange, placeholder = "Start typing..." }: RichTextEditorProps) {
-  const [isEmpty, setIsEmpty] = useState(true)
+  // Initialize isEmpty based on content prop
+  const [isEmpty, setIsEmpty] = useState(() => isContentEmpty(content || ""))
   const [updateCount, setUpdateCount] = useState(0)
   const isUpdatingFromPropRef = useRef(false)
   
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        codeBlock: true,
         heading: false,
         bulletList: {
           HTMLAttributes: {
@@ -79,6 +87,13 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
     },
   })
 
+  // Check editor isEmpty state when editor is ready
+  useEffect(() => {
+    if (editor) {
+      setIsEmpty(editor.isEmpty)
+    }
+  }, [editor])
+
   // Update editor content when content prop changes (only if different from current content)
   useEffect(() => {
     if (!editor) return
@@ -87,6 +102,9 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
     const normalizedContent = content || ""
     const normalizedCurrent = currentContent || ""
     
+    // Update isEmpty state based on content prop
+    setIsEmpty(isContentEmpty(normalizedContent))
+    
     // Only update if content is actually different from what's in the editor
     // This prevents cursor jumps when user types (content prop matches editor content)
     if (normalizedContent !== normalizedCurrent) {
@@ -94,7 +112,7 @@ export default function RichTextEditor({ content, onChange, placeholder = "Start
       const { from, to } = editor.state.selection
       isUpdatingFromPropRef.current = true
       
-      editor.commands.setContent(normalizedContent, false)
+      editor.commands.setContent(normalizedContent, { emitUpdate: false })
       setIsEmpty(editor.isEmpty)
       
       // Try to restore cursor position if it's still valid
