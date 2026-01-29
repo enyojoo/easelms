@@ -13,6 +13,7 @@ import LessonBuilder from "./components/LessonBuilder"
 import CourseSettings from "./components/CourseSettings"
 import CoursePreview from "./components/CoursePreview"
 import { useAutoSave } from "./hooks/useAutoSave"
+import { useInvalidateCourses } from "@/lib/react-query/hooks"
 
 function NewCourseContent() {
   const router = useRouter()
@@ -115,6 +116,9 @@ function NewCourseContent() {
       }
     },
   })
+  
+  // Get cache invalidation function for courses
+  const invalidateCourses = useInvalidateCourses()
   
   const [loading, setLoading] = useState(false)
   const [isSavingDraft, setIsSavingDraft] = useState(false)
@@ -538,9 +542,21 @@ function NewCourseContent() {
       return
     }
 
-    console.log("Starting publish...")
+    console.log("Starting publish...", {
+      courseId: currentCourseId || editCourseId || "new",
+      currentSettingsIsPublished: currentCourseData.settings?.isPublished,
+    })
     setIsPublishing(true)
     try {
+      // Ensure settings.isPublished matches the publish intent
+      const courseDataToSave = {
+        ...currentCourseData,
+        settings: {
+          ...currentCourseData.settings,
+          isPublished: true, // Explicitly set to true for publish
+        },
+      }
+      
       const response = await fetch("/api/courses/drafts", {
         method: "POST",
         headers: {
@@ -548,8 +564,8 @@ function NewCourseContent() {
         },
         body: JSON.stringify({
           courseId: currentCourseId || editCourseId || "new",
-          courseData: currentCourseData, // Use latest builder state, not localStorage
-          isPublished: true, // Publish the course
+          courseData: courseDataToSave, // Use latest builder state with explicit isPublished
+          isPublished: true, // Publish the course - this takes priority
         }),
       })
 
@@ -569,9 +585,12 @@ function NewCourseContent() {
       // Clear draft on successful publish
       clearDraft()
       
+      // Invalidate courses cache to refresh course list with updated published status
+      invalidateCourses()
+      
       toast.success("Course published successfully")
       
-      // Navigate to courses page
+      // Navigate to courses page - it will show updated course status
       router.push("/admin/courses")
     } catch (error: any) {
       console.error("Error publishing course:", error)

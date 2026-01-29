@@ -59,11 +59,26 @@ export async function POST(request: Request) {
     
     // Prioritize isPublished parameter from request (for draft/publish buttons)
     // If not provided, fall back to settings.isPublished, then default to false
+    // Ensure it's always a boolean (not undefined/null)
     const finalIsPublished = isPublished !== undefined 
-      ? isPublished 
-      : (settings.isPublished !== undefined ? settings.isPublished : false)
+      ? Boolean(isPublished) 
+      : (settings.isPublished !== undefined ? Boolean(settings.isPublished) : false)
     
-    const dbCourseData = {
+    // Log for debugging
+    logInfo("Saving course draft/publish", {
+      component: "courses/drafts/route",
+      action: "POST",
+      courseId,
+      isPublishedParam: isPublished,
+      settingsIsPublished: settings.isPublished,
+      finalIsPublished,
+      finalIsPublishedType: typeof finalIsPublished,
+      userId: user.id,
+    })
+    
+    // Build database course data object
+    // IMPORTANT: Always explicitly set is_published to ensure publish/draft status is saved correctly
+    const dbCourseData: any = {
       title: courseData.basicInfo?.title || "",
       description: courseData.basicInfo?.description || "",
       requirements: courseData.basicInfo?.requirements || null,
@@ -76,7 +91,7 @@ export async function POST(request: Request) {
         : null,
       price: priceValue,
       currency: settings.currency || "USD",
-      is_published: finalIsPublished,
+      is_published: finalIsPublished, // CRITICAL: Explicitly set published status from request parameter
       requires_sequential_progress: settings.requiresSequentialProgress !== undefined ? settings.requiresSequentialProgress : false,
       minimum_quiz_score: settings.minimumQuizScore !== undefined ? settings.minimumQuizScore : null,
       enrollment_mode: enrollment.enrollmentMode || "free",
@@ -93,8 +108,12 @@ export async function POST(request: Request) {
       signature_title: certificate.signatureTitle || null,
       additional_text: certificate.additionalText || null,
       certificate_type: certificate.certificateType || null,
-      created_by: user.id,
       updated_at: new Date().toISOString(),
+    }
+    
+    // Only include created_by for new courses (not updates)
+    if (!courseId || courseId === "new") {
+      dbCourseData.created_by = user.id
     }
 
     let result
@@ -104,6 +123,15 @@ export async function POST(request: Request) {
 
     if (courseId && courseId !== "new") {
       // Update existing course
+      logInfo("Updating course in database", {
+        component: "courses/drafts/route",
+        action: "POST",
+        courseId,
+        is_published: dbCourseData.is_published,
+        dbCourseDataKeys: Object.keys(dbCourseData),
+        userId: user.id,
+      })
+      
       const { data, error } = await dbClient
         .from("courses")
         .update(dbCourseData)
@@ -118,11 +146,65 @@ export async function POST(request: Request) {
           action: "POST",
           courseId,
           userId: user.id,
+          dbCourseData,
         })
         return NextResponse.json(createErrorResponse(error, 500, { courseId, userId: user.id }), { status: 500 })
       }
 
-      result = data
+      // Log the result to verify what was actually saved
+      logInfo("Course updated successfully", {
+        component: "courses/drafts/route",
+        action: "POST",
+        courseId,
+        savedIsPublished: data?.is_published,
+        requestedIsPublished: dbCourseData.is_published,
+        savedIsPublishedType: typeof data?.is_published,
+        userId: user.id,
+      })
+
+      // If there's a mismatch, force update is_published explicitly
+      if (data && data.is_published !== dbCourseData.is_published) {
+        logWarning("Published status mismatch - forcing correction", {
+          component: "courses/drafts/route",
+          action: "POST",
+          courseId,
+          requested: dbCourseData.is_published,
+          saved: data.is_published,
+          userId: user.id,
+        })
+        
+        // Force update is_published field explicitly
+        const { data: correctedData, error: correctError } = await dbClient
+          .from("courses")
+          .update({ 
+            is_published: dbCourseData.is_published,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", courseId)
+          .eq("created_by", user.id)
+          .select()
+          .single()
+        
+        if (!correctError && correctedData) {
+          logInfo("Published status force-corrected", {
+            component: "courses/drafts/route",
+            courseId,
+            before: data.is_published,
+            after: correctedData.is_published,
+          })
+          result = correctedData
+        } else if (correctError) {
+          logError("Failed to correct published status", correctError, {
+            component: "courses/drafts/route",
+            courseId,
+          })
+          result = data // Return original result even if correction failed
+        } else {
+          result = data
+        }
+      } else {
+        result = data
+      }
     } else {
       // Create new course draft
       const { data, error } = await dbClient
