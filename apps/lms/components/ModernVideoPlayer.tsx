@@ -15,6 +15,7 @@ import {
 import { Maximize, Minimize, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useHLS } from "@/lib/hooks/useHLS"
 
 interface ModernVideoPlayerProps {
   src: string
@@ -47,6 +48,23 @@ export default function ModernVideoPlayer({
   const [isLoading, setIsLoading] = useState(true) // Track loading state
   const autoplayProcessedRef = useRef(false)
   const wasPlayingBeforeFullscreenRef = useRef(false) // Track if video was playing before fullscreen
+
+  // Initialize HLS hook for adaptive streaming
+  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
+    videoRef,
+    src,
+    onError: (error) => {
+      console.error('HLS playback error:', error)
+      setIsLoading(false)
+    },
+  })
+
+  // Update loading state based on HLS loading
+  useEffect(() => {
+    if (isHLSFile && isHLSLoading) {
+      setIsLoading(true)
+    }
+  }, [isHLSFile, isHLSLoading])
 
   // Cleanup: Pause and reset video when src changes or component unmounts
   // Also ensure HTML5 controls are always disabled and playsInline is set for iOS/Android
@@ -648,10 +666,10 @@ export default function ModernVideoPlayer({
       )}
       <VideoPlayerContent
         ref={videoRef}
-        crossOrigin="anonymous"
-        preload="auto"
+        crossOrigin={src?.includes('s3.amazonaws.com') || src?.includes('amazonaws.com') || src?.includes('azurefd.net') ? undefined : "anonymous"}
+        preload={isHLSFile ? "auto" : "auto"}
         slot="media"
-        src={src && typeof src === 'string' ? src.trim() : undefined}
+        src={isHLSFile ? undefined : (src && typeof src === 'string' ? src.trim() : undefined)}
         poster={poster}
         autoPlay={false}
         controls={false}

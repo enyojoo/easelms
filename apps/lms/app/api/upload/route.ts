@@ -162,10 +162,14 @@ export async function POST(request: Request) {
 
     // Upload to S3
     const fileBuffer = Buffer.from(await file.arrayBuffer())
-    const { key, url } = await uploadFileToS3(fileBuffer, s3Path, file.type)
+    const { key, url: s3Url } = await uploadFileToS3(fileBuffer, s3Path, file.type)
+
+    // Transform to CDN URL if enabled (for videos)
+    const isVideo = s3Type === "video" || s3Type === "lesson"
+    const finalUrl = isVideo ? getPublicUrl(key, true) : s3Url
 
     return NextResponse.json({
-      url,
+      url: finalUrl,
       path: key,
       bucket: "s3",
     })

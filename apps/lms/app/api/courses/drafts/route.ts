@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
+import { transformVideoUrls } from "@/lib/aws/s3"
 
 // Save or update a course draft
 export async function POST(request: Request) {
@@ -1101,9 +1102,12 @@ export async function POST(request: Request) {
       }
     }
 
+    // Transform video URLs to Azure Front Door URLs if enabled
+    const transformedResult = transformVideoUrls(result)
+
     return NextResponse.json({ 
-      course: result,
-      courseId: result.id 
+      course: transformedResult,
+      courseId: transformedResult.id 
     })
   } catch (error: any) {
     logError("Unexpected error saving draft", error, {
@@ -1479,7 +1483,10 @@ export async function GET(request: Request) {
       } : null,
     })
 
-    return NextResponse.json({ course: data })
+    // Transform video URLs to Azure Front Door URLs if enabled
+    const transformedData = transformVideoUrls(data)
+
+    return NextResponse.json({ course: transformedData })
   } catch (error: any) {
     logError("Unexpected error fetching draft", error, {
       component: "courses/drafts/route",

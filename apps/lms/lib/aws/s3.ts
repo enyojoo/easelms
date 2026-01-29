@@ -241,9 +241,125 @@ export async function getPresignedPutUrl(
 }
 
 /**
- * Get public URL for a file (uses direct S3 URL - CloudFront support removed)
+ * Extract S3 key from a full URL (handles both S3 URLs and CDN URLs)
  */
-export function getPublicUrl(key: string): string {
+export function extractS3KeyFromUrl(url: string): string | null {
+  if (!url) return null
+  
+  try {
+    const urlObj = new URL(url)
+    
+    // Handle S3 URLs: https://bucket.s3.region.amazonaws.com/key
+    if (urlObj.hostname.includes('.s3.') && urlObj.hostname.includes('.amazonaws.com')) {
+      return urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+    }
+    
+    // Handle Azure Front Door URLs: https://endpoint.azurefd.net/key
+    // The pathname should be the S3 key
+    if (urlObj.hostname.includes('.azurefd.net')) {
+      return urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+    }
+    
+    // Handle other CDN URLs - try to extract key from pathname
+    if (urlObj.pathname) {
+      return urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+    }
+    
+    return null
+  } catch (error) {
+    // Invalid URL, return null
+    return null
+  }
+}
+
+/**
+ * Transform S3 URL to Azure Front Door URL (with fallback to S3)
+ */
+export function transformToCDNUrl(s3Url: string): string {
+  if (!s3Url) return s3Url
+  
+  const useCDN = process.env.USE_AZURE_CDN === 'true'
+  const azureCDNUrl = process.env.AZURE_CDN_URL
+  
+  // If CDN is disabled or URL not configured, return original URL
+  if (!useCDN || !azureCDNUrl) {
+    return s3Url
+  }
+  
+  // Extract S3 key from URL
+  const s3Key = extractS3KeyFromUrl(s3Url)
+  if (!s3Key) {
+    // Can't extract key, return original URL
+    return s3Url
+  }
+  
+  // Encode the key properly for CDN URL
+  const encodedKey = s3Key.split("/").map(segment => {
+    if (segment.includes(" ") || /[^a-zA-Z0-9._-]/.test(segment)) {
+      return encodeURIComponent(segment)
+    }
+    return segment
+  }).join("/")
+  
+  // Return Azure Front Door URL
+  return `${azureCDNUrl}/${encodedKey}`
+}
+
+/**
+ * Recursively transform video URLs in data objects
+ * Handles video_url, preview_video, and content.url fields
+ */
+export function transformVideoUrls(data: any): any {
+  if (!data) return data
+  
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => transformVideoUrls(item))
+  }
+  
+  // Handle objects
+  if (typeof data === 'object') {
+    const transformed: any = {}
+    
+    for (const [key, value] of Object.entries(data)) {
+      // Transform video URL fields
+      if ((key === 'video_url' || key === 'preview_video' || key === 'url') && typeof value === 'string' && value.trim()) {
+        // Check if it's a video URL
+        const isVideo = value.includes('/video-') ||
+                       value.includes('/preview-video-') ||
+                       value.includes('.mp4') ||
+                       value.includes('.webm') ||
+                       value.includes('.m3u8') ||
+                       value.includes('.ts')
+        
+        if (isVideo) {
+          transformed[key] = transformToCDNUrl(value)
+        } else {
+          transformed[key] = value
+        }
+      } else if (key === 'content' && typeof value === 'object' && value !== null) {
+        // Recursively transform content object
+        transformed[key] = transformVideoUrls(value)
+      } else if (key === 'lessons' && Array.isArray(value)) {
+        // Transform lessons array
+        transformed[key] = transformVideoUrls(value)
+      } else {
+        // Recursively transform nested objects/arrays
+        transformed[key] = transformVideoUrls(value)
+      }
+    }
+    
+    return transformed
+  }
+  
+  // Return primitive values as-is
+  return data
+}
+
+/**
+ * Get public URL for a file (uses Azure Front Door if enabled, otherwise S3)
+ */
+export function getPublicUrl(key: string, useCDN: boolean = false): string {
   // Remove leading slash if present
   let cleanKey = key.startsWith("/") ? key.slice(1) : key
   
@@ -260,9 +376,44 @@ export function getPublicUrl(key: string): string {
     }).join("/")
   }
   
-  // Always use direct S3 URL (CloudFront removed from environment)
+  // Check if Azure Front Door should be used
+  const azureCDNUrl = process.env.AZURE_CDN_URL
+  const useCDNEnv = process.env.USE_AZURE_CDN === 'true'
+  
+  if ((useCDN || useCDNEnv) && azureCDNUrl) {
+    // Check if this is a video file
+    const isVideo = cleanKey.includes('/video-') ||
+                   cleanKey.includes('/preview-video-') ||
+                   cleanKey.includes('.mp4') ||
+                   cleanKey.includes('.webm') ||
+                   cleanKey.includes('.m3u8') ||
+                   cleanKey.includes('.ts')
+    
+    if (isVideo || useCDN) {
+      return `${azureCDNUrl}/${cleanKey}`
+    }
+  }
+  
+  // Fallback to S3 URL
   const region = process.env.AWS_REGION || "us-east-1"
   return `https://${BUCKET_NAME}.s3.${region}.amazonaws.com/${cleanKey}`
+}
+
+/**
+ * Get HLS manifest URL for a video (generates .m3u8 URL from original video key)
+ */
+export function getHLSVideoUrl(originalVideoKey: string): string {
+  // Extract base path and filename
+  const lastSlashIndex = originalVideoKey.lastIndexOf('/')
+  const path = lastSlashIndex >= 0 ? originalVideoKey.substring(0, lastSlashIndex) : ''
+  const filename = lastSlashIndex >= 0 ? originalVideoKey.substring(lastSlashIndex + 1) : originalVideoKey
+  
+  // Remove extension and add /hls/master.m3u8
+  const baseName = filename.replace(/\.[^/.]+$/, '')
+  const hlsKey = path ? `${path}/hls/${baseName}/master.m3u8` : `hls/${baseName}/master.m3u8`
+  
+  // Use CDN if enabled
+  return getPublicUrl(hlsKey, true)
 }
 
 /**

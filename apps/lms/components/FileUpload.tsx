@@ -311,6 +311,32 @@ export default function FileUpload({
           setUploadMetadata(metadata)
           setUploading(false)
           setUploaded(true)
+          
+          // Trigger HLS transcoding for large videos (>100MB)
+          if (type === "video" || type === "lesson") {
+            for (let i = 0; i < validFiles.length; i++) {
+              const file = validFiles[i]
+              const fileMetadata = metadata[i]
+              
+              // Only transcode videos larger than 100MB
+              if (file.size > 100 * 1024 * 1024 && fileMetadata.path) {
+                // Trigger transcoding asynchronously (don't block upload completion)
+                fetch("/api/videos/transcode", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    videoKey: fileMetadata.path,
+                  }),
+                }).catch((error) => {
+                  console.error("Failed to trigger video transcoding:", error)
+                  // Don't show error to user - transcoding is optional
+                })
+              }
+            }
+          }
+          
           onUploadComplete?.(validFiles, urls)
         } catch (err: any) {
           setError(err.message || "Upload failed")
@@ -475,6 +501,32 @@ export default function FileUpload({
       setUploadMetadata(metadata)
       setUploading(false)
       setUploaded(true)
+      
+      // Trigger HLS transcoding for large videos (>100MB)
+      if (type === "video" || type === "lesson") {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i]
+          const fileMetadata = metadata[i]
+          
+          // Only transcode videos larger than 100MB
+          if (file.size > 100 * 1024 * 1024 && fileMetadata.path) {
+            // Trigger transcoding asynchronously (don't block upload completion)
+            fetch("/api/videos/transcode", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                videoKey: fileMetadata.path,
+              }),
+            }).catch((error) => {
+              console.error("Failed to trigger video transcoding:", error)
+              // Don't show error to user - transcoding is optional
+            })
+          }
+        }
+      }
+      
       onUploadComplete?.(files, urls)
     } catch (err: any) {
       setError(err.message || "Upload failed")

@@ -59,8 +59,9 @@ export async function POST(request: Request) {
     // Generate presigned PUT URL (expires in 1 hour)
     const presignedUrl = await getPresignedPutUrl(s3Key, contentType, 3600)
 
-    // Return presigned URL and the final public URL
-    const publicUrl = getPublicUrl(s3Key)
+    // Return presigned URL and the final public URL (use CDN if enabled for videos)
+    const isVideo = fileType === "video" || fileType === "lesson"
+    const publicUrl = getPublicUrl(s3Key, isVideo)
 
     return NextResponse.json({
       presignedUrl,

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
 import { extractIdFromSlug } from "@/lib/slug"
 import { shuffleQuiz, generateSeed } from "@/lib/quiz/shuffle"
+import { transformVideoUrls } from "@/lib/aws/s3"
 
 export async function GET(
   request: Request,
@@ -712,7 +713,10 @@ export async function GET(
       hasCreator: !!creator,
     })
 
-    return NextResponse.json({ course: processedCourse })
+    // Transform video URLs to Azure Front Door URLs if enabled
+    const transformedCourse = transformVideoUrls(processedCourse)
+
+    return NextResponse.json({ course: transformedCourse })
   } catch (error: any) {
     logError("Unexpected error fetching course", error, {
       component: "courses/[id]/route",
