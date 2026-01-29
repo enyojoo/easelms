@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Play, Pause, Loader2 } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 import { Progress } from "@/components/ui/progress"
+import { useHLS } from "@/lib/hooks/useHLS"
 
 interface VideoPreviewPlayerProps {
   src: string
@@ -30,6 +31,23 @@ export default function VideoPreviewPlayer({
   const [isLoading, setIsLoading] = useState(false) // Track loading state - start false, only show when buffering
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Initialize HLS hook for adaptive streaming
+  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
+    videoRef,
+    src,
+    onError: (error) => {
+      console.error('HLS playback error:', error)
+      setIsLoading(false)
+    },
+  })
+
+  // Update loading state based on HLS loading
+  useEffect(() => {
+    if (isHLSFile && isHLSLoading) {
+      setIsLoading(true)
+    }
+  }, [isHLSFile, isHLSLoading])
 
   // Track video loading state - only show spinner when actually buffering
   useEffect(() => {
@@ -357,12 +375,12 @@ export default function VideoPreviewPlayer({
       <video
         key={src.trim()}
         ref={videoRef}
-        src={src.trim()}
+        src={isHLSFile ? undefined : src.trim()}
         className="w-full h-full object-cover"
-        preload="auto"
+        preload={isHLSFile ? "auto" : "auto"}
         muted={false}
         playsInline
-        crossOrigin="anonymous"
+        crossOrigin={src?.includes('s3.amazonaws.com') || src?.includes('amazonaws.com') || src?.includes('azurefd.net') ? undefined : "anonymous"}
         loop={false}
         poster={poster}
         autoPlay={autoplay}

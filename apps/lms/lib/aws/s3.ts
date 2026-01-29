@@ -274,8 +274,9 @@ export function extractS3KeyFromUrl(url: string): string | null {
 
 /**
  * Transform S3 URL to Azure Front Door URL (with fallback to S3)
+ * Automatically prefers HLS manifest if available for video files
  */
-export function transformToCDNUrl(s3Url: string): string {
+export function transformToCDNUrl(s3Url: string, preferHLS: boolean = true): string {
   if (!s3Url) return s3Url
   
   const useCDN = process.env.USE_AZURE_CDN === 'true'
@@ -291,6 +292,20 @@ export function transformToCDNUrl(s3Url: string): string {
   if (!s3Key) {
     // Can't extract key, return original URL
     return s3Url
+  }
+  
+  // Check if this is a video file and if we should prefer HLS
+  const isVideoFile = s3Key.includes('/video-') ||
+                     s3Key.includes('/preview-video-') ||
+                     s3Key.includes('.mp4') ||
+                     s3Key.includes('.webm')
+  
+  // If it's a video file and preferHLS is true, try to use HLS manifest URL
+  if (isVideoFile && preferHLS && !s3Key.includes('.m3u8') && !s3Key.includes('.ts')) {
+    // Generate HLS manifest URL
+    const hlsUrl = getHLSVideoUrl(s3Key)
+    // Return HLS URL (the function already handles CDN transformation)
+    return hlsUrl
   }
   
   // Encode the key properly for CDN URL
@@ -333,7 +348,8 @@ export function transformVideoUrls(data: any): any {
                        value.includes('.ts')
         
         if (isVideo) {
-          transformed[key] = transformToCDNUrl(value)
+          // Prefer HLS for video files - try HLS URL first, player will fallback if not available
+          transformed[key] = getPreferredVideoUrl(value)
         } else {
           transformed[key] = value
         }
@@ -401,6 +417,7 @@ export function getPublicUrl(key: string, useCDN: boolean = false): string {
 
 /**
  * Get HLS manifest URL for a video (generates .m3u8 URL from original video key)
+ * Returns the HLS manifest URL, or falls back to original URL if HLS not available
  */
 export function getHLSVideoUrl(originalVideoKey: string): string {
   // Extract base path and filename
@@ -414,6 +431,39 @@ export function getHLSVideoUrl(originalVideoKey: string): string {
   
   // Use CDN if enabled
   return getPublicUrl(hlsKey, true)
+}
+
+/**
+ * Check if HLS version exists for a video and return HLS URL, otherwise return original URL
+ * This is a helper that tries HLS first but falls back gracefully
+ */
+export function getPreferredVideoUrl(originalVideoUrl: string): string {
+  if (!originalVideoUrl) return originalVideoUrl
+  
+  // If already HLS, return as-is
+  if (originalVideoUrl.includes('.m3u8')) {
+    return transformToCDNUrl(originalVideoUrl, false)
+  }
+  
+  // Extract S3 key
+  const s3Key = extractS3KeyFromUrl(originalVideoUrl)
+  if (!s3Key) {
+    return transformToCDNUrl(originalVideoUrl, false)
+  }
+  
+  // Check if it's a video file
+  const isVideoFile = s3Key.includes('/video-') ||
+                     s3Key.includes('/preview-video-') ||
+                     s3Key.includes('.mp4') ||
+                     s3Key.includes('.webm')
+  
+  if (isVideoFile) {
+    // Try HLS URL first (player will fallback if it doesn't exist)
+    return getHLSVideoUrl(s3Key)
+  }
+  
+  // Not a video file, return transformed URL
+  return transformToCDNUrl(originalVideoUrl, false)
 }
 
 /**
