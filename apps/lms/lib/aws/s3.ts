@@ -241,8 +241,7 @@ export async function getPresignedPutUrl(
 }
 
 /**
- * Get public URL for a file
- * Supports: Azure CDN, CloudFront, or direct S3 URL
+ * Get public URL for a file (uses direct S3 URL - CloudFront support removed)
  */
 export function getPublicUrl(key: string): string {
   // Remove leading slash if present
@@ -261,25 +260,7 @@ export function getPublicUrl(key: string): string {
     }).join("/")
   }
   
-  // Priority: Azure CDN > CloudFront > Direct S3
-  const azureCdnDomain = process.env.AZURE_CDN_DOMAIN
-  if (azureCdnDomain) {
-    // Azure CDN URL format: https://<endpoint>.azureedge.net/<key>
-    const cdnUrl = azureCdnDomain.endsWith("/") 
-      ? azureCdnDomain.slice(0, -1) 
-      : azureCdnDomain
-    return `${cdnUrl}/${cleanKey}`
-  }
-  
-  const cloudfrontDomain = process.env.AWS_CLOUDFRONT_DOMAIN
-  if (cloudfrontDomain) {
-    const cfUrl = cloudfrontDomain.endsWith("/") 
-      ? cloudfrontDomain.slice(0, -1) 
-      : cloudfrontDomain
-    return `${cfUrl}/${cleanKey}`
-  }
-  
-  // Fallback to direct S3 URL
+  // Always use direct S3 URL (CloudFront removed from environment)
   const region = process.env.AWS_REGION || "us-east-1"
   return `https://${BUCKET_NAME}.s3.${region}.amazonaws.com/${cleanKey}`
 }
