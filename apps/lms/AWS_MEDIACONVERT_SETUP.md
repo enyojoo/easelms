@@ -67,9 +67,12 @@ aws iam get-role --role-name MediaConvert_Default_Role --query 'Role.Arn' --outp
 - Read video files from S3 (input)
 - Write HLS files to S3 (output)
 
-## Step 2: Grant IAM User Permission to Pass Role
+## Step 2: Grant IAM User MediaConvert Permissions
 
-**IMPORTANT:** Your IAM user (the one with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) needs permission to pass the MediaConvert role to the MediaConvert service.
+**IMPORTANT:** Your IAM user (the one with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) needs two types of permissions:
+
+1. **MediaConvert permissions** - to create and manage transcoding jobs
+2. **IAM PassRole permission** - to pass the MediaConvert role to the service
 
 ### Option A: Add Policy via AWS Console
 
@@ -83,25 +86,43 @@ aws iam get-role --role-name MediaConvert_Default_Role --query 'Role.Arn' --outp
   "Statement": [
     {
       "Effect": "Allow",
+      "Action": [
+        "mediaconvert:CreateJob",
+        "mediaconvert:GetJob",
+        "mediaconvert:ListJobs"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
       "Action": "iam:PassRole",
-      "Resource": "arn:aws:iam::YOUR_ACCOUNT_ID:role/MediaConvert_Default_Role"
+      "Resource": "arn:aws:iam::795708378684:role/MediaConvert_Default_Role"
     }
   ]
 }
 ```
 
-Replace `YOUR_ACCOUNT_ID` with your AWS account ID (e.g., `795708378684`)
+**Important:** Replace `795708378684` with your AWS account ID.
 
-4. Click **Review policy** → Name it: `PassMediaConvertRole` → **Create policy**
+4. Click **Review policy** → Name it: `MediaConvertAccess` → **Create policy**
 
 ### Option B: Add Policy via AWS CLI
 
 ```bash
 # Create policy document
-cat > pass-mediaconvert-role-policy.json <<EOF
+cat > mediaconvert-user-policy.json <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "mediaconvert:CreateJob",
+        "mediaconvert:GetJob",
+        "mediaconvert:ListJobs"
+      ],
+      "Resource": "*"
+    },
     {
       "Effect": "Allow",
       "Action": "iam:PassRole",
@@ -114,11 +135,18 @@ EOF
 # Attach policy to user
 aws iam put-user-policy \
   --user-name euniversity \
-  --policy-name PassMediaConvertRole \
-  --policy-document file://pass-mediaconvert-role-policy.json
+  --policy-name MediaConvertAccess \
+  --policy-document file://mediaconvert-user-policy.json
 ```
 
 **Note:** Replace `795708378684` with your AWS account ID and `euniversity` with your IAM user name.
+
+### What These Permissions Do:
+
+- **`mediaconvert:CreateJob`** - Allows creating transcoding jobs
+- **`mediaconvert:GetJob`** - Allows checking job status (for the status endpoint)
+- **`mediaconvert:ListJobs`** - Allows listing jobs (optional, for monitoring)
+- **`iam:PassRole`** - Allows passing the MediaConvert role to the service
 
 ## Step 3: Configure Environment Variables
 
@@ -188,11 +216,13 @@ s3://bucket/
 - Ensure `AWS_MEDIACONVERT_ROLE_ARN` is set in environment variables
 - Verify the role has correct S3 permissions
 
-### Error: "Access Denied" or "iam:PassRole"
-- **Most Common:** Your IAM user needs `iam:PassRole` permission for the MediaConvert role
-- Go to IAM → Users → Your User → Add inline policy with `iam:PassRole` permission
-- See Step 2 above for detailed instructions
-- Check IAM role permissions
+### Error: "Access Denied" or "mediaconvert:CreateJob" or "iam:PassRole"
+- **Most Common:** Your IAM user needs MediaConvert and IAM PassRole permissions
+- Go to IAM → Users → Your User → Add inline policy with:
+  - `mediaconvert:CreateJob`, `mediaconvert:GetJob`, `mediaconvert:ListJobs`
+  - `iam:PassRole` for the MediaConvert role
+- See Step 2 above for complete policy JSON
+- Check IAM role permissions (MediaConvert role needs S3 access)
 - Verify S3 bucket policies allow MediaConvert access
 
 ### Job Status: "ERROR"
