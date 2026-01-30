@@ -292,8 +292,8 @@ export default function AdminCourseLearningPage() {
     
     // NOTE: No save to Supabase in preview mode - all data is local only
 
-    // Mark lesson as completed ONLY if quiz was passed (locally)
-    if (quizPassed && !completedLessons.includes(currentLessonIndex)) {
+    // Admin preview: always mark lesson complete when quiz is submitted (no need to pass)
+    if (!completedLessons.includes(currentLessonIndex)) {
       const newCompletedLessons = [...completedLessons, currentLessonIndex]
       setCompletedLessons(newCompletedLessons)
       const newProgress = (newCompletedLessons.length / course.lessons.length) * 100
@@ -301,10 +301,8 @@ export default function AdminCourseLearningPage() {
       if (newCompletedLessons.length === course.lessons.length) {
         setAllLessonsCompleted(true)
       }
-      
-      // NOTE: No save to API in preview mode
     }
-    
+
     // Don't auto-navigate - keep user on quiz results screen
   }
 
