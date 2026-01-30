@@ -25,20 +25,40 @@ export async function POST(request: Request) {
       // Extract S3 key from URL
       // Format: https://bucket.s3.region.amazonaws.com/key
       // Format: https://cloudfront-domain.cloudfront.net/key
-      if (url.includes("s3.amazonaws.com")) {
-        const urlParts = url.split(".s3.")
-        if (urlParts.length > 1) {
-          s3Key = urlParts[1].split("/").slice(1).join("/")
-        }
-      } else if (url.includes("cloudfront.net")) {
-        // CloudFront URL: extract everything after domain
+      // Format: https://endpoint.azurefd.net/key (Azure Front Door)
+      try {
         const urlObj = new URL(url)
-        s3Key = urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
-      } else if (url.includes("amazonaws.com")) {
-        // Try to extract from any AWS URL format
-        const match = url.match(/amazonaws\.com\/(.+)$/)
+        
+        if (url.includes("s3.amazonaws.com")) {
+          const urlParts = url.split(".s3.")
+          if (urlParts.length > 1) {
+            s3Key = urlParts[1].split("/").slice(1).join("/").split("?")[0] // Remove query params
+          }
+        } else if (url.includes("cloudfront.net")) {
+          // CloudFront URL: extract everything after domain
+          s3Key = urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+          s3Key = s3Key.split("?")[0] // Remove query params
+        } else if (url.includes("azurefd.net")) {
+          // Azure Front Door URL: pathname is the S3 key
+          s3Key = urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+          s3Key = s3Key.split("?")[0] // Remove query params
+        } else if (url.includes("amazonaws.com")) {
+          // Try to extract from any AWS URL format
+          const match = url.match(/amazonaws\.com\/(.+)$/)
+          if (match) {
+            s3Key = match[1].split("?")[0] // Remove query params
+          }
+        } else {
+          // Fallback: try to extract from pathname for any URL
+          s3Key = urlObj.pathname.startsWith("/") ? urlObj.pathname.slice(1) : urlObj.pathname
+          s3Key = s3Key.split("?")[0] // Remove query params
+        }
+      } catch (e) {
+        logError("Failed to parse URL", e as Error, { url })
+        // Try simple extraction as fallback
+        const match = url.match(/\/([^?]+)/)
         if (match) {
-          s3Key = match[1].split("?")[0] // Remove query params
+          s3Key = match[1]
         }
       }
     }

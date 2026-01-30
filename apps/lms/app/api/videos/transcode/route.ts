@@ -41,6 +41,25 @@ export async function POST(request: Request) {
     // Check if FFmpeg is available
     const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg'
     
+    // Check if we're in a serverless environment (Vercel) - transcoding might not be supported
+    const isServerless = process.env.VERCEL === '1' || !process.env.FFMPEG_PATH
+    
+    if (isServerless) {
+      logError("Video transcoding not supported in serverless environment", new Error("FFmpeg not available"), {
+        videoKey,
+        userId: user.id,
+        environment: "serverless",
+      })
+      
+      return NextResponse.json(
+        { 
+          error: "Video transcoding is not available in this environment. Please configure FFmpeg or use a different hosting solution.",
+          requiresFFmpeg: true
+        },
+        { status: 503 } // Service Unavailable
+      )
+    }
+    
     logInfo("🚀 Starting video transcoding", {
       videoKey,
       userId: user.id,
@@ -136,9 +155,15 @@ export async function POST(request: Request) {
           }
         })
 
-        ffmpeg.on('error', (error) => {
-          logError("FFmpeg spawn error", error, { ffmpegPath })
-          reject(error)
+        ffmpeg.on('error', (error: any) => {
+          logError("FFmpeg spawn error", error, { ffmpegPath, errorCode: error.code })
+          
+          // Provide more helpful error messages
+          if (error.code === 'ENOENT') {
+            reject(new Error(`FFmpeg not found at path: ${ffmpegPath}. Please install FFmpeg or set FFMPEG_PATH environment variable.`))
+          } else {
+            reject(new Error(`FFmpeg error: ${error.message || error}`))
+          }
         })
       })
 
@@ -215,14 +240,25 @@ export async function POST(request: Request) {
         // Ignore cleanup errors
       }
 
+      const errorMessage = error?.message || "Failed to transcode video"
+      const isFFmpegError = errorMessage.includes('FFmpeg') || errorMessage.includes('ENOENT')
+      
       logError("Video transcoding error", error, {
         videoKey,
         userId: user.id,
+        errorMessage,
+        isFFmpegError,
       })
 
       return NextResponse.json(
-        { error: error.message || "Failed to transcode video" },
-        { status: 500 }
+        { 
+          error: errorMessage,
+          requiresFFmpeg: isFFmpegError,
+          details: isFFmpegError 
+            ? "FFmpeg is required for video transcoding. Please install FFmpeg on your server or configure FFMPEG_PATH environment variable."
+            : undefined
+        },
+        { status: isFFmpegError ? 503 : 500 } // Service Unavailable for FFmpeg errors
       )
     }
   } catch (error: any) {

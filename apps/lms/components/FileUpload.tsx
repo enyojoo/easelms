@@ -318,31 +318,36 @@ export default function FileUpload({
               const file = validFiles[i]
               const fileMetadata = metadata[i]
               
-              // Transcode all videos for HLS adaptive streaming (better performance)
-              if (fileMetadata.path) {
-                console.log('Triggering HLS transcoding for video:', fileMetadata.path)
-                // Trigger transcoding asynchronously (don't block upload completion)
-                fetch("/api/videos/transcode", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    videoKey: fileMetadata.path,
-                  }),
-                })
-                .then((response) => {
-                  if (response.ok) {
-                    console.log('HLS transcoding triggered successfully')
-                  } else {
-                    console.error('Failed to trigger transcoding:', response.status, response.statusText)
-                  }
-                })
-                .catch((error) => {
-                  console.error("Failed to trigger video transcoding:", error)
-                  // Don't show error to user - transcoding is optional
-                })
+          // Transcode all videos for HLS adaptive streaming (better performance)
+          if (fileMetadata.path) {
+            console.log('Triggering HLS transcoding for video:', fileMetadata.path)
+            // Trigger transcoding asynchronously (don't block upload completion)
+            fetch("/api/videos/transcode", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                videoKey: fileMetadata.path,
+              }),
+            })
+            .then(async (response) => {
+              if (response.ok) {
+                console.log('✅ HLS transcoding triggered successfully')
+              } else {
+                const errorData = await response.json().catch(() => ({}))
+                if (response.status === 503 && errorData.requiresFFmpeg) {
+                  console.warn('⚠️ HLS transcoding not available (FFmpeg not configured). Video will play as MP4.')
+                } else {
+                  console.error('❌ Failed to trigger transcoding:', response.status, response.statusText, errorData)
+                }
               }
+            })
+            .catch((error) => {
+              console.warn("⚠️ Failed to trigger video transcoding (non-critical):", error.message)
+              // Don't show error to user - transcoding is optional, video will play as MP4
+            })
+          }
             }
           }
           
@@ -530,16 +535,21 @@ export default function FileUpload({
                 videoKey: fileMetadata.path,
               }),
             })
-            .then((response) => {
+            .then(async (response) => {
               if (response.ok) {
-                console.log('HLS transcoding triggered successfully')
+                console.log('✅ HLS transcoding triggered successfully')
               } else {
-                console.error('Failed to trigger transcoding:', response.status, response.statusText)
+                const errorData = await response.json().catch(() => ({}))
+                if (response.status === 503 && errorData.requiresFFmpeg) {
+                  console.warn('⚠️ HLS transcoding not available (FFmpeg not configured). Video will play as MP4.')
+                } else {
+                  console.error('❌ Failed to trigger transcoding:', response.status, response.statusText, errorData)
+                }
               }
             })
             .catch((error) => {
-              console.error("Failed to trigger video transcoding:", error)
-              // Don't show error to user - transcoding is optional
+              console.warn("⚠️ Failed to trigger video transcoding (non-critical):", error.message)
+              // Don't show error to user - transcoding is optional, video will play as MP4
             })
           }
         }
