@@ -76,13 +76,14 @@ export default function VideoPreviewPlayer({
     }
 
     const handleCanPlay = () => {
-      // Video can start playing - hide spinner
       setIsLoading(false)
+      // Show video thumbnail (first frame) when paused so user sees thumbnail instead of black
+      if (video.paused) video.currentTime = 0
     }
 
     const handleCanPlayThrough = () => {
-      // Video can play through without stopping - hide spinner
       setIsLoading(false)
+      if (video.paused) video.currentTime = 0
     }
 
     const handlePlaying = () => {
@@ -157,6 +158,8 @@ export default function VideoPreviewPlayer({
     const handleEnded = () => {
       setIsPlaying(false)
       setCurrentTime(0)
+      // Seek to start so thumbnail/first frame is shown again (like poster)
+      if (video) video.currentTime = 0
     }
     const handleTimeUpdate = () => {
       if (video) {

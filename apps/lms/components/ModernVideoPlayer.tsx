@@ -12,7 +12,7 @@ import {
   VideoPlayerVolumeRange,
   VideoPlayerFullscreenButton,
 } from "@/components/kibo-ui/video-player"
-import { Maximize, Minimize, Loader2 } from "lucide-react"
+import { Maximize, Minimize, Loader2, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useHLS } from "@/lib/hooks/useHLS"
@@ -48,6 +48,8 @@ export default function ModernVideoPlayer({
   const [isLoading, setIsLoading] = useState(true) // Track loading state
   const autoplayProcessedRef = useRef(false)
   const wasPlayingBeforeFullscreenRef = useRef(false) // Track if video was playing before fullscreen
+  // When false autoplay: show poster/thumbnail overlay with play button until user clicks (course-builder style)
+  const [showPosterOverlay, setShowPosterOverlay] = useState(!autoplay)
 
   // Initialize HLS hook for adaptive streaming
   const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
@@ -189,11 +191,12 @@ export default function ModernVideoPlayer({
     }
   }, [onReady])
 
-  // Reset autoplay processed flag when src changes
+  // Reset autoplay processed flag and poster overlay when src changes
   useEffect(() => {
     autoplayProcessedRef.current = false
     setIsLoading(false) // Start with loading false - only show spinner when actually buffering
-  }, [src])
+    setShowPosterOverlay(!autoplay)
+  }, [src, autoplay])
 
   // Track video loading state - only show spinner when actually buffering
   useEffect(() => {
@@ -256,12 +259,25 @@ export default function ModernVideoPlayer({
   }, [src])
 
   // Aggressive autoplay handling - try to play immediately when autoplay is enabled
-  // But only if the video element is actually visible in the viewport
+  // But only if the video element is actually visible in the viewport.
+  // Skip when useHLS handles this source (HLS or MP4/lesson URLs) to avoid duplicate play/audio.
   useEffect(() => {
     const video = videoRef.current
     const container = containerRef.current
     if (!video || !autoplay || !container) {
       // If autoplay is disabled, don't do anything - let video state persist
+      return
+    }
+
+    // When useHLS will handle this source, only useHLS should call play() - avoid double-play
+    const useHLSHandlesThis =
+      src &&
+      (src.includes(".m3u8") ||
+        src.includes(".mp4") ||
+        src.includes(".webm") ||
+        src.includes("/video-") ||
+        src.includes("/preview-video-"))
+    if (useHLSHandlesThis) {
       return
     }
 
@@ -408,7 +424,7 @@ export default function ModernVideoPlayer({
       }
       // Don't pause video on cleanup - let it continue playing naturally
     }
-  }, [autoplay])
+  }, [autoplay, src])
 
   // Handle fullscreen changes and orientation changes
   useEffect(() => {
@@ -665,6 +681,34 @@ export default function ModernVideoPlayer({
           <Loader2 className="h-10 w-10 text-white animate-spin" />
         </div>
       )}
+      {/* Poster/thumbnail overlay with play button (course-builder style) when not autoplaying */}
+      {showPosterOverlay && !isLoading && (
+        <div
+          className="absolute inset-0 bg-black/40 flex items-center justify-center z-[9] cursor-pointer group hover:bg-black/50 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            const video = videoRef.current
+            if (video) {
+              video.play().catch((err) => console.warn("Play failed:", err))
+              setShowPosterOverlay(false)
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              videoRef.current?.play().catch((err) => console.warn("Play failed:", err))
+              setShowPosterOverlay(false)
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label="Play video"
+        >
+          <div className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full p-4 group-hover:scale-110 transition-transform shadow-lg">
+            <Play className="h-12 w-12 sm:h-14 sm:w-14 fill-current" />
+          </div>
+        </div>
+      )}
       <VideoPlayerContent
         ref={videoRef}
         crossOrigin={src?.includes('s3.amazonaws.com') || src?.includes('amazonaws.com') || src?.includes('azurefd.net') ? undefined : "anonymous"}
@@ -769,12 +813,17 @@ export default function ModernVideoPlayer({
             ;(video as any).playsInline = true
             ;(video as any).webkitPlaysInline = true
           }
+          setShowPosterOverlay(false)
           onPlay?.()
         }}
         onPause={() => {
           onPause?.()
         }}
         onEnded={() => {
+          // Show thumbnail/poster overlay again and seek to start
+          setShowPosterOverlay(true)
+          const video = videoRef.current
+          if (video) video.currentTime = 0
           onEnded?.()
         }}
         onTimeUpdate={(e) => {

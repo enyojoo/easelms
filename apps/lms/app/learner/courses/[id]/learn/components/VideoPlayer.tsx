@@ -9,6 +9,7 @@ interface VideoPlayerProps {
   autoPlay?: boolean
   isActive: boolean
   videoUrl?: string // S3 video URL
+  poster?: string // Optional thumbnail/poster image (e.g. lesson thumbnail)
   courseId?: string
   lessonId?: string
 }
@@ -19,6 +20,7 @@ export default function VideoPlayer({
   autoPlay = true,
   isActive,
   videoUrl,
+  poster,
   courseId,
   lessonId,
 }: VideoPlayerProps) {
@@ -82,8 +84,9 @@ export default function VideoPlayer({
     <div className="relative w-full h-full flex items-center justify-center bg-black">
       <ModernVideoPlayer
         src={validVideoUrl}
+        poster={poster}
         controls={true}
-        autoplay={autoPlay && isActive}
+        autoplay={false}
         onReady={(player: any) => {
           // Always enable resume functionality - load saved progress from localStorage
           if (progressStorageKey) {

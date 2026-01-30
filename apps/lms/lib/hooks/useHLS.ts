@@ -108,6 +108,11 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         initializingRef.current = false
         setIsHLS(false)
         video.src = src
+        const showThumbnail = () => {
+          if (video.paused) video.currentTime = 0
+        }
+        video.addEventListener('loadeddata', showThumbnail, { once: true })
+        video.addEventListener('canplay', showThumbnail, { once: true })
         return
       }
 
@@ -145,6 +150,11 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       // Not an HLS file and no HLS URL to try, use native video playback
       initializingRef.current = false
       video.src = src
+      const showThumbnail = () => {
+        if (video.paused) video.currentTime = 0
+      }
+      video.addEventListener('loadeddata', showThumbnail, { once: true })
+      video.addEventListener('canplay', showThumbnail, { once: true })
       return
     }
 
@@ -283,20 +293,30 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       
       hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
         console.log('HLS Buffer appended:', data.type)
-        // When we have video data in the buffer, try to play and hide loading (only if autoplay)
-        if (autoplay && data.type === 'video' && video.paused) {
+        if (data.type === 'video') {
           setIsLoading(false)
-          console.log('Video buffer appended, attempting play, readyState:', video.readyState)
-          video.play().catch((err) => console.warn('Play after buffer append:', err.message))
+          // Show video thumbnail (first frame): seek to 0 so user sees thumbnail instead of black
+          if (video.paused) {
+            video.currentTime = 0
+          }
+          if (autoplay && video.paused) {
+            console.log('Video buffer appended, attempting play, readyState:', video.readyState)
+            video.play().catch((err) => console.warn('Play after buffer append:', err.message))
+          }
         }
       })
       
       // Try to start playback when first fragment is loaded (only if autoplay)
       hls.on(Hls.Events.FRAG_BUFFERED, (event, data) => {
-        if (autoplay && data.frag?.type === 'main' && video.paused) {
+        if (data.frag?.type === 'main') {
           setIsLoading(false)
-          console.log('Fragment buffered, attempting play')
-          video.play().catch((err) => console.warn('Play after frag buffered:', err.message))
+          if (video.paused) {
+            video.currentTime = 0
+          }
+          if (autoplay && video.paused) {
+            console.log('Fragment buffered, attempting play')
+            video.play().catch((err) => console.warn('Play after frag buffered:', err.message))
+          }
         }
       })
       
@@ -362,10 +382,11 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
           }
         }
         
-        // Wait for video to have some data before playing (only if autoplay)
+        // Wait for video to have some data; show thumbnail (first frame) when not autoplaying
         const tryPlayWhenReady = () => {
           if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.paused) {
             setIsLoading(false)
+            video.currentTime = 0
             if (autoplay) {
               console.log('Video has data, starting playback, readyState:', video.readyState)
               startPlayback()
