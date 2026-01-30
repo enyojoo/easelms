@@ -97,7 +97,7 @@ export async function createMediaConvertJob(videoKey: string): Promise<string> {
                 ProgramDateTime: "EXCLUDE",
                 TimedMetadataId3Frame: "NONE",
                 TimedMetadataId3Period: 10,
-                AdMarkers: [],
+                // Don't include AdMarkers if not using ads
               },
             },
             Outputs: [
