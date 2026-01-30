@@ -157,13 +157,31 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                     errorDetails: data.details,
                     responseCode: data.response?.code
                   })
+                  // Properly detach and destroy HLS before switching to MP4
                   if (hls) {
-                    hls.destroy()
+                    try {
+                      hls.detachMedia() // Detach from video element first
+                      hls.destroy() // Then destroy the instance
+                    } catch (e) {
+                      console.warn('Error destroying HLS:', e)
+                    }
                     hlsRef.current = null
                   }
                   setIsHLS(false)
                   setIsLoading(false)
-                  video.src = src
+                  
+                  // Reset video element and load MP4
+                  video.pause()
+                  video.removeAttribute('src')
+                  video.load() // Reset the video element
+                  
+                  // Use setTimeout to ensure video element is reset before setting new src
+                  setTimeout(() => {
+                    if (video && src && !src.includes('.m3u8')) {
+                      video.src = src
+                      video.load() // Load the new source
+                    }
+                  }, 100)
                   return
                 }
               }
@@ -179,11 +197,27 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                   if (hlsUrl && src && !src.includes('.m3u8')) {
                     console.log('HLS recovery failed, falling back to MP4:', src)
                     if (hls) {
-                      hls.destroy()
+                      try {
+                        hls.detachMedia()
+                        hls.destroy()
+                      } catch (e) {
+                        console.warn('Error destroying HLS:', e)
+                      }
                       hlsRef.current = null
                     }
                     setIsHLS(false)
-                    video.src = src
+                    
+                    // Reset video element and load MP4
+                    video.pause()
+                    video.removeAttribute('src')
+                    video.load()
+                    
+                    setTimeout(() => {
+                      if (video && src && !src.includes('.m3u8')) {
+                        video.src = src
+                        video.load()
+                      }
+                    }, 100)
                   }
                 }
               }
@@ -214,7 +248,12 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       // Cleanup function
       return () => {
         if (hls) {
-          hls.destroy()
+          try {
+            hls.detachMedia()
+            hls.destroy()
+          } catch (e) {
+            console.warn('Error cleaning up HLS:', e)
+          }
           hlsRef.current = null
         }
       }
@@ -238,7 +277,12 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
   useEffect(() => {
     return () => {
       if (hlsRef.current) {
-        hlsRef.current.destroy()
+        try {
+          hlsRef.current.detachMedia()
+          hlsRef.current.destroy()
+        } catch (e) {
+          console.warn('Error cleaning up HLS on unmount:', e)
+        }
         hlsRef.current = null
       }
     }
