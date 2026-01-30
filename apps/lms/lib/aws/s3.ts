@@ -418,10 +418,6 @@ export function getPublicUrl(key: string, useCDN: boolean = false): string {
 /**
  * Get HLS manifest URL for a video (generates .m3u8 URL from original video key)
  * Returns the HLS manifest URL, or falls back to original URL if HLS not available
- * 
- * MediaConvert creates HLS output at: {path}/hls/{baseName}/{baseName}.m3u8
- * Example: courses/course-18/preview-video-123.mp4 
- *       -> courses/course-18/hls/preview-video-123/preview-video-123.m3u8
  */
 export function getHLSVideoUrl(originalVideoKey: string): string {
   // Extract base path and filename
@@ -429,9 +425,9 @@ export function getHLSVideoUrl(originalVideoKey: string): string {
   const path = lastSlashIndex >= 0 ? originalVideoKey.substring(0, lastSlashIndex) : ''
   const filename = lastSlashIndex >= 0 ? originalVideoKey.substring(lastSlashIndex + 1) : originalVideoKey
   
-  // Remove extension - MediaConvert uses baseName.m3u8 (not master.m3u8)
+  // Remove extension and add /hls/master.m3u8
   const baseName = filename.replace(/\.[^/.]+$/, '')
-  const hlsKey = path ? `${path}/hls/${baseName}/${baseName}.m3u8` : `hls/${baseName}/${baseName}.m3u8`
+  const hlsKey = path ? `${path}/hls/${baseName}/master.m3u8` : `hls/${baseName}/master.m3u8`
   
   // Use CDN if enabled
   return getPublicUrl(hlsKey, true)

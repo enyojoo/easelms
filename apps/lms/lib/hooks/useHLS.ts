@@ -17,6 +17,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
   const [isHLS, setIsHLS] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  // Track if we've already tried HLS and failed for this source - prevents infinite retry loops
+  const hlsFailedForSrcRef = useRef<string | null>(null)
 
   useEffect(() => {
     const video = videoRef.current
@@ -31,6 +33,14 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     // Construct HLS URL from MP4 URL using the same logic as getHLSVideoUrl
     let hlsUrl: string | null = null
     if (!isHLSFile && (src.includes('.mp4') || src.includes('.webm') || src.includes('/video-') || src.includes('/preview-video-'))) {
+      // Check if we already tried HLS for this source and it failed
+      if (hlsFailedForSrcRef.current === src) {
+        console.log('HLS previously failed for this source, using MP4 directly:', src)
+        setIsHLS(false)
+        video.src = src
+        return
+      }
+
       // Extract S3 key from URL (handles both S3 URLs and CDN URLs)
       try {
         const url = new URL(src)
@@ -43,7 +53,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         
         if (s3Key) {
           // Use same logic as getHLSVideoUrl: path/hls/baseName/baseName.m3u8
-          // MediaConvert creates: {path}/hls/{baseName}/{baseName}.m3u8 (not master.m3u8)
+          // MediaConvert creates: {path}/hls/{baseName}/{baseName}.m3u8 (NOT master.m3u8)
           const lastSlashIndex = s3Key.lastIndexOf('/')
           const path = lastSlashIndex >= 0 ? s3Key.substring(0, lastSlashIndex) : ''
           const filename = lastSlashIndex >= 0 ? s3Key.substring(lastSlashIndex + 1) : s3Key
@@ -81,6 +91,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         // Fallback to MP4 if HLS fails
         video.addEventListener('error', () => {
           if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+            console.log('Safari HLS failed, falling back to MP4:', src)
+            hlsFailedForSrcRef.current = src
             video.src = src
           }
         }, { once: true })
@@ -106,9 +118,16 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         highBufferWatchdogPeriod: 2,       // Check buffer health every 2s
         nudgeOffset: 0.1,                  // Small seek adjustments
         nudgeMaxRetry: 3,                  // Retry failed segments
-        maxFragLoadingTimeOut: 200,       // 200ms timeout for segments
+        maxFragLookUpTolerance: 0.25,      // Fragment lookup tolerance
         maxLoadingDelay: 4,                // Max delay before switching quality
         minAutoBitrate: 0,                 // Allow lowest quality if needed
+        // Limit retries to prevent infinite loops
+        manifestLoadingMaxRetry: 2,        // Only retry manifest load 2 times
+        levelLoadingMaxRetry: 2,           // Only retry level load 2 times
+        fragLoadingMaxRetry: 3,            // Retry fragment load 3 times
+        manifestLoadingRetryDelay: 1000,   // 1s delay between retries
+        levelLoadingRetryDelay: 1000,
+        fragLoadingRetryDelay: 1000,
         // Adaptive bitrate switching
         abrEwmaDefaultEstimate: 500000,   // Initial bandwidth estimate (500kbps)
         abrBandWidthFactor: 0.95,          // Conservative bandwidth factor
@@ -133,6 +152,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setIsLoading(false)
         setError(null)
+        // Clear failed flag on success
+        hlsFailedForSrcRef.current = null
         // Auto-play if video is ready
         if (video.paused) {
           video.play().catch(() => {
@@ -156,100 +177,78 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                                 data.response?.code === 404 ||
                                 (data.response && (data.response.code === 403 || data.response.code === 404))
               
-              if (isNotFound) {
-                // HLS manifest doesn't exist, fallback to original MP4
-                if (hlsUrl && src && !src.includes('.m3u8')) {
-                  console.log('HLS not available (transcoding may still be in progress), falling back to MP4:', {
-                    hlsUrl,
-                    mp4Url: src,
-                    errorDetails: data.details,
-                    responseCode: data.response?.code
-                  })
-                  // Properly detach and destroy HLS before switching to MP4
-                  if (hls) {
-                    try {
-                      hls.detachMedia() // Detach from video element first
-                      hls.destroy() // Then destroy the instance
-                    } catch (e) {
-                      console.warn('Error destroying HLS:', e)
-                    }
-                    hlsRef.current = null
-                  }
-                  setIsHLS(false)
-                  setIsLoading(false)
-                  
-                  // Reset video element - React will handle setting src prop when isHLS becomes false
-                  video.pause()
-                  video.removeAttribute('src')
-                  video.load() // Reset the video element
-                  
-                  // Force React to update by triggering a re-render
-                  // The component will set src={src.trim()} when isHLS is false
-                  // Use requestAnimationFrame to ensure DOM is ready
-                  requestAnimationFrame(() => {
-                    if (video && videoRef.current === video) {
-                      // Ensure video element is ready for React to set src
-                      video.load()
-                    }
-                  })
-                  return
-                }
-              }
-              // Try to recover for other network errors
-              if (data.fatal && hls) {
+              if (isNotFound && hlsUrl && src && !src.includes('.m3u8')) {
+                console.log('HLS not available (403/404), falling back to MP4:', {
+                  hlsUrl,
+                  mp4Url: src,
+                  errorDetails: data.details,
+                  responseCode: data.response?.code
+                })
+                
+                // Mark this source as failed so we don't try HLS again
+                hlsFailedForSrcRef.current = src
+                
+                // Properly detach and destroy HLS before switching to MP4
                 try {
-                  hls.startLoad()
+                  hls.stopLoad()
+                  hls.detachMedia()
+                  hls.destroy()
                 } catch (e) {
-                  const error = new Error(errorMessage)
-                  setError(error)
-                  onError?.(error)
-                  // Fallback to direct video if available
-                  if (hlsUrl && src && !src.includes('.m3u8')) {
-                    console.log('HLS recovery failed, falling back to MP4:', src)
-                    if (hls) {
-                      try {
-                        hls.detachMedia()
-                        hls.destroy()
-                      } catch (e) {
-                        console.warn('Error destroying HLS:', e)
-                      }
-                      hlsRef.current = null
-                    }
-                    setIsHLS(false)
-                    
-                    // Reset video element - React will handle setting src prop when isHLS becomes false
-                    video.pause()
-                    video.removeAttribute('src')
-                    video.load()
-                    
-                    // Force React to update by triggering a re-render
-                    requestAnimationFrame(() => {
-                      if (video && videoRef.current === video) {
-                        video.load()
-                      }
-                    })
-                  }
+                  console.warn('Error destroying HLS:', e)
                 }
+                hlsRef.current = null
+                
+                setIsHLS(false)
+                setIsLoading(false)
+                
+                // Set MP4 source directly
+                video.src = src
+                video.load()
+                return
+              }
+              
+              // For other network errors, don't retry infinitely
+              console.error('HLS network error (non-recoverable):', data.details)
+              hlsFailedForSrcRef.current = src
+              
+              try {
+                hls.stopLoad()
+                hls.detachMedia()
+                hls.destroy()
+              } catch (e) {
+                console.warn('Error destroying HLS:', e)
+              }
+              hlsRef.current = null
+              
+              // Fallback to MP4
+              if (hlsUrl && src && !src.includes('.m3u8')) {
+                setIsHLS(false)
+                video.src = src
+                video.load()
+              } else {
+                const error = new Error(errorMessage)
+                setError(error)
+                onError?.(error)
               }
               break
+              
             case Hls.ErrorTypes.MEDIA_ERROR:
               errorMessage = 'Media error while playing HLS stream'
-              // Try to recover
-              if (data.fatal && hls) {
-                try {
-                  hls.recoverMediaError()
-                } catch (e) {
-                  const error = new Error(errorMessage)
-                  setError(error)
-                  onError?.(error)
-                }
+              // Try to recover once
+              try {
+                hls.recoverMediaError()
+              } catch (e) {
+                const error = new Error(errorMessage)
+                setError(error)
+                onError?.(error)
               }
               break
+              
             default:
               errorMessage = 'Unknown HLS error'
-              const error = new Error(errorMessage)
-              setError(error)
-              onError?.(error)
+              const unknownError = new Error(errorMessage)
+              setError(unknownError)
+              onError?.(unknownError)
               break
           }
         }
@@ -259,6 +258,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       return () => {
         if (hls) {
           try {
+            hls.stopLoad()
             hls.detachMedia()
             hls.destroy()
           } catch (e) {
@@ -288,6 +288,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     return () => {
       if (hlsRef.current) {
         try {
+          hlsRef.current.stopLoad()
           hlsRef.current.detachMedia()
           hlsRef.current.destroy()
         } catch (e) {
