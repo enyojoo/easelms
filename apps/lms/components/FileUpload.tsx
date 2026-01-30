@@ -339,11 +339,22 @@ export default function FileUpload({
                 const errorData = await response.json().catch(() => ({}))
                 if (response.status === 503) {
                   if (errorData.requiresIAM) {
-                    console.warn('⚠️ MediaConvert IAM role not configured. Video will play as MP4.')
-                  } else if (errorData.requiresAWS || errorData.requiresS3) {
-                    console.warn('⚠️ AWS credentials not configured. Video will play as MP4.')
+                    console.warn('⚠️ MediaConvert IAM role not configured. Video will play as MP4.', {
+                      error: errorData.error,
+                      hint: 'Set AWS_MEDIACONVERT_ROLE_ARN environment variable. See AWS_MEDIACONVERT_SETUP.md'
+                    })
+                  } else if (errorData.requiresAWS) {
+                    console.warn('⚠️ AWS credentials not configured. Video will play as MP4.', {
+                      error: errorData.error,
+                      hint: 'Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables'
+                    })
+                  } else if (errorData.requiresS3) {
+                    console.warn('⚠️ S3 bucket not configured. Video will play as MP4.', {
+                      error: errorData.error,
+                      hint: 'Set AWS_S3_BUCKET_NAME environment variable'
+                    })
                   } else {
-                    console.warn('⚠️ HLS transcoding not available. Video will play as MP4.')
+                    console.warn('⚠️ HLS transcoding not available. Video will play as MP4.', errorData)
                   }
                 } else {
                   console.error('❌ Failed to trigger transcoding:', response.status, response.statusText, errorData)
@@ -550,11 +561,22 @@ export default function FileUpload({
                 const errorData = await response.json().catch(() => ({}))
                 if (response.status === 503) {
                   if (errorData.requiresIAM) {
-                    console.warn('⚠️ MediaConvert IAM role not configured. Video will play as MP4.')
-                  } else if (errorData.requiresAWS || errorData.requiresS3) {
-                    console.warn('⚠️ AWS credentials not configured. Video will play as MP4.')
+                    console.warn('⚠️ MediaConvert IAM role not configured. Video will play as MP4.', {
+                      error: errorData.error,
+                      hint: 'Set AWS_MEDIACONVERT_ROLE_ARN environment variable. See AWS_MEDIACONVERT_SETUP.md'
+                    })
+                  } else if (errorData.requiresAWS) {
+                    console.warn('⚠️ AWS credentials not configured. Video will play as MP4.', {
+                      error: errorData.error,
+                      hint: 'Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables'
+                    })
+                  } else if (errorData.requiresS3) {
+                    console.warn('⚠️ S3 bucket not configured. Video will play as MP4.', {
+                      error: errorData.error,
+                      hint: 'Set AWS_S3_BUCKET_NAME environment variable'
+                    })
                   } else {
-                    console.warn('⚠️ HLS transcoding not available. Video will play as MP4.')
+                    console.warn('⚠️ HLS transcoding not available. Video will play as MP4.', errorData)
                   }
                 } else {
                   console.error('❌ Failed to trigger transcoding:', response.status, response.statusText, errorData)

@@ -58,6 +58,21 @@ export async function POST(request: Request) {
       )
     }
 
+    if (!process.env.AWS_MEDIACONVERT_ROLE_ARN) {
+      logError("MediaConvert IAM role not configured", new Error("Missing MediaConvert role ARN"), {
+        videoKey,
+        userId: user.id,
+      })
+      
+      return NextResponse.json(
+        { 
+          error: "MediaConvert IAM role not configured. Please set AWS_MEDIACONVERT_ROLE_ARN environment variable. See AWS_MEDIACONVERT_SETUP.md for setup instructions.",
+          requiresIAM: true
+        },
+        { status: 503 }
+      )
+    }
+
     logInfo("🚀 Starting MediaConvert transcoding job", {
       videoKey,
       userId: user.id,
