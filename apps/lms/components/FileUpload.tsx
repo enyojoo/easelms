@@ -333,11 +333,18 @@ export default function FileUpload({
             })
             .then(async (response) => {
               if (response.ok) {
-                console.log('✅ HLS transcoding triggered successfully')
+                const data = await response.json().catch(() => ({}))
+                console.log('✅ HLS transcoding job created:', data.jobId || 'success')
               } else {
                 const errorData = await response.json().catch(() => ({}))
-                if (response.status === 503 && errorData.requiresFFmpeg) {
-                  console.warn('⚠️ HLS transcoding not available (FFmpeg not configured). Video will play as MP4.')
+                if (response.status === 503) {
+                  if (errorData.requiresIAM) {
+                    console.warn('⚠️ MediaConvert IAM role not configured. Video will play as MP4.')
+                  } else if (errorData.requiresAWS || errorData.requiresS3) {
+                    console.warn('⚠️ AWS credentials not configured. Video will play as MP4.')
+                  } else {
+                    console.warn('⚠️ HLS transcoding not available. Video will play as MP4.')
+                  }
                 } else {
                   console.error('❌ Failed to trigger transcoding:', response.status, response.statusText, errorData)
                 }
@@ -537,11 +544,18 @@ export default function FileUpload({
             })
             .then(async (response) => {
               if (response.ok) {
-                console.log('✅ HLS transcoding triggered successfully')
+                const data = await response.json().catch(() => ({}))
+                console.log('✅ HLS transcoding job created:', data.jobId || 'success')
               } else {
                 const errorData = await response.json().catch(() => ({}))
-                if (response.status === 503 && errorData.requiresFFmpeg) {
-                  console.warn('⚠️ HLS transcoding not available (FFmpeg not configured). Video will play as MP4.')
+                if (response.status === 503) {
+                  if (errorData.requiresIAM) {
+                    console.warn('⚠️ MediaConvert IAM role not configured. Video will play as MP4.')
+                  } else if (errorData.requiresAWS || errorData.requiresS3) {
+                    console.warn('⚠️ AWS credentials not configured. Video will play as MP4.')
+                  } else {
+                    console.warn('⚠️ HLS transcoding not available. Video will play as MP4.')
+                  }
                 } else {
                   console.error('❌ Failed to trigger transcoding:', response.status, response.statusText, errorData)
                 }
