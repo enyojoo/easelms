@@ -107,6 +107,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         console.log('HLS previously failed for this source, using MP4 directly:', src)
         initializingRef.current = false
         setIsHLS(false)
+        video.setAttribute('playsinline', 'true')
+        video.setAttribute('webkit-playsinline', 'true')
         video.src = src
         const showThumbnail = () => {
           if (video.paused) video.currentTime = 0
@@ -149,6 +151,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     if (!isHLSFile && !hlsUrl) {
       // Not an HLS file and no HLS URL to try, use native video playback
       initializingRef.current = false
+      video.setAttribute('playsinline', 'true')
+      video.setAttribute('webkit-playsinline', 'true')
       video.src = src
       const showThumbnail = () => {
         if (video.paused) video.currentTime = 0
@@ -160,6 +164,12 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
 
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
+
+    // iOS/Safari: set playsinline BEFORE setting src so video can play inline (required for iPhone)
+    video.setAttribute('playsinline', 'true')
+    video.setAttribute('webkit-playsinline', 'true')
+    ;(video as HTMLVideoElement & { webkitPlaysInline?: boolean }).webkitPlaysInline = true
+    ;(video as HTMLVideoElement & { playsInline?: boolean }).playsInline = true
 
     // Check if browser supports native HLS (Safari)
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)

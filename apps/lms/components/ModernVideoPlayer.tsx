@@ -693,6 +693,15 @@ export default function ModernVideoPlayer({
               setShowPosterOverlay(false)
             }
           }}
+          onTouchEnd={(e) => {
+            // iOS: play() must run in the touch gesture; click fires delayed and loses the gesture
+            const video = videoRef.current
+            if (video) {
+              e.preventDefault()
+              video.play().catch((err) => console.warn("Play failed:", err))
+              setShowPosterOverlay(false)
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault()
