@@ -234,6 +234,30 @@ s3://bucket/
 - Check job status: `GET /api/videos/transcode/status?jobId=<job-id>`
 - Verify output path matches expected structure
 
+### 403 Errors in Browser Console (HLS Segments)
+If you see `403 (Forbidden)` errors for HLS segments (`.m3u8`, `.ts` files) in the browser console, but direct URL access works:
+
+**Problem:** Azure Front Door CORS rules might not be configured for HLS segment requests.
+
+**Solution:** Ensure Azure Front Door CORS rules allow requests for:
+- `.m3u8` files (HLS manifests)
+- `.ts` files (HLS video segments)
+
+**Steps:**
+1. Go to Azure Portal → Front Door → Your Front Door → Rules Engine
+2. Edit your `video-delivery-rules` rule set
+3. Ensure CORS rules include:
+   - **Match Condition:** `Request URL Path` contains `.m3u8` OR `.ts`
+   - **Action:** Modify Response Header
+   - **Header Name:** `Access-Control-Allow-Origin`
+   - **Value:** Your website domain (e.g., `https://www.enthronementuniversity.org`)
+4. Also ensure the rule applies to both `.m3u8` and `.ts` file extensions
+
+**Alternative:** If CORS is properly configured but still getting 403s:
+- Check if MediaConvert output files have `PUBLIC_READ` ACL (see code - should be set automatically)
+- Verify S3 bucket policy allows public read access
+- Check Azure Front Door origin group configuration
+
 ## Monitoring
 
 - **AWS Console**: MediaConvert → Jobs

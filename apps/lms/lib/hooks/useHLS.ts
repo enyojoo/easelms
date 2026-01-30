@@ -113,6 +113,13 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         abrBandWidthFactor: 0.95,          // Conservative bandwidth factor
         abrBandWidthUpFactor: 0.7,        // More conservative when upgrading
         abrMaxWithRealBitrate: false,     // Don't limit based on real bitrate
+        // CORS configuration for Azure Front Door
+        xhrSetup: (xhr, url) => {
+          // Don't set credentials for Azure Front Door URLs (avoids CORS preflight)
+          if (url.includes('azurefd.net')) {
+            xhr.withCredentials = false
+          }
+        },
       })
 
       hlsRef.current = hls
