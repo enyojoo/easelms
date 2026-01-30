@@ -1,27 +1,16 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3"
 import { logError, logInfo } from "@/lib/utils/errorHandler"
+import { createMediaConvertJob } from "@/lib/aws/mediaconvert"
 import { getHLSVideoUrl } from "@/lib/aws/s3"
-import { spawn } from "child_process"
-import { createWriteStream, unlinkSync, existsSync, mkdirSync } from "fs"
-import { join } from "path"
-import { tmpdir } from "os"
-
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-})
-
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME!
 
 /**
- * Transcode video to HLS format with multiple bitrates
+ * Transcode video to HLS format with multiple bitrates using AWS MediaConvert
  * POST /api/videos/transcode
  * Body: { videoKey: string }
+ * 
+ * This creates an async MediaConvert job. The job will process the video
+ * and upload HLS files to S3 automatically.
  */
 export async function POST(request: Request) {
   try {
@@ -38,227 +27,105 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "videoKey is required" }, { status: 400 })
     }
 
-    // Check if FFmpeg is available
-    const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg'
-    
-    // Check if we're in a serverless environment (Vercel) - transcoding might not be supported
-    const isServerless = process.env.VERCEL === '1' || !process.env.FFMPEG_PATH
-    
-    if (isServerless) {
-      logError("Video transcoding not supported in serverless environment", new Error("FFmpeg not available"), {
+    // Check required environment variables
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      logError("AWS credentials not configured", new Error("Missing AWS credentials"), {
         videoKey,
         userId: user.id,
-        environment: "serverless",
       })
       
       return NextResponse.json(
         { 
-          error: "Video transcoding is not available in this environment. Please configure FFmpeg or use a different hosting solution.",
-          requiresFFmpeg: true
+          error: "AWS credentials not configured. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.",
+          requiresAWS: true
         },
-        { status: 503 } // Service Unavailable
+        { status: 503 }
       )
     }
-    
-    logInfo("🚀 Starting video transcoding", {
+
+    if (!process.env.AWS_S3_BUCKET_NAME) {
+      logError("S3 bucket not configured", new Error("Missing S3 bucket name"), {
+        videoKey,
+        userId: user.id,
+      })
+      
+      return NextResponse.json(
+        { 
+          error: "S3 bucket not configured. Please set AWS_S3_BUCKET_NAME environment variable.",
+          requiresS3: true
+        },
+        { status: 503 }
+      )
+    }
+
+    logInfo("🚀 Starting MediaConvert transcoding job", {
       videoKey,
       userId: user.id,
-      ffmpegPath,
       timestamp: new Date().toISOString(),
     })
     
-    // Also log to console for immediate visibility
-    console.log("🎬 HLS Transcoding Started:", {
+    console.log("🎬 MediaConvert HLS Transcoding Started:", {
       videoKey,
       userId: user.id,
       time: new Date().toISOString(),
     })
 
-    // Create temporary directories
-    const tempDir = join(tmpdir(), `hls-transcode-${Date.now()}`)
-    const inputPath = join(tempDir, 'input.mp4')
-    const outputDir = join(tempDir, 'hls')
-
-    mkdirSync(tempDir, { recursive: true })
-    mkdirSync(outputDir, { recursive: true })
-
     try {
-      // Download video from S3
-      logInfo("Downloading video from S3", { videoKey })
-      const getObjectCommand = new GetObjectCommand({
-        Bucket: BUCKET_NAME,
-        Key: videoKey,
-      })
+      // Create MediaConvert job (async - will process in background)
+      const jobId = await createMediaConvertJob(videoKey)
 
-      const response = await s3Client.send(getObjectCommand)
-      const stream = response.Body as NodeJS.ReadableStream
-
-      // Write to temporary file
-      const writeStream = createWriteStream(inputPath)
-      await new Promise((resolve, reject) => {
-        stream.pipe(writeStream)
-        writeStream.on('finish', resolve)
-        writeStream.on('error', reject)
-      })
-
-      logInfo("Video downloaded, starting FFmpeg transcoding", { inputPath })
-
-      // Transcode to HLS with multiple bitrates
-      // Creates: master.m3u8, and segment files for each quality
-      const masterPlaylistPath = join(outputDir, 'master.m3u8')
-      
-      // Use FFmpeg's hls variant playlist feature for multiple bitrates
-      const ffmpegArgs = [
-        '-i', inputPath,
-        '-c:v', 'libx264',
-        '-c:a', 'aac',
-        '-hls_time', '10',
-        '-hls_playlist_type', 'vod',
-        '-hls_segment_filename', join(outputDir, 'segment_%03d_%v.ts'),
-        // Multiple bitrates: 1080p (5Mbps), 720p (3Mbps), 480p (1.5Mbps)
-        '-map', '0:v:0', '-map', '0:a:0',
-        '-b:v:0', '5000k', '-s:v:0', '1920x1080', '-b:a:0', '192k',
-        '-map', '0:v:0', '-map', '0:a:0',
-        '-b:v:1', '3000k', '-s:v:1', '1280x720', '-b:a:1', '128k',
-        '-map', '0:v:0', '-map', '0:a:0',
-        '-b:v:2', '1500k', '-s:v:2', '854x480', '-b:a:2', '96k',
-        '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2',
-        '-master_pl_name', 'master.m3u8',
-        '-f', 'hls',
-        '-hls_flags', 'independent_segments',
-        join(outputDir, 'stream_%v.m3u8'),
-      ]
-
-      await new Promise<void>((resolve, reject) => {
-        const ffmpeg = spawn(ffmpegPath, ffmpegArgs, {
-          stdio: ['ignore', 'pipe', 'pipe'],
-        })
-
-        let stdout = ''
-        let stderr = ''
-
-        ffmpeg.stdout?.on('data', (data) => {
-          stdout += data.toString()
-        })
-
-        ffmpeg.stderr?.on('data', (data) => {
-          stderr += data.toString()
-        })
-
-        ffmpeg.on('close', (code) => {
-          if (code === 0) {
-            logInfo("FFmpeg transcoding completed", { code, stdout: stdout.slice(0, 500) })
-            resolve()
-          } else {
-            logError("FFmpeg transcoding failed", new Error(stderr), { code, stderr: stderr.slice(0, 1000) })
-            reject(new Error(`FFmpeg failed with code ${code}: ${stderr.slice(0, 500)}`))
-          }
-        })
-
-        ffmpeg.on('error', (error: any) => {
-          logError("FFmpeg spawn error", error, { ffmpegPath, errorCode: error.code })
-          
-          // Provide more helpful error messages
-          if (error.code === 'ENOENT') {
-            reject(new Error(`FFmpeg not found at path: ${ffmpegPath}. Please install FFmpeg or set FFMPEG_PATH environment variable.`))
-          } else {
-            reject(new Error(`FFmpeg error: ${error.message || error}`))
-          }
-        })
-      })
-
-      // Upload HLS files to S3
-      logInfo("Uploading HLS files to S3", { outputDir })
-      
-      // Read all files in output directory
-      const { readdirSync, readFileSync } = await import('fs')
-      const files = readdirSync(outputDir)
-
-      // Determine HLS path in S3 (same path as original video with /hls/ subdirectory)
-      const lastSlashIndex = videoKey.lastIndexOf('/')
-      const videoPath = lastSlashIndex >= 0 ? videoKey.substring(0, lastSlashIndex) : ''
-      const filename = lastSlashIndex >= 0 ? videoKey.substring(lastSlashIndex + 1) : videoKey
-      const baseName = filename.replace(/\.[^/.]+$/, '')
-      const hlsBasePath = videoPath ? `${videoPath}/hls/${baseName}` : `hls/${baseName}`
-
-      // Upload each file
-      for (const file of files) {
-        const filePath = join(outputDir, file)
-        const fileContent = readFileSync(filePath)
-        const s3Key = `${hlsBasePath}/${file}`
-
-        const putObjectCommand = new PutObjectCommand({
-          Bucket: BUCKET_NAME,
-          Key: s3Key,
-          Body: fileContent,
-          ContentType: file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t',
-        })
-
-        await s3Client.send(putObjectCommand)
-        logInfo("Uploaded HLS file to S3", { s3Key, fileSize: fileContent.length })
-      }
-
-      // Generate HLS manifest URL
+      // Generate expected HLS manifest URL (will be available once job completes)
       const hlsManifestUrl = getHLSVideoUrl(videoKey)
 
-      logInfo("✅ Video transcoding completed successfully", {
+      logInfo("✅ MediaConvert job created successfully", {
+        jobId,
         videoKey,
         hlsManifestUrl,
-        filesCount: files.length,
         timestamp: new Date().toISOString(),
       })
       
-      // Also log to console for immediate visibility
-      console.log("🎬 HLS Transcoding Complete:", {
+      console.log("🎬 MediaConvert Job Created:", {
+        jobId,
         videoKey,
         hlsUrl: hlsManifestUrl,
-        filesUploaded: files.length,
+        note: "Job is processing in background. HLS files will be available once job completes.",
       })
-
-      // Cleanup temporary files
-      try {
-        const { rmSync } = await import('fs')
-        rmSync(tempDir, { recursive: true, force: true })
-      } catch (cleanupError) {
-        logError("Failed to cleanup temporary files", cleanupError as Error, { tempDir })
-        // Don't fail the request if cleanup fails
-      }
 
       return NextResponse.json({
         success: true,
-        hlsUrl: hlsManifestUrl,
+        jobId,
+        hlsUrl: hlsManifestUrl, // Expected URL (will be available after job completes)
         videoKey,
+        status: "processing",
+        message: "Transcoding job created successfully. HLS files will be available once processing completes.",
       })
     } catch (error: any) {
-      // Cleanup on error
-      try {
-        if (existsSync(tempDir)) {
-          const { rmSync } = await import('fs')
-          rmSync(tempDir, { recursive: true, force: true })
-        }
-      } catch (cleanupError) {
-        // Ignore cleanup errors
-      }
-
-      const errorMessage = error?.message || "Failed to transcode video"
-      const isFFmpegError = errorMessage.includes('FFmpeg') || errorMessage.includes('ENOENT')
+      const errorMessage = error?.message || "Failed to create MediaConvert job"
       
-      logError("Video transcoding error", error, {
+      logError("MediaConvert job creation error", error, {
         videoKey,
         userId: user.id,
         errorMessage,
-        isFFmpegError,
       })
+
+      // Check for specific MediaConvert errors
+      if (errorMessage.includes('Role') || errorMessage.includes('IAM')) {
+        return NextResponse.json(
+          { 
+            error: "MediaConvert IAM role not configured. Please set AWS_MEDIACONVERT_ROLE_ARN environment variable.",
+            requiresIAM: true,
+            details: errorMessage
+          },
+          { status: 503 }
+        )
+      }
 
       return NextResponse.json(
         { 
           error: errorMessage,
-          requiresFFmpeg: isFFmpegError,
-          details: isFFmpegError 
-            ? "FFmpeg is required for video transcoding. Please install FFmpeg on your server or configure FFMPEG_PATH environment variable."
-            : undefined
+          details: errorMessage
         },
-        { status: isFFmpegError ? 503 : 500 } // Service Unavailable for FFmpeg errors
+        { status: 500 }
       )
     }
   } catch (error: any) {
