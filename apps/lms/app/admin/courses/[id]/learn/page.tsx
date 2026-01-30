@@ -137,31 +137,11 @@ export default function AdminCourseLearningPage() {
     return "video" // Default fallback
   }
 
-  // Check if required lessons are completed before allowing access
+  // Admin preview: no completion rules - admin can access any lesson (video, text, quiz, resources) and navigate freely
   const canAccessLesson = (lessonIndex: number): boolean => {
     if (!course) return false
     const lesson = course.lessons[lessonIndex]
     if (!lesson) return false
-    
-    // Check lesson settings for required flag
-    const settings = lesson.settings
-    const isRequired = settings && typeof settings === "object" ? (settings as any).isRequired : false
-    
-    // If lesson is not required, always allow access
-    if (!isRequired) return true
-
-    // Check if all previous required lessons are completed
-    for (let i = 0; i < lessonIndex; i++) {
-      const prevLesson = course.lessons[i]
-      if (prevLesson) {
-        const prevSettings = prevLesson.settings
-        const prevIsRequired = prevSettings && typeof prevSettings === "object" ? (prevSettings as any).isRequired : false
-        if (prevIsRequired && !completedLessons.includes(i)) {
-          return false
-        }
-      }
-    }
-
     return true
   }
 
