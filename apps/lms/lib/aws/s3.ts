@@ -419,10 +419,10 @@ export function getPublicUrl(key: string, useCDN: boolean = false): string {
  * Get HLS manifest URL for a video (generates .m3u8 URL from original video key)
  * Returns the HLS manifest URL, or falls back to original URL if HLS not available
  * 
- * MediaConvert creates HLS output at: {path}/hls/{baseName}/main.m3u8
- * AWS MediaConvert uses "main.m3u8" as the default name for the multivariant (master) playlist
+ * MediaConvert creates HLS output at: {path}/hls/{baseName}/{baseName}.m3u8
+ * The master playlist uses the same name as the folder (baseName)
  * Example: courses/course-18/preview-video-123.mp4 
- *       -> courses/course-18/hls/preview-video-123/main.m3u8
+ *       -> courses/course-18/hls/preview-video-123/preview-video-123.m3u8
  */
 export function getHLSVideoUrl(originalVideoKey: string): string {
   // Extract base path and filename
@@ -430,10 +430,10 @@ export function getHLSVideoUrl(originalVideoKey: string): string {
   const path = lastSlashIndex >= 0 ? originalVideoKey.substring(0, lastSlashIndex) : ''
   const filename = lastSlashIndex >= 0 ? originalVideoKey.substring(lastSlashIndex + 1) : originalVideoKey
   
-  // Remove extension to get baseName for the HLS folder
+  // Remove extension to get baseName for the HLS folder and master playlist
   const baseName = filename.replace(/\.[^/.]+$/, '')
-  // MediaConvert creates the master playlist as "main.m3u8" in the HLS folder
-  const hlsKey = path ? `${path}/hls/${baseName}/main.m3u8` : `hls/${baseName}/main.m3u8`
+  // MediaConvert creates the master playlist as "{baseName}.m3u8" in the HLS folder
+  const hlsKey = path ? `${path}/hls/${baseName}/${baseName}.m3u8` : `hls/${baseName}/${baseName}.m3u8`
   
   // Use CDN if enabled
   return getPublicUrl(hlsKey, true)
