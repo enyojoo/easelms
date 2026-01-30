@@ -8,6 +8,58 @@ This guide explains how to set up AWS MediaConvert for video transcoding to HLS 
 2. S3 bucket for storing videos
 3. IAM role with MediaConvert permissions
 
+## CRITICAL: S3 Bucket Public Access Configuration
+
+For Azure Front Door CDN to serve your videos, your S3 bucket **must** allow public read access. Without this, you'll get 403 Forbidden errors.
+
+### Step 0.1: Disable "Block Public Access" (Required!)
+
+1. Go to **S3 Console** → Select your bucket
+2. Click **Permissions** tab
+3. Click **Edit** under "Block public access (bucket settings)"
+4. **Uncheck** the following options:
+   - ❌ Block all public access
+   - ❌ Block public access to buckets and objects granted through new access control lists (ACLs)
+   - ❌ Block public access to buckets and objects granted through any access control lists (ACLs)
+5. Click **Save changes**
+6. Type "confirm" when prompted
+
+### Step 0.2: Add Bucket Policy for Public Read Access
+
+1. Still in the **Permissions** tab
+2. Scroll to **Bucket policy** and click **Edit**
+3. Add this policy (replace `YOUR_BUCKET_NAME` with your actual bucket name):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
+    }
+  ]
+}
+```
+
+4. Click **Save changes**
+
+### Step 0.3: Enable ACLs (Required for public-read ACL)
+
+1. Still in the **Permissions** tab
+2. Scroll to **Object Ownership** and click **Edit**
+3. Select **ACLs enabled** (choose "Bucket owner preferred")
+4. Click **Save changes**
+
+**Why is this needed?**
+- Files uploaded to S3 are set with `ACL: "public-read"`
+- MediaConvert also outputs files with `PUBLIC_READ` ACL
+- If "Block Public Access" is enabled, these ACLs are ignored
+- Azure Front Door needs public read access to serve files
+
 ## Step 1: Create IAM Role for MediaConvert
 
 MediaConvert needs an IAM role with permissions to:

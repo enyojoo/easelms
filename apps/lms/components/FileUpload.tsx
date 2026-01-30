@@ -214,11 +214,13 @@ export default function FileUpload({
               const presignedData = await presignedResponse.json()
 
               // Upload directly to S3 using presigned URL
+              // Include x-amz-acl header to match presigned URL's ACL setting
               const uploadResponse = await fetch(presignedData.presignedUrl, {
                 method: "PUT",
                 body: file,
                 headers: {
                   "Content-Type": file.type,
+                  "x-amz-acl": "public-read", // Required for Azure Front Door CDN access
                 },
               })
 
@@ -449,11 +451,13 @@ export default function FileUpload({
           const presignedData = await presignedResponse.json()
 
           // Upload directly to S3 using presigned URL
+          // Include x-amz-acl header to match presigned URL's ACL setting
           const uploadResponse = await fetch(presignedData.presignedUrl, {
             method: "PUT",
             body: file,
             headers: {
               "Content-Type": file.type,
+              "x-amz-acl": "public-read", // Required for Azure Front Door CDN access
             },
           })
 

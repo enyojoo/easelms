@@ -192,6 +192,7 @@ export function getS3StoragePath(
 
 /**
  * Upload file to S3
+ * Note: Files are uploaded with public-read ACL to allow Azure Front Door access
  */
 export async function uploadFileToS3(
   file: Buffer,
@@ -203,6 +204,7 @@ export async function uploadFileToS3(
     Key: key,
     Body: file,
     ContentType: contentType,
+    ACL: "public-read", // Required for Azure Front Door CDN access
   })
 
   await s3Client.send(command)
@@ -225,6 +227,7 @@ export async function getPresignedUrl(key: string, expiresIn: number = 3600) {
 
 /**
  * Get presigned URL for uploading (PUT) - for direct client uploads
+ * Note: Files are uploaded with public-read ACL to allow Azure Front Door access
  */
 export async function getPresignedPutUrl(
   key: string,
@@ -235,6 +238,7 @@ export async function getPresignedPutUrl(
     Bucket: BUCKET_NAME,
     Key: key,
     ContentType: contentType,
+    ACL: "public-read", // Required for Azure Front Door CDN access
   })
 
   return await getSignedUrl(s3Client, command, { expiresIn })
