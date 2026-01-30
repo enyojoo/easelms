@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 
 interface UseHLSOptions {
-  videoRef: React.RefObject<HTMLVideoElement>
+  videoRef: React.RefObject<HTMLVideoElement | null>
   src: string | null | undefined
   onError?: (error: Error) => void
+  /** Set to true once the video element is in the DOM (e.g. after modal open). Omit or true for normal mounts. */
+  videoReady?: boolean
 }
 
 /**
@@ -12,7 +14,7 @@ interface UseHLSOptions {
  * Automatically detects .m3u8 URLs and initializes HLS.js for non-Safari browsers
  * Uses native HLS for Safari
  */
-export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
+export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOptions) {
   const hlsRef = useRef<Hls | null>(null)
   const [isHLS, setIsHLS] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -29,7 +31,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
   useEffect(() => {
     const video = videoRef.current
-    if (!video || !src) {
+    if (!videoReady || !video || !src) {
       // Cleanup if src becomes null/undefined
       if (hlsRef.current) {
         try {
@@ -590,7 +592,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         video.src = src
       }
     }
-  }, [src]) // Only depend on src - videoRef and onError are stable refs
+  }, [src, videoReady]) // Re-run when video element is mounted (e.g. modal open)
 
   // Cleanup on unmount
   useEffect(() => {

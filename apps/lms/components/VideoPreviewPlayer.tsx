@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { Play, Pause, Loader2 } from "lucide-react"
 import SafeImage from "@/components/SafeImage"
 import { Progress } from "@/components/ui/progress"
@@ -31,11 +31,18 @@ export default function VideoPreviewPlayer({
   const [isLoading, setIsLoading] = useState(false) // Track loading state - start false, only show when buffering
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // Signal that the video element is in the DOM (needed when used inside Dialog/modal)
+  const [videoReady, setVideoReady] = useState(false)
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
+    setVideoReady(!!el)
+  }, [])
 
-  // Initialize HLS hook for adaptive streaming
+  // Initialize HLS hook for adaptive streaming (videoReady ensures HLS runs after video is mounted, e.g. in modal)
   const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
     videoRef,
     src,
+    videoReady,
     onError: (error) => {
       console.error('HLS playback error:', error)
       setIsLoading(false)
@@ -163,9 +170,9 @@ export default function VideoPreviewPlayer({
       if (autoplay && video.paused) {
         try {
           await video.play()
-        } catch (error) {
+        } catch (error: unknown) {
           // Silently handle autoplay errors (browser policies)
-          if (error.name !== 'NotAllowedError') {
+          if (!(error instanceof Error) || error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video:", error)
           }
         }
@@ -176,9 +183,9 @@ export default function VideoPreviewPlayer({
       if (autoplay && video.paused) {
         try {
           await video.play()
-        } catch (error) {
+        } catch (error: unknown) {
           // Silently handle autoplay errors (browser policies)
-          if (error.name !== 'NotAllowedError') {
+          if (!(error instanceof Error) || error.name !== 'NotAllowedError') {
             console.error("Error autoplaying video on load:", error)
           }
         }
@@ -374,7 +381,7 @@ export default function VideoPreviewPlayer({
       )}
       <video
         key={src.trim()}
-        ref={videoRef}
+        ref={setVideoRef}
         src={isHLSFile ? undefined : src.trim()}
         className="w-full h-full object-cover"
         preload="auto"

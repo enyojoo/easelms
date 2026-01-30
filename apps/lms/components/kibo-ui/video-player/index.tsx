@@ -13,6 +13,7 @@ import {
   MediaVolumeRange,
 } from "media-chrome/react";
 import type { ComponentProps, CSSProperties } from "react";
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
 export type VideoPlayerProps = ComponentProps<typeof MediaController>;
@@ -131,9 +132,13 @@ export const VideoPlayerFullscreenButton = ({
 
 export type VideoPlayerContentProps = ComponentProps<"video">;
 
-export const VideoPlayerContent = ({
-  className,
-  ...props
-}: VideoPlayerContentProps) => (
-  <video className={cn("mt-0 mb-0 w-full h-full object-cover", className)} {...props} />
+export const VideoPlayerContent = forwardRef<HTMLVideoElement, VideoPlayerContentProps>(
+  ({ className, ...props }, ref) => (
+    <video
+      ref={ref}
+      className={cn("mt-0 mb-0 w-full h-full object-cover", className)}
+      {...props}
+    />
+  )
 );
+VideoPlayerContent.displayName = "VideoPlayerContent";
