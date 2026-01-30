@@ -122,12 +122,15 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         maxLoadingDelay: 4,                // Max delay before switching quality
         minAutoBitrate: 0,                 // Allow lowest quality if needed
         // Limit retries to prevent infinite loops
-        manifestLoadingMaxRetry: 2,        // Only retry manifest load 2 times
-        levelLoadingMaxRetry: 2,           // Only retry level load 2 times
-        fragLoadingMaxRetry: 3,            // Retry fragment load 3 times
-        manifestLoadingRetryDelay: 1000,   // 1s delay between retries
-        levelLoadingRetryDelay: 1000,
-        fragLoadingRetryDelay: 1000,
+        manifestLoadingMaxRetry: 1,        // Only retry manifest load 1 time (fail fast)
+        levelLoadingMaxRetry: 1,           // Only retry level load 1 time
+        fragLoadingMaxRetry: 2,            // Retry fragment load 2 times
+        manifestLoadingRetryDelay: 500,    // 500ms delay between retries (fail fast)
+        levelLoadingRetryDelay: 500,
+        fragLoadingRetryDelay: 500,
+        // Stop retrying on fatal errors immediately
+        fragLoadingTimeOut: 2000,          // 2s timeout for fragments
+        manifestLoadingTimeOut: 2000,      // 2s timeout for manifest
         // Adaptive bitrate switching
         abrEwmaDefaultEstimate: 500000,   // Initial bandwidth estimate (500kbps)
         abrBandWidthFactor: 0.95,          // Conservative bandwidth factor
@@ -198,6 +201,12 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                                 data.response?.code === 404 ||
                                 (data.response && (data.response.code === 403 || data.response.code === 404))
               
+              // For any fatal network error with 403/404, immediately fallback to MP4
+              const isNotFound = data.details === 'manifestLoadError' || 
+                                data.response?.code === 403 || 
+                                data.response?.code === 404 ||
+                                (data.response && (data.response.code === 403 || data.response.code === 404))
+              
               if (isNotFound && hlsUrl && src && !src.includes('.m3u8')) {
                 const isCorsIssue = data.response?.code === 403 && hlsUrl.includes('azurefd.net')
                 console.warn(
@@ -217,7 +226,30 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                 // Mark this source as failed so we don't try HLS again
                 hlsFailedForSrcRef.current = src
                 
-                // Properly detach and destroy HLS before switching to MP4
+                // Immediately stop all HLS operations to prevent retry loops
+                try {
+                  hls.stopLoad() // Stop loading immediately
+                  hls.detachMedia() // Detach from video
+                  hls.destroy() // Destroy instance
+                } catch (e) {
+                  console.warn('Error destroying HLS:', e)
+                }
+                hlsRef.current = null
+                
+                setIsHLS(false)
+                setIsLoading(false)
+                
+                // Set MP4 source directly - don't wait
+                video.src = src
+                video.load()
+                return
+              }
+              
+              // For other fatal network errors, also fallback immediately (don't retry)
+              if (data.fatal && hlsUrl && src && !src.includes('.m3u8')) {
+                console.error('HLS fatal network error, falling back to MP4:', data.details)
+                hlsFailedForSrcRef.current = src
+                
                 try {
                   hls.stopLoad()
                   hls.detachMedia()
@@ -229,36 +261,16 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                 
                 setIsHLS(false)
                 setIsLoading(false)
-                
-                // Set MP4 source directly
                 video.src = src
                 video.load()
                 return
               }
               
-              // For other network errors, don't retry infinitely
-              console.error('HLS network error (non-recoverable):', data.details)
-              hlsFailedForSrcRef.current = src
-              
-              try {
-                hls.stopLoad()
-                hls.detachMedia()
-                hls.destroy()
-              } catch (e) {
-                console.warn('Error destroying HLS:', e)
-              }
-              hlsRef.current = null
-              
-              // Fallback to MP4
-              if (hlsUrl && src && !src.includes('.m3u8')) {
-                setIsHLS(false)
-                video.src = src
-                video.load()
-              } else {
-                const error = new Error(errorMessage)
-                setError(error)
-                onError?.(error)
-              }
+              // If we get here, it's a fatal error but we can't fallback
+              // Set error state and let user know
+              const error = new Error(errorMessage)
+              setError(error)
+              onError?.(error)
               break
               
             case Hls.ErrorTypes.MEDIA_ERROR:
