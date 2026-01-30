@@ -229,29 +229,66 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       hlsRef.current = hls
 
       console.log('Loading HLS manifest:', hlsSrc)
+      console.log('Video element state before HLS attach:', {
+        src: video.src,
+        readyState: video.readyState,
+        paused: video.paused,
+        networkState: video.networkState
+      })
       
-      // Load the manifest and attach to video
-      // HLS.js will handle the source via Media Source Extensions
+      // Ensure video element has no src attribute (HLS.js uses Media Source Extensions)
+      if (video.src) {
+        video.removeAttribute('src')
+      }
+      
+      // Load the manifest FIRST, then attach media
+      // Order matters: loadSource before attachMedia
       hls.loadSource(hlsSrc)
       hls.attachMedia(video)
       
-      // Add event listeners for debugging
+      console.log('HLS attached to video, waiting for manifest parse...')
+      
+      // Add event listeners for debugging and tracking
+      hls.on(Hls.Events.LEVEL_LOADING, (event, data) => {
+        console.log('HLS Level loading:', data.level, data.url)
+      })
+      
+      hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+        console.log('HLS Level loaded:', data.level, data.details?.totalduration)
+      })
+      
       hls.on(Hls.Events.FRAG_LOADING, (event, data) => {
-        console.log('HLS Fragment loading:', data.frag?.url)
+        console.log('HLS Fragment loading:', data.frag?.url, 'level:', data.frag?.level)
       })
       
       hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
-        console.log('HLS Fragment loaded:', data.frag?.url)
+        console.log('HLS Fragment loaded:', data.frag?.url, 'level:', data.frag?.level)
         consecutiveErrorsRef.current = 0 // Reset on successful load
       })
       
       hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, (event, data) => {
         console.warn('HLS Fragment load aborted:', data.frag?.url)
       })
+      
+      hls.on(Hls.Events.BUFFER_APPENDING, (event, data) => {
+        console.log('HLS Buffer appending:', data.type)
+      })
+      
+      hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
+        console.log('HLS Buffer appended:', data.type)
+      })
 
       // Handle HLS events
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         console.log('HLS Manifest parsed successfully:', data.levels?.length, 'levels')
+        console.log('HLS Levels:', data.levels?.map((l: any) => ({ 
+          level: l.level, 
+          bitrate: l.bitrate, 
+          width: l.width, 
+          height: l.height,
+          url: l.url 
+        })))
+        
         initializingRef.current = false
         setIsLoading(false)
         setError(null)
@@ -259,22 +296,45 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         hlsFailedForSrcRef.current = null
         consecutiveErrorsRef.current = 0
         
-        // Wait for video to be ready before attempting autoplay
-        const tryAutoplay = () => {
-          if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA && video.paused) {
+        // After manifest is parsed, HLS.js should start loading levels automatically
+        // But we need to ensure loading starts - explicitly start if needed
+        if (hls.media === video) {
+          console.log('Manifest parsed, ensuring HLS starts loading levels')
+          // HLS.js should auto-start, but let's make sure
+          if (hls.currentLevel === -1 && data.levels && data.levels.length > 0) {
+            console.log('No level selected, starting load')
+            hls.startLoad()
+          }
+        }
+        
+        // Try to start playback - HLS.js will handle buffering
+        const startPlayback = () => {
+          if (video.paused) {
+            console.log('Attempting to start HLS playback, readyState:', video.readyState)
             video.play().catch((err) => {
-              // Auto-play was prevented or failed, that's okay
-              console.log('Autoplay prevented or failed:', err.message)
+              console.warn('Autoplay prevented or failed:', err.message)
+              // Even if autoplay fails, HLS.js should still load fragments
+              // The user can click play manually
             })
           }
         }
         
-        // Try immediately if ready, otherwise wait for canplay event
-        if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
-          tryAutoplay()
-        } else {
-          video.addEventListener('canplay', tryAutoplay, { once: true })
+        // Wait for video to have some data before playing
+        const waitForData = () => {
+          if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+            console.log('Video has metadata, readyState:', video.readyState)
+            startPlayback()
+          } else {
+            console.log('Waiting for video metadata, current readyState:', video.readyState)
+            video.addEventListener('loadedmetadata', () => {
+              console.log('Video metadata loaded, readyState:', video.readyState)
+              startPlayback()
+            }, { once: true })
+          }
         }
+        
+        // Start immediately if possible, otherwise wait
+        waitForData()
       })
 
       hls.on(Hls.Events.ERROR, (event, data) => {
