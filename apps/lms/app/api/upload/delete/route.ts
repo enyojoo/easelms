@@ -1,4 +1,4 @@
-import { deleteFileFromS3 } from "@/lib/aws/s3"
+import { deleteFileFromS3, deleteVideoWithHLS, extractS3KeyFromUrl } from "@/lib/aws/s3"
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { logError, logWarning, logInfo, createErrorResponse } from "@/lib/utils/errorHandler"
@@ -68,8 +68,30 @@ export async function POST(request: Request) {
     }
 
     try {
-      await deleteFileFromS3(s3Key)
-      return NextResponse.json({ message: "File deleted successfully from S3" })
+      // Check if it's a video file - if so, delete video + HLS folder
+      const isVideoFile = s3Key.includes('/video-') || 
+                         s3Key.includes('/preview-video-') || 
+                         s3Key.includes('.mp4') || 
+                         s3Key.includes('.webm') ||
+                         s3Key.includes('.mov') ||
+                         s3Key.includes('.avi')
+
+      if (isVideoFile) {
+        // Delete video file and its HLS folder
+        const result = await deleteVideoWithHLS(s3Key)
+        if (result.errors.length > 0) {
+          logWarning("Some files failed to delete", { s3Key, errors: result.errors })
+        }
+        return NextResponse.json({ 
+          message: `Deleted video and ${result.deleted} file(s) (including HLS folder)`,
+          deleted: result.deleted,
+          errors: result.errors.length > 0 ? result.errors : undefined
+        })
+      } else {
+        // For non-video files, just delete the file
+        await deleteFileFromS3(s3Key)
+        return NextResponse.json({ message: "File deleted successfully from S3" })
+      }
     } catch (s3Error: any) {
       // If file doesn't exist, that's okay
       if (s3Error.message?.includes("NoSuchKey") || s3Error.message?.includes("not found")) {

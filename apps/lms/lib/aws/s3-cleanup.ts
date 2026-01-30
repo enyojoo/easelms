@@ -4,7 +4,7 @@
  * Functions to clean up S3 files when courses, lessons, or resources are deleted
  */
 
-import { deleteFileFromS3 } from "./s3"
+import { deleteFileFromS3, deleteVideoWithHLS } from "./s3"
 import { createServiceRoleClient } from "@/lib/supabase/server"
 
 /**
@@ -68,14 +68,18 @@ export async function cleanupCourseFiles(courseId: number): Promise<{ deleted: n
       }
     }
 
-    // Delete course preview video
+    // Delete course preview video and its HLS folder
     if (course.preview_video) {
       const videoKey = extractS3KeyFromUrl(course.preview_video)
       if (videoKey) {
         try {
-          await deleteFileFromS3(videoKey)
-          deleted++
-          console.log(`Deleted course preview video: ${videoKey}`)
+          const result = await deleteVideoWithHLS(videoKey)
+          deleted += result.deleted
+          console.log(`Deleted course preview video and HLS folder: ${videoKey} (${result.deleted} files)`)
+          if (result.errors.length > 0) {
+            errors += result.errors.length
+            console.error(`Errors deleting HLS files for ${videoKey}:`, result.errors)
+          }
         } catch (error: any) {
           console.error(`Error deleting course preview video ${videoKey}:`, error)
           errors++
@@ -176,14 +180,18 @@ export async function cleanupLessonFiles(lessonId: number): Promise<{ deleted: n
 
     const content = lesson.content as any
 
-    // Delete lesson video if present
+    // Delete lesson video and its HLS folder if present
     if (content?.url) {
       const videoKey = extractS3KeyFromUrl(content.url)
       if (videoKey) {
         try {
-          await deleteFileFromS3(videoKey)
-          deleted++
-          console.log(`Deleted lesson video: ${videoKey}`)
+          const result = await deleteVideoWithHLS(videoKey)
+          deleted += result.deleted
+          console.log(`Deleted lesson video and HLS folder: ${videoKey} (${result.deleted} files)`)
+          if (result.errors.length > 0) {
+            errors += result.errors.length
+            console.error(`Errors deleting HLS files for ${videoKey}:`, result.errors)
+          }
         } catch (error: any) {
           console.error(`Error deleting lesson video ${videoKey}:`, error)
           errors++

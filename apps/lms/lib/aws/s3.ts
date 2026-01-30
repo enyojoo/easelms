@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3"
 import type { PutObjectCommandInput } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
@@ -456,6 +456,63 @@ export function getPreferredVideoUrl(originalVideoUrl: string): string {
 }
 
 /**
+ * Get HLS folder path for a video key
+ * Input: courses/course-18/preview-video-123.mp4
+ * Output: courses/course-18/hls/preview-video-123/
+ */
+export function getHLSFolderPath(videoKey: string): string {
+  const lastSlashIndex = videoKey.lastIndexOf('/')
+  const path = lastSlashIndex >= 0 ? videoKey.substring(0, lastSlashIndex) : ''
+  const filename = lastSlashIndex >= 0 ? videoKey.substring(lastSlashIndex + 1) : videoKey
+  const baseName = filename.replace(/\.[^/.]+$/, '')
+  return path ? `${path}/hls/${baseName}/` : `hls/${baseName}/`
+}
+
+/**
+ * Delete HLS folder and all its files from S3
+ */
+export async function deleteHLSFolder(videoKey: string): Promise<number> {
+  const hlsFolderPath = getHLSFolderPath(videoKey)
+  let deletedCount = 0
+
+  try {
+    // List all objects in the HLS folder
+    const listCommand = new ListObjectsV2Command({
+      Bucket: BUCKET_NAME,
+      Prefix: hlsFolderPath,
+    })
+
+    const listResponse = await s3Client.send(listCommand)
+    const objects = listResponse.Contents || []
+
+    // Delete each object
+    for (const object of objects) {
+      if (object.Key) {
+        try {
+          const deleteCommand = new DeleteObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: object.Key,
+          })
+          await s3Client.send(deleteCommand)
+          deletedCount++
+        } catch (error: any) {
+          // Log error but continue deleting other files
+          console.error(`Error deleting HLS file ${object.Key}:`, error)
+        }
+      }
+    }
+
+    return deletedCount
+  } catch (error: any) {
+    // If folder doesn't exist, that's okay
+    if (error.name === 'NoSuchKey' || error.message?.includes('not found')) {
+      return 0
+    }
+    throw error
+  }
+}
+
+/**
  * Delete file from S3
  */
 export async function deleteFileFromS3(key: string): Promise<void> {
@@ -465,6 +522,40 @@ export async function deleteFileFromS3(key: string): Promise<void> {
   })
 
   await s3Client.send(command)
+}
+
+/**
+ * Delete video file and its associated HLS folder
+ * @param videoKey - S3 key of the video file
+ * @returns Object with deleted file count and any errors
+ */
+export async function deleteVideoWithHLS(videoKey: string): Promise<{ 
+  deleted: number
+  errors: string[]
+}> {
+  const errors: string[] = []
+  let deleted = 0
+
+  // Delete the original video file
+  try {
+    await deleteFileFromS3(videoKey)
+    deleted++
+  } catch (error: any) {
+    // If file doesn't exist, that's okay
+    if (!error.message?.includes('NoSuchKey') && !error.message?.includes('not found')) {
+      errors.push(`Failed to delete video file: ${error.message}`)
+    }
+  }
+
+  // Delete HLS folder and all its files
+  try {
+    const hlsDeletedCount = await deleteHLSFolder(videoKey)
+    deleted += hlsDeletedCount
+  } catch (error: any) {
+    errors.push(`Failed to delete HLS folder: ${error.message}`)
+  }
+
+  return { deleted, errors }
 }
 
 /**
