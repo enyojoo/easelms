@@ -109,9 +109,13 @@ export async function createMediaConvertJob(videoKey: string): Promise<string> {
                   CodecSettings: {
                     Codec: "H_264",
                     H264Settings: {
-                      RateControlMode: "CBR",
+                      RateControlMode: "QVBR",
+                      QvbrSettings: {
+                        QvbrQualityLevel: 7,
+                        QvbrQualityLevelFineTune: 0,
+                      },
                       Bitrate: 5000000,
-                      MaxBitrate: 5000000,
+                      MaxBitrate: 6000000,
                       GopSize: 60,
                       GopSizeUnits: "FRAMES",
                       InterlaceMode: "PROGRESSIVE",
@@ -160,9 +164,13 @@ export async function createMediaConvertJob(videoKey: string): Promise<string> {
                   CodecSettings: {
                     Codec: "H_264",
                     H264Settings: {
-                      RateControlMode: "CBR",
+                      RateControlMode: "QVBR",
+                      QvbrSettings: {
+                        QvbrQualityLevel: 7,
+                        QvbrQualityLevelFineTune: 0,
+                      },
                       Bitrate: 3000000,
-                      MaxBitrate: 3000000,
+                      MaxBitrate: 3600000,
                       GopSize: 60,
                       GopSizeUnits: "FRAMES",
                       InterlaceMode: "PROGRESSIVE",
@@ -211,9 +219,13 @@ export async function createMediaConvertJob(videoKey: string): Promise<string> {
                   CodecSettings: {
                     Codec: "H_264",
                     H264Settings: {
-                      RateControlMode: "CBR",
+                      RateControlMode: "QVBR",
+                      QvbrSettings: {
+                        QvbrQualityLevel: 7,
+                        QvbrQualityLevelFineTune: 0,
+                      },
                       Bitrate: 1500000,
-                      MaxBitrate: 1500000,
+                      MaxBitrate: 1800000,
                       GopSize: 60,
                       GopSizeUnits: "FRAMES",
                       InterlaceMode: "PROGRESSIVE",
