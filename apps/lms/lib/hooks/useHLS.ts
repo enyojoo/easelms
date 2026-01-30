@@ -27,11 +27,39 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
   useEffect(() => {
     const video = videoRef.current
     if (!video || !src) {
+      // Cleanup if src becomes null/undefined
+      if (hlsRef.current) {
+        try {
+          hlsRef.current.stopLoad()
+          hlsRef.current.detachMedia()
+          hlsRef.current.destroy()
+        } catch (e) {
+          console.warn('Error cleaning up HLS:', e)
+        }
+        hlsRef.current = null
+      }
+      currentSrcRef.current = null
+      initializingRef.current = false
       return
     }
 
+    // If source changed, cleanup old HLS instance first
+    if (currentSrcRef.current !== null && currentSrcRef.current !== src) {
+      if (hlsRef.current) {
+        try {
+          hlsRef.current.stopLoad()
+          hlsRef.current.detachMedia()
+          hlsRef.current.destroy()
+        } catch (e) {
+          console.warn('Error cleaning up old HLS instance:', e)
+        }
+        hlsRef.current = null
+      }
+      initializingRef.current = false
+    }
+
     // Prevent re-initialization if already processing the same source
-    if (currentSrcRef.current === src || initializingRef.current) {
+    if (currentSrcRef.current === src && initializingRef.current) {
       return
     }
     
@@ -176,11 +204,22 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         setError(null)
         // Clear failed flag on success
         hlsFailedForSrcRef.current = null
-        // Auto-play if video is ready
-        if (video.paused) {
-          video.play().catch(() => {
-            // Auto-play was prevented, that's okay
-          })
+        
+        // Wait for video to be ready before attempting autoplay
+        const tryAutoplay = () => {
+          if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA && video.paused) {
+            video.play().catch((err) => {
+              // Auto-play was prevented or failed, that's okay
+              console.log('Autoplay prevented or failed:', err.message)
+            })
+          }
+        }
+        
+        // Try immediately if ready, otherwise wait for canplay event
+        if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+          tryAutoplay()
+        } else {
+          video.addEventListener('canplay', tryAutoplay, { once: true })
         }
       })
 
