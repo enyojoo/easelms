@@ -373,11 +373,11 @@ export default function VideoPreviewPlayer({
         </div>
       )}
       <video
-        key={`${src.trim()}-${isHLSFile ? 'hls' : 'mp4'}`}
+        key={src.trim()}
         ref={videoRef}
         src={isHLSFile ? undefined : src.trim()}
         className="w-full h-full object-cover"
-        preload={isHLSFile ? "auto" : "auto"}
+        preload="auto"
         muted={false}
         playsInline
         crossOrigin={src?.includes('s3.amazonaws.com') || src?.includes('amazonaws.com') || src?.includes('azurefd.net') ? undefined : "anonymous"}

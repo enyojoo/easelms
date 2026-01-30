@@ -77,6 +77,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       // Check if we already tried HLS for this source and it failed
       if (hlsFailedForSrcRef.current === src) {
         console.log('HLS previously failed for this source, using MP4 directly:', src)
+        initializingRef.current = false
         setIsHLS(false)
         video.src = src
         return
@@ -114,6 +115,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
     if (!isHLSFile && !hlsUrl) {
       // Not an HLS file and no HLS URL to try, use native video playback
+      initializingRef.current = false
       video.src = src
       return
     }
@@ -127,6 +129,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     if (isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari has native HLS support - use it directly
       // Try HLS first, fallback to MP4 if not available
+      initializingRef.current = false
       if (hlsUrl) {
         video.src = hlsUrl
         // Fallback to MP4 if HLS fails
