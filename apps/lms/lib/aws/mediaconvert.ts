@@ -24,7 +24,9 @@ function getMediaConvertEndpoint(region: string): string {
 /**
  * Create HLS output path structure
  * Input: courses/course-18/preview-video-123.mp4
- * Output: courses/course-18/hls/preview-video-123/master.m3u8
+ * Output: courses/course-18/hls/preview-video-123/main.m3u8
+ * 
+ * Note: MediaConvert creates the master playlist as "main.m3u8" (AWS default)
  */
 function getHLSOutputPath(videoKey: string): { hlsPath: string; baseName: string } {
   const lastSlashIndex = videoKey.lastIndexOf('/')

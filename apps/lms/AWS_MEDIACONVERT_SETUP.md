@@ -197,12 +197,14 @@ s3://bucket/
       preview-video-123.mp4          (original)
       hls/
         preview-video-123/
-          master.m3u8                (master playlist)
+          main.m3u8                   (master playlist - AWS default name)
           preview-video-123_1080p.m3u8
           preview-video-123_720p.m3u8
           preview-video-123_480p.m3u8
           segment files (.ts)
 ```
+
+**Note:** AWS MediaConvert uses `main.m3u8` as the default name for the multivariant (master) playlist, not `master.m3u8` or `{baseName}.m3u8`.
 
 ## Cost Considerations
 
