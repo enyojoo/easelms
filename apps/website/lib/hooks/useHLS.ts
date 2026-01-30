@@ -62,13 +62,34 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     }
 
     // Prevent re-initialization if already processing the same source
-    if (currentSrcRef.current === src && initializingRef.current) {
-      return
+    if (currentSrcRef.current === src && hlsRef.current) {
+      // Check if HLS instance is still valid and attached
+      try {
+        const hls = hlsRef.current
+        // If HLS instance exists and media is attached, don't recreate
+        if (hls.media === video) {
+          console.log('HLS instance already exists and attached for this source, skipping:', src)
+          initializingRef.current = false
+          return
+        }
+      } catch (e) {
+        // HLS instance might be destroyed, continue to create new one
+        console.log('Existing HLS instance invalid, creating new one')
+        hlsRef.current = null
+      }
+      
+      // If we're already initializing, don't start again
+      if (initializingRef.current) {
+        console.log('HLS already initializing for this source, skipping:', src)
+        return
+      }
     }
     
     // Mark as initializing and store current source
     initializingRef.current = true
     currentSrcRef.current = src
+    
+    console.log('Initializing HLS for source:', src)
 
     // Check if URL is HLS (.m3u8)
     const isHLSFile = src.includes('.m3u8')
@@ -207,13 +228,30 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
       hlsRef.current = hls
 
+      console.log('Loading HLS manifest:', hlsSrc)
+      
       // Load the manifest and attach to video
       // HLS.js will handle the source via Media Source Extensions
       hls.loadSource(hlsSrc)
       hls.attachMedia(video)
+      
+      // Add event listeners for debugging
+      hls.on(Hls.Events.FRAG_LOADING, (event, data) => {
+        console.log('HLS Fragment loading:', data.frag?.url)
+      })
+      
+      hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+        console.log('HLS Fragment loaded:', data.frag?.url)
+        consecutiveErrorsRef.current = 0 // Reset on successful load
+      })
+      
+      hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, (event, data) => {
+        console.warn('HLS Fragment load aborted:', data.frag?.url)
+      })
 
       // Handle HLS events
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+        console.log('HLS Manifest parsed successfully:', data.levels?.length, 'levels')
         initializingRef.current = false
         setIsLoading(false)
         setError(null)
@@ -394,6 +432,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
       // Cleanup function
       return () => {
+        console.log('Cleaning up HLS instance for source:', src)
         if (hls) {
           try {
             hls.stopLoad()
@@ -421,7 +460,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         video.src = src
       }
     }
-  }, [src, videoRef, onError])
+  }, [src]) // Only depend on src - videoRef and onError are stable refs
 
   // Cleanup on unmount
   useEffect(() => {
