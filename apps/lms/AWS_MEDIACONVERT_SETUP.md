@@ -18,11 +18,17 @@ MediaConvert needs an IAM role with permissions to:
 
 1. Go to **IAM Console** → **Roles** → **Create Role**
 2. Select **AWS Service** → **MediaConvert**
-3. Attach the following policies:
-   - `AmazonS3ReadOnlyAccess` (or custom policy for your bucket)
-   - `AmazonS3FullAccess` (or custom policy for your bucket)
-4. Name the role: `MediaConvert_Default_Role`
-5. Copy the **Role ARN** (e.g., `arn:aws:iam::123456789012:role/MediaConvert_Default_Role`)
+3. AWS may suggest `AmazonAPIGatewayInvokeFullAccess` - **you can ignore/remove this** (not needed for our use case)
+4. Attach the following policies:
+   - `AmazonS3FullAccess` - **Required** (allows MediaConvert to read input videos and write HLS output files)
+   - Optionally, you can use more restrictive custom policies:
+     - S3 read access to your bucket (for input videos)
+     - S3 write access to your bucket (for HLS output files)
+5. Click **Next** → Name the role: `MediaConvert_Default_Role`
+6. Click **Create Role**
+7. Copy the **Role ARN** (e.g., `arn:aws:iam::123456789012:role/MediaConvert_Default_Role`)
+
+**Note:** If AWS suggests `AmazonAPIGatewayInvokeFullAccess`, you don't need it. MediaConvert only needs S3 permissions to read input videos and write output files.
 
 ### Option B: Use AWS CLI
 
@@ -48,11 +54,7 @@ aws iam create-role \
   --role-name MediaConvert_Default_Role \
   --assume-role-policy-document file://mediaconvert-trust-policy.json
 
-# Attach S3 policies
-aws iam attach-role-policy \
-  --role-name MediaConvert_Default_Role \
-  --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
-
+# Attach S3 policy (MediaConvert needs full S3 access to read inputs and write outputs)
 aws iam attach-role-policy \
   --role-name MediaConvert_Default_Role \
   --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess
@@ -60,6 +62,10 @@ aws iam attach-role-policy \
 # Get role ARN
 aws iam get-role --role-name MediaConvert_Default_Role --query 'Role.Arn' --output text
 ```
+
+**Note:** `AmazonS3FullAccess` is sufficient. MediaConvert needs to:
+- Read video files from S3 (input)
+- Write HLS files to S3 (output)
 
 ## Step 2: Configure Environment Variables
 
