@@ -23,6 +23,9 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
   const currentSrcRef = useRef<string | null>(null)
   // Track if HLS is currently initializing to prevent duplicate initialization
   const initializingRef = useRef<boolean>(false)
+  // Track consecutive non-fatal errors to prevent infinite retry loops
+  const consecutiveErrorsRef = useRef<number>(0)
+  const maxConsecutiveErrors = 5 // Stop after 5 consecutive non-fatal errors
 
   useEffect(() => {
     const video = videoRef.current
@@ -161,28 +164,28 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        // YouTube-like buffering configuration
-        backBufferLength: 90,              // Keep 90s behind current position
-        maxBufferLength: 60,               // Buffer 60s ahead (YouTube-like)
-        maxMaxBufferLength: 120,           // Up to 2min on fast networks
-        maxBufferSize: 60 * 1000 * 1000,  // 60MB buffer
-        maxBufferHole: 0.5,                // Max gap tolerance
+        // Conservative buffering to prevent continuous requests
+        backBufferLength: 30,              // Keep 30s behind current position (reduced)
+        maxBufferLength: 20,               // Buffer 20s ahead (reduced to prevent excessive requests)
+        maxMaxBufferLength: 30,            // Max 30s buffer (reduced from 120s)
+        maxBufferSize: 30 * 1000 * 1000,  // 30MB buffer (reduced)
+        maxBufferHole: 0.1,                // Smaller gap tolerance
         highBufferWatchdogPeriod: 2,       // Check buffer health every 2s
         nudgeOffset: 0.1,                  // Small seek adjustments
         nudgeMaxRetry: 3,                  // Retry failed segments
         maxFragLookUpTolerance: 0.25,      // Fragment lookup tolerance
         maxLoadingDelay: 4,                // Max delay before switching quality
         minAutoBitrate: 0,                 // Allow lowest quality if needed
-        // Limit retries to prevent infinite loops
-        manifestLoadingMaxRetry: 1,        // Only retry manifest load 1 time (fail fast)
-        levelLoadingMaxRetry: 1,           // Only retry level load 1 time
-        fragLoadingMaxRetry: 2,            // Retry fragment load 2 times
-        manifestLoadingRetryDelay: 500,    // 500ms delay between retries (fail fast)
-        levelLoadingRetryDelay: 500,
-        fragLoadingRetryDelay: 500,
+        // Limit retries to prevent infinite loops - VERY STRICT
+        manifestLoadingMaxRetry: 0,        // NO retries for manifest (fail immediately)
+        levelLoadingMaxRetry: 0,           // NO retries for level (fail immediately)
+        fragLoadingMaxRetry: 1,            // Only retry fragment load 1 time
+        manifestLoadingRetryDelay: 0,      // No delay - fail immediately
+        levelLoadingRetryDelay: 0,
+        fragLoadingRetryDelay: 100,        // Very short delay for fragments
         // Stop retrying on fatal errors immediately
-        fragLoadingTimeOut: 2000,          // 2s timeout for fragments
-        manifestLoadingTimeOut: 2000,      // 2s timeout for manifest
+        fragLoadingTimeOut: 1000,          // 1s timeout for fragments (shorter)
+        manifestLoadingTimeOut: 1000,      // 1s timeout for manifest (shorter)
         // Adaptive bitrate switching
         abrEwmaDefaultEstimate: 500000,   // Initial bandwidth estimate (500kbps)
         abrBandWidthFactor: 0.95,          // Conservative bandwidth factor
@@ -214,8 +217,9 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         initializingRef.current = false
         setIsLoading(false)
         setError(null)
-        // Clear failed flag on success
+        // Clear failed flag and error counter on success
         hlsFailedForSrcRef.current = null
+        consecutiveErrorsRef.current = 0
         
         // Wait for video to be ready before attempting autoplay
         const tryAutoplay = () => {
@@ -237,6 +241,40 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
       hls.on(Hls.Events.ERROR, (event, data) => {
         setIsLoading(false)
+        
+        // Track consecutive errors for non-fatal errors
+        if (!data.fatal) {
+          consecutiveErrorsRef.current += 1
+          
+          // If too many consecutive non-fatal errors, stop and fallback
+          if (consecutiveErrorsRef.current >= maxConsecutiveErrors && hlsUrl && src && !src.includes('.m3u8')) {
+            console.warn(`Too many consecutive HLS errors (${consecutiveErrorsRef.current}), falling back to MP4`)
+            hlsFailedForSrcRef.current = src
+            
+            try {
+              hls.stopLoad()
+              hls.detachMedia()
+              hls.destroy()
+            } catch (e) {
+              console.warn('Error destroying HLS after too many errors:', e)
+            }
+            hlsRef.current = null
+            
+            setIsHLS(false)
+            setIsLoading(false)
+            consecutiveErrorsRef.current = 0
+            video.src = src
+            video.load()
+            return
+          }
+          
+          // For non-fatal errors, just log and continue (HLS.js will retry)
+          console.warn('HLS non-fatal error:', data.details, `(${consecutiveErrorsRef.current}/${maxConsecutiveErrors})`)
+          return
+        }
+        
+        // Reset error counter on fatal error (we'll handle it below)
+        consecutiveErrorsRef.current = 0
         
         if (data.fatal) {
           let errorMessage = 'HLS playback error'
@@ -402,6 +440,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       currentSrcRef.current = null
       initializingRef.current = false
       hlsFailedForSrcRef.current = null
+      consecutiveErrorsRef.current = 0
     }
   }, [])
 
