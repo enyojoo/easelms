@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 
 interface UseHLSOptions {
@@ -19,12 +19,25 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
   const [error, setError] = useState<Error | null>(null)
   // Track if we've already tried HLS and failed for this source - prevents infinite retry loops
   const hlsFailedForSrcRef = useRef<string | null>(null)
+  // Track the current source to prevent re-initialization on same source
+  const currentSrcRef = useRef<string | null>(null)
+  // Track if HLS is currently initializing to prevent duplicate initialization
+  const initializingRef = useRef<boolean>(false)
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !src) {
       return
     }
+
+    // Prevent re-initialization if already processing the same source
+    if (currentSrcRef.current === src || initializingRef.current) {
+      return
+    }
+    
+    // Mark as initializing and store current source
+    initializingRef.current = true
+    currentSrcRef.current = src
 
     // Check if URL is HLS (.m3u8)
     const isHLSFile = src.includes('.m3u8')
@@ -158,6 +171,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
       // Handle HLS events
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        initializingRef.current = false
         setIsLoading(false)
         setError(null)
         // Clear failed flag on success
@@ -301,6 +315,10 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
           }
           hlsRef.current = null
         }
+        // Reset initialization flags on cleanup
+        initializingRef.current = false
+        // Only reset currentSrcRef if we're actually changing sources
+        // (not on re-renders with same source)
       }
     } else {
       // HLS.js not supported - fallback to direct video
@@ -331,6 +349,10 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         }
         hlsRef.current = null
       }
+      // Reset all refs on unmount
+      currentSrcRef.current = null
+      initializingRef.current = false
+      hlsFailedForSrcRef.current = null
     }
   }, [])
 
