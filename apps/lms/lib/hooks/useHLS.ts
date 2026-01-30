@@ -195,12 +195,6 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                 error: data.error
               })
               
-              // Check if it's a 403/404 (HLS doesn't exist) - fallback to MP4
-              const isNotFound = data.details === 'manifestLoadError' || 
-                                data.response?.code === 403 || 
-                                data.response?.code === 404 ||
-                                (data.response && (data.response.code === 403 || data.response.code === 404))
-              
               // For any fatal network error with 403/404, immediately fallback to MP4
               const isNotFound = data.details === 'manifestLoadError' || 
                                 data.response?.code === 403 || 

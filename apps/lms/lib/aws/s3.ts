@@ -617,4 +617,3 @@ export function getMaxImageSize(): number {
 export function getMaxDocumentSize(): number {
   return 50 * 1024 * 1024 // 50MB
 }
-
