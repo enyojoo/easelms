@@ -135,11 +135,16 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         abrMaxWithRealBitrate: false,     // Don't limit based on real bitrate
         // CORS configuration for Azure Front Door
         xhrSetup: (xhr, url) => {
-          // Don't set credentials for Azure Front Door URLs (avoids CORS preflight)
+          // Configure XHR for Azure Front Door to avoid CORS issues
           if (url.includes('azurefd.net')) {
             xhr.withCredentials = false
+            // Set headers that Azure Front Door expects
+            // Don't add custom headers that would trigger preflight
+            // HLS.js will add Range header automatically for segments
           }
         },
+        // Ensure proper CORS handling
+        cors: true,
       })
 
       hlsRef.current = hls
@@ -171,6 +176,22 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               errorMessage = 'Network error while loading HLS stream'
+              
+              // Log detailed error information for debugging
+              console.error('HLS Network Error Details:', {
+                type: data.type,
+                details: data.details,
+                fatal: data.fatal,
+                url: data.url || hlsSrc,
+                response: data.response ? {
+                  code: data.response.code,
+                  text: data.response.text?.substring(0, 200), // First 200 chars
+                  url: data.response.url,
+                  headers: data.response.headers
+                } : null,
+                error: data.error
+              })
+              
               // Check if it's a 403/404 (HLS doesn't exist) - fallback to MP4
               const isNotFound = data.details === 'manifestLoadError' || 
                                 data.response?.code === 403 || 
@@ -178,12 +199,20 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                                 (data.response && (data.response.code === 403 || data.response.code === 404))
               
               if (isNotFound && hlsUrl && src && !src.includes('.m3u8')) {
-                console.log('HLS not available (403/404), falling back to MP4:', {
-                  hlsUrl,
-                  mp4Url: src,
-                  errorDetails: data.details,
-                  responseCode: data.response?.code
-                })
+                const isCorsIssue = data.response?.code === 403 && hlsUrl.includes('azurefd.net')
+                console.warn(
+                  isCorsIssue 
+                    ? 'HLS URL returns 403 - This is likely a CORS issue. Azure Front Door needs CORS headers for XHR requests. Falling back to MP4.'
+                    : 'HLS not available (403/404), falling back to MP4',
+                  {
+                    hlsUrl,
+                    mp4Url: src,
+                    errorDetails: data.details,
+                    responseCode: data.response?.code,
+                    responseText: data.response?.text?.substring(0, 200),
+                    isCorsIssue
+                  }
+                )
                 
                 // Mark this source as failed so we don't try HLS again
                 hlsFailedForSrcRef.current = src

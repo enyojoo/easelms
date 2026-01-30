@@ -237,11 +237,14 @@ s3://bucket/
 ### 403 Errors in Browser Console (HLS Segments)
 If you see `403 (Forbidden)` errors for HLS segments (`.m3u8`, `.ts` files) in the browser console, but direct URL access works:
 
-**Problem:** Azure Front Door CORS rules might not be configured for HLS segment requests.
+**Problem:** This is a **CORS (Cross-Origin Resource Sharing) issue**. When you open a URL directly in the browser, it's a simple navigation request. But when HLS.js (the video player library) makes XHR requests to load HLS manifests and segments, these are cross-origin requests that require CORS headers.
 
-**Solution:** Ensure Azure Front Door CORS rules allow requests for:
+**Root Cause:** Azure Front Door is blocking XHR requests because CORS headers are missing or incorrect. HLS.js uses XHR with `Range` headers for seeking and segment loading, which requires specific CORS configuration.
+
+**Solution:** Ensure Azure Front Door CORS rules allow XHR requests for:
 - `.m3u8` files (HLS manifests)
 - `.ts` files (HLS video segments)
+- All files under `/hls/` paths
 
 **Steps:**
 1. Go to Azure Portal → Front Door → Your Front Door → Rules Engine
@@ -250,15 +253,18 @@ If you see `403 (Forbidden)` errors for HLS segments (`.m3u8`, `.ts` files) in t
 
 **Rule Name:** `Allow HLS CORS`
 
-**Match Conditions:**
+**Match Conditions (use OR logic):**
+- `Request URL Path` contains `/hls/` OR
 - `Request URL Path` contains `.m3u8` OR
 - `Request URL Path` contains `.ts`
 
-**Actions (Add all CORS headers):**
+**Actions (Add all CORS headers - CRITICAL for HLS.js to work):**
+
 1. **Modify Response Header:**
    - Header Name: `Access-Control-Allow-Origin`
-   - Value: `https://www.enthronementuniversity.org` (your website domain)
+   - Value: `*` (or your specific domain like `https://www.enthronementuniversity.org`)
    - Operation: `Add` or `Overwrite`
+   - **Important:** Use `*` for public access, or specific domain for production
 
 2. **Modify Response Header:**
    - Header Name: `Access-Control-Allow-Methods`
@@ -267,18 +273,25 @@ If you see `403 (Forbidden)` errors for HLS segments (`.m3u8`, `.ts` files) in t
 
 3. **Modify Response Header:**
    - Header Name: `Access-Control-Allow-Headers`
-   - Value: `Range, Content-Type, Accept`
+   - Value: `Range, Content-Type, Accept, Origin, X-Requested-With`
    - Operation: `Add` or `Overwrite`
+   - **Critical:** Must include `Range` header (HLS.js uses this for seeking)
 
 4. **Modify Response Header:**
    - Header Name: `Access-Control-Expose-Headers`
-   - Value: `Content-Length, Content-Range, Accept-Ranges`
+   - Value: `Content-Length, Content-Range, Accept-Ranges, Content-Type`
    - Operation: `Add` or `Overwrite`
+   - **Important:** Allows JavaScript to read these headers
 
 5. **Modify Response Header:**
    - Header Name: `Access-Control-Max-Age`
    - Value: `86400` (24 hours)
    - Operation: `Add` or `Overwrite`
+
+6. **Handle OPTIONS preflight requests:**
+   - Add a separate rule for OPTIONS requests
+   - Match Condition: `Request Method` equals `OPTIONS`
+   - Action: Return 204 No Content with all CORS headers above
 
 **Note:** You can also combine this with your existing video CORS rule by adding `.m3u8` and `.ts` to the match conditions of your existing rule, rather than creating a separate rule.
 
