@@ -99,23 +99,6 @@ export async function createMediaConvertJob(videoKey: string): Promise<string> {
                 TimedMetadataId3Period: 10,
                 // Don't include AdMarkers if not using ads
               },
-              CustomName: "HLS Output Group",
-            },
-            OutputGroupSettings: {
-              Type: "HLS_GROUP_SETTINGS",
-              HlsGroupSettings: {
-                ManifestDurationFormat: "INTEGER",
-                SegmentLength: 10,
-                Destination: outputS3Url,
-                MinSegmentLength: 0,
-                ManifestCompression: "NONE",
-                StreamInfResolution: "INCLUDE",
-                CaptionLanguageSetting: "OMIT",
-                OutputSelection: "MANIFESTS_AND_SEGMENTS",
-                ProgramDateTime: "EXCLUDE",
-                TimedMetadataId3Frame: "NONE",
-                TimedMetadataId3Period: 10,
-              },
               DestinationSettings: {
                 S3Settings: {
                   AccessControl: {
