@@ -67,9 +67,62 @@ aws iam get-role --role-name MediaConvert_Default_Role --query 'Role.Arn' --outp
 - Read video files from S3 (input)
 - Write HLS files to S3 (output)
 
-## Step 2: Configure Environment Variables
+## Step 2: Grant IAM User Permission to Pass Role
 
-Add the following to your `.env.local` file:
+**IMPORTANT:** Your IAM user (the one with `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) needs permission to pass the MediaConvert role to the MediaConvert service.
+
+### Option A: Add Policy via AWS Console
+
+1. Go to **IAM Console** → **Users** → Select your user (e.g., `euniversity`)
+2. Click **Add permissions** → **Create inline policy**
+3. Click **JSON** tab and paste:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::YOUR_ACCOUNT_ID:role/MediaConvert_Default_Role"
+    }
+  ]
+}
+```
+
+Replace `YOUR_ACCOUNT_ID` with your AWS account ID (e.g., `795708378684`)
+
+4. Click **Review policy** → Name it: `PassMediaConvertRole` → **Create policy**
+
+### Option B: Add Policy via AWS CLI
+
+```bash
+# Create policy document
+cat > pass-mediaconvert-role-policy.json <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::795708378684:role/MediaConvert_Default_Role"
+    }
+  ]
+}
+EOF
+
+# Attach policy to user
+aws iam put-user-policy \
+  --user-name euniversity \
+  --policy-name PassMediaConvertRole \
+  --policy-document file://pass-mediaconvert-role-policy.json
+```
+
+**Note:** Replace `795708378684` with your AWS account ID and `euniversity` with your IAM user name.
+
+## Step 3: Configure Environment Variables
+
+Add the following to your `.env.local` file (or Vercel environment variables):
 
 ```env
 # AWS Credentials (already configured)
@@ -79,17 +132,19 @@ AWS_SECRET_ACCESS_KEY=your_secret_key
 AWS_S3_BUCKET_NAME=your_bucket_name
 
 # MediaConvert IAM Role ARN (REQUIRED)
-AWS_MEDIACONVERT_ROLE_ARN=arn:aws:iam::123456789012:role/MediaConvert_Default_Role
+AWS_MEDIACONVERT_ROLE_ARN=arn:aws:iam::795708378684:role/MediaConvert_Default_Role
 
 # Optional: AWS Account ID (if not using default role name)
-AWS_ACCOUNT_ID=123456789012
+AWS_ACCOUNT_ID=795708378684
 ```
 
-## Step 3: Verify MediaConvert Access
+**Important:** Replace `795708378684` with your actual AWS account ID.
+
+## Step 4: Verify MediaConvert Access
 
 MediaConvert is available in most AWS regions. Make sure your `AWS_REGION` supports MediaConvert.
 
-## Step 4: Test the Integration
+## Step 5: Test the Integration
 
 1. Upload a video through your application
 2. Check the console logs for MediaConvert job creation
@@ -133,7 +188,10 @@ s3://bucket/
 - Ensure `AWS_MEDIACONVERT_ROLE_ARN` is set in environment variables
 - Verify the role has correct S3 permissions
 
-### Error: "Access Denied"
+### Error: "Access Denied" or "iam:PassRole"
+- **Most Common:** Your IAM user needs `iam:PassRole` permission for the MediaConvert role
+- Go to IAM → Users → Your User → Add inline policy with `iam:PassRole` permission
+- See Step 2 above for detailed instructions
 - Check IAM role permissions
 - Verify S3 bucket policies allow MediaConvert access
 
