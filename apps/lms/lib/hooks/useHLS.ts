@@ -150,6 +150,14 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     if (Hls.isSupported()) {
       setIsLoading(true)
       
+      // Clear any existing src before creating HLS instance to prevent conflicts
+      // HLS.js will manage the source internally via Media Source Extensions
+      if (video.src && !isHLSFile) {
+        // Only clear if we're switching from MP4 to HLS
+        video.removeAttribute('src')
+        // Don't call load() here as it might cause issues - let HLS.js handle it
+      }
+      
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
@@ -196,7 +204,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
       hlsRef.current = hls
 
-      // Load the manifest
+      // Load the manifest and attach to video
+      // HLS.js will handle the source via Media Source Extensions
       hls.loadSource(hlsSrc)
       hls.attachMedia(video)
 
