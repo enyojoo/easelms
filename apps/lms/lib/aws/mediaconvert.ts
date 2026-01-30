@@ -97,8 +97,8 @@ export async function createMediaConvertJob(videoKey: string): Promise<string> {
                 ProgramDateTime: "EXCLUDE",
                 TimedMetadataId3Frame: "NONE",
                 TimedMetadataId3Period: 10,
-                // Ensure master playlist is named master.m3u8
-                AdMarkers: "NONE",
+                // AdMarkers must be an array, not a string
+                AdMarkers: [],
               },
             },
             Outputs: [
