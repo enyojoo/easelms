@@ -246,17 +246,47 @@ If you see `403 (Forbidden)` errors for HLS segments (`.m3u8`, `.ts` files) in t
 **Steps:**
 1. Go to Azure Portal → Front Door → Your Front Door → Rules Engine
 2. Edit your `video-delivery-rules` rule set
-3. Ensure CORS rules include:
-   - **Match Condition:** `Request URL Path` contains `.m3u8` OR `.ts`
-   - **Action:** Modify Response Header
-   - **Header Name:** `Access-Control-Allow-Origin`
-   - **Value:** Your website domain (e.g., `https://www.enthronementuniversity.org`)
-4. Also ensure the rule applies to both `.m3u8` and `.ts` file extensions
+3. Add a new rule for HLS files (or update existing CORS rule to include HLS):
+
+**Rule Name:** `Allow HLS CORS`
+
+**Match Conditions:**
+- `Request URL Path` contains `.m3u8` OR
+- `Request URL Path` contains `.ts`
+
+**Actions (Add all CORS headers):**
+1. **Modify Response Header:**
+   - Header Name: `Access-Control-Allow-Origin`
+   - Value: `https://www.enthronementuniversity.org` (your website domain)
+   - Operation: `Add` or `Overwrite`
+
+2. **Modify Response Header:**
+   - Header Name: `Access-Control-Allow-Methods`
+   - Value: `GET, HEAD, OPTIONS`
+   - Operation: `Add` or `Overwrite`
+
+3. **Modify Response Header:**
+   - Header Name: `Access-Control-Allow-Headers`
+   - Value: `Range, Content-Type, Accept`
+   - Operation: `Add` or `Overwrite`
+
+4. **Modify Response Header:**
+   - Header Name: `Access-Control-Expose-Headers`
+   - Value: `Content-Length, Content-Range, Accept-Ranges`
+   - Operation: `Add` or `Overwrite`
+
+5. **Modify Response Header:**
+   - Header Name: `Access-Control-Max-Age`
+   - Value: `86400` (24 hours)
+   - Operation: `Add` or `Overwrite`
+
+**Note:** You can also combine this with your existing video CORS rule by adding `.m3u8` and `.ts` to the match conditions of your existing rule, rather than creating a separate rule.
 
 **Alternative:** If CORS is properly configured but still getting 403s:
 - Check if MediaConvert output files have `PUBLIC_READ` ACL (see code - should be set automatically)
 - Verify S3 bucket policy allows public read access
 - Check Azure Front Door origin group configuration
+- Purge Azure Front Door cache after updating CORS rules
 
 ## Monitoring
 
