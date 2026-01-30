@@ -312,14 +312,15 @@ export default function FileUpload({
           setUploading(false)
           setUploaded(true)
           
-          // Trigger HLS transcoding for large videos (>100MB)
+          // Trigger HLS transcoding for all videos (for better performance)
           if (type === "video" || type === "lesson") {
             for (let i = 0; i < validFiles.length; i++) {
               const file = validFiles[i]
               const fileMetadata = metadata[i]
               
-              // Only transcode videos larger than 100MB
-              if (file.size > 100 * 1024 * 1024 && fileMetadata.path) {
+              // Transcode all videos for HLS adaptive streaming (better performance)
+              if (fileMetadata.path) {
+                console.log('Triggering HLS transcoding for video:', fileMetadata.path)
                 // Trigger transcoding asynchronously (don't block upload completion)
                 fetch("/api/videos/transcode", {
                   method: "POST",
@@ -329,7 +330,15 @@ export default function FileUpload({
                   body: JSON.stringify({
                     videoKey: fileMetadata.path,
                   }),
-                }).catch((error) => {
+                })
+                .then((response) => {
+                  if (response.ok) {
+                    console.log('HLS transcoding triggered successfully')
+                  } else {
+                    console.error('Failed to trigger transcoding:', response.status, response.statusText)
+                  }
+                })
+                .catch((error) => {
                   console.error("Failed to trigger video transcoding:", error)
                   // Don't show error to user - transcoding is optional
                 })
@@ -502,14 +511,15 @@ export default function FileUpload({
       setUploading(false)
       setUploaded(true)
       
-      // Trigger HLS transcoding for large videos (>100MB)
+      // Trigger HLS transcoding for all videos (for better performance)
       if (type === "video" || type === "lesson") {
         for (let i = 0; i < files.length; i++) {
           const file = files[i]
           const fileMetadata = metadata[i]
           
-          // Only transcode videos larger than 100MB
-          if (file.size > 100 * 1024 * 1024 && fileMetadata.path) {
+          // Transcode all videos for HLS adaptive streaming (better performance)
+          if (fileMetadata.path) {
+            console.log('Triggering HLS transcoding for video:', fileMetadata.path)
             // Trigger transcoding asynchronously (don't block upload completion)
             fetch("/api/videos/transcode", {
               method: "POST",
@@ -519,7 +529,15 @@ export default function FileUpload({
               body: JSON.stringify({
                 videoKey: fileMetadata.path,
               }),
-            }).catch((error) => {
+            })
+            .then((response) => {
+              if (response.ok) {
+                console.log('HLS transcoding triggered successfully')
+              } else {
+                console.error('Failed to trigger transcoding:', response.status, response.statusText)
+              }
+            })
+            .catch((error) => {
               console.error("Failed to trigger video transcoding:", error)
               // Don't show error to user - transcoding is optional
             })

@@ -28,20 +28,33 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     const isHLSFile = src.includes('.m3u8')
     
     // For MP4 videos, try to use HLS if available
-    // Construct HLS URL from MP4 URL
+    // Construct HLS URL from MP4 URL using the same logic as getHLSVideoUrl
     let hlsUrl: string | null = null
     if (!isHLSFile && (src.includes('.mp4') || src.includes('.webm') || src.includes('/video-') || src.includes('/preview-video-'))) {
-      // Try to construct HLS manifest URL
-      // Pattern: /path/to/video.mp4 -> /path/to/hls/video/master.m3u8
+      // Extract S3 key from URL (handles both S3 URLs and CDN URLs)
       try {
         const url = new URL(src)
-        const pathParts = url.pathname.split('/')
-        const filename = pathParts[pathParts.length - 1]
-        const baseName = filename.replace(/\.[^/.]+$/, '')
-        const pathWithoutFile = pathParts.slice(0, -1).join('/')
-        hlsUrl = `${url.origin}${pathWithoutFile}/hls/${baseName}/master.m3u8`
+        let s3Key: string | null = null
+        
+        // Extract S3 key from pathname (works for both S3 and Azure Front Door)
+        if (url.pathname) {
+          s3Key = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname
+        }
+        
+        if (s3Key) {
+          // Use same logic as getHLSVideoUrl: path/hls/baseName/master.m3u8
+          const lastSlashIndex = s3Key.lastIndexOf('/')
+          const path = lastSlashIndex >= 0 ? s3Key.substring(0, lastSlashIndex) : ''
+          const filename = lastSlashIndex >= 0 ? s3Key.substring(lastSlashIndex + 1) : s3Key
+          const baseName = filename.replace(/\.[^/.]+$/, '')
+          const hlsKey = path ? `${path}/hls/${baseName}/master.m3u8` : `hls/${baseName}/master.m3u8`
+          
+          // Construct full HLS URL using same origin
+          hlsUrl = `${url.origin}/${hlsKey}`
+        }
       } catch (e) {
         // Invalid URL, skip HLS
+        console.warn('Failed to construct HLS URL:', e)
       }
     }
 
@@ -130,10 +143,20 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               errorMessage = 'Network error while loading HLS stream'
               // Check if it's a 403/404 (HLS doesn't exist) - fallback to MP4
-              if (data.details === 'manifestLoadError' || data.response?.code === 403 || data.response?.code === 404) {
+              const isNotFound = data.details === 'manifestLoadError' || 
+                                data.response?.code === 403 || 
+                                data.response?.code === 404 ||
+                                (data.response && (data.response.code === 403 || data.response.code === 404))
+              
+              if (isNotFound) {
                 // HLS manifest doesn't exist, fallback to original MP4
                 if (hlsUrl && src && !src.includes('.m3u8')) {
-                  console.log('HLS not available, falling back to MP4:', src)
+                  console.log('HLS not available (transcoding may still be in progress), falling back to MP4:', {
+                    hlsUrl,
+                    mp4Url: src,
+                    errorDetails: data.details,
+                    responseCode: data.response?.code
+                  })
                   if (hls) {
                     hls.destroy()
                     hlsRef.current = null
