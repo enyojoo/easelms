@@ -13,17 +13,17 @@ interface ErrorContext {
 }
 
 /**
- * Log error with context (for development/debugging)
- * In production, this should send to error tracking service
+ * Log error with context (always logs for debugging)
+ * In production, Vercel captures console.error
  */
 export function logError(message: string, error: Error | unknown, context?: ErrorContext) {
-  if (process.env.NODE_ENV === 'development') {
-    console.error(`[ERROR] ${message}`, {
-      error,
-      context,
-      timestamp: new Date().toISOString(),
-    })
-  }
+  // Always log - Vercel captures console.error in production
+  console.error(`[ERROR] ${message}`, {
+    error,
+    context,
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+  })
   // TODO: In production, send to error tracking service (e.g., Sentry)
   // if (process.env.NODE_ENV === 'production') {
   //   errorTrackingService.captureException(error, { extra: context })
@@ -43,12 +43,15 @@ export function logWarning(message: string, context?: ErrorContext) {
 }
 
 /**
- * Log info (only in development)
+ * Log info (always logs, including production for debugging)
  */
 export function logInfo(message: string, data?: any) {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[INFO] ${message}`, data)
-  }
+  // Always log - Vercel captures console.log in production
+  console.log(`[INFO] ${message}`, {
+    ...data,
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV,
+  })
 }
 
 /**

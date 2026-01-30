@@ -41,10 +41,18 @@ export async function POST(request: Request) {
     // Check if FFmpeg is available
     const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg'
     
-    logInfo("Starting video transcoding", {
+    logInfo("🚀 Starting video transcoding", {
       videoKey,
       userId: user.id,
       ffmpegPath,
+      timestamp: new Date().toISOString(),
+    })
+    
+    // Also log to console for immediate visibility
+    console.log("🎬 HLS Transcoding Started:", {
+      videoKey,
+      userId: user.id,
+      time: new Date().toISOString(),
     })
 
     // Create temporary directories
@@ -168,10 +176,18 @@ export async function POST(request: Request) {
       // Generate HLS manifest URL
       const hlsManifestUrl = getHLSVideoUrl(videoKey)
 
-      logInfo("Video transcoding completed successfully", {
+      logInfo("✅ Video transcoding completed successfully", {
         videoKey,
         hlsManifestUrl,
         filesCount: files.length,
+        timestamp: new Date().toISOString(),
+      })
+      
+      // Also log to console for immediate visibility
+      console.log("🎬 HLS Transcoding Complete:", {
+        videoKey,
+        hlsUrl: hlsManifestUrl,
+        filesUploaded: files.length,
       })
 
       // Cleanup temporary files
