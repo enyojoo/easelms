@@ -109,6 +109,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         setIsHLS(false)
         video.setAttribute('playsinline', 'true')
         video.setAttribute('webkit-playsinline', 'true')
+        ;(video as any).playsInline = true
+        ;(video as any).webkitPlaysInline = true
         video.src = src
         const showThumbnail = () => {
           if (video.paused) video.currentTime = 0
@@ -153,6 +155,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       initializingRef.current = false
       video.setAttribute('playsinline', 'true')
       video.setAttribute('webkit-playsinline', 'true')
+      ;(video as any).playsInline = true
+      ;(video as any).webkitPlaysInline = true
       video.src = src
       const showThumbnail = () => {
         if (video.paused) video.currentTime = 0
@@ -165,17 +169,18 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
 
-    // iOS/Safari: set playsinline BEFORE setting src so video can play inline (required for iPhone)
+    // iOS (iPhone/iPad): use native HLS for Safari and Chrome so HLS plays on iPhone
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
+    // Set playsinline before any src or HLS attach (required for iPhone inline playback)
     video.setAttribute('playsinline', 'true')
     video.setAttribute('webkit-playsinline', 'true')
-    ;(video as HTMLVideoElement & { webkitPlaysInline?: boolean }).webkitPlaysInline = true
-    ;(video as HTMLVideoElement & { playsInline?: boolean }).playsInline = true
+    ;(video as any).playsInline = true
+    ;(video as any).webkitPlaysInline = true
 
-    // Check if browser supports native HLS (Safari)
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    
-    if (isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari has native HLS support - use it directly
+    if ((isSafari || isIOS) && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS (Safari or iOS Chrome) - use it directly
       // Try HLS first, fallback to MP4 if not available
       initializingRef.current = false
       if (hlsUrl) {

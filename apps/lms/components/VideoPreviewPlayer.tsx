@@ -36,7 +36,7 @@ export default function VideoPreviewPlayer({
   const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
     (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
     if (el) {
-      // iOS/iPhone: set playsinline before any src so video can play inline (required for Safari)
+      // iOS/iPhone: set playsinline before any src so video can play inline (required for Safari/Chrome on iOS)
       el.setAttribute('playsinline', 'true')
       el.setAttribute('webkit-playsinline', 'true')
       ;(el as HTMLVideoElement & { webkitPlaysInline?: boolean }).webkitPlaysInline = true
@@ -382,7 +382,6 @@ export default function VideoPreviewPlayer({
           }, 5000)
         }
       }}
-      onClick={handleTogglePlay}
       onTouchEnd={(e) => {
         // iOS: play() must run in the touch gesture; click fires ~300ms later and loses the gesture
         const video = videoRef.current
@@ -397,6 +396,7 @@ export default function VideoPreviewPlayer({
           setIsPlaying(false)
         }
       }}
+      onClick={handleTogglePlay}
     >
       {/* Loading overlay */}
       {isLoading && (
