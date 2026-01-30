@@ -7,58 +7,74 @@ This guide explains how to set up AWS MediaConvert for video transcoding to HLS 
 1. AWS Account with MediaConvert access
 2. S3 bucket for storing videos
 3. IAM role with MediaConvert permissions
+4. S3 bucket policy allowing public read access (see Step 0)
 
-## CRITICAL: S3 Bucket Public Access Configuration
+## Step 0: Configure S3 Bucket for Public Video Access (REQUIRED)
 
-For Azure Front Door CDN to serve your videos, your S3 bucket **must** allow public read access. Without this, you'll get 403 Forbidden errors.
+**IMPORTANT:** This step is required for HLS video playback to work. Without it, you'll get 403 Forbidden errors.
 
-### Step 0.1: Disable "Block Public Access" (Required!)
+### Why This Is Needed
 
-1. Go to **S3 Console** → Select your bucket
-2. Click **Permissions** tab
-3. Click **Edit** under "Block public access (bucket settings)"
-4. **Uncheck** the following options:
-   - ❌ Block all public access
-   - ❌ Block public access to buckets and objects granted through new access control lists (ACLs)
-   - ❌ Block public access to buckets and objects granted through any access control lists (ACLs)
-5. Click **Save changes**
-6. Type "confirm" when prompted
+When MediaConvert transcodes videos to HLS format, it creates `.m3u8` playlist files and `.ts` segment files in your S3 bucket. For the video player (and Azure Front Door CDN) to access these files, they must be publicly readable.
 
-### Step 0.2: Add Bucket Policy for Public Read Access
+Simply turning off "Block all public access" is **not enough** - you also need a bucket policy.
 
-1. Still in the **Permissions** tab
-2. Scroll to **Bucket policy** and click **Edit**
-3. Add this policy (replace `YOUR_BUCKET_NAME` with your actual bucket name):
+### Configure S3 Bucket
+
+1. **Disable "Block all public access"** (if not already done):
+   - Go to **S3 Console** → Your Bucket → **Permissions** → **Block public access**
+   - Click **Edit** and uncheck all options
+   - Save changes
+
+2. **Enable ACLs** (recommended for MediaConvert):
+   - Go to **S3 Console** → Your Bucket → **Permissions** → **Object Ownership**
+   - Click **Edit**
+   - Select **"ACLs enabled"** → **"Bucket owner preferred"**
+   - Save changes
+
+3. **Add Bucket Policy for public read access**:
+   - Go to **S3 Console** → Your Bucket → **Permissions** → **Bucket policy**
+   - Click **Edit** and paste:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "PublicReadGetObject",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::YOUR_BUCKET_NAME/*"
-    }
-  ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadForCourses",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME/courses/*"
+        },
+        {
+            "Sid": "PublicReadForHLS",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME/*/hls/*"
+        }
+    ]
 }
 ```
 
-4. Click **Save changes**
+**Important:** Replace `YOUR-BUCKET-NAME` with your actual S3 bucket name.
 
-### Step 0.3: Enable ACLs (Required for public-read ACL)
+### What This Policy Does
 
-1. Still in the **Permissions** tab
-2. Scroll to **Object Ownership** and click **Edit**
-3. Select **ACLs enabled** (choose "Bucket owner preferred")
-4. Click **Save changes**
+- Allows anyone to **read** (GET) files under the `courses/` prefix
+- Allows anyone to **read** HLS files in any `/hls/` subfolder
+- Does NOT allow write/delete access (only you can upload/delete via IAM credentials)
 
-**Why is this needed?**
-- Files uploaded to S3 are set with `ACL: "public-read"`
-- MediaConvert also outputs files with `PUBLIC_READ` ACL
-- If "Block Public Access" is enabled, these ACLs are ignored
-- Azure Front Door needs public read access to serve files
+### Verify the Configuration
+
+After adding the bucket policy, test by:
+1. Opening an HLS file URL directly in your browser (e.g., `https://your-bucket.s3.region.amazonaws.com/courses/course-18/hls/preview-video-123/master.m3u8`)
+2. You should see the M3U8 playlist content (not a 403 error)
+
+If you're using Azure Front Door:
+1. Test the CDN URL: `https://your-cdn.azurefd.net/courses/course-18/hls/preview-video-123/master.m3u8`
+2. Purge the CDN cache if needed: Azure Portal → Front Door → Purge
 
 ## Step 1: Create IAM Role for MediaConvert
 
@@ -249,12 +265,14 @@ s3://bucket/
       preview-video-123.mp4          (original)
       hls/
         preview-video-123/
-          master.m3u8                (master playlist)
+          preview-video-123.m3u8     (master playlist)
           preview-video-123_1080p.m3u8
           preview-video-123_720p.m3u8
           preview-video-123_480p.m3u8
           segment files (.ts)
 ```
+
+**Note:** The master playlist is named `{baseName}.m3u8`, NOT `master.m3u8`.
 
 ## Cost Considerations
 
@@ -335,10 +353,66 @@ If you see `403 (Forbidden)` errors for HLS segments (`.m3u8`, `.ts` files) in t
 **Note:** You can also combine this with your existing video CORS rule by adding `.m3u8` and `.ts` to the match conditions of your existing rule, rather than creating a separate rule.
 
 **Alternative:** If CORS is properly configured but still getting 403s:
-- Check if MediaConvert output files have `PUBLIC_READ` ACL (see code - should be set automatically)
-- Verify S3 bucket policy allows public read access
+- **Most Common:** S3 bucket policy is missing - see Step 0 above
+- Check if "Block all public access" is disabled on your S3 bucket
+- Verify ACLs are enabled on your S3 bucket (Object Ownership setting)
 - Check Azure Front Door origin group configuration
-- Purge Azure Front Door cache after updating CORS rules
+- Purge Azure Front Door cache after updating rules
+
+### 403 Forbidden on ALL video files (MP4 and HLS)
+
+**Step 1: Verify S3 Direct Access**
+Test if S3 is accessible directly (without CDN):
+```
+https://YOUR-BUCKET.s3.YOUR-REGION.amazonaws.com/courses/course-18/preview-video-123.mp4
+```
+
+If this returns 403:
+- Check S3 bucket policy (see Step 0)
+- Verify "Block all public access" is OFF
+
+If S3 works but Azure Front Door returns 403, the issue is with Azure Front Door.
+
+**Step 2: Verify Azure Front Door Configuration**
+
+1. **Check Origin Settings:**
+   - Go to Azure Portal → Front Door → Origins
+   - Origin host name should be: `YOUR-BUCKET.s3.YOUR-REGION.amazonaws.com`
+   - Origin host header should be: `YOUR-BUCKET.s3.YOUR-REGION.amazonaws.com` (same as host name)
+   - Origin path should be: empty (no leading slash, no path)
+
+2. **Check Origin Group:**
+   - Health probe should use HTTPS, port 443
+   - Health probe path can be `/` or a known file path
+
+3. **Purge the Cache:**
+   - Go to Azure Portal → Front Door → Purge
+   - Enter `/*` to purge all
+   - Click Purge and wait 1-2 minutes
+
+4. **Check Routing Rules:**
+   - Patterns to match should include `/*`
+   - Route should forward to the correct origin group
+   - Forwarding protocol: HTTPS only
+
+**Step 3: Verify CORS Headers (for browser playback)**
+
+Azure Front Door needs to add CORS headers for HLS playback to work:
+1. Go to Azure Portal → Front Door → Rule sets
+2. Create/edit rules to add these response headers:
+   - `Access-Control-Allow-Origin`: `*` (or your specific domain)
+   - `Access-Control-Allow-Methods`: `GET, HEAD, OPTIONS`
+   - `Access-Control-Allow-Headers`: `Range, Content-Type, Accept`
+   - `Access-Control-Expose-Headers`: `Content-Length, Content-Range, Accept-Ranges`
+
+**Common Azure Front Door Issues:**
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| 403 on all files | Wrong origin host header | Set origin host header same as host name |
+| 403 on specific files | Cached error | Purge cache |
+| CORS errors in browser | Missing CORS headers | Add CORS rule set |
+| Intermittent 403 | Origin health probe failing | Check health probe settings |
 
 ## Monitoring
 

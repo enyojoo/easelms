@@ -42,12 +42,13 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         }
         
         if (s3Key) {
-          // Use same logic as getHLSVideoUrl: path/hls/baseName/master.m3u8
+          // Use same logic as getHLSVideoUrl: path/hls/baseName/baseName.m3u8
+          // MediaConvert creates: {path}/hls/{baseName}/{baseName}.m3u8 (not master.m3u8)
           const lastSlashIndex = s3Key.lastIndexOf('/')
           const path = lastSlashIndex >= 0 ? s3Key.substring(0, lastSlashIndex) : ''
           const filename = lastSlashIndex >= 0 ? s3Key.substring(lastSlashIndex + 1) : s3Key
           const baseName = filename.replace(/\.[^/.]+$/, '')
-          const hlsKey = path ? `${path}/hls/${baseName}/master.m3u8` : `hls/${baseName}/master.m3u8`
+          const hlsKey = path ? `${path}/hls/${baseName}/${baseName}.m3u8` : `hls/${baseName}/${baseName}.m3u8`
           
           // Construct full HLS URL using same origin
           hlsUrl = `${url.origin}/${hlsKey}`
