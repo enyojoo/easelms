@@ -7,6 +7,8 @@ interface UseHLSOptions {
   onError?: (error: Error) => void
   /** Set to true once the video element is in the DOM (e.g. after modal open). Omit or true for normal mounts. */
   videoReady?: boolean
+  /** If true, start playback when ready. If false, never call video.play() from this hook. Default false. */
+  autoplay?: boolean
 }
 
 /**
@@ -14,7 +16,7 @@ interface UseHLSOptions {
  * Automatically detects .m3u8 URLs and initializes HLS.js for non-Safari browsers
  * Uses native HLS for Safari
  */
-export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOptions) {
+export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = false }: UseHLSOptions) {
   const hlsRef = useRef<Hls | null>(null)
   const [isHLS, setIsHLS] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -251,7 +253,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOpti
       
       hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
         console.log('HLS Level loaded:', data.level, data.details?.totalduration)
-        // After level is loaded, fragments will load; try play after a short delay as fallback
+        // After level is loaded, fragments will load; try play after a short delay as fallback (only if autoplay)
+        if (!autoplay) return
         setTimeout(() => {
           if (hlsRef.current === hls && video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
             console.log('Level loaded fallback: attempting play, readyState:', video.readyState)
@@ -280,17 +283,17 @@ export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOpti
       
       hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
         console.log('HLS Buffer appended:', data.type)
-        // When we have video data in the buffer, try to play and hide loading
-        if (data.type === 'video' && video.paused) {
+        // When we have video data in the buffer, try to play and hide loading (only if autoplay)
+        if (autoplay && data.type === 'video' && video.paused) {
           setIsLoading(false)
           console.log('Video buffer appended, attempting play, readyState:', video.readyState)
           video.play().catch((err) => console.warn('Play after buffer append:', err.message))
         }
       })
       
-      // Try to start playback when first fragment is loaded (MSE may not fire loadedmetadata early)
+      // Try to start playback when first fragment is loaded (only if autoplay)
       hls.on(Hls.Events.FRAG_BUFFERED, (event, data) => {
-        if (data.frag?.type === 'main' && video.paused) {
+        if (autoplay && data.frag?.type === 'main' && video.paused) {
           setIsLoading(false)
           console.log('Fragment buffered, attempting play')
           video.play().catch((err) => console.warn('Play after frag buffered:', err.message))
@@ -347,9 +350,9 @@ export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOpti
           }
         }
         
-        // Try to start playback - HLS.js will handle buffering
+        // Try to start playback only when autoplay is enabled
         const startPlayback = () => {
-          if (video.paused) {
+          if (autoplay && video.paused) {
             console.log('Attempting to start HLS playback, readyState:', video.readyState)
             video.play().catch((err) => {
               console.warn('Autoplay prevented or failed:', err.message)
@@ -359,13 +362,14 @@ export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOpti
           }
         }
         
-        // Wait for video to have some data before playing
-        // With MSE, loadedmetadata may fire only after first segment; also listen for loadeddata/canplay
+        // Wait for video to have some data before playing (only if autoplay)
         const tryPlayWhenReady = () => {
           if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && video.paused) {
-            console.log('Video has data, starting playback, readyState:', video.readyState)
             setIsLoading(false)
-            startPlayback()
+            if (autoplay) {
+              console.log('Video has data, starting playback, readyState:', video.readyState)
+              startPlayback()
+            }
           }
         }
         
@@ -374,17 +378,19 @@ export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOpti
         video.addEventListener('canplay', () => {
           console.log('Video canplay, readyState:', video.readyState)
           setIsLoading(false)
-          startPlayback()
+          if (autoplay) startPlayback()
         }, { once: true })
         video.addEventListener('playing', () => {
           console.log('Video playing')
           setIsLoading(false)
         }, { once: true })
         
-        // Immediate try and fallback after level load
-        tryPlayWhenReady()
-        setTimeout(tryPlayWhenReady, 1000)
-        setTimeout(tryPlayWhenReady, 3000)
+        // Immediate try and fallback after level load (only when autoplay)
+        if (autoplay) {
+          tryPlayWhenReady()
+          setTimeout(tryPlayWhenReady, 1000)
+          setTimeout(tryPlayWhenReady, 3000)
+        }
       })
 
       hls.on(Hls.Events.ERROR, (event, data) => {
@@ -592,7 +598,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true }: UseHLSOpti
         video.src = src
       }
     }
-  }, [src, videoReady]) // Re-run when video element is mounted (e.g. modal open)
+  }, [src, videoReady, autoplay]) // Re-run when video element is mounted or autoplay changes
 
   // Cleanup on unmount
   useEffect(() => {

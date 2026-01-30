@@ -43,6 +43,7 @@ export default function VideoPreviewPlayer({
     videoRef,
     src,
     videoReady,
+    autoplay,
     onError: (error) => {
       console.error('HLS playback error:', error)
       setIsLoading(false)

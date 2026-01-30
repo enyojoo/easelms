@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckCircle2, AlertCircle } from "lucide-react"
-import VideoPreview from "@/components/VideoPreview"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import FileUpload from "@/components/FileUpload"
 import VideoPreviewPlayer from "@/components/VideoPreviewPlayer"
@@ -191,6 +190,7 @@ export default function CourseBasicInfo({ data, onUpdate, courseId }: CourseBasi
                   <VideoPreviewPlayer
                     key={videoUrl}
                     src={videoUrl}
+                    autoplay={false}
                     showControlsOnHover={true}
                   />
                 </div>

@@ -53,6 +53,7 @@ export default function ModernVideoPlayer({
   const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
     videoRef,
     src,
+    autoplay,
     onError: (error) => {
       console.error('HLS playback error:', error)
       setIsLoading(false)
