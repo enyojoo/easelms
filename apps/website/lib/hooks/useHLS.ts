@@ -26,20 +26,53 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
 
     // Check if URL is HLS (.m3u8)
     const isHLSFile = src.includes('.m3u8')
-    setIsHLS(isHLSFile)
+    
+    // For MP4 videos, try to use HLS if available
+    // Construct HLS URL from MP4 URL
+    let hlsUrl: string | null = null
+    if (!isHLSFile && (src.includes('.mp4') || src.includes('.webm') || src.includes('/video-') || src.includes('/preview-video-'))) {
+      // Try to construct HLS manifest URL
+      // Pattern: /path/to/video.mp4 -> /path/to/hls/video/master.m3u8
+      try {
+        const url = new URL(src)
+        const pathParts = url.pathname.split('/')
+        const filename = pathParts[pathParts.length - 1]
+        const baseName = filename.replace(/\.[^/.]+$/, '')
+        const pathWithoutFile = pathParts.slice(0, -1).join('/')
+        hlsUrl = `${url.origin}${pathWithoutFile}/hls/${baseName}/master.m3u8`
+      } catch (e) {
+        // Invalid URL, skip HLS
+      }
+    }
 
-    if (!isHLSFile) {
-      // Not an HLS file, use native video playback
+    setIsHLS(isHLSFile || !!hlsUrl)
+
+    if (!isHLSFile && !hlsUrl) {
+      // Not an HLS file and no HLS URL to try, use native video playback
       video.src = src
       return
     }
+
+    // Use HLS URL if we constructed one, otherwise use the original src
+    const hlsSrc = hlsUrl || src
 
     // Check if browser supports native HLS (Safari)
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
     
     if (isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari has native HLS support - use it directly
-      video.src = src
+      // Try HLS first, fallback to MP4 if not available
+      if (hlsUrl) {
+        video.src = hlsUrl
+        // Fallback to MP4 if HLS fails
+        video.addEventListener('error', () => {
+          if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
+            video.src = src
+          }
+        }, { once: true })
+      } else {
+        video.src = hlsSrc
+      }
       return
     }
 
@@ -72,7 +105,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       hlsRef.current = hls
 
       // Load the manifest
-      hls.loadSource(src)
+      hls.loadSource(hlsSrc)
       hls.attachMedia(video)
 
       // Handle HLS events
@@ -96,7 +129,22 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               errorMessage = 'Network error while loading HLS stream'
-              // Try to recover
+              // Check if it's a 403/404 (HLS doesn't exist) - fallback to MP4
+              if (data.details === 'manifestLoadError' || data.response?.code === 403 || data.response?.code === 404) {
+                // HLS manifest doesn't exist, fallback to original MP4
+                if (hlsUrl && src && !src.includes('.m3u8')) {
+                  console.log('HLS not available, falling back to MP4:', src)
+                  if (hls) {
+                    hls.destroy()
+                    hlsRef.current = null
+                  }
+                  setIsHLS(false)
+                  setIsLoading(false)
+                  video.src = src
+                  return
+                }
+              }
+              // Try to recover for other network errors
               if (data.fatal && hls) {
                 try {
                   hls.startLoad()
@@ -105,8 +153,14 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                   setError(error)
                   onError?.(error)
                   // Fallback to direct video if available
-                  if (src && !src.includes('.m3u8')) {
-                    video.src = src.replace('.m3u8', '.mp4')
+                  if (hlsUrl && src && !src.includes('.m3u8')) {
+                    console.log('HLS recovery failed, falling back to MP4:', src)
+                    if (hls) {
+                      hls.destroy()
+                      hlsRef.current = null
+                    }
+                    setIsHLS(false)
+                    video.src = src
                   }
                 }
               }
@@ -147,7 +201,9 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       setError(error)
       onError?.(error)
       // Try to fallback to .mp4 if available
-      if (src.includes('.m3u8')) {
+      if (hlsUrl && src && !src.includes('.m3u8')) {
+        video.src = src
+      } else if (src.includes('.m3u8')) {
         video.src = src.replace('.m3u8', '.mp4')
       } else {
         video.src = src

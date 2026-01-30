@@ -436,6 +436,10 @@ export function getHLSVideoUrl(originalVideoKey: string): string {
 /**
  * Check if HLS version exists for a video and return HLS URL, otherwise return original URL
  * This is a helper that tries HLS first but falls back gracefully
+ * 
+ * IMPORTANT: We return the original MP4 URL here. The player will try HLS automatically
+ * by checking if .m3u8 exists, and fallback to MP4 if HLS is not available.
+ * This prevents 403 errors when HLS files don't exist yet.
  */
 export function getPreferredVideoUrl(originalVideoUrl: string): string {
   if (!originalVideoUrl) return originalVideoUrl
@@ -445,24 +449,9 @@ export function getPreferredVideoUrl(originalVideoUrl: string): string {
     return transformToCDNUrl(originalVideoUrl, false)
   }
   
-  // Extract S3 key
-  const s3Key = extractS3KeyFromUrl(originalVideoUrl)
-  if (!s3Key) {
-    return transformToCDNUrl(originalVideoUrl, false)
-  }
-  
-  // Check if it's a video file
-  const isVideoFile = s3Key.includes('/video-') ||
-                     s3Key.includes('/preview-video-') ||
-                     s3Key.includes('.mp4') ||
-                     s3Key.includes('.webm')
-  
-  if (isVideoFile) {
-    // Try HLS URL first (player will fallback if it doesn't exist)
-    return getHLSVideoUrl(s3Key)
-  }
-  
-  // Not a video file, return transformed URL
+  // For now, return the original URL transformed to CDN
+  // The player will automatically try HLS by constructing the HLS URL from the MP4 URL
+  // This way, if HLS doesn't exist, it falls back to MP4 gracefully
   return transformToCDNUrl(originalVideoUrl, false)
 }
 
