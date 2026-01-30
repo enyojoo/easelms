@@ -205,8 +205,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         levelLoadingRetryDelay: 0,
         fragLoadingRetryDelay: 100,        // Very short delay for fragments
         // Stop retrying on fatal errors immediately
-        fragLoadingTimeOut: 1000,          // 1s timeout for fragments (shorter)
-        manifestLoadingTimeOut: 1000,      // 1s timeout for manifest (shorter)
+        fragLoadingTimeOut: 10000,         // 10s timeout for fragments
+        manifestLoadingTimeOut: 10000,     // 10s timeout for manifest (increased to handle slow responses)
         // Adaptive bitrate switching
         abrEwmaDefaultEstimate: 500000,   // Initial bandwidth estimate (500kbps)
         abrBandWidthFactor: 0.95,          // Conservative bandwidth factor
@@ -217,9 +217,9 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
           // Configure XHR for Azure Front Door to avoid CORS issues
           if (url.includes('azurefd.net')) {
             xhr.withCredentials = false
-            // Set headers that Azure Front Door expects
-            // Don't add custom headers that would trigger preflight
+            // Don't set custom headers that would trigger preflight
             // HLS.js will add Range header automatically for segments
+            console.log('XHR setup for URL:', url)
           }
         },
         // Ensure proper CORS handling
@@ -241,13 +241,7 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         video.removeAttribute('src')
       }
       
-      // Load the manifest FIRST, then attach media
-      // Order matters: loadSource before attachMedia
-      hls.loadSource(hlsSrc)
-      hls.attachMedia(video)
-      
-      console.log('HLS attached to video, waiting for manifest parse...')
-      
+      // Add event listeners BEFORE loading source (so we don't miss events)
       // Add event listeners for debugging and tracking
       hls.on(Hls.Events.LEVEL_LOADING, (event, data) => {
         console.log('HLS Level loading:', data.level, data.url)
@@ -277,6 +271,25 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
         console.log('HLS Buffer appended:', data.type)
       })
+      
+      // Listen for manifest loading events
+      hls.on(Hls.Events.MANIFEST_LOADING, () => {
+        console.log('HLS Manifest loading started...')
+      })
+      
+      hls.on(Hls.Events.MANIFEST_LOADED, (event, data) => {
+        console.log('HLS Manifest loaded successfully:', {
+          levels: data.levels?.length,
+          url: data.url,
+          stats: data.stats
+        })
+      })
+      
+      // NOW load the manifest and attach media (after all listeners are set up)
+      console.log('Loading HLS source and attaching to video...')
+      hls.loadSource(hlsSrc)
+      hls.attachMedia(video)
+      console.log('HLS attached to video, waiting for manifest parse...')
 
       // Handle HLS events
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
@@ -389,12 +402,32 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                 url: data.url || hlsSrc,
                 response: data.response ? {
                   code: data.response.code,
-                  text: data.response.text?.substring(0, 200), // First 200 chars
+                  text: data.response.text?.substring(0, 500), // First 500 chars
                   url: data.response.url,
                   headers: data.response.headers
                 } : null,
-                error: data.error
+                error: data.error,
+                // Additional debugging info
+                networkDetails: data.networkDetails,
+                context: data.context
               })
+              
+              // If it's a timeout, check if the URL is accessible
+              if (data.details === 'manifestLoadTimeOut') {
+                console.warn('Manifest load timeout - checking if URL is accessible:', hlsSrc)
+                // Try to fetch the manifest directly to see if it's accessible
+                fetch(hlsSrc, { method: 'HEAD', mode: 'cors' })
+                  .then(response => {
+                    console.log('Direct fetch test - Status:', response.status, 'Headers:', {
+                      'content-type': response.headers.get('content-type'),
+                      'access-control-allow-origin': response.headers.get('access-control-allow-origin'),
+                      'access-control-expose-headers': response.headers.get('access-control-expose-headers')
+                    })
+                  })
+                  .catch(err => {
+                    console.error('Direct fetch test failed:', err)
+                  })
+              }
               
               // For any fatal network error with 403/404, immediately fallback to MP4
               const isNotFound = data.details === 'manifestLoadError' || 
