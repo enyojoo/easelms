@@ -373,7 +373,7 @@ export default function VideoPreviewPlayer({
         </div>
       )}
       <video
-        key={src.trim()}
+        key={`${src.trim()}-${isHLSFile ? 'hls' : 'mp4'}`}
         ref={videoRef}
         src={isHLSFile ? undefined : src.trim()}
         className="w-full h-full object-cover"

@@ -170,18 +170,20 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                   setIsHLS(false)
                   setIsLoading(false)
                   
-                  // Reset video element and load MP4
+                  // Reset video element - React will handle setting src prop when isHLS becomes false
                   video.pause()
                   video.removeAttribute('src')
                   video.load() // Reset the video element
                   
-                  // Use setTimeout to ensure video element is reset before setting new src
-                  setTimeout(() => {
-                    if (video && src && !src.includes('.m3u8')) {
-                      video.src = src
-                      video.load() // Load the new source
+                  // Force React to update by triggering a re-render
+                  // The component will set src={src.trim()} when isHLS is false
+                  // Use requestAnimationFrame to ensure DOM is ready
+                  requestAnimationFrame(() => {
+                    if (video && videoRef.current === video) {
+                      // Ensure video element is ready for React to set src
+                      video.load()
                     }
-                  }, 100)
+                  })
                   return
                 }
               }
@@ -207,17 +209,17 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
                     }
                     setIsHLS(false)
                     
-                    // Reset video element and load MP4
+                    // Reset video element - React will handle setting src prop when isHLS becomes false
                     video.pause()
                     video.removeAttribute('src')
                     video.load()
                     
-                    setTimeout(() => {
-                      if (video && src && !src.includes('.m3u8')) {
-                        video.src = src
+                    // Force React to update by triggering a re-render
+                    requestAnimationFrame(() => {
+                      if (video && videoRef.current === video) {
                         video.load()
                       }
-                    }, 100)
+                    })
                   }
                 }
               }
