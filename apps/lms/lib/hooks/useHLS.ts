@@ -161,10 +161,19 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
 
+    // Detect if we're on iOS (iPhone, iPad, iPod)
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    
+    // Detect if we're on Safari (not Chrome/Firefox on macOS)
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
     // Check for native HLS support first (all iOS browsers, Safari on macOS)
     // This follows HLS.js recommended pattern and fixes iPhone playback
     // All browsers on iPhone (Safari, Chrome, Firefox) use WebKit and have native HLS support
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    const hasNativeHLS = video.canPlayType('application/vnd.apple.mpegurl')
+    
+    if (hasNativeHLS && (isIOS || isSafari)) {
       // Use native HLS (iPhone/iPad Safari/Chrome/Firefox, macOS Safari)
       console.log('Using native HLS support (iOS/Safari)')
       initializingRef.current = false
