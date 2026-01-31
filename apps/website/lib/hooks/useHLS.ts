@@ -152,8 +152,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     const hasNativeHLS = video.canPlayType('application/vnd.apple.mpegurl')
 
     if (hasNativeHLS && (isIOS || isSafari)) {
-      // Safari / iOS: use native HLS (plain video tag source URL per HLS.js docs)
-      // Try HLS first; fall back to MP4 on error or if HLS doesn't load in time
+      // Safari / iOS: use native HLS (plain video tag with .m3u8 URL per HLS.js docs).
+      // Same HLS URLs as Chrome/Android; only fall back to MP4 on actual video error.
       const sourceToUse = hlsUrl || hlsSrc
       const canFallbackToMp4 = src && !src.includes('.m3u8')
 
@@ -161,15 +161,8 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
       video.src = sourceToUse
       video.load()
 
-      const HLS_LOAD_TIMEOUT_MS = 8000
-      let timeoutId: ReturnType<typeof setTimeout> | null = null
-
       const fallbackToMp4 = () => {
         if (!canFallbackToMp4) return
-        if (timeoutId != null) {
-          window.clearTimeout(timeoutId)
-          timeoutId = null
-        }
         hlsFailedForSrcRef.current = src
         video.src = src
         video.load()
@@ -185,22 +178,11 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
         }
       }, { once: true })
 
-      if (canFallbackToMp4) {
-        timeoutId = window.setTimeout(() => {
-          timeoutId = null
-          if (video.readyState < 2) fallbackToMp4()
-        }, HLS_LOAD_TIMEOUT_MS)
-      }
-
-      const clearTimeoutAndShowThumbnail = () => {
-        if (timeoutId != null) {
-          window.clearTimeout(timeoutId)
-          timeoutId = null
-        }
+      const showThumbnail = () => {
         if (video.paused) video.currentTime = 0
       }
-      video.addEventListener('loadeddata', clearTimeoutAndShowThumbnail, { once: true })
-      video.addEventListener('canplay', clearTimeoutAndShowThumbnail, { once: true })
+      video.addEventListener('loadeddata', showThumbnail, { once: true })
+      video.addEventListener('canplay', showThumbnail, { once: true })
       return
     }
 

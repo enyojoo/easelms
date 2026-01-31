@@ -176,7 +176,7 @@ export default function VideoPreviewPlayer({
           await video.play()
         } catch (error: unknown) {
           // Silently handle autoplay errors (browser policies)
-          if (!(error instanceof Error) || error.name !== 'NotAllowedError') {
+          if (!(error instanceof Error) || (error.name !== 'NotAllowedError' && error.name !== 'AbortError')) {
             console.error("Error autoplaying video:", error)
           }
         }
@@ -189,7 +189,7 @@ export default function VideoPreviewPlayer({
           await video.play()
         } catch (error: unknown) {
           // Silently handle autoplay errors (browser policies)
-          if (!(error instanceof Error) || error.name !== 'NotAllowedError') {
+          if (!(error instanceof Error) || (error.name !== 'NotAllowedError' && error.name !== 'AbortError')) {
             console.error("Error autoplaying video on load:", error)
           }
         }
@@ -202,8 +202,7 @@ export default function VideoPreviewPlayer({
       // Try to play as soon as metadata is loaded
       if (autoplay && video.paused) {
         video.play().catch((error) => {
-          // Silently handle autoplay errors (browser policies)
-          if (error.name !== 'NotAllowedError') {
+          if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
             console.error("Error autoplaying video on metadata:", error)
           }
         })
@@ -225,8 +224,7 @@ export default function VideoPreviewPlayer({
       const attemptPlay = () => {
         if (video.paused) {
           video.play().catch((error) => {
-            // Silently handle autoplay errors (browser policies)
-            if (error.name !== 'NotAllowedError') {
+            if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
               console.error("Error autoplaying video:", error)
             }
           })
@@ -266,8 +264,7 @@ export default function VideoPreviewPlayer({
     const attemptPlay = () => {
       if (video.paused && autoplay) {
         video.play().catch((error) => {
-          // Silently handle autoplay errors (browser policies)
-          if (error.name !== 'NotAllowedError') {
+          if (error.name !== 'NotAllowedError' && error.name !== 'AbortError') {
             console.error("Error autoplaying video (immediate):", error)
           }
         })

@@ -689,14 +689,14 @@ export default function ModernVideoPlayer({
             e.stopPropagation()
             const video = videoRef.current
             if (video) {
-              video.play().catch((err) => console.warn("Play failed:", err))
+              video.play().catch((err) => { if (err?.name !== 'AbortError') console.warn("Play failed:", err) })
               setShowPosterOverlay(false)
             }
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault()
-              videoRef.current?.play().catch((err) => console.warn("Play failed:", err))
+              videoRef.current?.play().catch((err) => { if (err?.name !== 'AbortError') console.warn("Play failed:", err) })
               setShowPosterOverlay(false)
             }
           }}
