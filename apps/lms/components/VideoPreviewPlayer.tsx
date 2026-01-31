@@ -36,11 +36,18 @@ export default function VideoPreviewPlayer({
   const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
     (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el
     if (el) {
+      console.log('VideoPreviewPlayer: Setting video ref, applying playsinline attributes')
       // iOS/iPhone: set playsinline before any src so video can play inline (required for Safari/Chrome on iOS)
       el.setAttribute('playsinline', 'true')
       el.setAttribute('webkit-playsinline', 'true')
       ;(el as HTMLVideoElement & { webkitPlaysInline?: boolean }).webkitPlaysInline = true
       ;(el as HTMLVideoElement & { playsInline?: boolean }).playsInline = true
+      console.log('VideoPreviewPlayer: playsinline attributes set:', {
+        hasPlaysinlineAttr: el.hasAttribute('playsinline'),
+        hasWebkitAttr: el.hasAttribute('webkit-playsinline'),
+        playsInlineProp: (el as any).playsInline,
+        webkitPlaysInlineProp: (el as any).webkitPlaysInline
+      })
     }
     setVideoReady(!!el)
   }, [])
@@ -384,19 +391,38 @@ export default function VideoPreviewPlayer({
       }}
       onTouchEnd={(e) => {
         // iOS: play() must run in the touch gesture; click fires ~300ms later and loses the gesture
+        console.log('VideoPreviewPlayer: onTouchEnd triggered, isPlaying:', isPlaying)
         const video = videoRef.current
         if (video && !isPlaying) {
           e.preventDefault()
-          video.play().catch((err) => console.warn("Play failed:", err))
+          e.stopPropagation()
+          console.log('VideoPreviewPlayer: Attempting play from touch, video state:', {
+            paused: video.paused,
+            readyState: video.readyState,
+            src: video.src,
+            hasPlaysinline: video.hasAttribute('playsinline')
+          })
+          video.play()
+            .then(() => console.log('VideoPreviewPlayer: Play successful from touch'))
+            .catch((err) => console.error('VideoPreviewPlayer: Play failed from touch:', err))
           setIsPlaying(true)
           onClick?.()
         } else if (video && isPlaying) {
           e.preventDefault()
+          e.stopPropagation()
+          console.log('VideoPreviewPlayer: Pausing from touch')
           video.pause()
           setIsPlaying(false)
         }
       }}
-      onClick={handleTogglePlay}
+      onClick={(e) => {
+        // On iOS, onTouchEnd handles play/pause (touch fires first), so skip onClick to avoid double-toggle
+        // onClick still runs on desktop (no touch events)
+        const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+        if (!hasTouch) {
+          handleTogglePlay(e)
+        }
+      }}
     >
       {/* Loading overlay */}
       {isLoading && (

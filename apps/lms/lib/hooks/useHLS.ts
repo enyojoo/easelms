@@ -172,6 +172,9 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // iOS (iPhone/iPad): use native HLS for Safari and Chrome so HLS plays on iPhone
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const canPlayHLS = video.canPlayType('application/vnd.apple.mpegurl')
+
+    console.log('useHLS device detection:', { isIOS, isSafari, canPlayHLS, userAgent: navigator.userAgent })
 
     // Set playsinline before any src or HLS attach (required for iPhone inline playback)
     video.setAttribute('playsinline', 'true')
@@ -179,7 +182,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     ;(video as any).playsInline = true
     ;(video as any).webkitPlaysInline = true
 
-    if ((isSafari || isIOS) && video.canPlayType('application/vnd.apple.mpegurl')) {
+    if ((isSafari || isIOS) && canPlayHLS) {
       // Native HLS (Safari or iOS Chrome) - use it directly
       // Try HLS first, fallback to MP4 if not available
       initializingRef.current = false
