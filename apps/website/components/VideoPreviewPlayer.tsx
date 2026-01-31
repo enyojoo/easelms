@@ -302,7 +302,9 @@ export default function VideoPreviewPlayer({
           setIsPlaying(true)
           onClick?.()
         } catch (error) {
-          console.error("Error playing video:", error)
+          if (error?.name !== 'AbortError' && error?.name !== 'NotAllowedError') {
+            console.error("Error playing video:", error)
+          }
         }
       }
     } else {

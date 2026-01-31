@@ -300,8 +300,11 @@ export default function VideoPreviewPlayer({
           await video.play()
           setIsPlaying(true)
           onClick?.()
-        } catch (error) {
-          console.error("Error playing video:", error)
+        } catch (error: unknown) {
+          const err = error as { name?: string }
+          if (err?.name !== 'AbortError' && err?.name !== 'NotAllowedError') {
+            console.error("Error playing video:", error)
+          }
         }
       }
     } else {
