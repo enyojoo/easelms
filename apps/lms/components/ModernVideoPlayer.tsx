@@ -656,12 +656,18 @@ export default function ModernVideoPlayer({
   return (
     <div 
       ref={containerRef} 
-      className={cn("w-full h-full", className)}
+      className={cn("relative w-full h-full", className)}
       style={{
         maxWidth: '100%',
         maxHeight: '100%',
       }}
     >
+      {/* Loading overlay: outside MediaController so it's not affected by media-chrome hover/autohide; always visible while loading */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50 pointer-events-auto">
+          <Loader2 className="h-10 w-10 text-white animate-spin" />
+        </div>
+      )}
       <VideoPlayer
         key={src} // Force re-render when src changes
         className={cn(
@@ -675,12 +681,6 @@ export default function ModernVideoPlayer({
           maxHeight: '100%',
         }}
       >
-      {/* Loading overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-          <Loader2 className="h-10 w-10 text-white animate-spin" />
-        </div>
-      )}
       {/* Poster/thumbnail overlay with play button (course-builder style) when not autoplaying */}
       {showPosterOverlay && !isLoading && (
         <div
