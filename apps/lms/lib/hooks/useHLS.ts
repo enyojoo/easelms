@@ -161,30 +161,42 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
 
-    // Check if browser supports native HLS (Safari)
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    
-    if (isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari has native HLS support - use it directly
-      // Try HLS first, fallback to MP4 if not available
+    // Check for native HLS support first (all iOS browsers, Safari on macOS)
+    // This follows HLS.js recommended pattern and fixes iPhone playback
+    // All browsers on iPhone (Safari, Chrome, Firefox) use WebKit and have native HLS support
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Use native HLS (iPhone/iPad Safari/Chrome/Firefox, macOS Safari)
+      console.log('Using native HLS support (iOS/Safari)')
       initializingRef.current = false
       if (hlsUrl) {
         video.src = hlsUrl
         // Fallback to MP4 if HLS fails
         video.addEventListener('error', () => {
           if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-            console.log('Safari HLS failed, falling back to MP4:', src)
+            console.log('Native HLS failed, falling back to MP4:', src)
             hlsFailedForSrcRef.current = src
             video.src = src
           }
         }, { once: true })
+        // Show thumbnail when data ready
+        const showThumbnail = () => {
+          if (video.paused) video.currentTime = 0
+        }
+        video.addEventListener('loadeddata', showThumbnail, { once: true })
+        video.addEventListener('canplay', showThumbnail, { once: true })
       } else {
         video.src = hlsSrc
+        // Show thumbnail when data ready
+        const showThumbnail = () => {
+          if (video.paused) video.currentTime = 0
+        }
+        video.addEventListener('loadeddata', showThumbnail, { once: true })
+        video.addEventListener('canplay', showThumbnail, { once: true })
       }
       return
     }
 
-    // For non-Safari browsers, use HLS.js with YouTube-like buffering config
+    // For browsers with MSE support (Chrome/Firefox/Edge desktop, Android), use HLS.js
     if (Hls.isSupported()) {
       setIsLoading(true)
       
