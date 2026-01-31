@@ -173,40 +173,74 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // All browsers on iPhone (Safari, Chrome, Firefox) use WebKit and have native HLS support
     const hasNativeHLS = video.canPlayType('application/vnd.apple.mpegurl')
     
+    console.log('🎥 Video playback detection:', {
+      isIOS,
+      isSafari,
+      hasNativeHLS,
+      hlsUrl,
+      src,
+      userAgent: navigator.userAgent
+    })
+    
     if (hasNativeHLS && (isIOS || isSafari)) {
       // Use native HLS (iPhone/iPad Safari/Chrome/Firefox, macOS Safari)
-      console.log('Using native HLS support (iOS/Safari)')
+      console.log('✅ Using native HLS support (iOS/Safari)', { hlsUrl, src })
       initializingRef.current = false
-      if (hlsUrl) {
-        video.src = hlsUrl
-        // Fallback to MP4 if HLS fails
-        video.addEventListener('error', () => {
-          if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-            console.log('Native HLS failed, falling back to MP4:', src)
-            hlsFailedForSrcRef.current = src
-            video.src = src
-          }
-        }, { once: true })
-        // Show thumbnail when data ready
-        const showThumbnail = () => {
-          if (video.paused) video.currentTime = 0
+      
+      const sourceToUse = hlsUrl || hlsSrc
+      console.log('📺 Setting video source:', sourceToUse)
+      video.src = sourceToUse
+      
+      // More comprehensive error handling
+      const handleError = (e: Event) => {
+        const error = video.error
+        console.error('❌ Native HLS error:', {
+          error: error?.code,
+          message: error?.message,
+          networkState: video.networkState,
+          readyState: video.readyState,
+          src: video.src,
+          event: e
+        })
+        
+        // Try MP4 fallback if HLS fails and we have both URLs
+        if (hlsUrl && error && (
+          error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ||
+          error.code === MediaError.MEDIA_ERR_DECODE ||
+          error.code === MediaError.MEDIA_ERR_NETWORK
+        )) {
+          console.log('🔄 Falling back to MP4:', src)
+          hlsFailedForSrcRef.current = src
+          video.src = src
+          video.load()
         }
-        video.addEventListener('loadeddata', showThumbnail, { once: true })
-        video.addEventListener('canplay', showThumbnail, { once: true })
-      } else {
-        video.src = hlsSrc
-        // Show thumbnail when data ready
-        const showThumbnail = () => {
-          if (video.paused) video.currentTime = 0
-        }
-        video.addEventListener('loadeddata', showThumbnail, { once: true })
-        video.addEventListener('canplay', showThumbnail, { once: true })
       }
+      
+      video.addEventListener('error', handleError, { once: true })
+      
+      // Log loading progress
+      const handleLoadStart = () => console.log('⏳ Native HLS: loadstart')
+      const handleLoadedMetadata = () => console.log('📊 Native HLS: loadedmetadata')
+      const handleLoadedData = () => {
+        console.log('✅ Native HLS: loadeddata')
+        if (video.paused) video.currentTime = 0
+      }
+      const handleCanPlay = () => {
+        console.log('▶️ Native HLS: canplay')
+        if (video.paused) video.currentTime = 0
+      }
+      
+      video.addEventListener('loadstart', handleLoadStart, { once: true })
+      video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true })
+      video.addEventListener('loadeddata', handleLoadedData, { once: true })
+      video.addEventListener('canplay', handleCanPlay, { once: true })
+      
       return
     }
 
     // For browsers with MSE support (Chrome/Firefox/Edge desktop, Android), use HLS.js
     if (Hls.isSupported()) {
+      console.log('✅ Using HLS.js (MSE support detected)')
       setIsLoading(true)
       
       // Clear any existing src before creating HLS instance to prevent conflicts
@@ -628,15 +662,20 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       }
     } else {
       // HLS.js not supported - fallback to direct video
+      console.warn('⚠️ HLS.js not supported, falling back to direct video playback')
       const error = new Error('HLS.js is not supported in this browser')
       setError(error)
       onError?.(error)
       // Try to fallback to .mp4 if available
       if (hlsUrl && src && !src.includes('.m3u8')) {
+        console.log('📺 Fallback: Using MP4 source:', src)
         video.src = src
       } else if (src.includes('.m3u8')) {
-        video.src = src.replace('.m3u8', '.mp4')
+        const mp4Src = src.replace('.m3u8', '.mp4')
+        console.log('📺 Fallback: Converting m3u8 to mp4:', mp4Src)
+        video.src = mp4Src
       } else {
+        console.log('📺 Fallback: Using original source:', src)
         video.src = src
       }
     }
