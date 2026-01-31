@@ -88,8 +88,6 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     // Mark as initializing and store current source
     initializingRef.current = true
     currentSrcRef.current = src
-    
-    console.log('Initializing HLS for source:', src)
 
     // Check if URL is HLS (.m3u8)
     const isHLSFile = src.includes('.m3u8')
@@ -147,30 +145,66 @@ export function useHLS({ videoRef, src, onError }: UseHLSOptions) {
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
 
-    // Check if browser supports native HLS (Safari)
+    // Detect iOS (iPhone, iPad, iPod) and Safari (macOS) - both have native HLS per HLS.js docs
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    
-    if (isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari has native HLS support - use it directly
-      // Try HLS first, fallback to MP4 if not available
+    const hasNativeHLS = video.canPlayType('application/vnd.apple.mpegurl')
+
+    if (hasNativeHLS && (isIOS || isSafari)) {
+      // Safari / iOS: use native HLS (plain video tag source URL per HLS.js docs)
+      // Try HLS first; fall back to MP4 on error or if HLS doesn't load in time
+      const sourceToUse = hlsUrl || hlsSrc
+      const canFallbackToMp4 = src && !src.includes('.m3u8')
+
       initializingRef.current = false
-      if (hlsUrl) {
-        video.src = hlsUrl
-        // Fallback to MP4 if HLS fails
-        video.addEventListener('error', () => {
-          if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-            console.log('Safari HLS failed, falling back to MP4:', src)
-            hlsFailedForSrcRef.current = src
-            video.src = src
-          }
-        }, { once: true })
-      } else {
-        video.src = hlsSrc
+      video.src = sourceToUse
+      video.load()
+
+      const HLS_LOAD_TIMEOUT_MS = 8000
+      let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+      const fallbackToMp4 = () => {
+        if (!canFallbackToMp4) return
+        if (timeoutId != null) {
+          window.clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        hlsFailedForSrcRef.current = src
+        video.src = src
+        video.load()
       }
+
+      video.addEventListener('error', () => {
+        const err = video.error
+        if (err && canFallbackToMp4) {
+          const fatal = err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ||
+            err.code === MediaError.MEDIA_ERR_NETWORK ||
+            err.code === MediaError.MEDIA_ERR_DECODE
+          if (fatal) fallbackToMp4()
+        }
+      }, { once: true })
+
+      if (canFallbackToMp4) {
+        timeoutId = window.setTimeout(() => {
+          timeoutId = null
+          if (video.readyState < 2) fallbackToMp4()
+        }, HLS_LOAD_TIMEOUT_MS)
+      }
+
+      const clearTimeoutAndShowThumbnail = () => {
+        if (timeoutId != null) {
+          window.clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        if (video.paused) video.currentTime = 0
+      }
+      video.addEventListener('loadeddata', clearTimeoutAndShowThumbnail, { once: true })
+      video.addEventListener('canplay', clearTimeoutAndShowThumbnail, { once: true })
       return
     }
 
-    // For non-Safari browsers, use HLS.js with YouTube-like buffering config
+    // Browsers with MSE: use HLS.js
     if (Hls.isSupported()) {
       setIsLoading(true)
       
