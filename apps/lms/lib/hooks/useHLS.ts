@@ -107,10 +107,6 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         console.log('HLS previously failed for this source, using MP4 directly:', src)
         initializingRef.current = false
         setIsHLS(false)
-        video.setAttribute('playsinline', 'true')
-        video.setAttribute('webkit-playsinline', 'true')
-        ;(video as any).playsInline = true
-        ;(video as any).webkitPlaysInline = true
         video.src = src
         const showThumbnail = () => {
           if (video.paused) video.currentTime = 0
@@ -153,10 +149,6 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     if (!isHLSFile && !hlsUrl) {
       // Not an HLS file and no HLS URL to try, use native video playback
       initializingRef.current = false
-      video.setAttribute('playsinline', 'true')
-      video.setAttribute('webkit-playsinline', 'true')
-      ;(video as any).playsInline = true
-      ;(video as any).webkitPlaysInline = true
       video.src = src
       const showThumbnail = () => {
         if (video.paused) video.currentTime = 0
@@ -169,35 +161,37 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
 
-    // iOS (iPhone/iPad): use native HLS for Safari and Chrome so HLS plays on iPhone
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    const canPlayHLS = video.canPlayType('application/vnd.apple.mpegurl')
-
-    console.log('useHLS device detection:', { isIOS, isSafari, canPlayHLS, userAgent: navigator.userAgent })
-
-    // Set playsinline before any src or HLS attach (required for iPhone inline playback)
-    video.setAttribute('playsinline', 'true')
-    video.setAttribute('webkit-playsinline', 'true')
-    ;(video as any).playsInline = true
-    ;(video as any).webkitPlaysInline = true
-
-    if ((isSafari || isIOS) && canPlayHLS) {
-      // Native HLS (Safari or iOS Chrome) - use it directly
-      // Try HLS first, fallback to MP4 if not available
+    // Follow HLS.js recommended pattern: check native HLS support first, then HLS.js
+    // All iOS browsers (Safari, Chrome, Firefox) have native HLS via WebKit - check using canPlayType
+    // See: https://github.com/video-dev/hls.js#embedding-hlsjs
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Browser has native HLS support (iOS Safari/Chrome/Firefox, macOS Safari, etc.) - use it directly
+      console.log('Using native HLS support (iOS/Safari)')
       initializingRef.current = false
       if (hlsUrl) {
         video.src = hlsUrl
         // Fallback to MP4 if HLS fails
-        video.addEventListener('error', () => {
+        const handleError = () => {
           if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-            console.log('Safari HLS failed, falling back to MP4:', src)
+            console.log('Native HLS failed, falling back to MP4:', src)
             hlsFailedForSrcRef.current = src
             video.src = src
           }
-        }, { once: true })
+        }
+        video.addEventListener('error', handleError, { once: true })
+        // Show thumbnail when data ready
+        const showThumbnail = () => {
+          if (video.paused) video.currentTime = 0
+        }
+        video.addEventListener('loadeddata', showThumbnail, { once: true })
+        video.addEventListener('canplay', showThumbnail, { once: true })
       } else {
         video.src = hlsSrc
+        const showThumbnail = () => {
+          if (video.paused) video.currentTime = 0
+        }
+        video.addEventListener('loadeddata', showThumbnail, { once: true })
+        video.addEventListener('canplay', showThumbnail, { once: true })
       }
       return
     }
