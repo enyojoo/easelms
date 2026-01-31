@@ -21,6 +21,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
   const [isHLS, setIsHLS] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
+  /** URL to pass to the video element. Native HLS needs this so React does not overwrite video.src with undefined. */
+  const [effectiveVideoSrc, setEffectiveVideoSrc] = useState<string | undefined>(undefined)
   // Track if we've already tried HLS and failed for this source - prevents infinite retry loops
   const hlsFailedForSrcRef = useRef<string | null>(null)
   // Track the current source to prevent re-initialization on same source
@@ -34,7 +36,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
   useEffect(() => {
     const video = videoRef.current
     if (!videoReady || !video || !src) {
-      // Cleanup if src becomes null/undefined
+      setEffectiveVideoSrc(undefined)
       if (hlsRef.current) {
         try {
           hlsRef.current.stopLoad()
@@ -105,6 +107,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         console.log('HLS previously failed for this source, using MP4 directly:', src)
         initializingRef.current = false
         setIsHLS(false)
+        setEffectiveVideoSrc(src)
         video.src = src
         const showThumbnail = () => {
           if (video.paused) video.currentTime = 0
@@ -145,8 +148,8 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     setIsHLS(isHLSFile || !!hlsUrl)
 
     if (!isHLSFile && !hlsUrl) {
-      // Not an HLS file and no HLS URL to try, use native video playback
       initializingRef.current = false
+      setEffectiveVideoSrc(src)
       video.src = src
       const showThumbnail = () => {
         if (video.paused) video.currentTime = 0
@@ -173,6 +176,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       const canFallbackToMp4 = src && !src.includes('.m3u8')
 
       initializingRef.current = false
+      setEffectiveVideoSrc(hlsSrc)
       setIsLoading(true)
       video.src = hlsSrc
       video.load()
@@ -180,6 +184,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       const fallbackToMp4 = () => {
         if (!canFallbackToMp4) return
         hlsFailedForSrcRef.current = src
+        setEffectiveVideoSrc(src)
         video.src = src
         video.load()
       }
@@ -206,6 +211,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
 
     // For browsers with MSE support (Chrome/Firefox/Edge desktop, Android), use HLS.js
     if (Hls.isSupported()) {
+      setEffectiveVideoSrc(undefined)
       setIsLoading(true)
       
       // Clear any existing src before creating HLS instance to prevent conflicts
@@ -626,15 +632,18 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         // (not on re-renders with same source)
       }
     } else {
-      // HLS.js not supported - fallback to direct video
       const error = new Error('HLS.js is not supported in this browser')
       setError(error)
       onError?.(error)
       if (hlsUrl && src && !src.includes('.m3u8')) {
+        setEffectiveVideoSrc(src)
         video.src = src
       } else if (src.includes('.m3u8')) {
-        video.src = src.replace('.m3u8', '.mp4')
+        const mp4Src = src.replace('.m3u8', '.mp4')
+        setEffectiveVideoSrc(mp4Src)
+        video.src = mp4Src
       } else {
+        setEffectiveVideoSrc(src)
         video.src = src
       }
     }
@@ -665,6 +674,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     isHLS,
     isLoading,
     error,
+    effectiveVideoSrc,
     hls: hlsRef.current,
   }
 }

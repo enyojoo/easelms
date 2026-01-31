@@ -56,7 +56,7 @@ export default function ModernVideoPlayer({
   const resumeTimeoutRef = useRef<NodeJS.Timeout | null>(null) // Timeout for auto-resume
 
   // Initialize HLS hook for adaptive streaming
-  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
+  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError, effectiveVideoSrc } = useHLS({
     videoRef,
     src,
     onError: (error) => {
@@ -980,7 +980,7 @@ export default function ModernVideoPlayer({
         crossOrigin={src?.includes('s3.amazonaws.com') || src?.includes('amazonaws.com') || src?.includes('azurefd.net') ? undefined : "anonymous"}
         preload={isHLSFile ? "auto" : "metadata"}
         slot="media"
-        src={isHLSFile ? undefined : (src && typeof src === 'string' ? src.trim() : undefined)}
+        src={effectiveVideoSrc !== undefined ? effectiveVideoSrc : (isHLSFile ? undefined : (src && typeof src === 'string' ? src.trim() : undefined))}
         poster={poster}
         autoPlay={false}
         controls={false}

@@ -39,7 +39,7 @@ export default function VideoPreviewPlayer({
   }, [])
 
   // Initialize HLS hook for adaptive streaming (videoReady ensures HLS runs after video is mounted, e.g. in modal)
-  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
+  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError, effectiveVideoSrc } = useHLS({
     videoRef,
     src,
     videoReady,
@@ -386,7 +386,7 @@ export default function VideoPreviewPlayer({
       <video
         key={src.trim()}
         ref={setVideoRef}
-        src={isHLSFile ? undefined : src.trim()}
+        src={effectiveVideoSrc !== undefined ? effectiveVideoSrc : (isHLSFile ? undefined : src.trim())}
         className="w-full h-full object-cover"
         preload="auto"
         muted={false}

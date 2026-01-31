@@ -34,7 +34,7 @@ export default function VideoPreviewPlayer({
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Initialize HLS hook for adaptive streaming
-  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError } = useHLS({
+  const { isHLS: isHLSFile, isLoading: isHLSLoading, error: hlsError, effectiveVideoSrc } = useHLS({
     videoRef,
     src,
     onError: (error) => {
@@ -386,7 +386,7 @@ export default function VideoPreviewPlayer({
       <video
         key={src.trim()}
         ref={videoRef}
-        src={isHLSFile ? undefined : src.trim()}
+        src={effectiveVideoSrc !== undefined ? effectiveVideoSrc : (isHLSFile ? undefined : src.trim())}
         className="w-full h-full object-cover"
         preload="auto"
         muted={false}
