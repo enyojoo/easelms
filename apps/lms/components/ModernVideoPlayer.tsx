@@ -687,23 +687,8 @@ export default function ModernVideoPlayer({
           className="absolute inset-0 bg-black/40 flex items-center justify-center z-[9] cursor-pointer group hover:bg-black/50 transition-colors"
           onClick={(e) => {
             e.stopPropagation()
-            // On iOS, onTouchEnd handles play (touch fires first), so skip onClick to avoid double-play
-            // onClick still runs on desktop (no touch events)
-            const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0
-            if (!hasTouch) {
-              const video = videoRef.current
-              if (video) {
-                video.play().catch((err) => console.warn("Play failed:", err))
-                setShowPosterOverlay(false)
-              }
-            }
-          }}
-          onTouchEnd={(e) => {
-            // iOS: play() must run in the touch gesture; click fires delayed and loses the gesture
             const video = videoRef.current
             if (video) {
-              e.preventDefault()
-              e.stopPropagation()
               video.play().catch((err) => console.warn("Play failed:", err))
               setShowPosterOverlay(false)
             }

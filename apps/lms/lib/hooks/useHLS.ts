@@ -161,37 +161,25 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // Use HLS URL if we constructed one, otherwise use the original src
     const hlsSrc = hlsUrl || src
 
-    // Follow HLS.js recommended pattern: check native HLS support first, then HLS.js
-    // All iOS browsers (Safari, Chrome, Firefox) have native HLS via WebKit - check using canPlayType
-    // See: https://github.com/video-dev/hls.js#embedding-hlsjs
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Browser has native HLS support (iOS Safari/Chrome/Firefox, macOS Safari, etc.) - use it directly
-      console.log('Using native HLS support (iOS/Safari)')
+    // Check if browser supports native HLS (Safari)
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    
+    if (isSafari && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari has native HLS support - use it directly
+      // Try HLS first, fallback to MP4 if not available
       initializingRef.current = false
       if (hlsUrl) {
         video.src = hlsUrl
         // Fallback to MP4 if HLS fails
-        const handleError = () => {
+        video.addEventListener('error', () => {
           if (video.error && video.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) {
-            console.log('Native HLS failed, falling back to MP4:', src)
+            console.log('Safari HLS failed, falling back to MP4:', src)
             hlsFailedForSrcRef.current = src
             video.src = src
           }
-        }
-        video.addEventListener('error', handleError, { once: true })
-        // Show thumbnail when data ready
-        const showThumbnail = () => {
-          if (video.paused) video.currentTime = 0
-        }
-        video.addEventListener('loadeddata', showThumbnail, { once: true })
-        video.addEventListener('canplay', showThumbnail, { once: true })
+        }, { once: true })
       } else {
         video.src = hlsSrc
-        const showThumbnail = () => {
-          if (video.paused) video.currentTime = 0
-        }
-        video.addEventListener('loadeddata', showThumbnail, { once: true })
-        video.addEventListener('canplay', showThumbnail, { once: true })
       }
       return
     }
