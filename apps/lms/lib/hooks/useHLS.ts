@@ -99,7 +99,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
     // For MP4 videos, try to use HLS if available
     // Construct HLS URL from MP4 URL using the same logic as getHLSVideoUrl
     let hlsUrl: string | null = null
-    if (!isHLSFile && (src.includes('.mp4') || src.includes('.webm') || src.includes('/video-') || src.includes('/preview-video-'))) {
+    if (!isHLSFile && (src.includes('.mp4') || src.includes('.webm') || src.includes('/video-') || src.includes('/preview-video-') || src.includes('/lessons/'))) {
       // Check if we already tried HLS for this source and it failed
       if (hlsFailedForSrcRef.current === src) {
         console.log('HLS previously failed for this source, using MP4 directly:', src)
@@ -156,27 +156,25 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       return
     }
 
-    // Use HLS URL if we constructed one, otherwise use the original src
+    // Use HLS URL if we constructed one, otherwise use the original src.
+    // Same hlsSrc used for BOTH native HLS (Safari/iOS) and HLS.js (Chrome/Firefox/Android).
     const hlsSrc = hlsUrl || src
 
-    // Detect if we're on iOS (iPhone, iPad, iPod)
+    // Native HLS path (Safari/iOS): video.src = hlsSrc → browser fetches .m3u8 and .ts.
+    // HLS.js path (others): hls.loadSource(hlsSrc) → HLS.js fetches .m3u8/.ts via XHR, feeds MSE.
+    // Both use same URL construction (path/hls/baseName/baseName.m3u8); both fall back to MP4 on error.
+
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-    
-    // Detect if we're on Safari (not Chrome/Firefox on macOS)
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-
-    // Check for native HLS support first (all iOS browsers, Safari on macOS)
     const hasNativeHLS = video.canPlayType('application/vnd.apple.mpegurl')
 
     if (hasNativeHLS && (isIOS || isSafari)) {
-      // Safari / iOS: use native HLS (plain video tag with .m3u8 URL per HLS.js docs).
-      // Same HLS URLs as Chrome/Android; only fall back to MP4 on actual video error.
-      const sourceToUse = hlsUrl || hlsSrc
       const canFallbackToMp4 = src && !src.includes('.m3u8')
 
       initializingRef.current = false
-      video.src = sourceToUse
+      setIsLoading(true)
+      video.src = hlsSrc
       video.load()
 
       const fallbackToMp4 = () => {
@@ -187,6 +185,7 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
       }
 
       video.addEventListener('error', () => {
+        setIsLoading(false)
         const err = video.error
         if (err && canFallbackToMp4) {
           const fatal = err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED ||
@@ -196,11 +195,12 @@ export function useHLS({ videoRef, src, onError, videoReady = true, autoplay = f
         }
       }, { once: true })
 
-      const showThumbnail = () => {
+      const onReady = () => {
+        setIsLoading(false)
         if (video.paused) video.currentTime = 0
       }
-      video.addEventListener('loadeddata', showThumbnail, { once: true })
-      video.addEventListener('canplay', showThumbnail, { once: true })
+      video.addEventListener('loadeddata', onReady, { once: true })
+      video.addEventListener('canplay', onReady, { once: true })
       return
     }
 
