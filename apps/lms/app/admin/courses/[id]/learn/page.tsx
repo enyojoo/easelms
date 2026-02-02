@@ -450,8 +450,8 @@ export default function AdminCourseLearningPage() {
       {/* Main Content - Scrollable container on mobile, fixed on desktop */}
       <div className="flex-1 overflow-hidden flex flex-col lg:flex-row min-h-0">
         <div className="flex-1 flex flex-col min-w-0 lg:w-[70%] order-1 lg:order-none min-h-0">
-          <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-0 bg-card border-r border-border overflow-hidden rounded-none">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 rounded-none">
               {(() => {
                 const lessonType = currentLesson.type || ((currentLesson as any).url ? "video" : "text")
                 const hasVideo = !!(currentLesson as any).url
@@ -508,10 +508,9 @@ export default function AdminCourseLearningPage() {
                   <>
                     {/* Video Tab - for video-only and mixed lessons */}
                     {(hasVideo && !isMixed) || isMixed ? (
-                      <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                        <div className="relative w-full h-full bg-black flex items-center justify-center min-h-0">
-                          <div className="w-full h-full" style={{ aspectRatio: '16/9' }}>
-                            <VideoPlayer
+                      <TabsContent value="video" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
+                        <div className="relative w-full h-full bg-black">
+                          <VideoPlayer
                               key={`lesson-${currentLesson.id}-${currentLessonIndex}-video`}
                               lessonTitle={currentLesson.title}
                               onComplete={handleLessonComplete}
@@ -521,16 +520,15 @@ export default function AdminCourseLearningPage() {
                               courseId={id}
                               lessonId={currentLesson.id?.toString() || "lesson-" + String(currentLessonIndex)}
                             />
-                          </div>
                         </div>
                       </TabsContent>
                     ) : null}
 
                     {/* Text Tab - for text-only and mixed lessons */}
                     {(hasText && !isMixed) || isMixed ? (
-                      <TabsContent value="text" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                      <TabsContent value="text" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                         <ScrollArea className="w-full h-full flex-1 min-h-0">
-                          <div className="p-3 sm:p-4 md:p-6">
+                          <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
                             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
                               {currentLesson.title}
                             </h1>
@@ -549,9 +547,9 @@ export default function AdminCourseLearningPage() {
               })()}
 
               {currentLesson.quiz_questions && currentLesson.quiz_questions.length > 0 && currentLesson.quiz?.enabled !== false && (
-                <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <ScrollArea className="w-full h-full flex-1 min-h-0">
-                    <div className="p-3 sm:p-4 md:p-6">
+                    <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
                       <QuizComponent
                           quiz={{
                             questions: currentLesson.quiz_questions.map((q: any) => {
@@ -606,9 +604,9 @@ export default function AdminCourseLearningPage() {
               )}
 
               {currentLesson.resources && currentLesson.resources.length > 0 && (
-                <TabsContent value="resources" className="flex-1 m-0 p-0 overflow-hidden min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <TabsContent value="resources" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <ScrollArea className="w-full h-full flex-1 min-h-0">
-                    <div className="p-3 sm:p-4 md:p-6">
+                    <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
                       <ResourcesPanel 
                         resources={currentLesson.resources || []} 
                       />
@@ -618,15 +616,14 @@ export default function AdminCourseLearningPage() {
               )}
             </Tabs>
 
-            {/* Footer - Fixed */}
+            {/* Footer - Fixed (match learner learn page UI) */}
             <div className="flex-shrink-0 p-3 sm:p-4 border-t border-border bg-background">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+              <div className="flex items-center justify-between gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   onClick={handlePreviousLesson}
                   disabled={currentLessonIndex === 0}
-                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm"
-                  size="sm"
+                  className="text-foreground bg-background hover:bg-primary/10 hover:text-primary flex-1 sm:flex-initial h-10 sm:h-12 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 lg:px-8"
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" /> Previous
                 </Button>
@@ -639,12 +636,11 @@ export default function AdminCourseLearningPage() {
                     activeTab === "resources" &&
                     currentLessonIndex === course.lessons.length - 1
                   }
-                  className={`text-foreground w-full sm:w-auto min-h-[44px] sm:min-h-[40px] text-sm ${
+                  className={`text-foreground flex-1 sm:flex-initial h-10 sm:h-12 text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 lg:px-8 ${
                     allLessonsCompleted
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-background hover:bg-primary/10 hover:text-primary"
                   }`}
-                  size="sm"
                 >
                   {allLessonsCompleted ? (
                     <>

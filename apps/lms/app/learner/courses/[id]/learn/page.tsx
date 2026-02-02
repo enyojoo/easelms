@@ -1023,7 +1023,7 @@ export default function CourseLearningPage() {
                (currentLesson.quiz?.enabled !== false || (completedQuizzes && currentLesson.id && completedQuizzes[currentLesson.id])) && (
                 <TabsContent value="quiz" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <div className="w-full h-full overflow-y-auto">
-                    <div className="p-3 sm:p-4 md:p-6">
+                    <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
                       <QuizComponent
                       quiz={{
                         questions: currentLesson.quiz_questions.map((q: any) => {
@@ -1086,7 +1086,7 @@ export default function CourseLearningPage() {
               {currentLesson.resources && currentLesson.resources.length > 0 && (
                 <TabsContent value="resources" className="flex-1 m-0 p-0 overflow-hidden min-h-0 rounded-none data-[state=active]:flex data-[state=active]:flex-col">
                   <div className="w-full h-full overflow-y-auto">
-                    <div className="p-3 sm:p-4 md:p-6">
+                    <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
                       <ResourcesPanel 
                         resources={currentLesson.resources || []} 
                       />
