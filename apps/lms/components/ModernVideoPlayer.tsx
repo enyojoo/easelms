@@ -69,6 +69,39 @@ export default function ModernVideoPlayer({
     }
   }, [isHLSFile, isHLSLoading])
 
+  // Prevent right-click and copy/drag to protect video URL (same approach as website ModernVideoPlayer)
+  const handleContextMenu = (e: React.MouseEvent | MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    return false
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent | KeyboardEvent) => {
+    const isModifier = (e as KeyboardEvent).metaKey || (e as KeyboardEvent).ctrlKey
+    const key = (e as KeyboardEvent).key.toLowerCase()
+    if (isModifier && (key === 'c' || key === 'a' || key === 's' || key === 'p')) {
+      e.preventDefault()
+      e.stopPropagation()
+      return false
+    }
+  }
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const onContextMenu = (e: Event) => { e.preventDefault(); e.stopPropagation(); return false }
+    const onKeyDown = (e: KeyboardEvent) => { handleKeyDown(e) }
+    const onDragStart = (e: DragEvent) => { e.preventDefault(); return false }
+    video.addEventListener('contextmenu', onContextMenu, true)
+    video.addEventListener('keydown', onKeyDown, true)
+    video.addEventListener('dragstart', onDragStart, true)
+    return () => {
+      video.removeEventListener('contextmenu', onContextMenu, true)
+      video.removeEventListener('keydown', onKeyDown, true)
+      video.removeEventListener('dragstart', onDragStart, true)
+    }
+  }, [src])
+
   // Cleanup: Pause and reset video when src changes or component unmounts
   // Also ensure HTML5 controls are always disabled and playsInline is set for iOS/Android
   useEffect(() => {
@@ -661,6 +694,8 @@ export default function ModernVideoPlayer({
         maxWidth: '100%',
         maxHeight: '100%',
       }}
+      onContextMenu={handleContextMenu}
+      onKeyDown={handleKeyDown}
     >
       {/* Loading overlay: outside MediaController so it's not affected by media-chrome hover/autohide; always visible while loading */}
       {isLoading && (
@@ -727,6 +762,8 @@ export default function ModernVideoPlayer({
           height: isFullscreen ? '100vh' : '100%', 
           objectFit: 'contain' // Use contain (like Netflix/YouTube) to show complete video without cropping
         }}
+        onContextMenu={handleContextMenu}
+        onKeyDown={handleKeyDown}
         onError={(e) => {
           const video = e.currentTarget
           if (video.error) {

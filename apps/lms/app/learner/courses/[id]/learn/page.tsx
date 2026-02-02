@@ -999,7 +999,7 @@ export default function CourseLearningPage() {
                           />
                         ) : (
                           <div className="w-full h-full overflow-y-auto">
-                            <div className="p-3 sm:p-4 md:p-6">
+                            <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
                               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-6 text-foreground">
                                 {currentLesson.title}
                               </h1>

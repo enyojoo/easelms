@@ -94,7 +94,7 @@ export default function MixedLessonContent({
           />
         </div>
         {/* Text Section */}
-        <div className="p-3 sm:p-4 md:p-6">
+        <div className="p-3 sm:p-4 md:p-6 select-none" onContextMenu={(e) => e.preventDefault()}>
           <div 
             className="prose prose-sm sm:prose-base dark:prose-invert max-w-none"
             dangerouslySetInnerHTML={{
