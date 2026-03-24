@@ -10,7 +10,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Enabled-green?logo=supabase)](https://supabase.com)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Hosted Service](#-hosted-service) • [Contributing](#-contributing)
+[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](https://docs.easelms.org) • [Hosted Service](#-hosted-service) • [Contributing](#-contributing)
 
 </div>
 
@@ -372,7 +372,8 @@ If you need to use EaseLMS in a proprietary application or provide a hosted serv
 
 ## 🆘 Support
 
-- 📧 [Email Support](mailto:contact@easelms.org)
+- 📧 [Email Support](mailto:support@novaviewconsulting.com)
+- 📚 [Documentation](https://docs.easelms.org)
 - 💬 [Contact Us](https://www.easelms.org/contact) - Schedule a meeting or send us a message
 - 🐦 [Twitter (X)](https://x.com/enyosaam) - Follow us for updates
 
