@@ -13,7 +13,8 @@ export function generateBaseEmailTemplate(
   subtitle: string,
   content: string,
   ctaButton?: { text: string; url: string },
-  brandSettings?: EmailBrandSettings
+  brandSettings?: EmailBrandSettings,
+  footerNotice?: string
 ): string {
   const platformName = brandSettings?.platformName || "EaseLMS"
   const logoBlack = brandSettings?.logoUrl || "https://cldup.com/VQGhFU5kd6.svg"
@@ -21,11 +22,15 @@ export function generateBaseEmailTemplate(
   const supportEmail = brandSettings?.supportEmail || "support@easelms.org"
   const appUrl = brandSettings?.appUrl || "https://www.easelms.org"
 
+  const receivingNotice =
+    footerNotice ||
+    `You're receiving this email because you have an account with ${platformName}.`
+
   const ctaButtonHtml = ctaButton
     ? `
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 32px auto;">
       <tr>
-        <td style="border-radius: 6px; background-color: hsl(240, 5.9%, 10%);">
+        <td class="email-cta-button" style="border-radius: 6px; background-color: hsl(240, 5.9%, 10%);">
           <a href="${ctaButton.url}" style="display: inline-block; padding: 14px 28px; color: hsl(0, 0%, 98%); text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">${ctaButton.text}</a>
         </td>
       </tr>
@@ -134,6 +139,23 @@ export function generateBaseEmailTemplate(
       .info-box-text {
         color: #d1d1d1 !important;
       }
+      .otp-container {
+        background-color: #252525 !important;
+        border-color: hsl(0, 0%, 98%) !important;
+      }
+      .otp-label,
+      .otp-instructions {
+        color: #d1d1d1 !important;
+      }
+      .otp-code {
+        color: hsl(0, 0%, 98%) !important;
+        background-color: #1a1a1a !important;
+        border-color: #333333 !important;
+      }
+      .confirmation-url {
+        background-color: #252525 !important;
+        color: hsl(0, 0%, 98%) !important;
+      }
       .course-box {
         background-color: #252525 !important;
       }
@@ -192,7 +214,7 @@ export function generateBaseEmailTemplate(
           <tr>
             <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
               <p class="email-footer-small" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.6;">
-                You're receiving this email because you have an account with ${platformName}.
+                ${receivingNotice}
               </p>
             </td>
           </tr>
@@ -345,6 +367,67 @@ export function generatePaymentDetails(data: {
       </p>
       ${data.failureReason ? `<p class="info-box-text" style="margin: 16px 0 0; font-size: 14px; color: #dc2626;"><strong>Reason:</strong> ${data.failureReason}</p>` : ""}
     </div>
+  `
+}
+
+/**
+ * Generate inline CTA button for auth emails (used inside content body)
+ */
+export function generateEmailCtaButton(text: string, url: string): string {
+  return `
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 24px auto;">
+      <tr>
+        <td class="email-cta-button" style="border-radius: 6px; background-color: hsl(240, 5.9%, 10%);">
+          <a href="${url}" style="display: inline-block; padding: 14px 28px; color: hsl(0, 0%, 98%); text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">${text}</a>
+        </td>
+      </tr>
+    </table>
+  `
+}
+
+/**
+ * Generate OTP verification code section for auth emails
+ */
+export function generateOtpCodeSection(code: string): string {
+  return `
+    <div class="otp-container" style="background-color: #f9f9f9; border: 2px solid hsl(240, 5.9%, 10%); border-radius: 12px; padding: 30px; text-align: center; margin: 24px 0;">
+      <p class="otp-label" style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1a1a1a;">Your verification code is:</p>
+      <div class="otp-code" style="font-size: 36px; font-weight: 700; color: hsl(240, 5.9%, 10%); letter-spacing: 8px; font-family: 'Courier New', monospace; background: #ffffff; padding: 20px 30px; border-radius: 8px; border: 1px solid #e5e5e5; display: inline-block; margin: 10px 0;">${code}</div>
+      <p class="otp-instructions" style="margin: 15px 0 0; font-size: 14px; color: #666666;">Enter this code in the password reset form to continue</p>
+    </div>
+  `
+}
+
+/**
+ * Generate auth notice box (expiry, security, etc.)
+ */
+export function generateAuthNoticeBox(message: string): string {
+  return `
+    <div class="info-box" style="background-color: #f0f7ff; border-left: 4px solid hsl(240, 5.9%, 10%); padding: 16px; margin: 24px 0; border-radius: 4px;">
+      <p class="info-box-text" style="margin: 0; font-size: 14px; color: #333333; line-height: 1.6;">${message}</p>
+    </div>
+  `
+}
+
+/**
+ * Generate feature list for auth onboarding emails
+ */
+export function generateAuthFeatureList(items: string[]): string {
+  const listItems = items.map((item) => `<li style="margin-bottom: 8px;">${item}</li>`).join("")
+  return `
+    <ul style="color: #333333; font-size: 16px; line-height: 1.7; margin: 20px 0; padding-left: 20px;">
+      ${listItems}
+    </ul>
+  `
+}
+
+/**
+ * Generate confirmation URL fallback for email clients without button support
+ */
+export function generateConfirmationUrlFallback(url: string): string {
+  return `
+    <p style="margin: 0 0 12px; font-size: 16px; color: #333333;">If the button doesn't work, you can also copy and paste this link into your browser:</p>
+    <p class="confirmation-url" style="word-break: break-all; color: hsl(240, 5.9%, 10%); font-size: 14px; background-color: #f9f9f9; padding: 15px; border-radius: 6px; margin: 0 0 24px;">${url}</p>
   `
 }
 

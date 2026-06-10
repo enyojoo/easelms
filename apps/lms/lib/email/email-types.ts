@@ -83,6 +83,23 @@ export interface WelcomeEmailData {
   dashboardUrl: string
 }
 
+// Password reset email data
+export interface PasswordResetEmailData {
+  firstName?: string
+  email: string
+  resetCode: string
+  resetUrl?: string
+  platformName?: string
+}
+
+// Email confirmation data
+export interface EmailConfirmationEmailData {
+  firstName?: string
+  email: string
+  confirmationUrl: string
+  platformName?: string
+}
+
 // Admin notification email data
 export interface AdminNotificationEmailData {
   userName: string

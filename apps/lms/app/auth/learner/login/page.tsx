@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import Logo from "@/components/Logo"
 import Indicator from "@/components/Indicator"
-import { AlertCircle, Eye, EyeOff } from "lucide-react"
+import { AlertCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 
@@ -21,7 +21,15 @@ export default function UserLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState("")
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get("reset") === "success") {
+      setSuccessMessage("Your password has been updated. Please sign in with your new password.")
+    }
+  }, [searchParams])
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,6 +92,12 @@ export default function UserLoginPage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+              {successMessage && (
+                <Alert className="text-sm border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950 dark:text-green-100">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <AlertDescription className="text-xs sm:text-sm">{successMessage}</AlertDescription>
+                </Alert>
+              )}
               {error && (
                 <Alert variant="destructive" className="text-sm">
                   <AlertCircle className="h-4 w-4" />

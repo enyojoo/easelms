@@ -12,7 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Logo from "@/components/Logo"
 import Indicator from "@/components/Indicator"
-import { AlertCircle, Eye, EyeOff } from "lucide-react"
+import { AlertCircle } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
+import { clearPasswordResetEmail } from "@/lib/auth/password-reset"
 
 export default function NewPasswordPage() {
   const [password, setPassword] = useState("")
@@ -40,11 +42,29 @@ export default function NewPasswordPage() {
     setLoading(true)
 
     try {
-      // In a real app, you would send a request to your backend to update the password
-      console.log("New password set:", password)
-      // Redirect to the login page
-      router.push("/auth/learner/login")
-    } catch (err) {
+      const response = await fetch("/api/auth/set-new-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          clearPasswordResetEmail()
+          router.replace("/forgot-password")
+          return
+        }
+        setError(data.error || "Failed to update password. Please try again.")
+        return
+      }
+
+      clearPasswordResetEmail()
+      router.push("/auth/learner/login?reset=success")
+    } catch {
       setError("An error occurred. Please try again.")
     } finally {
       setLoading(false)
@@ -81,6 +101,7 @@ export default function NewPasswordPage() {
                     required
                     minLength={8}
                     className="pr-10"
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -108,6 +129,7 @@ export default function NewPasswordPage() {
                     required
                     minLength={8}
                     className="pr-10"
+                    disabled={loading}
                   />
                   <Button
                     type="button"
@@ -130,7 +152,7 @@ export default function NewPasswordPage() {
                 {loading ? "Setting password..." : "Set New Password"}
               </Button>
               <div className="text-center text-sm">
-                <Link href="/login" className="text-center text-sm underline">
+                <Link href="/auth/learner/login" className="text-center text-sm underline">
                   Back to Login
                 </Link>
               </div>

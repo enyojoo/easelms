@@ -9,6 +9,11 @@ import {
   generateEnrollmentDetails,
   generateCertificateDetails,
   generatePaymentDetails,
+  generateOtpCodeSection,
+  generateAuthNoticeBox,
+  generateAuthFeatureList,
+  generateConfirmationUrlFallback,
+  generateEmailCtaButton,
 } from "./email-generator"
 import type {
   EnrollmentEmailData,
@@ -16,6 +21,8 @@ import type {
   CertificateEmailData,
   PaymentEmailData,
   WelcomeEmailData,
+  PasswordResetEmailData,
+  EmailConfirmationEmailData,
   AdminNotificationEmailData,
   EmailTemplate,
   EmailBrandSettings,
@@ -525,9 +532,120 @@ View in dashboard: ${data.adminDashboardUrl}
   },
 }
 
+// Password reset email template
+export const passwordResetTemplate: EmailTemplate = {
+  subject: (data: PasswordResetEmailData) =>
+    `Your ${data.platformName || "EaseLMS"} Password Reset Code`,
+  html: async (data: PasswordResetEmailData) => {
+    const brandSettings = await getBrandSettingsForEmail()
+    const greeting = data.firstName ? `Hi ${data.firstName},` : "Hi,"
+    const otpSection = generateOtpCodeSection(data.resetCode)
+    const expiryNotice = generateAuthNoticeBox(
+      "This verification code will expire in 10 minutes. If you didn't request a password reset, please ignore this email."
+    )
+    const featureList = generateAuthFeatureList([
+      "Create a new secure password",
+      "Regain access to your account",
+      "Continue your courses and learning progress",
+      "Manage your account settings",
+    ])
+    const content = `
+      <p>${greeting}</p>
+      <p>We received a request to reset your password for your ${brandSettings.platformName} account. Use the verification code below to proceed with creating a new password:</p>
+      ${otpSection}
+      ${expiryNotice}
+      <p>Once you've entered the verification code, you'll be able to:</p>
+      ${featureList}
+      <p>If you're having trouble with the verification code, you can request a new one from the password reset page.</p>
+    `
+    return generateBaseEmailTemplate(
+      "Password Reset",
+      "Secure your account with a new password",
+      content,
+      undefined,
+      brandSettings,
+      `You received this email because a password reset was requested for your ${brandSettings.platformName} account.`
+    )
+  },
+  text: (data: PasswordResetEmailData) => {
+    const greeting = data.firstName ? `Hi ${data.firstName},` : "Hi,"
+    return `
+Password Reset
+
+${greeting}
+
+We received a request to reset your password. Use the verification code below to proceed:
+
+${data.resetCode}
+
+This verification code will expire in 10 minutes. If you didn't request a password reset, please ignore this email.
+
+Enter this code in the password reset form to continue.
+
+Need help? Contact us at support@easelms.org
+  `.trim()
+  },
+}
+
+// Email confirmation template
+export const emailConfirmationTemplate: EmailTemplate = {
+  subject: (data: EmailConfirmationEmailData) =>
+    `Confirm your email to get started on ${data.platformName || "EaseLMS"}!`,
+  html: async (data: EmailConfirmationEmailData) => {
+    const brandSettings = await getBrandSettingsForEmail()
+    const greeting = data.firstName ? `Hi ${data.firstName},` : "Hi,"
+    const securityNotice = generateAuthNoticeBox(
+      `This confirmation link will expire in 30 minutes. If you didn't create an account with ${brandSettings.platformName}, please ignore this email.`
+    )
+    const featureList = generateAuthFeatureList([
+      "Browse and enroll in courses",
+      "Track your learning progress",
+      "Earn certificates as you complete courses",
+      "Access your dashboard anytime",
+    ])
+    const urlFallback = generateConfirmationUrlFallback(data.confirmationUrl)
+    const ctaButton = generateEmailCtaButton("Confirm My Email Address", data.confirmationUrl)
+    const content = `
+      <p>${greeting}</p>
+      <p>To complete your registration and start learning, please confirm your email address by clicking the button below:</p>
+      ${ctaButton}
+      ${securityNotice}
+      <p>Once confirmed, you'll be able to:</p>
+      ${featureList}
+      ${urlFallback}
+    `
+    return generateBaseEmailTemplate(
+      `Welcome to ${brandSettings.platformName}!`,
+      "Your learning journey starts here",
+      content,
+      undefined,
+      brandSettings,
+      `You received this email because you signed up for a ${brandSettings.platformName} account.`
+    )
+  },
+  text: (data: EmailConfirmationEmailData) => {
+    const greeting = data.firstName ? `Hi ${data.firstName},` : "Hi,"
+    return `
+Confirm Your Email
+
+${greeting}
+
+To complete your registration and start learning, please confirm your email address by visiting the link below:
+
+${data.confirmationUrl}
+
+This confirmation link will expire in 30 minutes. If you didn't create an account, please ignore this email.
+
+Need help? Contact us at support@easelms.org
+  `.trim()
+  },
+}
+
 // Export all templates
 export const emailTemplates: Record<string, EmailTemplate> = {
   welcome: welcomeTemplate,
+  passwordReset: passwordResetTemplate,
+  emailConfirmation: emailConfirmationTemplate,
   courseEnrollment: courseEnrollmentTemplate,
   courseCompletion: courseCompletionTemplate,
   certificateReady: certificateReadyTemplate,

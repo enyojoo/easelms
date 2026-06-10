@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Confirm Your Email - Enthronement University</title>
+  <style>
+    @media (max-width: 600px) {
+      .email-wrapper { padding: 20px 10px !important; }
+      .email-container { max-width: 100% !important; width: 100% !important; }
+      .email-header { padding: 30px 20px 20px !important; }
+      .email-content { padding: 0 20px 30px !important; }
+      .email-title { font-size: 24px !important; }
+      .email-footer { padding: 24px 20px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .email-wrapper { background-color: #0a0a0a !important; }
+      .email-container { background-color: #1a1a1a !important; box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important; }
+      .email-header, .email-content { background-color: #1a1a1a !important; color: #e5e5e5 !important; }
+      .email-title { color: #ffffff !important; }
+      .email-subtitle, .email-text { color: #d1d1d1 !important; }
+      .email-footer { background-color: #1f1f1f !important; border-top-color: #333333 !important; }
+      .email-footer-text, .email-footer-small { color: #b0b0b0 !important; }
+      .email-footer-link { color: hsl(0, 0%, 98%) !important; }
+      .email-cta-button { background-color: hsl(0, 0%, 98%) !important; }
+      .email-cta-button a { color: hsl(240, 5.9%, 10%) !important; }
+      .brand-logo-light, .powered-by-logo-light { display: none !important; }
+      .brand-logo-dark, .powered-by-logo-dark { display: block !important; }
+      .info-box { background-color: #252525 !important; border-left-color: hsl(0, 0%, 98%) !important; }
+      .info-box-text { color: #d1d1d1 !important; }
+      .confirmation-url { background-color: #252525 !important; color: hsl(0, 0%, 98%) !important; }
+      ul { color: #d1d1d1 !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-wrapper" style="background-color: #f5f5f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <tr>
+            <td class="email-header" style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff;">
+              <img src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20Bk%201.png" alt="Enthronement University" class="brand-logo-light" style="max-width: 280px; height: auto; display: block; margin: 0 auto;" />
+              <img src="https://llxnjumccpvjlrdjqbcw.supabase.co/storage/v1/object/public/logo/EUNI%20Logo%20wh%201.png" alt="Enthronement University" class="brand-logo-dark" style="max-width: 280px; height: auto; display: none; margin: 0 auto;" />
+            </td>
+          </tr>
+          <tr>
+            <td class="email-content" style="padding: 0 40px 40px; background-color: #ffffff;">
+              <h1 class="email-title" style="margin: 0 0 12px; font-size: 28px; font-weight: 700; color: #1a1a1a; line-height: 1.3;">Welcome to Enthronement University!</h1>
+              <p class="email-subtitle" style="margin: 0 0 32px; font-size: 16px; color: #666666; line-height: 1.6;">Your learning journey starts here</p>
+              <div class="email-text" style="font-size: 16px; line-height: 1.6; color: #333333;">
+                <p>Hi,</p>
+                <p>To complete your registration and start learning, please confirm your email address by clicking the button below:</p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 24px auto;">
+                  <tr>
+                    <td class="email-cta-button" style="border-radius: 6px; background-color: hsl(240, 5.9%, 10%);">
+                      <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 14px 28px; color: hsl(0, 0%, 98%); text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">Confirm My Email Address</a>
+                    </td>
+                  </tr>
+                </table>
+                <div class="info-box" style="background-color: #f0f7ff; border-left: 4px solid hsl(240, 5.9%, 10%); padding: 16px; margin: 24px 0; border-radius: 4px;">
+                  <p class="info-box-text" style="margin: 0; font-size: 14px; color: #333333; line-height: 1.6;">This confirmation link will expire in 30 minutes. If you didn&apos;t create an account with Enthronement University, please ignore this email.</p>
+                </div>
+                <p>Once confirmed, you&apos;ll be able to:</p>
+                <ul style="color: #333333; font-size: 16px; line-height: 1.7; margin: 20px 0; padding-left: 20px;">
+                  <li style="margin-bottom: 8px;">Browse and enroll in courses</li>
+                  <li style="margin-bottom: 8px;">Track your learning progress</li>
+                  <li style="margin-bottom: 8px;">Earn certificates as you complete courses</li>
+                  <li style="margin-bottom: 8px;">Access your dashboard anytime</li>
+                </ul>
+                <p>If the button doesn&apos;t work, you can also copy and paste this link into your browser:</p>
+                <p class="confirmation-url" style="word-break: break-all; color: hsl(240, 5.9%, 10%); font-size: 14px; background-color: #f9f9f9; padding: 15px; border-radius: 6px; margin: 0 0 24px;">{{ .ConfirmationURL }}</p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-footer" style="padding: 32px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
+              <p class="email-footer-text" style="margin: 0; font-size: 14px; color: #666666; line-height: 1.6;">
+                Need help? Contact us at <a href="mailto:support@easelms.org" class="email-footer-link" style="color: hsl(240, 5.9%, 10%); text-decoration: none;">support@easelms.org</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
+              <p class="email-footer-small" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.6;">
+                You received this email because you signed up for an Enthronement University account.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-footer" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #e5e5e5; text-align: center;">
+              <a href="https://www.easelms.org" target="_blank" rel="noopener noreferrer" style="display: inline-block; text-decoration: none;">
+                <img src="https://cldup.com/DttVmSBdr9.png" alt="EaseLMS" class="powered-by-logo-light" style="height: 12px; width: auto; display: block; margin: 0 auto;" />
+                <img src="https://cldup.com/gGEH37AYfE.png" alt="EaseLMS" class="powered-by-logo-dark" style="height: 12px; width: auto; display: none; margin: 0 auto;" />
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

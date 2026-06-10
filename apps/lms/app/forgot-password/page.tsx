@@ -9,19 +9,46 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import Logo from "@/components/Logo"
 import Indicator from "@/components/Indicator"
+import { AlertCircle } from "lucide-react"
+import { storePasswordResetEmail } from "@/lib/auth/password-reset"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, you would send a request to your backend to initiate the password reset process
-    console.log("Password reset requested for:", email)
-    // For demo purposes, we'll just redirect to the code entry page
-    router.push("/forgot-password/code")
+    setError("")
+    setLoading(true)
+
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || "Failed to send reset code. Please try again.")
+        return
+      }
+
+      storePasswordResetEmail(email)
+      router.push("/forgot-password/code")
+    } catch {
+      setError("An error occurred. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -37,6 +64,12 @@ export default function ForgotPasswordPage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -46,15 +79,16 @@ export default function ForgotPasswordPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                 />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button type="submit" className="w-full">
-                Send Reset Code
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Sending code..." : "Send Reset Code"}
               </Button>
               <div className="text-center text-sm">
-                <Link href="/login" className="text-center text-sm underline">
+                <Link href="/auth/learner/login" className="text-center text-sm underline">
                   Back to Login
                 </Link>
               </div>
