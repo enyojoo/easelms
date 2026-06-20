@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm install && pnpm turbo run build --filter=elms",
+  "outputDirectory": "apps/lms/.next",
+  "installCommand": "pnpm install"
+}
